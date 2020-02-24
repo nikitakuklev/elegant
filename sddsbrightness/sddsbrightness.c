@@ -168,7 +168,7 @@ input file using elegant's twiss_output command with radiation_integrals=1 .\n\n
 Program by Michael Borland.  ANL (This is version 1.21, "__DATE__")\n";
 
 void getErrorFactorData(double **errorFactor, long *errorFactors, char *filename, char *columnName);
-long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfile, long harmonics);
+long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfile, long harmonics, long method);
 double ComputeBrightness(double period, long Nu, double K, long n,
                          double gamma, double ex, double ey, double Sdelta0, 
                          double current, 
@@ -186,7 +186,7 @@ double convolutionFunc(double x);
 double delta0,sincNu; /*two constants used in convolutionFunc() */
 
 /*following functions are needed for calculating brightness using Dejus's method */
-void FindPeak(double *E,double *spec,double *ep,double *sp,int32_t n);
+void FindPeak(double *E,double *spec,double *ep,double *sp,double *fwhm, int32_t n);
 int Gauss_Convolve(double *E,double *spec,int32_t *ns,double sigmaE);
 /* note that sigmaE=Sdelta0 */
 void Dejus_CalculateBrightness(double current,long nE,
@@ -199,7 +199,7 @@ void Dejus_CalculateBrightness(double current,long nE,
 			       double *Kvalue,
                                double kMin,double kMax, long method,
                                double *sigmax,double *sigmay,double *sigmaxp,double *sigmayp,
-                               double **K, double ***FnOut,
+                               double **K, double ***FnOut, double ***FWHMOut,
                                double ***Energy, double ***Brightness, double ***LamdarOut);
 void ComputeBeamSize(double period, long Nu, double ex0, double ey0, double Sdelta0, 
                      double betax, double alphax, double etax, double etaxp,
@@ -228,7 +228,7 @@ int main(int argc, char **argv)
 								  sinc() and gaussian() */
   short spectralBroadening;
   long method, device,nE,ihMin,ihMax;
-  double *KK,**FnOut,**Energy,**Brightness,**LamdarOut;
+  double *KK,**FnOut,**Energy,**Brightness,**LamdarOut,**FWHMOut;
   long minNEKS,maxNEKS;
   int32_t neks;
   double sigmax,sigmay,sigmaxp,sigmayp;
@@ -243,7 +243,7 @@ int main(int argc, char **argv)
     exit(1);
   }
   KK=NULL;
-  FnOut=Energy=Brightness=LamdarOut=NULL;
+  FnOut=Energy=Brightness=LamdarOut=FWHMOut=NULL;
   deviceOption=NULL;
 
   inputfile = outputfile = NULL;
@@ -254,9 +254,9 @@ int main(int argc, char **argv)
   harmonics = KPoints = 0;
   method=1;
   device=0;
-  minNEKS=100;
   maxNEKS=500;
-  neks=100;
+  minNEKS=100;
+  neks=minNEKS;
   
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (s_arg[i_arg].arg_type==OPTION) {
@@ -469,7 +469,7 @@ int main(int argc, char **argv)
 #ifdef DEBUG
   fprintf(stderr, "Setting up output file...\n");
 #endif
-  if (!SetUpOutputFile(&SDDSout, &SDDSin, outputfile, harmonics))
+  if (!SetUpOutputFile(&SDDSout, &SDDSin, outputfile, harmonics, method))
     SDDS_Bomb("problem setting up output file");
   
   dK = (KEnd-KStart)/(KPoints-1);
@@ -503,9 +503,9 @@ int main(int argc, char **argv)
       Dejus_CalculateBrightness(current,nE,periodLength, periods,device,ihMin,ihMax,2,Sdelta0,
                                 pCentral,ex0,ey0,
                                 betax,alphax,etax,etaxp,betay,alphay,etay,etayp,
-                                minNEKS,maxNEKS,neks, Kvalue, KStart, KEnd,method,
+                                minNEKS,maxNEKS,neks, Kvalue, KStart, KEnd, method,
                                 &sigmax,&sigmay,&sigmaxp,&sigmayp,
-                                &KK, &FnOut,&Energy,&Brightness,&LamdarOut);
+                                &KK, &FnOut, &FWHMOut, &Energy, &Brightness, &LamdarOut);
 #ifdef DEBUG
       fprintf(stderr, "Returned from Dejus_CalculateBrightness\n");
 #endif
@@ -520,10 +520,11 @@ int main(int argc, char **argv)
         h = ih*2+1;
         if (h==1 && !SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,KK,nE,0))
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        if (!SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,Brightness[ih],nE,ih*4+1) ||
-            !SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,FnOut[ih],nE,ih*4+2) ||
-            !SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,LamdarOut[ih],nE,ih*4+3) ||
-            !SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,Energy[ih],nE,ih*4+4))
+        if (!SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,Brightness[ih],nE,ih*5+1) ||
+            !SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,FnOut[ih],nE,ih*5+2) ||
+            !SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,LamdarOut[ih],nE,ih*5+3) ||
+            !SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,Energy[ih],nE,ih*5+4) ||
+            (method==1 && !SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,FWHMOut[ih],nE,ih*5+5)))
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       if (!SDDS_SetParameters(&SDDSout,SDDS_BY_NAME|SDDS_PASS_BY_VALUE,"current",current,
@@ -600,7 +601,7 @@ int main(int argc, char **argv)
   return 0;
 }
 
-long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfile, long harmonics)
+long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfile, long harmonics, long method)
 {
   long h;
   char buffer[1024];
@@ -632,6 +633,11 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfi
     sprintf(buffer, "photonEnergy%ld", h);
     if (!SDDS_DefineSimpleColumn(SDDSout, buffer, "keV", SDDS_DOUBLE))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (method==1) {
+      sprintf(buffer, "FWHM%ld", h);
+      if (!SDDS_DefineSimpleColumn(SDDSout, buffer, "eV", SDDS_DOUBLE))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
   }
   if (!SDDS_WriteLayout(SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -839,19 +845,47 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
   return 1;
 }
 
-void FindPeak(double *E,double *spec,double *ep,double *sp,int32_t n)
+void FindPeak(double *E,double *spec,double *ep,double *sp,double *fwhm,int32_t n)
 {
-  long i;
-  
+  long i, ip;
+  double e1, e2;
+
   *sp=spec[0];
   *ep=E[0];
+  ip = -1;
   for (i=1; i<n; i++) {
     if (*sp<spec[i]) {
       *sp=spec[i];
       *ep=E[i];
+      ip = i;
+    }
+  }
+  if (fwhm && ip!=-1) {
+    *fwhm = -1;
+    e1 = e2 = -1;
+    for (i=ip; i>=1; i--)  {
+      if (spec[i]<(spec[ip]/2)) {
+        e1 = E[i] + (E[i+1]-E[i])/(spec[i+1]-spec[i])*(spec[ip]/2-spec[i]);
+        break;
+      }
+    }
+    for (i=ip; i<(n-1); i++)  {
+      if (spec[i+1]<(spec[ip]/2)) {
+        e2 = E[i] + (E[i+1]-E[i])/(spec[i+1]-spec[i])*(spec[ip]/2-spec[i]);
+        break;
+      }
+    }
+    if (e1>0 && e2>e1)
+      *fwhm = e2-e1;
+    else {
+      printf("*** Failed to find FWHM around ip=%ld, e1=%le, e2=%le:\n", ip, e1, e2);
+      for (i=0; i<n; i++)
+        printf("%ld %le %le\n", i, E[i], spec[i]);
+      exit(1);
     }
   }
 }
+
 
 int Gauss_Convolve(double *E,double *spec,int32_t *ns,double sigmaE) 
 {
@@ -866,7 +900,7 @@ int Gauss_Convolve(double *E,double *spec,int32_t *ns,double sigmaE)
     fprintf(stderr,"No energy or spectra points!\n");
     return 1;
   }
-  FindPeak(E,spec,&ep,&sp,ns1);
+  FindPeak(E,spec,&ep,&sp,NULL,ns1);
   
   /*generate Gaussian with correct sigma in units of x-axis */
   de=E[1]-E[0];
@@ -970,14 +1004,14 @@ void Dejus_CalculateBrightness(double current,long nE,
 			       double *Kvalue, 
                                double kMin,double kMax, long method,
                                double *sigmax,double *sigmay,double *sigmaxp,double *sigmayp,
-                               double **K, double ***FnOut,
+                               double **K, double ***FnOut, double ***FWHMOut,
                                double ***Energy, double ***Brightness, double ***LamdarOut)
 {
-  double lamdar,reducedE,kx,ky,eMin,eMax,ekMin,ekMax,ep,sp,dep1,dep2,fc,fc2,de,smax;
+  double lamdar,reducedE,kx,ky,eMin,eMax,ekMin,ekMax,ep,sp,dep1,dep2,fc=-1,fc2,de,smax;
   int32_t ih,i,j,je,errorFlag=0;
   int32_t nSigma=3,nppSigma=6,nek,ns,exitLoop=0,badPoint=0;
   double JArg,sigmaEE,gk,dek,ek;
-  double *tmpE,*tmpSpec,**ei,*ptot,*pd,*kyb,**eb,**sb, eiz;
+  double *tmpE,*tmpSpec,**ei,*ptot,*pd,*kyb,**eb,**sb,**fwhm, eiz;
   double e,k;
   double sigmaX,sigmaX1,sigmaY,sigmaY1,period;
   double ENERGY;
@@ -987,7 +1021,7 @@ void Dejus_CalculateBrightness(double current,long nE,
 #endif
   
   tmpE=tmpSpec=pd=ptot=NULL;
-  ei=eb=sb=NULL;
+  ei=eb=sb=fwhm=NULL;
   period=period_mks*1.0e2; /*use cm as units */
   if (*K) free(*K);
   if (*FnOut) free(*FnOut);
@@ -995,7 +1029,7 @@ void Dejus_CalculateBrightness(double current,long nE,
   if (*Brightness) free(*Brightness);
   if (*LamdarOut) free(*LamdarOut);
   *K=NULL;
-  *FnOut=*Energy=*Brightness=*LamdarOut=NULL;
+  *FnOut=*Energy=*Brightness=*LamdarOut=*FWHMOut=NULL;
   
   if (neks<=nE) neks=nE+50;
 
@@ -1012,11 +1046,13 @@ void Dejus_CalculateBrightness(double current,long nE,
   ei=(double**)malloc(sizeof(*ei)*(neks+100));
   eb=(double**)malloc(sizeof(*eb)*(neks+100));
   sb=(double**)malloc(sizeof(*sb)*(neks+100));
+  fwhm=(double**)malloc(sizeof(*fwhm)*(neks+100));
   
   for (i=0;i<(neks+100);i++) {
     ei[i]=(double*)calloc(MAXIMUM_H,sizeof(**ei));
     eb[i]=(double*)calloc(MAXIMUM_H,sizeof(**eb));
     sb[i]=(double*)calloc(MAXIMUM_H,sizeof(**sb));
+    fwhm[i]=(double*)calloc(MAXIMUM_H,sizeof(**fwhm));
   }
   
 #ifdef DEBUG
@@ -1076,7 +1112,7 @@ void Dejus_CalculateBrightness(double current,long nE,
       exit(1);
     }
     /*find the peak */
-    FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
+    FindPeak(tmpE,tmpSpec,&ep,&sp,NULL,ns);
     if (ep> 0.9995*eiz) ep = 0.9995*eiz;
     if (i==1)
       dep1=eMax*i-ep;
@@ -1120,7 +1156,7 @@ void Dejus_CalculateBrightness(double current,long nE,
       }
       if (i%2) {
         /*odd harmonics */
-        ekMin=i*ek-i*dep1;
+        ekMin=i*ek-i*dep1; 
         ekMax=i*ek+i*dep1/2.0;
         if (i==1) ekMin=ekMin-dep1;
         if (i> (ek/dep1)) {
@@ -1154,7 +1190,7 @@ void Dejus_CalculateBrightness(double current,long nE,
     } else if (smax < minB ) {
       badPoint = 1;
     } else {
-      FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
+      FindPeak(tmpE,tmpSpec,&ep,&sp,NULL,ns);
       /*define fc */
       fc=0.985*ep/ek/i;
       if (i > 1/(1-fc) ) {
@@ -1193,8 +1229,8 @@ void Dejus_CalculateBrightness(double current,long nE,
 	if (sigmaE > 0) {
 	  nek=neks;
 	  dek=(ekMax-ekMin)/nek;
-	  sigmaEE=2.0*sigmaE*i*ek; /*  estimated width (eV) */
-	  ekMin=ekMin-sigmaEE*nSigma; /* adjust for convolution */
+	  sigmaEE=i*ek*sqrt(sqr(2.0*sigmaE)+sqr(0.36/(i*nP))); /*  estimated width (eV) */
+	  ekMin=ekMin-sigmaEE*nSigma;  /* adjust for convolution */
 	  ekMax=ekMax+sigmaEE*nSigma;  /* adjust for convolution */
 	  if (sigmaEE/nppSigma < dek) dek=sigmaEE/nppSigma;
 	  nek=(ekMax-ekMin)/dek+1; /*number of points */
@@ -1211,23 +1247,25 @@ void Dejus_CalculateBrightness(double current,long nE,
 	  fprintf(stderr,"error occurred in calling fortran subroutine usb\n");
 	  exit(1);
 	} 
-	FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
+	FindPeak(tmpE,tmpSpec,&ep,&sp,NULL,ns);
 	/* fprintf(stderr,"j=%d,points %d,maxE %e,minE %e,peakE %e,peakB %e\n",j,nek,ekMax,ekMin,ep,sp); */
 	if (sigmaE>0) {
 	  /* gauss convolve */
 	  if (Gauss_Convolve(tmpE,tmpSpec,&ns,sigmaE))
 	    exit(1);
 	}
-	FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
+	FindPeak(tmpE,tmpSpec,&ep,&sp,&fwhm[j][ih],ns);
 	/* fprintf(stderr,"after gauss convolve, peakE %e, peakB %e\n",ep,sp); */
       
 	ei[j][ih]=i*ek;
 	eb[j][ih]=ep;
 	sb[j][ih]=sp;
+        
       } else {
 	ei[j][ih]=i*ek;
 	eb[j][ih]=0;
 	sb[j][ih]=0;
+        fwhm[j][ih]=0;
       }
     }
    /* fprintf(stderr,"Harmonics %d completed.\n",i); */
@@ -1240,11 +1278,13 @@ void Dejus_CalculateBrightness(double current,long nE,
   /*output the result */
   *K=(double*)calloc(nE,sizeof(**K));
   *FnOut=(double**)malloc(sizeof(**FnOut)*ih);
+  *FWHMOut=(double**)malloc(sizeof(**FWHMOut)*ih);
   *Energy=(double**)malloc(sizeof(**Energy)*ih);
   *Brightness=(double**)malloc(sizeof(**Brightness)*ih);
   *LamdarOut=(double**)malloc(sizeof(**LamdarOut)*ih);
   for (i=0;i<ih;i++) {
     (*FnOut)[i]=calloc(nE,sizeof(***FnOut));
+    (*FWHMOut)[i]=calloc(nE,sizeof(***FWHMOut));
     (*Energy)[i]=calloc(nE,sizeof(***Energy));
     (*Brightness)[i]=calloc(nE,sizeof(***Brightness));
     (*LamdarOut)[i]=calloc(nE,sizeof(***LamdarOut));
@@ -1262,6 +1302,7 @@ void Dejus_CalculateBrightness(double current,long nE,
       k=(*K)[j];
       JArg = i*k*k/(4+2*k*k);
       (*FnOut)[ih][j]=pow(i*k/(1+k*k/2)*(jn((i+1)/2, JArg) - jn((i-1)/2, JArg)),2);
+      (*FWHMOut)[ih][j] = fwhm[nE-1-j][ih];
       (*Energy)[ih][j]=eb[nE-1-j][ih]*1.0e-3;
       (*Brightness)[ih][j]=sb[nE-1-j][ih];
       e=(*Energy)[ih][j];
@@ -1283,10 +1324,12 @@ void Dejus_CalculateBrightness(double current,long nE,
     free(ei[i]);
     free(eb[i]);
     free(sb[i]);
+    free(fwhm[i]);
   }
   free(ei);
   free(eb);
   free(sb);
+  free(fwhm);
 #ifdef DEBUG
   fprintf(stderr, "Freed memory.\n");
 #endif
