@@ -53,13 +53,15 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added \verb|MIN_MULTIPOLE_ORDER| and \verb|MAX_MULTIPOLE_ORDER| to the \verb|KQUAD|, \verb|KSEXT|, and \verb|CCBEND| elements.
+\item Added \verb|MIN_NORMAL_ORDER|, \verb|MAX_NORMAL_ORDER|, \verb|MIN_SKEW_ORDER|, and \verb|MAX_SKEW_ORDER| 
+  to the \verb|KQUAD|, \verb|KSEXT|, and \verb|CCBEND| elements.
   This allows easily restricting which systematic and random multipole orders are included without changing the data files.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item The \verb|closed_orbit| command now includes a parameter in the output file that indicates if the orbit determination
+  has failed.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
