@@ -875,14 +875,8 @@ void FindPeak(double *E,double *spec,double *ep,double *sp,double *fwhm,int32_t 
         break;
       }
     }
-    if (e1>0 && e2>e1)
+    if (e1>0 && e2>0)
       *fwhm = e2-e1;
-    else {
-      printf("*** Failed to find FWHM around ip=%ld, e1=%le, e2=%le:\n", ip, e1, e2);
-      for (i=0; i<n; i++)
-        printf("%ld %le %le\n", i, E[i], spec[i]);
-      exit(1);
-    }
   }
 }
 
@@ -1227,16 +1221,24 @@ void Dejus_CalculateBrightness(double current,long nE,
 	ekMax=fc2*i*ek;
 	/* adjust ekmin, ekmax, and number of points if beam energy spread applied */
 	if (sigmaE > 0) {
+          double fwEE;
 	  nek=neks;
 	  dek=(ekMax-ekMin)/nek;
-	  sigmaEE=i*ek*sqrt(sqr(2.0*sigmaE)+sqr(0.36/(i*nP))); /*  estimated width (eV) */
-	  ekMin=ekMin-sigmaEE*nSigma;  /* adjust for convolution */
-	  ekMax=ekMax+sigmaEE*nSigma;  /* adjust for convolution */
+	  fwEE=4*i*ek*sqrt(sqr(2.0*sigmaE)+sqr(0.36/(i*nP))); /* estimated full width (eV) */
+	  ekMin=ekMin-fwEE; /* adjust for convolution */
+	  ekMax=ekMax+fwEE; /* adjust for convolution */
+	  if (fwEE/nppSigma < dek) dek=fwEE/nppSigma;
+#if 0
+	  sigmaEE=2.0*sigmaE*i*ek; /*  estimated width (eV) */
+	  ekMin=ekMin-6*sigmaEE*nSigma; /* adjust for convolution */
+	  ekMax=ekMax+3*sigmaEE*nSigma;  /* adjust for convolution */
 	  if (sigmaEE/nppSigma < dek) dek=sigmaEE/nppSigma;
+#endif
 	  nek=(ekMax-ekMin)/dek+1; /*number of points */
 	  if (nek>MAXIMUM_E) {
-	    fprintf(stderr,"Energy points out of boundary (constrainted by FORTRAN usb subroutine).\n");
-	    exit(1);
+            ekMin += dek*(nek-MAXIMUM_E)/2.0;
+            ekMax -= dek*(nek-MAXIMUM_E)/2.0;
+            nek = MAXIMUM_E;
 	  }
 	}
 	/* get undulator on-axis brilliance for given K value in energy range ekmin to ekmax
