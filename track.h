@@ -992,9 +992,9 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 15
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
-#define N_KSEXT_PARAMS 33
+#define N_KSEXT_PARAMS 35
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 50
+#define N_KQUAD_PARAMS 52
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -1073,7 +1073,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 14
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CCBEND_PARAMS 46
+#define N_CCBEND_PARAMS 48
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS 19
 #define N_APCONTOUR_PARAMS 10
@@ -1993,7 +1993,7 @@ typedef struct {
     short xSteering, ySteering, synch_rad;
     char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor, steeringMultipoleFactor;
-    short minMultipoleOrder, maxMultipoleOrder;
+    short minMultipoleOrder[2], maxMultipoleOrder[2]; /* normal, skew */
     short integration_order, sqrtOrder, isr, isr1Particle, expandHamiltonian;
     /* for internal use */
     short multipolesInitialized, totalMultipolesComputed;
@@ -2049,7 +2049,7 @@ typedef struct {
     short xSteering, ySteering, synch_rad;
     char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor, steeringMultipoleFactor;
-    short minMultipoleOrder, maxMultipoleOrder;
+    short minMultipoleOrder[2], maxMultipoleOrder[2]; /* normal, skew */
     short integration_order, sqrtOrder, isr, isr1Particle;
     short edge1_effects, edge2_effects;
     double lEffective;
@@ -2346,7 +2346,7 @@ typedef struct {
     char *systematic_multipoles, *edge_multipoles, *edge1_multipoles, *edge2_multipoles, *random_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor;
     short referenceOrder;
-    short minMultipoleOrder, maxMultipoleOrder;
+    short minMultipoleOrder[2], maxMultipoleOrder[2]; /* normal, skew */
     short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
     short optimizeFse, optimizeDx, optimizeFseOnce, optimizeDxOnce, compensateKn, edgeOrder, verbose;
     /* for internal use only: */

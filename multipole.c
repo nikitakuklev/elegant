@@ -1679,7 +1679,9 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
 				      double steeringMultFactor,
                                       double KmL, long rootOrder0,
                                       long orderCheck, 
-                                      short minOrder, short maxOrder)
+                                      short *minOrder, /* normal, skew */ 
+				      short *maxOrder  /* normal, skew */
+				      )
 {
   long i, edge;
   MULTIPOLE_DATA *edgeMult;
@@ -1802,8 +1804,10 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
       totalMult->KnL[i] += rFactor*randomMult->anMod[i];
       totalMult->JnL[i] += rFactor*randomMult->bnMod[i];
     }
-    if ((minOrder>=0 && totalMult->order[i]<minOrder) || (maxOrder>=0 && totalMult->order[i]>maxOrder))
-      totalMult->KnL[i] = totalMult->JnL[i] = 0;
+    if ((minOrder[0]>=0 && totalMult->order[i]<minOrder[0]) || (maxOrder[0]>=0 && totalMult->order[i]>maxOrder[0]))
+      totalMult->KnL[i] = 0;
+    if ((minOrder[1]>=0 && totalMult->order[i]<minOrder[1]) || (maxOrder[1]>=0 && totalMult->order[i]>maxOrder[1]))
+      totalMult->JnL[i] = 0;
   }
 
   for (edge=0; edge<2; edge++) {
@@ -1819,8 +1823,10 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
       for (i=0; i<edgeMult->orders; i++) {
         edgeMult->KnL[i] = sFactor*edgeMult->anMod[i];
         edgeMult->JnL[i] = sFactor*edgeMult->bnMod[i];
-        if ((minOrder>=0 && edgeMult->order[i]<minOrder) || (maxOrder>=0 && edgeMult->order[i]>maxOrder))
-          edgeMult->KnL[i] = edgeMult->JnL[i] = 0;
+        if ((minOrder[0]>=0 && edgeMult->order[i]<minOrder[0]) || (maxOrder[0]>=0 && edgeMult->order[i]>maxOrder[0]))
+          edgeMult->KnL[i] = 0;
+        if ((minOrder[1]>=0 && edgeMult->order[i]<minOrder[1]) || (maxOrder[1]>=0 && edgeMult->order[i]>maxOrder[1]))
+          edgeMult->JnL[i] = 0;
       }
     }
   }
@@ -1834,8 +1840,10 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
       steeringMult->JnL[i] = 
         -1*steeringMult->bn[i]*dfactorial(steeringMult->order[i])/ipow(steeringMult->referenceRadius, steeringMult->order[i])*
 	steeringMultFactor;
-      if ((minOrder>=0 && steeringMult->order[i]<minOrder) || (maxOrder>=0 && steeringMult->order[i]>maxOrder))
-        steeringMult->KnL[i] = steeringMult->JnL[i] = 0;
+      if ((minOrder[0]>=0 && steeringMult->order[i]<minOrder[0]) || (maxOrder[0]>=0 && steeringMult->order[i]>maxOrder[0]))
+        steeringMult->KnL[i] = 0;
+      if ((minOrder[1]>=0 && steeringMult->order[i]<minOrder[1]) || (maxOrder[1]>=0 && steeringMult->order[i]>maxOrder[1]))
+        steeringMult->JnL[i] = 0;
     }
   }
 
