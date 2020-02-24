@@ -50,13 +50,15 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 #define IP_YERROR 2
 #define IP_DELTA 3
 #define IP_SERROR 4
-#define N_PARAMETERS 5
+#define IP_FAILED 5
+#define N_PARAMETERS 6
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
     {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
     {"xError", "&parameter name=xError, type=double, units=m, description=\"Horizontal closed orbit convergence error\" &end"},
     {"yError", "&parameter name=yError, type=double, units=m, description=\"Vertical closed orbit convergence error\" &end"},
     {"delta", "&parameter name=delta, symbol=\"$gd$r\", type=double, description=\"Fractional energy offset of closed orbit\" &end"},
     {"lengthError", "&parameter name=lengthError, type=double, units=m, description=\"Deviation of orbit length from reference orbit length\" &end"},
+    {"failed", "&parameter name=failed, type=short, description=\"Non-zero if orbit determination failed\" &end"},
     } ;
 
 #include "closed_orbit.h"
@@ -196,7 +198,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
         }
 
     if (do_output && SDDS_clorb_initialized)
-        dump_closed_orbit(clorb, beamline->n_elems, clorb_count++, deviation);
+      dump_closed_orbit(clorb, beamline->n_elems, clorb_count++, deviation, bad_orbit);
 
     return !bad_orbit;
     }
@@ -213,7 +215,7 @@ void finish_clorb_output(void)
     }
 
 
-void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviation)
+void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviation, long bad_orbit)
 {
     long i, n, occurence, row;
     double position;
@@ -242,6 +244,7 @@ void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviat
                             IP_YERROR, deviation[2],
                             IP_DELTA, traj[0].centroid[5],
                             IP_SERROR, deviation[4],
+			    IP_FAILED, bad_orbit?(short)1:(short)0,
                             -1)) {
         SDDS_SetError("Unable to set SDDS parameters (dump_closed_orbit)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

@@ -4248,7 +4248,7 @@ long ramped_rf_cavity(double **part, long np, RAMPRF *ramprf, double P_central,
                       double L_central, double z_cavity, long pass);
 
 /* prototypes for closed_orbit.c */
-extern void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviation);
+extern void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviation, long badOrbit);
 void finish_clorb_output(void);
 #define CLOSED_ORBIT_OUTPUT 0x01UL
 #define CLOSED_ORBIT_IGNORE_BEAM 0x02UL
