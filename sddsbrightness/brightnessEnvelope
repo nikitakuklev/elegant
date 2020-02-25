@@ -7,7 +7,7 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage {usage: brightnessEnvelope -input <filename> -output <filename> -mode {brightness|flux|fluxdensity|centralconeflux|pinholeflux} [-hmax <integer>(9)] [-spacing <keV>(0.1)] [-range <min>,<max>] [-breakPages {0|1}(1)] [-fast 1]}
+set usage {usage: brightnessEnvelope -input <filename> -output <filename> -mode {brightness|flux|fluxdensity|centralconeflux|pinholeflux|fwhm} [-hmax <integer>(9)] [-spacing <keV>(0.1)] [-range <min>,<max>] [-breakPages {0|1}(1)] [-fast 1]}
 set input ""
 set output ""
 set mode brightness
@@ -59,23 +59,33 @@ set count 0
 switch $mode {
     flux {
         set name TotalFlux
+        set sortName $name
         set units "photons/s/0.1%BW"
     }
     fluxdensity {
         set name FluxDensity
+        set sortName $name
         set units "photons/s/mrad\$a2\$n/0.1%BW"
     }
     centralconeflux {
         set name CentralConeFlux
+        set sortName $name
         set units "photons/s/0.1%BW"
     }
     pinholeflux {
         set name PinholeFlux
+        set sortName $name
         set units "photons/s/0.1%BW"
+    }
+    fwhm {
+        set name FWHM
+        set sortName Brightness
+        set units eV
     }
     default -
     brightness {
         set name Brightness
+        set sortName Brightness
         set units "photons/s/mrad\$a2\$n/mm\$a2\$n/0.1%BW"
     }
 }
@@ -91,8 +101,8 @@ if !$fast {
 
     for {set h 1} {$h<=$hmax} {incr h 2} {
 	set interpList $extraInterpList
-	lappend interpList $name$h
-	set renameList [list photonEnergy$h=photonEnergy $name$h=$name]
+	lappend interpList $name$h Brightness$h
+	set renameList [list photonEnergy$h=photonEnergy $name$h=$name Brightness$h=Brightness]
 	if [catch {exec sddssort $input -pipe=out -column=photonEnergy$h,incr \
 		       | sddsprocess -pipe "-test=column,photonEnergy$h 0 >" \
 		       | sddsinterp -pipe \
@@ -109,10 +119,10 @@ if !$fast {
     eval exec sddscombine $fileList -pipe=out \
 	| sddsprocess -pipe "{-define=column,harmonic,i_page 2 * 1 -,type=long}" \
 	| sddscombine -pipe -merge \
-	| sddssort -pipe -column=photonEnergy,incr -column=$name,incr \
+	| sddssort -pipe -column=photonEnergy,incr -column=$sortName,incr \
 	| sddsbreak -pipe -change=photonEnergy \
 	| sddsprocess -pipe -clip=0,1,invert \
-	| sddscombine -merge -pipe=in $output.tmp
+	| sddscombine -merge -pipe=in -retain=column,photonEnergy,harmonic,$name $output.tmp
     
     if $breakPages {
 	exec sddsbreak $output.tmp $output -change=harmonic
@@ -165,7 +175,7 @@ if !$fast {
 	    "{-redefine=column,TotalPower,$TPList $count maxn,units=W}" \
 	    "{-redefine=column,K,$KList $count maxn}" \
 	    | sddsconvert -pipe=in $output.tmp  \
-	    -delete=column,OnAxisPowerDensity?,OnAxisPowerDensity??,TotalPower?,TotalPower??,K?,K??,Brightness?,Brightness??,CentralConeFlux?,CentralConeFlux??,PinholeFlux?,PinholeFlux??
+	    -delete=column,OnAxisPowerDensity?,OnAxisPowerDensity??,TotalPower?,TotalPower??,K?,K??,Brightness?,Brightness??,CentralConeFlux?,CentralConeFlux??,PinholeFlux?,PinholeFlux??,FWHM?,FWHM??
     } else {
 	eval exec sddsxref $fileList -pipe=out -take=* \
 	    | sddsprocess -pipe \
