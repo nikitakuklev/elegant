@@ -1,4 +1,3 @@
-
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -462,11 +461,15 @@ long trackRfCavityWithWakes
                     bombElegant("invalid fiducial mode for RFCA element", NULL);
                 if (rfca->tReference!=-1)
                   t0 = rfca->tReference;
-                else 
-                  t0 = findFiducialTime(part, np, zEnd-rfca->length, length/2, *P_central, mode);
+                else {
+                  if (!rfca->backtrack)
+                    t0 = findFiducialTime(part, np, zEnd-rfca->length, length/2, *P_central, mode);
+                  else
+                    t0 = findFiducialTime(part, np, zEnd-rfca->length, -((zEnd-rfca->length)+length/2), *P_central, mode);
+                }
                 rfca->phase_fiducial = -omega*t0;
                 rfca->fiducial_seen = 1;
-                }
+            }
             set_phase_reference(rfca->phase_reference, phase=rfca->phase_fiducial);
 #if defined(DEBUG)
             printf("RFCA fiducial phase is %e\n", phase);
@@ -475,7 +478,7 @@ long trackRfCavityWithWakes
         default:
             bombElegant("unknown return value from get_phase_reference()", NULL);
             break;
-        }
+    }
 
     if (omega) {
         t0 = -rfca->phase_fiducial/omega;
@@ -573,130 +576,245 @@ long trackRfCavityWithWakes
     if (!matrixMethod) {
       double *inverseF;
       inverseF = calloc(sizeof(*inverseF), np);
-      
-      for (ik=0; ik<nKicks; ik++) {
-        dgammaOverGammaAve = dgammaOverGammaNp = 0;
-	if (isSlave || !notSinglePart) {
-	  for (ip=0; ip<np; ip++) {
-	    coord = part[ip];
-	    if (coord[5]==-1)
-	      continue;
-	    if (length)
-	      /* compute distance traveled to center of this section */
-	      dc4 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-	    else 
-	      dc4 = 0;
-          
-	    /* compute energy kick */
-	    P     = *P_central*(1+coord[5]);
-	    beta_i = P/(gamma=sqrt(sqr(P)+1));
-	    t     = (coord[4]+dc4)/(c_mks*beta_i) - timeOffset;
-	    if (ik==0 && timeOffset && rfca->change_t) 
-	      coord[4] = t*c_mks*beta_i-dc4;
-	    if ((dt = t-t0)<0)
-	      dt = 0;
-	    if  (!same_dgamma) {
-	      if (!linearize)
-		dgamma = volt*sin(omega*(t-(lockPhase?tAve:0)-ik*dtLight)+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
-	      else
-		dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*(tAve-timeOffset)+phase);
-	    }
-	    if (gamma) {
-	      dgammaOverGammaNp ++;
-	      dgammaOverGammaAve += dgamma/gamma;
-	    }
-          
-	    if (length) {
-	      if (rfca->end1Focus && ik==0) {
-		/* apply focus kick */
-                inverseF[ip] = dgamma/(2*gamma*length);
-		coord[1] -= coord[0]*inverseF[ip];
-		coord[3] -= coord[2]*inverseF[ip];
-	      } 
-	      /* apply initial drift */
-	      coord[0] += coord[1]*length/2;
-	      coord[2] += coord[3]*length/2;
-	      coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-	    } 
 
-	    /* apply energy kick */
-	    add_to_particle_energy(coord, t, *P_central, dgamma);
-	    if ((gamma1 = gamma+dgamma)<=1)
-	      coord[5] = -1;
-	    else 
-	      /* compute inverse focal length for exit kick */
-	      inverseF[ip] = -dgamma/(2*gamma1*length);
-	  }
-	}
-        if (!wakesAtEnd) {
-          /* do wakes */
-          if (wake) 
-            track_through_wake(part, np, wake, P_central, run, iPass, charge);
-          if (trwake)
-            track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
-          if (LSCKick) {
-#if !USE_MPI
-            if (dgammaOverGammaNp)
-              dgammaOverGammaAve /= dgammaOverGammaNp;           
-#else
-	    if (notSinglePart) {
-              double t1 = dgammaOverGammaAve;
-              long t2 = dgammaOverGammaNp;
-	      MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-              MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-	      if (dgammaOverGammaNp)
-		dgammaOverGammaAve /= dgammaOverGammaNp; 
-	    } else if (dgammaOverGammaNp)
-	      dgammaOverGammaAve /= dgammaOverGammaNp;
-    
-#endif
-            addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
+      if (!rfca->backtrack) {
+        for (ik=0; ik<nKicks; ik++) {
+          dgammaOverGammaAve = dgammaOverGammaNp = 0;
+          if (isSlave || !notSinglePart) {
+            for (ip=0; ip<np; ip++) {
+              coord = part[ip];
+              if (coord[5]==-1)
+                continue;
+              if (length)
+                /* compute distance traveled to center of this section */
+                dc4 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+              else 
+                dc4 = 0;
+              
+              /* compute energy kick */
+              P     = *P_central*(1+coord[5]);
+              beta_i = P/(gamma=sqrt(sqr(P)+1));
+              t     = (coord[4]+dc4)/(c_mks*beta_i) - timeOffset;
+              if (ik==0 && timeOffset && rfca->change_t) 
+                coord[4] = t*c_mks*beta_i-dc4;
+              if ((dt = t-t0)<0)
+                dt = 0;
+              if  (!same_dgamma) {
+                if (!linearize)
+                  dgamma = volt*sin(omega*(t-(lockPhase?tAve:0)-ik*dtLight)+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
+                else
+                  dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*(tAve-timeOffset)+phase);
+              }
+              if (gamma) {
+                dgammaOverGammaNp ++;
+                dgammaOverGammaAve += dgamma/gamma;
+              }
+              
+              if (length) {
+                if (rfca->end1Focus && ik==0) {
+                  /* apply focus kick */
+                  inverseF[ip] = dgamma/(2*gamma*length);
+                  coord[1] -= coord[0]*inverseF[ip];
+                  coord[3] -= coord[2]*inverseF[ip];
+                } 
+                /* apply initial drift */
+                coord[0] += coord[1]*length/2;
+                coord[2] += coord[3]*length/2;
+                coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+              } 
+              
+              /* apply energy kick */
+              add_to_particle_energy(coord, t, *P_central, dgamma);
+              if ((gamma1 = gamma+dgamma)<=1)
+                coord[5] = -1;
+              else 
+                /* compute inverse focal length for exit kick */
+                inverseF[ip] = -dgamma/(2*gamma1*length);
+            }
           }
-        }
-        if (length) {
-	  if(isSlave || !notSinglePart) {
-	    /* apply final drift and focus kick if needed */
-	    for (ip=0; ip<np; ip++) {
-	      coord = part[ip];
-	      coord[0] += coord[1]*length/2;
-	      coord[2] += coord[3]*length/2;
-	      coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-	      if (rfca->end2Focus && (ik==nKicks-1)) {
-		coord[1] -= coord[0]*inverseF[ip];
-		coord[3] -= coord[2]*inverseF[ip];
-	      }
-	    }
-	  }
-        }
-        
-        if (wakesAtEnd) {
-          /* do wakes */
-          if (wake) 
-            track_through_wake(part, np, wake, P_central, run, iPass, charge);
-          if (trwake)
-            track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
-          if (LSCKick) {
+          if (!wakesAtEnd) {
+            /* do wakes */
+            if (wake) 
+              track_through_wake(part, np, wake, P_central, run, iPass, charge);
+            if (trwake)
+              track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+            if (LSCKick) {
 #if !USE_MPI
-            if (dgammaOverGammaNp)
-              dgammaOverGammaAve /= dgammaOverGammaNp;           
+              if (dgammaOverGammaNp)
+                dgammaOverGammaAve /= dgammaOverGammaNp;           
 #else
-            if (dgammaOverGammaNp) {
               if (notSinglePart) {
                 double t1 = dgammaOverGammaAve;
                 long t2 = dgammaOverGammaNp;
-                MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
-                MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);  
-                dgammaOverGammaAve /= dgammaOverGammaNp; 
-              } else
+                MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+                if (dgammaOverGammaNp)
+                  dgammaOverGammaAve /= dgammaOverGammaNp; 
+              } else if (dgammaOverGammaNp)
                 dgammaOverGammaAve /= dgammaOverGammaNp;
+              
+#endif
+              addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
             }
+          }
+          if (length) {
+            if(isSlave || !notSinglePart) {
+              /* apply final drift and focus kick if needed */
+              for (ip=0; ip<np; ip++) {
+                coord = part[ip];
+                coord[0] += coord[1]*length/2;
+                coord[2] += coord[3]*length/2;
+                coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+                if (rfca->end2Focus && (ik==nKicks-1)) {
+                  coord[1] -= coord[0]*inverseF[ip];
+                  coord[3] -= coord[2]*inverseF[ip];
+                }
+              }
+            }
+          }
+        
+          if (wakesAtEnd) {
+            /* do wakes */
+            if (wake) 
+              track_through_wake(part, np, wake, P_central, run, iPass, charge);
+            if (trwake)
+              track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+            if (LSCKick) {
+#if !USE_MPI
+              if (dgammaOverGammaNp)
+                dgammaOverGammaAve /= dgammaOverGammaNp;           
+#else
+              if (dgammaOverGammaNp) {
+                if (notSinglePart) {
+                  double t1 = dgammaOverGammaAve;
+                  long t2 = dgammaOverGammaNp;
+                  MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
+                  MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);  
+                  dgammaOverGammaAve /= dgammaOverGammaNp; 
+                } else
+                  dgammaOverGammaAve /= dgammaOverGammaNp;
+              }
+#endif
+              addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
+            }
+          }
+        }
+      } else { /* backtracking */
+        double *dgammaSave=NULL, *tSave=NULL;
+        for (ik=0; ik<nKicks; ik++) {
+          dgammaOverGammaAve = dgammaOverGammaNp = 0;
+          if (isSlave || !notSinglePart) {
+            dgammaSave = tmalloc(sizeof(*dgammaSave)*np);
+            tSave = tmalloc(sizeof(*tSave)*np);
+            for (ip=0; ip<np; ip++) {
+              coord = part[ip];
+              if (coord[5]==-1)
+                continue;
+              if (length)
+                /* compute distance traveled to center of this section */
+                dc4 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+              else 
+                dc4 = 0;
+              
+              /* compute energy kick */
+              P     = *P_central*(1+coord[5]);
+              beta_i = P/(gamma=sqrt(sqr(P)+1));
+              t     = (coord[4]+dc4)/(c_mks*beta_i) - timeOffset;
+               if (ik==0 && timeOffset && rfca->change_t) 
+                coord[4] = t*c_mks*beta_i-dc4;
+              if ((dt = t-t0)<0)
+                dt = 0;
+              if  (!same_dgamma) {
+                if (!linearize)
+                  dgamma = volt*sin(omega*(t-(lockPhase?tAve:0)+(nKicks-1-ik)*dtLight)+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
+                else
+                  dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*(tAve-timeOffset)+phase);
+              }
+              tSave[ip] = t;
+              dgammaSave[ip] = dgamma;
+              if (gamma) {
+                dgammaOverGammaNp ++;
+                dgammaOverGammaAve += dgamma/gamma;
+              }
+              
+              if (length) {
+                if (rfca->end1Focus && ik==0) {
+                  /* apply focus kick */
+                  inverseF[ip] = dgamma/(2*gamma*length);
+                  coord[1] -= coord[0]*inverseF[ip];
+                  coord[3] -= coord[2]*inverseF[ip];
+                } 
+                /* apply initial drift */
+                coord[0] += coord[1]*length/2;
+                coord[2] += coord[3]*length/2;
+                coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+              } 
+            }
+          }
+
+          /* do wakes */
+          if (LSCKick) {
+#if !USE_MPI
+            if (dgammaOverGammaNp)
+              dgammaOverGammaAve /= dgammaOverGammaNp;           
+#else
+            if (notSinglePart) {
+              double t1 = dgammaOverGammaAve;
+              long t2 = dgammaOverGammaNp;
+              MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+              MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+              if (dgammaOverGammaNp)
+                dgammaOverGammaAve /= dgammaOverGammaNp; 
+            } else if (dgammaOverGammaNp)
+              dgammaOverGammaAve /= dgammaOverGammaNp;
+            
 #endif
             addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
+          }
+          if (trwake)
+            track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+          if (wake) 
+            track_through_wake(part, np, wake, P_central, run, iPass, charge);
+
+          if (isSlave || !notSinglePart) {
+            /* apply final drift and focus kick if needed */
+            for (ip=0; ip<np; ip++) {
+              coord = part[ip];
+              if (coord[5]==-1)
+                continue;
+              if (length)
+                /* compute distance traveled to center of this section */
+                dc4 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+              else 
+                dc4 = 0;
+
+              /* apply energy kick */
+              t = tSave[ip];
+              P     = *P_central*(1+coord[5]);
+              beta_i = P/(gamma=sqrt(sqr(P)+1));
+              dgamma = dgammaSave[ip];
+              add_to_particle_energy(coord, t, *P_central, dgamma);
+              if ((gamma1 = gamma+dgamma)<=1)
+                coord[5] = -1;
+              else 
+                /* compute inverse focal length for exit kick */
+                inverseF[ip] = -dgamma/(2*gamma1*length);
+              coord = part[ip];
+              coord[0] += coord[1]*length/2;
+              coord[2] += coord[3]*length/2;
+              coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+              if (rfca->end2Focus && (ik==nKicks-1)) {
+                coord[1] -= coord[0]*inverseF[ip];
+                coord[3] -= coord[2]*inverseF[ip];
+              }
+            }
+            free(dgammaSave);
+            free(tSave);
           }
         }
       }
       free(inverseF);
-    } else {
+    } else { /* matrix method */
       double sin_phase=0.0, cos_phase, inverseF;
       double R11=1, R21=0, R22, R12, dP, ds1;
 
@@ -735,7 +853,7 @@ long trackRfCavityWithWakes
             P     = *P_central*(1+coord[5]);
             beta_i = P/(gamma=sqrt(sqr(P)+1));
             ds1 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-            t     = (coord[4]+ds1)/(c_mks*beta_i)-timeOffset;
+            t   = (coord[4]+ds1)/(c_mks*beta_i)-timeOffset;
             if (timeOffset && rfca->change_t) 
               coord[4] = t*c_mks*beta_i-ds1;
             if ((dt = t-t0)<0)

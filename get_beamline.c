@@ -1798,8 +1798,8 @@ void modify_for_backtracking(ELEMENT_LIST *eptr)
     case T_RFCW:
       ((RFCW*)(eptr->p_elem))->volt *= -1;
       ((RFCW*)(eptr->p_elem))->backtrack = 1;
-      if (((RFCW*)(eptr->p_elem))->nKicks!=0)
-        bombElegant("RFCW in backtrack mode requires N_KICKS=0", NULL);
+      if (((RFCW*)(eptr->p_elem))->wakesAtEnd)
+        bombElegant("RFCW in backtrack mode requires WAKES_AT_END=0", NULL);
       break;
     case T_WAKE:
       ((WAKE*)(eptr->p_elem))->factor *= -1;
