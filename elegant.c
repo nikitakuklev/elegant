@@ -823,9 +823,10 @@ char **argv;
 	magnets                   = compose_filename(magnets, rootname);
 	semaphore_file            = compose_filename(semaphore_file, rootname);
 	parameters                = compose_filename(parameters, rootname);        
+        rfc_reference_output      = compose_filename(rfc_reference_output, rootname);
       }
       else {
-        magnets = semaphore_file = parameters = NULL;
+        magnets = semaphore_file = parameters = rfc_reference_output = NULL;
       }
       
       if (semaphore_file && fexists(semaphore_file))
@@ -1214,6 +1215,8 @@ char **argv;
         }
         if (parameters)
           dumpLatticeParameters(parameters, &run_conditions, beamline);
+        if (rfc_reference_output)
+          dumpRfcReferenceData(rfc_reference_output, &run_conditions, beamline);
         /* Reset corrector magnets for before/after tracking mode */
         if (correct.mode!=-1 && commandCode==TRACK && correct.track_before_and_after)
           zero_correctors(beamline->elem_recirc?beamline->elem_recirc:&(beamline->elem), &run_conditions, &correct);
@@ -1235,6 +1238,8 @@ char **argv;
         finish_response_output();
       if (parameters)
         finishLatticeParametersFile();
+      if (rfc_reference_output)
+        finishRfcDataFile();
       if (correct.mode!=-1)
         finishCorrectionOutput();
 #ifdef SUNOS4

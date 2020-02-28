@@ -1027,7 +1027,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSRDRIFT_PARAMS 27
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
-#define N_RFCW_PARAMS 40
+#define N_RFCW_PARAMS 41
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 22
@@ -1353,7 +1353,7 @@ typedef struct {
     short linearize, lockPhase;
     /* for internal use only: */
     short fiducial_seen, backtrack;
-    double phase_fiducial;
+    double phase_fiducial, t_fiducial;
     } RFCA;
 
 /* names and storage structure for modulated RF cavity physical parameters */
@@ -2878,6 +2878,7 @@ typedef struct {
     long interpolate;          /* flag to turn on interpolation */
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     double dx, dy;
+    double tReference;
     long linearize, doLSC, LSCBins, LSCInterpolate;
     double LSCLowFrequencyCutoff0, LSCLowFrequencyCutoff1;
     double LSCHighFrequencyCutoff0, LSCHighFrequencyCutoff1, LSCRadiusFactor;
@@ -4382,6 +4383,9 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions);
 #define PARAMETERS_LOADED 1
 #define PARAMETERS_ENDED 2
 void finish_load_parameters(void);
+extern void dumpRfcReferenceData(char *filename, RUN *run, LINE_LIST *beamline);
+extern void finishRfcDataFile() ;
+
 /* load parameters modes and indices */
 /* order here must be the same as load_mode array in load_parameters.c */
 #define LOAD_MODE_ABSOLUTE     0
@@ -4394,7 +4398,6 @@ void finish_load_parameters(void);
 #define LOAD_FLAG_FRACTIONAL   (1<<LOAD_MODE_FRACTIONAL)
 #define LOAD_FLAG_VERBOSE      (LOAD_FLAG_FRACTIONAL<<1)
 extern long nearestInteger(double value);
-
 
 #define SDDS_EOS_NEWFILE 1
 #define SDDS_EOS_COMPLETE 2

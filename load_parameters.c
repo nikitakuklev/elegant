@@ -845,7 +845,6 @@ void finish_load_parameters()
 }
 
 static long dumpingLatticeParameters = 0;
-static long iElementName, iElementParameter, iParameterValue, iElementType, iOccurence, iElementGroup;
 static SDDS_DATASET SDDS_dumpLattice;
 void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
 {
@@ -855,6 +854,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
   PARAMETER *parameter;
   long row, maxRows, doSave;
   double value=0.0;
+  static long iElementName, iElementParameter, iParameterValue, iElementType, iOccurence, iElementGroup;
   
   SDDSout = &SDDS_dumpLattice;
   if (!dumpingLatticeParameters) {
@@ -987,3 +987,80 @@ int matchesPatternList(char **pattern, long patterns, char *input)
   }
   return 0;
 }
+
+static long dumpingRfcData = 0;
+static SDDS_DATASET SDDS_rfcData;
+
+void dumpRfcReferenceData(char *filename, RUN *run, LINE_LIST *beamline)
+{
+  SDDS_DATASET *SDDSout;
+  long iElem, row, maxRows;
+  ELEMENT_LIST *eptr;
+  RFCA *rfca;
+  static long iElementName, iElementParameter, iParameterValue, iElementType, iOccurence;
+
+  SDDSout = &SDDS_rfcData;
+  if (!dumpingRfcData) {
+    if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 0, NULL, NULL, filename) ||
+        (iElementName=SDDS_DefineColumn(SDDSout, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
+        (iElementParameter=SDDS_DefineColumn(SDDSout, "ElementParameter", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
+        (iParameterValue=SDDS_DefineColumn(SDDSout, "ParameterValue", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (iElementType=SDDS_DefineColumn(SDDSout, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
+        (iOccurence=SDDS_DefineColumn(SDDSout, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, 0))<0 ||
+        !SDDS_WriteLayout(SDDSout)) {
+      printf("Problem setting up parameter output file got RFCA and RFCW reference\n");
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+    dumpingRfcData = 1;
+  }
+
+  if (!SDDS_StartPage(SDDSout, maxRows=beamline->n_elems*10))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  row = 0;
+  printf("Saving RFCA/RFCW timing parameters to %s...", filename);
+  fflush(stdout);
+
+  eptr = &(beamline->elem);
+  for (iElem=0; iElem<beamline->n_elems; iElem++) {
+    if (eptr->type==T_RFCW)
+      rfca = &(((RFCW*)(eptr->p_elem))->rfca);
+    else if (eptr->type==T_RFCA)
+      rfca = ((RFCA*)(eptr->p_elem));
+    else {
+      eptr = eptr->succ;
+      continue;
+    }
+    if (!(eptr->name))
+      SDDS_Bomb("element name is NULL (dumpRfcReferenceData)");
+    if (row>=maxRows) {
+      if (!SDDS_LengthenTable(SDDSout, 100))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      maxRows += 100;
+    }
+    if (!SDDS_SetRowValues(SDDSout, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+                           iOccurence, eptr->occurence,
+                           iElementName, eptr->name,
+                           iElementParameter, "T_REFERENCE",
+                           iParameterValue, rfca->t_fiducial,
+                           iElementType, entity_name[eptr->type],
+                           -1)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    row++;
+    eptr = eptr->succ;
+  }
+  if (!SDDS_WritePage(SDDSout))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (!inhibitFileSync)
+    SDDS_DoFSync(SDDSout);
+}
+
+void finishRfcDataFile() 
+{
+  if (dumpingRfcData && !SDDS_Terminate(&SDDS_rfcData))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  dumpingRfcData = 0;
+}
+

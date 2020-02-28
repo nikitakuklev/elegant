@@ -506,6 +506,7 @@ long trackRfCavityWithWakes
 
     if (omega) {
         t0 = -rfca->phase_fiducial/omega;
+        rfca->t_fiducial = t0; /* in case the user asks us to save it */
         To = PIx2/omega;
         }
     else
@@ -1085,6 +1086,7 @@ long track_through_rfcw
   rfcw->rfca.nKicks = rfcw->length?rfcw->nKicks:1;
   rfcw->rfca.dx = rfcw->dx;
   rfcw->rfca.dy = rfcw->dy;
+  rfcw->rfca.tReference = rfcw->tReference;
   rfcw->rfca.linearize = rfcw->linearize;
   if (!rfcw->initialized) {
     rfcw->rfca.phase_reference = rfcw->phase_reference;

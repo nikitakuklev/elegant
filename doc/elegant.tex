@@ -56,12 +56,16 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Added \verb|MIN_NORMAL_ORDER|, \verb|MAX_NORMAL_ORDER|, \verb|MIN_SKEW_ORDER|, and \verb|MAX_SKEW_ORDER| 
   to the \verb|KQUAD|, \verb|KSEXT|, and \verb|CCBEND| elements.
   This allows easily restricting which systematic and random multipole orders are included without changing the data files.
+\item Added the \verb|T_REFERENCE| parameter to \verb|RFCW|, which is useful in backtracking in linacs.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item The \verb|closed_orbit| command now includes a parameter in the output file that indicates if the orbit determination
   has failed.
+\item Added the \verb|rfc_reference_output| parameter to the \verb|run_setup| command, which allows recording the
+  internally-determined reference times for \verb|RFCA| and \verb|RFCW| elements. This can be useful in improving
+  backtracking in linacs.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}

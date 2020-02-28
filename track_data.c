@@ -2431,6 +2431,7 @@ PARAMETER rfcw_param[N_RFCW_PARAMS] = {
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&rfcw_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"T_REFERENCE", "S", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.tReference), NULL, -1.0, 0, "arrival time of reference particle"},
     {"LINEARIZE", "", IS_LONG, 0, (long)((char *)&rfcw_example.linearize), NULL, 0.0, 0, "Linearize phase dependence?"},
     {"LSC", "", IS_LONG, 0, (long)((char *)&rfcw_example.doLSC), NULL, 0.0, 0, "Include longitudinal space-charge impedance?"},
     {"LSC_BINS", "", IS_LONG, 0, (long)((char *)&rfcw_example.LSCBins), NULL, 0.0, 1024, "Number of bins for LSC calculations"},
