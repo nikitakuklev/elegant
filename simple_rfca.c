@@ -462,11 +462,35 @@ long trackRfCavityWithWakes
                 if (rfca->tReference!=-1)
                   t0 = rfca->tReference;
                 else {
-                  if (!rfca->backtrack)
+                  if (!rfca->backtrack || matrixMethod)
                     t0 = findFiducialTime(part, np, zEnd-rfca->length, length/2, *P_central, mode);
-                  else
-                    t0 = findFiducialTime(part, np, zEnd-rfca->length, -((zEnd-rfca->length)+length/2), *P_central, mode);
+                  else {
+                    double beta, P;
+                    long ik0;
+                    /* t0 = findFiducialTime(part, np, zEnd, -(fabs(rfca->length)-fabs(length/2)), *P_central, mode); */
+                    t0 = findFiducialTime(part, np, 0.0, 0.0, *P_central, mode);
+#if !USE_MPI && defined(DEBUG)
+                    printf("t0 = %21.15e\n", t0);
+#endif
+                    P = *P_central;
+                    beta = beta_from_delta(P, 0.0);
+                    for (ik0=0; ik0<nKicks; ik0++) {
+                      t0 -= fabs(length/2)/(beta*c_mks);
+                      P += volt*sin(rfca->phase*PI/180);
+                      beta = beta_from_delta(P, 0.0);
+                      if (ik0!=(nKicks-1))
+                        t0 -= fabs(length/2)/(beta*c_mks);
+                    }
+#if !USE_MPI && defined(DEBUG)
+                    printf("t0 = %21.15e, P = %21.15e\n", t0, P);
+#endif
+                  }
                 }
+#if !USE_MPI && defined(DEBUG)
+                printf("t0 = %21.15e, part[0][4] = %21.15e, part[0][5] = %21.15e, P0=%21.15e, dP/P=%le\n",
+                       t0, part[0][4], part[0][5], *P_central, volt*sin(rfca->phase*PI/180));
+                fflush(stdout);
+#endif
                 rfca->phase_fiducial = -omega*t0;
                 rfca->fiducial_seen = 1;
             }
@@ -699,6 +723,9 @@ long trackRfCavityWithWakes
             }
           }
         }
+#if defined(DEBUG)
+        printf("part[0][4] = %21.15le, part[0][5] = %21.15e, P0=%21.15e\n", part[0][4], part[0][5], *P_central);
+#endif
       } else { /* backtracking */
         double *dgammaSave=NULL, *tSave=NULL;
         for (ik=0; ik<nKicks; ik++) {
@@ -812,6 +839,9 @@ long trackRfCavityWithWakes
             free(tSave);
           }
         }
+#if defined(DEBUG)
+        printf("part[0][4] = %21.15le, part[0][5] = %21.15e, P0=%21.15e\n", part[0][4], part[0][5], *P_central);
+#endif
       }
       free(inverseF);
     } else { /* matrix method */
@@ -967,8 +997,12 @@ long trackRfCavityWithWakes
       }    
       np = removeInvalidParticles(part, np, accepted, zEnd, *P_central);
     }
-    if (rfca->change_p0)
+    if (rfca->change_p0) {
       do_match_energy(part, np, P_central, 0);
+#if defined(DEBUG)
+      printf("part[0][4] = %21.15le, part[0][5] = %21.15e, P0=%21.15e\n", part[0][4], part[0][5], *P_central);
+#endif
+    }
 
     return(np);
 }    
