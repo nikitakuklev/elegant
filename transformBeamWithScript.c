@@ -838,7 +838,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
     }
     for (iName=0; iName<pNames; iName++) {
       double paramValue;
-      double rpnNameBuffer[16384];
+      char rpnNameBuffer[16384];
       if (SDDS_NUMERIC_TYPE(SDDS_GetParameterType(&SDDSin, iName))) {
         if (!(SDDS_GetParameterAsDouble(&SDDSin, pName[iName], &paramValue))) {
           SDDS_SetError("Unable to get values of parameters from script output file");
