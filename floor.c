@@ -958,17 +958,18 @@ void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *co
     if (eptr->pred) {
       Z0 = eptr->pred->floorCoord[2];
       X0 = eptr->pred->floorCoord[0];
-      theta0 = eptr->pred->floorAngle[0];
+      theta0 = -eptr->pred->floorAngle[0];
     } else {
       Z0 = X0 = theta0 = 0;
     }
-    *Z = Z0 + dX*sin(eptr->floorAngle[0]) + dZ*cos(eptr->floorAngle[0]);
-    *X = X0 + dX*cos(eptr->floorAngle[0]) - dZ*sin(eptr->floorAngle[0]);
+    *Z = Z0 + dX*sin(theta0) + dZ*cos(theta0);
+    *X = X0 + dX*cos(theta0) - dZ*sin(theta0);
     *Y = coord[2];
   } else {
     ds = coord[4] - eptr->end_pos;
-    *Z = eptr->floorCoord[2] + coord[0]*sin(eptr->floorAngle[0]) + ds*cos(eptr->floorAngle[0]);
-    *X = eptr->floorCoord[0] + coord[0]*cos(eptr->floorAngle[0]) - ds*sin(eptr->floorAngle[0]);
+    theta0 = -eptr->pred->floorAngle[0];
+    *Z = eptr->floorCoord[2] + coord[0]*sin(theta0) + ds*cos(theta0);
+    *X = eptr->floorCoord[0] + coord[0]*cos(theta0) - ds*sin(theta0);
     *Y = coord[2];
   }
 }
