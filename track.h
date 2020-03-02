@@ -480,7 +480,7 @@ typedef struct {
     long default_order, concat_order, print_statistics;
     long combine_bunch_statistics, wrap_around, tracking_updates, final_pass; 
     long always_change_p0, stopTrackingParticleLimit, load_balancing_on, random_sequence_No, checkBeamStructure;
-    long showElementTiming, monitorMemoryUsage, backtrack;
+    long showElementTiming, monitorMemoryUsage, backtrack, lossesIncludeGlobalCoordinates;
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;
     APERTURE_DATA apertureData;
@@ -665,6 +665,7 @@ typedef struct {
 
 typedef struct {
   double **particle;      /* coordinates of lost particles, with pass on which a particle is lost */	
+  ELEMENT_LIST **eptr;    /* pointer to element in which loss occurs */
   long nLost;             /* number of particles in the array */
   long nLostMax;          /* size of the buffer */
 } LOST_BEAM;
@@ -4374,6 +4375,7 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
                              double *XYZMin, double *XYZMax);
+void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *coord, ELEMENT_LIST *eptr);
 
 long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST *eptr, double Po, double **accepted, double z_start, double *sigmaDelta2);
 
@@ -4409,7 +4411,7 @@ extern void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long
 extern void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents,
                           char *command_file, char *lattice_file, char *caller);
 extern void SDDS_BeamLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
-                          char *command_file, char *lattice_file, char *caller);
+                               char *command_file, char *lattice_file, long includeGlobalCoordinates, char *caller);
 extern void SDDS_SigmaMatrixSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
                            char *command_file, char *lattice_file, char *caller);
 extern void SDDS_WatchPointSetup(WATCH *waatch, long mode, long lines_per_row,
@@ -4426,7 +4428,7 @@ extern void dump_watch_parameters(WATCH *watch, long step, long pass, long n_pas
 extern void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles,
                            long original_particles,  double Po);
 extern void do_watch_FFT(double **data, long n_data, long slot, long window_code);
-extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, 
+extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, ELEMENT_LIST **eptr,
 				long particles, long step);
 extern void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long bunch,
                           double p_central);

@@ -918,3 +918,57 @@ void store_vertex_floor_coordinates(char *name, long occurence, double *ve, doub
   }
 }
 
+void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *coord, ELEMENT_LIST *eptr)
+{
+  double ds;
+  /* convert (s, x, y, z) coordinates to (Z, X, Y) */
+  /* For now, we assume that the beamline is flat ! */
+  if (IS_BEND(eptr->type)) {
+    double dtheta, theta0, angle, length, rho, dZ, dX, Z0, X0;
+    length = 0;
+    angle = 0;
+    switch (eptr->type) {
+    case T_SBEN:
+      length = ((BEND*)eptr->p_elem)->length;
+      angle = ((BEND*)eptr->p_elem)->angle;
+      break;
+    case T_CSBEND:
+      length = ((CSBEND*)eptr->p_elem)->length;
+      angle = ((CSBEND*)eptr->p_elem)->angle;
+      break;
+    case T_CCBEND:
+      length = ((CCBEND*)eptr->p_elem)->length;
+      angle = ((CCBEND*)eptr->p_elem)->angle;
+      break;
+    default:
+      bombElegantVA("Error: at present, can't provide global loss coordinates for %s element\n",
+             entity_name[eptr->type]);
+      break;
+    }
+    if (length<=0) 
+      bombElegantVA("Error: length<=0 for %s element %s---can't compute global loss coordinates\n",
+                    entity_name[eptr->type], eptr->name);
+    rho = length/angle;
+    ds = length-(eptr->end_pos-coord[4]);
+    /* compute floor coordinate offsets in frame of the magnet (initial trajectory parallel to line X=Y=0 */
+    dtheta = ds/rho;
+    dX = (rho+coord[0])*cos(dtheta) - rho;
+    dZ = (rho+coord[0])*sin(dtheta);
+
+    if (eptr->pred) {
+      Z0 = eptr->pred->floorCoord[2];
+      X0 = eptr->pred->floorCoord[0];
+      theta0 = eptr->pred->floorAngle[0];
+    } else {
+      Z0 = X0 = theta0 = 0;
+    }
+    *Z = Z0 + dX*sin(eptr->floorAngle[0]) + dZ*cos(eptr->floorAngle[0]);
+    *X = X0 + dX*cos(eptr->floorAngle[0]) - dZ*sin(eptr->floorAngle[0]);
+    *Y = coord[2];
+  } else {
+    ds = coord[4] - eptr->end_pos;
+    *Z = eptr->floorCoord[2] + coord[0]*sin(eptr->floorAngle[0]) + ds*cos(eptr->floorAngle[0]);
+    *X = eptr->floorCoord[0] + coord[0]*cos(eptr->floorAngle[0]) - ds*sin(eptr->floorAngle[0]);
+    *Y = coord[2];
+  }
+}

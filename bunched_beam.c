@@ -813,7 +813,8 @@ void do_track_beam_output(RUN *run, VARY *control,
       fflush(stdout);
     }
 
-    dump_lost_particles(&output->SDDS_losses, beam->lostBeam.particle, NULL,
+    dump_lost_particles(&output->SDDS_losses, beam->lostBeam.particle, NULL, 
+                        run->lossesIncludeGlobalCoordinates ? beam->lostBeam.eptr : NULL, 
 			beam->lostBeam.nLost, control->i_step);
     if (beam->lostBeam.particle && beam->lostBeam.nLostMax)
       free_czarray_2d((void**)beam->lostBeam.particle, beam->lostBeam.nLostMax, COORDINATES_PER_PARTICLE);
@@ -985,7 +986,7 @@ void setup_output(
         /* prepare dump of lost particles */
         SDDS_BeamLossSetup(&output->SDDS_losses, run->losses, SDDS_BINARY, 1, 
 			   "lost particle coordinates", run->runfile,
-			   run->lattice, "setup_output");
+			   run->lattice, run->lossesIncludeGlobalCoordinates, "setup_output");
         output->losses_initialized = 1;
         }
 

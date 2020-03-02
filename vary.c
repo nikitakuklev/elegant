@@ -249,6 +249,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
 {
   long i, ret_val, do_perturbations, step_incremented, parameters_loaded;
   ELEMENT_LINKS *links;
+  double XYZ[3], Angle[3], XYZMin[3], XYZMax[3];
 
   log_entry("vary_beamline");
   links = beamline->links;
@@ -367,6 +368,8 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
         ret_val = vary_beamline(_control, errcon, run, beamline);
         log_exit("vary_beamline.2");
         log_exit("vary_beamline");
+        printf("Updating floor coordinates\n");
+        final_floor_coordinates(beamline, XYZ, Angle, XYZMin, XYZMax);
         return(ret_val);
       }
       printf("counter advanced: ");
@@ -413,6 +416,8 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
     if (_control->n_steps && (_control->i_step-(step_incremented?1:0))>=_control->n_steps) {
       log_exit("vary_beamline.3");
       log_exit("vary_beamline");
+      printf("Updating floor coordinates\n");
+      final_floor_coordinates(beamline, XYZ, Angle, XYZMin, XYZMax);
       return(0);
     }
     assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
@@ -461,6 +466,8 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
       _control->i_step++;
       step_incremented = 1;
     }
+    printf("Updating floor coordinates\n");
+    final_floor_coordinates(beamline, XYZ, Angle, XYZMin, XYZMax);
     printf("tracking step %ld\n", _control->i_step);
     fflush(stdout);
     log_exit("vary_beamline.4");
@@ -488,6 +495,9 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
       beamline->matrix = NULL;
     }
   }
+
+  printf("Updating floor coordinates\n");
+  final_floor_coordinates(beamline, XYZ, Angle, XYZMin, XYZMax);
 
   printf("tracking step %ld\n", ++_control->i_step);
   fflush(stdout);

@@ -971,14 +971,15 @@ long multipole_tracking2(
     if (!koct->totalMultipolesComputed) {
       computeTotalErrorMultipoleFields(&(koct->totalMultipoleData),
                                        &(koct->systematicMultipoleData),
-				       1.0,
-                                       NULL,
+                                       1.0,
+				       NULL,
                                        NULL,
                                        &(koct->randomMultipoleData),
 				       1.0,
                                        NULL,
 				       1.0,
-                                       KnL[0], 3, 1, -1, -1);
+                                       KnL[0], 3, 1, 
+                                       NULL, NULL);
       koct->totalMultipolesComputed = 1;
     }
     multData = &(koct->totalMultipoleData);
@@ -1804,9 +1805,9 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
       totalMult->KnL[i] += rFactor*randomMult->anMod[i];
       totalMult->JnL[i] += rFactor*randomMult->bnMod[i];
     }
-    if ((minOrder[0]>=0 && totalMult->order[i]<minOrder[0]) || (maxOrder[0]>=0 && totalMult->order[i]>maxOrder[0]))
+    if ((minOrder && minOrder[0]>=0 && totalMult->order[i]<minOrder[0]) || (maxOrder && maxOrder[0]>=0 && totalMult->order[i]>maxOrder[0]))
       totalMult->KnL[i] = 0;
-    if ((minOrder[1]>=0 && totalMult->order[i]<minOrder[1]) || (maxOrder[1]>=0 && totalMult->order[i]>maxOrder[1]))
+    if ((minOrder && minOrder[1]>=0 && totalMult->order[i]<minOrder[1]) || (maxOrder && maxOrder[1]>=0 && totalMult->order[i]>maxOrder[1]))
       totalMult->JnL[i] = 0;
   }
 
@@ -1823,9 +1824,11 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
       for (i=0; i<edgeMult->orders; i++) {
         edgeMult->KnL[i] = sFactor*edgeMult->anMod[i];
         edgeMult->JnL[i] = sFactor*edgeMult->bnMod[i];
-        if ((minOrder[0]>=0 && edgeMult->order[i]<minOrder[0]) || (maxOrder[0]>=0 && edgeMult->order[i]>maxOrder[0]))
+        if ((minOrder && minOrder[0]>=0 && totalMult->order[i]<minOrder[0]) 
+            || (maxOrder && maxOrder[0]>=0 && totalMult->order[i]>maxOrder[0]))
           edgeMult->KnL[i] = 0;
-        if ((minOrder[1]>=0 && edgeMult->order[i]<minOrder[1]) || (maxOrder[1]>=0 && edgeMult->order[i]>maxOrder[1]))
+        if ((minOrder && minOrder[1]>=0 && totalMult->order[i]<minOrder[1]) 
+            || (maxOrder && maxOrder[1]>=0 && totalMult->order[i]>maxOrder[1]))
           edgeMult->JnL[i] = 0;
       }
     }
@@ -1840,10 +1843,12 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
       steeringMult->JnL[i] = 
         -1*steeringMult->bn[i]*dfactorial(steeringMult->order[i])/ipow(steeringMult->referenceRadius, steeringMult->order[i])*
 	steeringMultFactor;
-      if ((minOrder[0]>=0 && steeringMult->order[i]<minOrder[0]) || (maxOrder[0]>=0 && steeringMult->order[i]>maxOrder[0]))
-        steeringMult->KnL[i] = 0;
-      if ((minOrder[1]>=0 && steeringMult->order[i]<minOrder[1]) || (maxOrder[1]>=0 && steeringMult->order[i]>maxOrder[1]))
-        steeringMult->JnL[i] = 0;
+        if ((minOrder && minOrder[0]>=0 && totalMult->order[i]<minOrder[0]) 
+            || (maxOrder && maxOrder[0]>=0 && totalMult->order[i]>maxOrder[0]))
+          steeringMult->KnL[i] = 0;
+        if ((minOrder && minOrder[1]>=0 && totalMult->order[i]<minOrder[1]) 
+            || (maxOrder && maxOrder[1]>=0 && totalMult->order[i]>maxOrder[1]))
+          steeringMult->JnL[i] = 0;
     }
   }
 

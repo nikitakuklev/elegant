@@ -209,8 +209,10 @@ void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lon
     }
 
 
-#define BEAM_LOSS_COLUMNS 8
-static SDDS_DEFINITION beam_loss_column[BEAM_LOSS_COLUMNS] = {
+#define BEAM_LOSS_COLUMNS_BASIC 8
+#define BEAM_LOSS_COLUMNS_EXTRA 2
+
+static SDDS_DEFINITION beam_loss_column[BEAM_LOSS_COLUMNS_BASIC+BEAM_LOSS_COLUMNS_EXTRA] = {
     {"x", "&column name=x, units=m, type=double &end"},
     {"xp", "&column name=xp, symbol=\"x'\", type=double &end"},
     {"y", "&column name=y, units=m, type=double &end"},
@@ -219,10 +221,12 @@ static SDDS_DEFINITION beam_loss_column[BEAM_LOSS_COLUMNS] = {
     {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
     {"particleID", "&column name=particleID, type=long &end"},
     {"Pass", "&column name=Pass, type=long &end"},
+    {"Z", "&column name=Z, units=m, type=double &end"},
+    {"X", "&column name=X, units=m, type=double &end"},
     } ;
 
 void SDDS_BeamLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
-                          char *command_file, char *lattice_file, char *caller)
+                        char *command_file, char *lattice_file, long includeGlobal, char *caller)
 {
     log_entry("SDDS_BeamLossSetup");
 #if SDDS_MPI_IO  
@@ -232,7 +236,8 @@ void SDDS_BeamLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long 
 #endif
 
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
-                            standard_parameter, STANDARD_PARAMETERS, beam_loss_column, BEAM_LOSS_COLUMNS,
+                            standard_parameter, STANDARD_PARAMETERS, beam_loss_column, 
+                            BEAM_LOSS_COLUMNS_BASIC+(includeGlobal?BEAM_LOSS_COLUMNS_EXTRA:0),
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     log_exit("SDDS_BeamLossSetup");
     }
@@ -1646,7 +1651,7 @@ static int comp_IDs1(const void **coord1, const void **coord2)
   }
 #endif
 
-void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, 
+void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, ELEMENT_LIST **eptr, 
 			 long particles, long step)
 {
   long i, badPID;
@@ -1707,10 +1712,19 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
                                0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
                                4, particle[i][4], 5, particle[i][5],
                                6, (long)particle[i][6], 7, (long) particle[i][7], -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        if (eptr && eptr[i]) {
+          double Z, X, Y;
+          convertLocalCoordinatesToGlobal(&Z, &X, &Y, particle[i], eptr[i]);
+          if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
+                                 8, Z, 9, X, -1)) {
             SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
+          }
         }
+    }
     if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Step", step, NULL)) {
         SDDS_SetError("Problem setting SDDS parameters (dump_lost_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

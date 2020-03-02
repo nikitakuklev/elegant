@@ -761,6 +761,7 @@ char **argv;
       run_conditions.showElementTiming = show_element_timing;
       run_conditions.monitorMemoryUsage = monitor_memory_usage;
       run_conditions.backtrack = back_tracking; 
+      run_conditions.lossesIncludeGlobalCoordinates = losses_include_global_coordinates;
       if ((run_conditions.final_pass = final_pass))
         run_conditions.wrap_around = 1;
       run_conditions.tracking_updates = tracking_updates;
@@ -1268,7 +1269,8 @@ char **argv;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
         fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
-        ionEffectsSeen = 0;
+        ionEffectsSeen = back_tracking = losses_include_global_coordinates = 0;
+      element_divisions = 0;;
       break;
     case MATRIX_OUTPUT:
       if (!run_setuped)

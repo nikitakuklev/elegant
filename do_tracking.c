@@ -4261,10 +4261,13 @@ void recordLostParticles(
     if (n<nLeft)
       /* allocate somewhat more than needed to reduce repeated allocation and copying */
       n = n + (nLeft-n)/2;
-    if (lostBeam->particle==NULL)
+    if (lostBeam->particle==NULL) {
       lostBeam->particle = (double**) czarray_2d(sizeof(double), n, COORDINATES_PER_PARTICLE+1);
-    else 
+      lostBeam->eptr = (ELEMENT_LIST**) tmalloc(sizeof(ELEMENT_LIST)*n);
+    } else  {
       lostBeam->particle = (double**) resize_czarray_2d((void**)(lostBeam->particle), sizeof(double), n, COORDINATES_PER_PARTICLE+1);
+      lostBeam->eptr = (ELEMENT_LIST**) SDDS_Realloc(lostBeam->eptr, sizeof(ELEMENT_LIST)*n);
+    }
     lostBeam->nLostMax = n;
   }
   lossBuffer = lostBeam->particle;
@@ -4272,8 +4275,10 @@ void recordLostParticles(
 #ifdef HAVE_GPU
   if (getGpuBase()->particlesOnGpu) {
     syncWithGpuLossBuffer(nToTrack, nLeft);
-    for (ip=nLeft; ip<(nLeft+nNewLost); ip++) 
+    for (ip=nLeft; ip<(nLeft+nNewLost); ip++)  {
       lossBuffer[ip][7] = (double) pass;
+      lostBeam->eptr[ip] = trackingContext.element;
+    }
     lostBeam->nLost += nNewLost;
     return; 
   }
@@ -4287,6 +4292,8 @@ void recordLostParticles(
     }
     /* Record the loss pass */
     lossBuffer[ip+n][COORDINATES_PER_PARTICLE] = (double) pass;
+    /* Record the loss element */
+    lostBeam->eptr[ip+n] = trackingContext.element;
   }  
 
   lostBeam->nLost += nNewLost;

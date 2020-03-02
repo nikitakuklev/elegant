@@ -35,6 +35,7 @@
     STRING final = NULL;
     STRING acceptance = NULL;
     STRING losses = NULL;
+    long losses_include_global_coordinates = 0;
     STRING magnets = NULL;
     STRING semaphore_file = NULL;
     STRING parameters = NULL;
