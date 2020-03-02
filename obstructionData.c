@@ -75,25 +75,19 @@ long insideObstruction(double *part, long segment, long nSegments)
   TRACKING_CONTEXT context;
   ELEMENT_LIST *eptr;
   long ic;
-  double Z, X;
+  double Z, X, Y;
 
   if (!obstructionDataSets.initialized) return 0;
 
   getTrackingContext(&context);
   if (!(eptr=context.element)) return 0;
 
-  if (IS_BEND(eptr->type)) {
-    
-  } else {
-    Z = eptr->floorCoord[2] + sin(eptr->floorAngle[0])*part[0];
-    X = eptr->floorCoord[0] + cos(eptr->floorAngle[0])*part[0];
-    for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
-      if (pointIsInsideContour(Z, X, 
-                               obstructionDataSets.data[ic].Z, obstructionDataSets.data[ic].X, 
-                               obstructionDataSets.data[ic].points)) {
-        return 1;
-      }
-    }
+  convertLocalCoordinatesToGlobal(&Z, &X, &Y, part, eptr);
+  if (pointIsInsideContour(Z, X, 
+                           obstructionDataSets.data[ic].Z, 
+                           obstructionDataSets.data[ic].X, 
+                           obstructionDataSets.data[ic].points)) {
+    return 1;
   }
   return 0;
 }
