@@ -920,11 +920,11 @@ void store_vertex_floor_coordinates(char *name, long occurence, double *ve, doub
 
 void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *coord, ELEMENT_LIST *eptr)
 {
-  double ds;
+  double ds, theta1;
   /* convert (s, x, y, z) coordinates to (Z, X, Y) */
   /* For now, we assume that the beamline is flat ! */
   if (IS_BEND(eptr->type)) {
-    double dtheta, theta0, angle, length, rho, dZ, dX, Z0, X0;
+    double dtheta, angle, length, rho, dZ, dX, Z1, X1;
     length = 0;
     angle = 0;
     switch (eptr->type) {
@@ -956,23 +956,25 @@ void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *co
     dZ = (rho+coord[0])*sin(dtheta);
 
     if (eptr->pred) {
-      Z0 = eptr->pred->floorCoord[2];
-      X0 = eptr->pred->floorCoord[0];
-      theta0 = -eptr->pred->floorAngle[0];
+      Z1 = eptr->pred->floorCoord[2];
+      X1 = eptr->pred->floorCoord[0];
+      theta1 = -eptr->pred->floorAngle[0];
     } else {
-      Z0 = X0 = theta0 = 0;
+      Z1 = Z0;
+      X1 = X0;
+      theta1 = theta0;
     }
-    *Z = Z0 + dX*sin(theta0) + dZ*cos(theta0);
-    *X = X0 + dX*cos(theta0) - dZ*sin(theta0);
+    *Z = Z1 + dX*sin(theta1) + dZ*cos(theta1);
+    *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
     *Y = coord[2];
   } else {
     ds = coord[4] - eptr->end_pos;
     if (eptr->pred)
-      theta0 = -eptr->pred->floorAngle[0];
+      theta1 = -eptr->pred->floorAngle[0];
     else 
-      theta0 = 0;
-    *Z = eptr->floorCoord[2] + coord[0]*sin(theta0) + ds*cos(theta0);
-    *X = eptr->floorCoord[0] + coord[0]*cos(theta0) - ds*sin(theta0);
+      theta1 = 0;
+    *Z = eptr->floorCoord[2] + coord[0]*sin(theta1) + ds*cos(theta1);
+    *X = eptr->floorCoord[0] + coord[0]*cos(theta1) - ds*sin(theta1);
     *Y = coord[2];
   }
 }

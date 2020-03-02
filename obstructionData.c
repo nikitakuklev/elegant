@@ -74,6 +74,9 @@ long insideObstruction(double *part, long segment, long nSegments)
 {
   TRACKING_CONTEXT context;
   ELEMENT_LIST *eptr;
+  /*
+  static ELEMENT_LIST *lastEptr = NULL;
+  */
   long ic;
   double Z, X, Y;
 
@@ -81,6 +84,14 @@ long insideObstruction(double *part, long segment, long nSegments)
 
   getTrackingContext(&context);
   if (!(eptr=context.element)) return 0;
+
+  /*
+  if (eptr!=lastEptr) {
+    printf("%s#%04ld: Z=%le, X=%le, theta=%le\n", 
+           eptr->name, eptr->occurence, eptr->floorCoord[2], eptr->floorCoord[0], eptr->floorAngle[0]);
+    lastEptr = eptr;
+  }
+  */
 
   convertLocalCoordinatesToGlobal(&Z, &X, &Y, part, eptr);
   for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
