@@ -83,11 +83,13 @@ long insideObstruction(double *part, long segment, long nSegments)
   if (!(eptr=context.element)) return 0;
 
   convertLocalCoordinatesToGlobal(&Z, &X, &Y, part, eptr);
-  if (pointIsInsideContour(Z, X, 
-                           obstructionDataSets.data[ic].Z, 
-                           obstructionDataSets.data[ic].X, 
-                           obstructionDataSets.data[ic].points)) {
-    return 1;
+  for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
+    if (pointIsInsideContour(Z, X, 
+                             obstructionDataSets.data[ic].Z, 
+                             obstructionDataSets.data[ic].X, 
+                             obstructionDataSets.data[ic].points)) {
+      return 1;
+    }
   }
   return 0;
 }

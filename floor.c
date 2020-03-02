@@ -967,7 +967,10 @@ void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *co
     *Y = coord[2];
   } else {
     ds = coord[4] - eptr->end_pos;
-    theta0 = -eptr->pred->floorAngle[0];
+    if (eptr->pred)
+      theta0 = -eptr->pred->floorAngle[0];
+    else 
+      theta0 = 0;
     *Z = eptr->floorCoord[2] + coord[0]*sin(theta0) + ds*cos(theta0);
     *X = eptr->floorCoord[0] + coord[0]*cos(theta0) - ds*sin(theta0);
     *Y = coord[2];
