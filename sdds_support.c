@@ -1717,7 +1717,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
         }
         if (eptr && eptr[i]) {
           double Z, X, Y;
-          convertLocalCoordinatesToGlobal(&Z, &X, &Y, particle[i], eptr[i]);
+          convertLocalCoordinatesToGlobal(&Z, &X, &Y, particle[i], eptr[i], 0, 0);
           if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                                  8, Z, 9, X, -1)) {
             SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");

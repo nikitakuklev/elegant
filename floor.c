@@ -918,13 +918,15 @@ void store_vertex_floor_coordinates(char *name, long occurence, double *ve, doub
   }
 }
 
-void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *coord, ELEMENT_LIST *eptr)
+void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *coord, ELEMENT_LIST *eptr,
+                                     long segment, long nSegments)
 {
-  double ds, theta1;
+  double theta1;
+  double dZ, dX, Z1, X1, length;
   /* convert (s, x, y, z) coordinates to (Z, X, Y) */
   /* For now, we assume that the beamline is flat ! */
   if (IS_BEND(eptr->type)) {
-    double dtheta, angle, length, rho, dZ, dX, Z1, X1;
+    double dtheta, angle, rho;
     length = 0;
     angle = 0;
     switch (eptr->type) {
@@ -949,9 +951,15 @@ void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *co
       bombElegantVA("Error: length<=0 for %s element %s---can't compute global loss coordinates\n",
                     entity_name[eptr->type], eptr->name);
     rho = length/angle;
-    ds = length-(eptr->end_pos-coord[4]);
     /* compute floor coordinate offsets in frame of the magnet (initial trajectory parallel to line X=Y=0 */
-    dtheta = ds/rho;
+    if (nSegments) {
+      dtheta = (angle*segment)/nSegments;
+    } else {
+      /* estimate from path length at loss */
+      double ds;
+      ds = length-(eptr->end_pos-coord[4]);
+      dtheta = angle*ds/length;
+    }
     dX = (rho+coord[0])*cos(dtheta) - rho;
     dZ = (rho+coord[0])*sin(dtheta);
 
@@ -968,13 +976,27 @@ void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *co
     *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
     *Y = coord[2];
   } else {
-    ds = coord[4] - eptr->end_pos;
-    if (eptr->pred)
+    if (entity_description[eptr->type].flags&HAS_LENGTH)
+      length =  *((double*)(eptr->p_elem));
+    else
+      length = 0;
+    if (eptr->pred) {
+      Z1 = eptr->pred->floorCoord[2];
+      X1 = eptr->pred->floorCoord[0];
       theta1 = -eptr->pred->floorAngle[0];
-    else 
-      theta1 = 0;
-    *Z = eptr->floorCoord[2] + coord[0]*sin(theta1) + ds*cos(theta1);
-    *X = eptr->floorCoord[0] + coord[0]*cos(theta1) - ds*sin(theta1);
+    } else {
+      Z1 = Z0;
+      X1 = X0;
+      theta1 = theta0;
+    }
+    if (nSegments)
+      dZ = (length*segment)/nSegments;
+    else
+      /* estimate from path length at loss */
+      dZ = length-(eptr->end_pos-coord[4]);
+    dX = coord[0];
+    *Z = Z1 + dX*sin(theta1) + dZ*cos(theta1);
+    *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
     *Y = coord[2];
   }
 }

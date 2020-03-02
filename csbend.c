@@ -1253,6 +1253,10 @@ long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
   dist = 0;
   
   for (i=0; i<n; i++) {
+    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, i, n)) {
+      *s_lost = dist;
+      return 0;
+    }
     if (i==0) {
       /* do half-length drift */
       if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
@@ -1379,13 +1383,12 @@ long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
       *s_lost = dist;
       return 0;
     }
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      *s_lost = dist;
-      return 0;
-    }
-
   }
-
+  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, i, n)) {
+    *s_lost = dist;
+    return 0;
+  }
+  
   Qf[4] += dist;
   return 1;
 }
@@ -1438,6 +1441,10 @@ long integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
   dist = 0;
   
   for (i=0; i<n; i++) {
+    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, i, n)) {
+      *s_lost = dist;
+      return 0;
+    }
     if (i==0) {
       /* do half-length drift */
       QX += dsh*(1+DPoP)/(2*rho0);
@@ -1513,11 +1520,10 @@ long integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       *s_lost = dist;
       return 0;
     }
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      *s_lost = dist;
-      return 0;
-    }
-
+  }
+  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, i, n)) {
+    *s_lost = dist;
+    return 0;
   }
 
   Qf[4] += dist;
@@ -1565,8 +1571,12 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
   dist = 0;
 
   s /= n;
+
   for (i=0; i<n; i++) {
-    
+    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, i, n)) {
+      *s_lost = dist;
+      return 0;
+    }
     /* do first drift */
     dsh = s/2/(2-BETA);
     if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
@@ -1731,10 +1741,6 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     dist += factor*(1+DPoP);
     f = cos_phi/cosi;
     X  = rho0*(f-1) + f*X;
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      *s_lost = dist;
-      return 0;
-    }
 
     if (refTrajectoryMode==RECORD_TRAJECTORY) {
       refTrajectoryData[i][0] = X;
@@ -1751,6 +1757,10 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
       QY -= refTrajectoryData[i][3];
       dist -= refTrajectoryData[i][4];
     }
+  }
+  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, i, n)) {
+    *s_lost = dist;
+    return 0;
   }
 
   Qf[4] += dist;
@@ -1802,7 +1812,11 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
   s /= n;
   for (i=0; i<n; i++) {
-    
+    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, i, n)) {
+      *s_lost = dist;
+      return 0;
+    }
+
     /* do first drift */
     dsh = s/2/(2-BETA);
     QX += dsh*(1+DPoP)/(2*rho0);
@@ -1876,7 +1890,7 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       *s_lost = dist;
       return 0;
     }
-    
+
     /* do third kick */
     ds = s/(2-BETA);
     /* -- calculate the scaled fields */
@@ -1901,11 +1915,7 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
     X += QX*dsh/(1+DPoP);
     Y += QY*dsh/(1+DPoP);
     QX += dsh*(1+DPoP)/(2*rho0);
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      *s_lost = dist;
-      return 0;
-    }
-
+  
     if (refTrajectoryMode==RECORD_TRAJECTORY) {
       refTrajectoryData[i][0] = X;
       refTrajectoryData[i][1] = QX;
@@ -1921,6 +1931,10 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       QY -= refTrajectoryData[i][3];
       dist -= refTrajectoryData[i][4];
     }
+  }
+  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, i, n)) {
+    *s_lost = dist;
+    return 0;
   }
 
   Qf[4] += dist;

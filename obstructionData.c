@@ -75,10 +75,21 @@ long insideObstruction(double *part, long segment, long nSegments)
   TRACKING_CONTEXT context;
   ELEMENT_LIST *eptr;
   /*
+  static FILE *fpObs = NULL;
   static ELEMENT_LIST *lastEptr = NULL;
   */
   long ic;
   double Z, X, Y;
+
+  /*
+  if (!fpObs) {
+    fpObs = fopen("globalPart.sdds", "w");
+    fprintf(fpObs, "SDDS1\n&column name=Z type=double units=m &end\n");
+    fprintf(fpObs, "&column name=X type=double units=m &end\n");
+    fprintf(fpObs, "&column name=particleID type=long &end\n");
+    fprintf(fpObs, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+  */
 
   if (!obstructionDataSets.initialized) return 0;
 
@@ -93,7 +104,11 @@ long insideObstruction(double *part, long segment, long nSegments)
   }
   */
 
-  convertLocalCoordinatesToGlobal(&Z, &X, &Y, part, eptr);
+  convertLocalCoordinatesToGlobal(&Z, &X, &Y, part, eptr, segment, nSegments);
+  /* 
+  fprintf(fpObs, "%le %le %ld\n", Z, X, (long)part[6]); 
+  */
+
   for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
     if (pointIsInsideContour(Z, X, 
                              obstructionDataSets.data[ic].Z, 
@@ -105,12 +120,25 @@ long insideObstruction(double *part, long segment, long nSegments)
   return 0;
 }
 
-long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double Po)
+long insideObstruction_xy(double x, double y, long particleID, long segment, long nSegments)
+{
+  static double part[7] ={0,0,0,0,0,0,0};
+  part[0] =  x;
+  part[2] = y;
+  part[6] = particleID;
+  return insideObstruction(part, segment, nSegments);
+}
+
+
+long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double Po,
+                                     long segment, long nSegments)
 {
   long ip, itop;
   itop = np - 1;
   for (ip=0; ip<=itop; ip++) {
-    if (insideObstruction(coord[ip], 0, 1)) {
+    if (insideObstruction(coord[ip], segment, nSegments)) {
+      TRACKING_CONTEXT context;
+      getTrackingContext(&context);
       if (ip!=itop)
         swapParticles(coord[ip], coord[itop]);
       coord[itop][4] = z;

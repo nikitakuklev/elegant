@@ -4375,7 +4375,8 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
                              double *XYZMin, double *XYZMax);
-void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *coord, ELEMENT_LIST *eptr);
+void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *coord, ELEMENT_LIST *eptr,
+                                       long segment, long nSegments);
 
 long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST *eptr, double Po, double **accepted, double z_start, double *sigmaDelta2);
 
@@ -4665,8 +4666,10 @@ extern void summarizeWarnings();
 
 extern void resetObstructionData(OBSTRUCTION_DATASETS *obsData);
 extern void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run);
-extern long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double P_central);
+extern long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double P_central,
+                                            long segment, long nSegments);
 extern long insideObstruction(double *part, long segment, long nSegments);
+extern long insideObstruction_xy(double x, double y, long particleID, long segment, long nSegments);
 
 #ifdef __cplusplus
 }
