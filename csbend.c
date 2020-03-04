@@ -3264,7 +3264,10 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 #if USE_MPI 
   long np_total=1, np_tmp=np, binned_total;
 #endif
-  
+
+  if (csrDrift->LSCBins && !csrDrift->useStupakov)
+    bombElegant("LSCBINS is nonzero on CSRDRIFT but USE_STUPAKOV is zero. This is not supported.", NULL);
+
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
 #ifdef GPU_VERIFY     
@@ -3286,7 +3289,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   getTrackingContext(&tContext);
 
 #if (!USE_MPI)
-  if (np<=1 || !csrWake.valid || !csrDrift->csr) {
+  if (np<=1 || !csrWake.valid || !(csrDrift->csr || csrDrift->LSCBins)) {
 #else
   if (notSinglePart){
     if (isMaster) 
@@ -3295,7 +3298,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   } else
     np_total = np;
 
-  if (np_total<=1 || !csrWake.valid || !csrDrift->csr) 	{
+  if (np_total<=1 || !csrWake.valid || !(csrDrift->csr || csrDrift->LSCBins)) {
     if (isSlave||!notSinglePart) {
 #endif
       if (csrDrift->linearOptics) {
@@ -4168,7 +4171,8 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 	iBin = (f=(coord[4]-ctLower)/dct);
 	f -= iBin;
 	if (iBin>=0 && iBin<nBins1) {
-	  coord[5] += ((1-f)*csrWake.dGamma[iBin] + f*csrWake.dGamma[iBin+1])/Po;
+          if (csrDrift->csr)
+            coord[5] += ((1-f)*csrWake.dGamma[iBin] + f*csrWake.dGamma[iBin+1])/Po;
 	  binned ++;
 	} else {
 	  printf("Particle out of bin range---not kicked: ct-ctLower=%21.15e, dct=%21.15e, iBin=%ld\n",
