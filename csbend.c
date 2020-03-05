@@ -3967,6 +3967,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     lscKick.lowFrequencyCutoff1 = csrDrift->LSCLowFrequencyCutoff1;
     lscKick.highFrequencyCutoff0 = csrDrift->LSCHighFrequencyCutoff0;
     lscKick.highFrequencyCutoff1 = csrDrift->LSCHighFrequencyCutoff1;
+    lscKick.backtrack = 0;
   }
   for (iKick=0; iKick<nKicks; iKick++) {
     /* first drift is dz=dz0/2, others are dz0 */
