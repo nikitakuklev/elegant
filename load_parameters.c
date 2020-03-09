@@ -903,6 +903,8 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
         if (parameter[iParam].flags&PARAM_DIVISION_RELATED &&
             eptr->divisions>1)
           value *= eptr->divisions;
+        if (parameter[iParam].flags&HAS_LENGTH && run->backtrack && iParam==0)
+          value *= -1; /* don't want to save internal negative length values */
         break;
       case IS_LONG:
         value = *(long*)(eptr->p_elem+parameter[iParam].offset);

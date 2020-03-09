@@ -62,6 +62,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
+\item Added the \verb|obstruction_data| command, which permits specifying obstructions in global coordinates.
+\item Added the \verb|losses_include_global_coordinates| to the \verb|run_setup| command, which allows requesting
+  that the losses file contains global coordinates of lost particles (as opposed to only Frenet-Serret coordinates).
 \item The \verb|closed_orbit| command now includes a parameter in the output file that indicates if the orbit determination
   has failed.
 \item Added the \verb|rfc_reference_output| parameter to the \verb|run_setup| command, which allows recording the
@@ -3477,6 +3480,33 @@ sddssort -column=s output.mmap
 Also, if it is desirable for the output from \verb|Pelegant| to have exactly the same form as that from 
 \verb|elegant|, then the script \verb|reorganizeMmap| should be used. This script is provided with 
 \verb|elegant| and \verb|Pelegant| distributions.
+
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|obstruction_data|}\end{center}
+%\end{latexonly}
+\subsection{obstruction\_data \label{subsec:obstructiondata}}
+
+\begin{itemize}
+\item type: setup command
+\item function: define obstructions in the global coordinate system $(Z, X)$
+\item sequence: must follow \verb|floor_coodinates| and preceed \verb|track|
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
+\end{itemize}
+
+\begin{verbatim}
+&obstruction_data
+          STRING input = NULL;
+          long periodic = 0;
+          long superperiodicity = 0;
+          long disable = 0;
+&end
+\end{verbatim}
+
+\begin{itemize}
+
+\item \verb|input| --- 
+\end{itemize}
 
 %\begin{latexonly}
 \newpage

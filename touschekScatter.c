@@ -348,6 +348,8 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
   eptr = &(beamline->elem);
   beam0 = &Beam0;
   beam = &Beam;
+  memset(beam, 0, sizeof(*beam));
+  memset(beam0, 0, sizeof(*beam0));
   sTotal =(long)(beamline->revolution_length/sbin_step)+1;
 
   determineOccurenceInFilenames(&occurenceSeen, &noOccurenceSeen,
@@ -436,6 +438,8 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       beam0->p0_original = beam0->p0 = tsptr->betagamma;
       beam0->bunchFrequency = 0.;
       beam0->lostBeam.particle = NULL;
+      beam0->lostBeam.eptr = NULL;
+      beam0->lostBeam.recordEptr = 0;
       beam0->lostBeam.nLost = beam0->lostBeam.nLostMax = 0;
 
       if (verbosity>1) {
@@ -664,6 +668,8 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       beam->p0_original = beam->p0 = tsptr->betagamma;
       beam->bunchFrequency = 0.;
       beam->lostBeam.particle = (double**)czarray_2d(sizeof(double), iTotal, (COORDINATES_PER_PARTICLE+1));
+      beam->lostBeam.eptr = NULL;
+      beam->lostBeam.recordEptr = 0;
       beam->lostBeam.nLostMax = iTotal;
       beam->lostBeam.nLost = 0;
 
@@ -792,6 +798,8 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
                 printf("Processor %ld lost %ld\n", i, nLostCounts[i]);
             }
             beam->lostBeam.particle = (double**)czarray_2d(sizeof(double), nLostTotal, COORDINATES_PER_PARTICLE+1);
+            beam->lostBeam.eptr = NULL;
+            beam->lostBeam.recordEptr = 0;
             beam->lostBeam.nLostMax = nLostTotal;
             if (verbosity>2) {
               for (i=0; i<n_processors; i++) 

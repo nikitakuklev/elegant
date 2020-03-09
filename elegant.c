@@ -2436,11 +2436,15 @@ void free_beamdata(BEAM *beam)
     free_czarray_2d((void**)beam->original, beam->n_original, COORDINATES_PER_PARTICLE);
   if (beam->lostBeam.particle)
     free_czarray_2d((void**)beam->lostBeam.particle, beam->lostBeam.nLostMax, COORDINATES_PER_PARTICLE+1);
+  if (beam->lostBeam.recordEptr && beam->lostBeam.eptr)
+    free(beam->lostBeam.eptr);
 
   beam->particle = beam->accepted = beam->original = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
   beam->p0_original = beam->p0 =0.;
   beam->lostBeam.particle = NULL;
+  beam->lostBeam.eptr = NULL;
+  beam->lostBeam.recordEptr = 0;
   beam->lostBeam.nLost = beam->lostBeam.nLostMax = 0;
 }  
 

@@ -372,6 +372,7 @@ long do_tracking(
     lostBeam = &(beam->lostBeam);
   else {
     lostBeam = &lostBeam0;
+    memset(lostBeam, 0, sizeof(*lostBeam));
     lostBeam->nLostMax = nOriginal;
     /*
     if (lostParticles)
@@ -4256,18 +4257,20 @@ void recordLostParticles(
   fflush(stdout);
 #endif
 
-  if ((n=lostBeam->nLost + nNewLost)>lostBeam->nLostMax || lostBeam->particle==NULL) {
+  if ((n=lostBeam->nLost + nNewLost)>lostBeam->nLostMax || lostBeam->particle==NULL || 
+      (lostBeam->recordEptr && lostBeam->eptr==NULL)) {
     /* resize array */
     if (n<nLeft)
       /* allocate somewhat more than needed to reduce repeated allocation and copying */
       n = n + (nLeft-n)/2;
-    if (lostBeam->particle==NULL) {
+    if (lostBeam->particle==NULL)
       lostBeam->particle = (double**) czarray_2d(sizeof(double), n, COORDINATES_PER_PARTICLE+1);
-      lostBeam->eptr = (ELEMENT_LIST**) tmalloc(sizeof(ELEMENT_LIST)*n);
-    } else  {
+    else
       lostBeam->particle = (double**) resize_czarray_2d((void**)(lostBeam->particle), sizeof(double), n, COORDINATES_PER_PARTICLE+1);
+    if (lostBeam->eptr==NULL)
+      lostBeam->eptr = (ELEMENT_LIST**) tmalloc(sizeof(ELEMENT_LIST)*n);
+    else
       lostBeam->eptr = (ELEMENT_LIST**) SDDS_Realloc(lostBeam->eptr, sizeof(ELEMENT_LIST)*n);
-    }
     lostBeam->nLostMax = n;
   }
   lossBuffer = lostBeam->particle;
@@ -4277,7 +4280,8 @@ void recordLostParticles(
     syncWithGpuLossBuffer(nToTrack, nLeft);
     for (ip=nLeft; ip<(nLeft+nNewLost); ip++)  {
       lossBuffer[ip][7] = (double) pass;
-      lostBeam->eptr[ip] = trackingContext.element;
+      if (lostBeam->recordEptr && lostBeam->eptr)
+        lostBeam->eptr[ip] = trackingContext.element;
     }
     lostBeam->nLost += nNewLost;
     return; 
@@ -4293,7 +4297,8 @@ void recordLostParticles(
     /* Record the loss pass */
     lossBuffer[ip+n][COORDINATES_PER_PARTICLE] = (double) pass;
     /* Record the loss element */
-    lostBeam->eptr[ip+n] = trackingContext.element;
+    if (lostBeam->recordEptr && lostBeam->eptr)
+      lostBeam->eptr[ip+n] = trackingContext.element;
   }  
 
   lostBeam->nLost += nNewLost;

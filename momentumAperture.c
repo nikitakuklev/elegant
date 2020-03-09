@@ -474,7 +474,7 @@ long doMomentumApertureSearch(
   turnByTurnCoord = (double**)czarray_2d(sizeof(double), 5, control->n_passes);
   
   /* need to do this because do_tracking() in principle may realloc this pointer */
-  lostParticles = (double**)czarray_2d(sizeof(double),1, COORDINATES_PER_PARTICLE+1);	 
+  lostParticles = (double**)czarray_2d(sizeof(double), 1, COORDINATES_PER_PARTICLE+1);	 
  
   elem = elem0;
   /* iElem = 0; */

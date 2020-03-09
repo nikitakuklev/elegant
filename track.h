@@ -666,6 +666,7 @@ typedef struct {
 typedef struct {
   double **particle;      /* coordinates of lost particles, with pass on which a particle is lost */	
   ELEMENT_LIST **eptr;    /* pointer to element in which loss occurs */
+  short recordEptr;       /* whether to record element at which loss occurs---needed only in order to get global coordinates */
   long nLost;             /* number of particles in the array */
   long nLostMax;          /* size of the buffer */
 } LOST_BEAM;

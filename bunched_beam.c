@@ -258,7 +258,9 @@ void setup_bunched_beam(
   beamCounter = 0;
   beam->lostBeam.particle = NULL;	
   beam->lostBeam.nLost = beam->lostBeam.nLostMax = 0;
-  
+  beam->lostBeam.eptr = NULL;
+  beam->lostBeam.recordEptr = run->lossesIncludeGlobalCoordinates;
+
   if (one_random_bunch) {
     /* make a seed for reinitializing the beam RN generator */
     beamRepeatSeed = 1e8*random_4(1);
@@ -814,11 +816,14 @@ void do_track_beam_output(RUN *run, VARY *control,
     }
 
     dump_lost_particles(&output->SDDS_losses, beam->lostBeam.particle, NULL, 
-                        run->lossesIncludeGlobalCoordinates ? beam->lostBeam.eptr : NULL, 
+                        beam->lostBeam.recordEptr ? beam->lostBeam.eptr : NULL, 
 			beam->lostBeam.nLost, control->i_step);
     if (beam->lostBeam.particle && beam->lostBeam.nLostMax)
       free_czarray_2d((void**)beam->lostBeam.particle, beam->lostBeam.nLostMax, COORDINATES_PER_PARTICLE);
+    if (beam->lostBeam.recordEptr && beam->lostBeam.eptr)
+      free(beam->lostBeam.eptr);
     beam->lostBeam.particle = NULL;
+    beam->lostBeam.eptr = NULL;
     beam->lostBeam.nLost =  beam->lostBeam.nLostMax = 0;
     if (!(flags&SILENT_RUNNING)) {
       printf("done.\n");
