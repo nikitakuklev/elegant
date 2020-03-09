@@ -49,7 +49,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item The parameters file created by the \verb|run_setup| command had negative values for certain drift lengths when 
+  backtracking was used.   This was reported by Y. Park (UCLA).
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -3497,15 +3498,15 @@ Also, if it is desirable for the output from \verb|Pelegant| to have exactly the
 \begin{verbatim}
 &obstruction_data
           STRING input = NULL;
-          long periodic = 0;
-          long superperiodicity = 0;
-          long disable = 0;
 &end
 \end{verbatim}
 
 \begin{itemize}
 
-\item \verb|input| --- 
+\item \verb|input| --- Name of SDDS file containing obstruction data. The file must contain two columns, \verb|Z| and 
+  \verb|X|, giving the global coordinates of points on the obstruction contour in the $Y=0$ plane, in units of meters.
+  The file may contain more than one page, with each page giving a closed contour for a separate obstruction.
+  At present, obstructions are considered to extend over $Y:[-\infty, \infty]$.
 \end{itemize}
 
 %\begin{latexonly}
