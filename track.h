@@ -4061,7 +4061,8 @@ extern long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData);
 extern int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta);
 extern int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta);
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);
-extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, double Po, double **accepted, double z_start,
+extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, 
+                                double Po, double **accepted, double z_start,
                                 MAXAMP *maxamp, APERTURE_DATA *apData, double *sigmaDelta2);
 extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipole,
                                 double p_error, double Po, double **accepted, double z_start);
@@ -4070,13 +4071,13 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                   long *order, double *KnL, short *skew, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
-				  long radial);
+				  long radial, double refTilt);
 int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
                                   long *order, double *KnL, short *skew, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
-				  long radial);
+				  long radial, double refTilt);
 void apply_canonical_multipole_kicks(double *qx, double *qy, 
                                      double *sum_Fx_return, double *sum_Fy_return,
                                      double *xpow, double *ypow,
@@ -4670,7 +4671,7 @@ extern void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run);
 extern long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double P_central,
                                             long segment, long nSegments);
 extern long insideObstruction(double *part, long segment, long nSegments);
-extern long insideObstruction_xy(double x, double y, long particleID, long segment, long nSegments);
+extern long insideObstruction_xy(double x, double y, double tilt, long particleID, long segment, long nSegments);
 
 #ifdef __cplusplus
 }

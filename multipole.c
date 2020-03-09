@@ -443,7 +443,7 @@ long fmultipole_tracking(
     is_lost = 0;
     if (!integrate_kick_multipole_ord4(coord, multipole->dx, multipole->dy, 0.0, 0.0, Po, rad_coef, 0.0,
                                        order, KnL, skew, n_kicks, drift, &multData, NULL, NULL, NULL,
-                                       &dzLoss, NULL, 0))
+                                       &dzLoss, NULL, 0, multipole->tilt))
       is_lost = 1;
     
     x = coord[0];
@@ -1092,7 +1092,7 @@ long multipole_tracking2(
                                         n_parts, drift, 
                                         multData, edgeMultData, steeringMultData,
                                         &apertureData, &dzLoss, sigmaDelta2,
-					elem->type==T_KQUAD?kquad->radial:0)) ||
+					elem->type==T_KQUAD?kquad->radial:0, tilt)) ||
         (integ_order==2 &&
          !integrate_kick_multipole_ord2(coord, dx, dy, xkick, ykick,
                                         Po, rad_coef, isr_coef, 
@@ -1100,7 +1100,7 @@ long multipole_tracking2(
                                         n_parts, drift,
                                         multData, edgeMultData, steeringMultData,
                                         &apertureData, &dzLoss, sigmaDelta2,
-					elem->type==T_KQUAD?kquad->radial:0))) {
+					elem->type==T_KQUAD?kquad->radial:0, tilt))) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
@@ -1155,7 +1155,9 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                   MULTIPOLE_DATA *edgeMultData, 
                                   MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
-				  long radial) 
+				  long radial, 
+                                  double refTilt /* used for obstruction evaluation only */
+                                  ) 
 {
   double p, qx, qy, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
@@ -1223,7 +1225,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       }
       *dzLoss += drift*(i_kick?2:1);
     }
-    if ((apData && !checkMultAperture(x+dx, y+dy, apData)) || insideObstruction_xy(x, y, (long)coord[6], i_kick, n_kicks)) {
+    if ((apData && !checkMultAperture(x+dx, y+dy, apData)) || insideObstruction_xy(x, y, refTilt, (long)coord[6], i_kick, n_kicks)) {
       coord[0] = x;
       coord[2] = y;
       return 0;
@@ -1306,7 +1308,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     }
     *dzLoss += drift;
   }
-  if ((apData && !checkMultAperture(x+dx, y+dy, apData)) || insideObstruction_xy(x, y, (long)coord[6], i_kick, n_kicks)) {
+  if ((apData && !checkMultAperture(x+dx, y+dy, apData)) || insideObstruction_xy(x, y, refTilt, (long)coord[6], i_kick, n_kicks)) {
     coord[0] = x;
     coord[2] = y;
     return 0;
@@ -1365,7 +1367,9 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
                                   long n_parts, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
-				  long radial) 
+				  long radial, 
+                                  double refTilt /* used for obstruction evaluation only */
+                                  )
 {
   double p, qx, qy, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
@@ -1430,7 +1434,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
 
   *dzLoss = 0;
   for (i_kick=0; i_kick<n_parts; i_kick++) {
-    if ((apData && !checkMultAperture(x+dx, y+dy, apData)) || insideObstruction_xy(x, y, (long)coord[6], i_kick, n_parts)) {
+    if ((apData && !checkMultAperture(x+dx, y+dy, apData)) || insideObstruction_xy(x, y, refTilt, (long)coord[6], i_kick, n_parts)) {
       coord[0] = x;
       coord[2] = y;
       return 0;
@@ -1528,7 +1532,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
     }
   }
   
-  if ((apData && !checkMultAperture(x+dx, y+dy, apData)) || insideObstruction_xy(x, y, (long)coord[6], i_kick, n_parts)) {
+  if ((apData && !checkMultAperture(x+dx, y+dy, apData)) || insideObstruction_xy(x, y, refTilt, (long)coord[6], i_kick, n_parts)) {
     coord[0] = x;
     coord[2] = y;
     return 0;

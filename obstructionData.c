@@ -120,11 +120,14 @@ long insideObstruction(double *part, long segment, long nSegments)
   return 0;
 }
 
-long insideObstruction_xy(double x, double y, long particleID, long segment, long nSegments)
+long insideObstruction_xy(double x, double y, double xyTilt, long particleID, long segment, long nSegments)
 {
   static double part[7] ={0,0,0,0,0,0,0};
-  part[0] =  x;
-  part[2] = y;
+  double sin_tilt, cos_tilt;
+  sin_tilt = sin(xyTilt);
+  cos_tilt = cos(xyTilt);
+  part[0] =  x*cos_tilt - y*sin_tilt;
+  part[2] =  x*sin_tilt + y*cos_tilt;
   part[6] = particleID;
   return insideObstruction(part, segment, nSegments);
 }
