@@ -272,7 +272,8 @@ int main(
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   if (!SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 1, NULL, NULL, output))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-  if (!SDDS_DefineSimpleParameter(&SDDSout, "S11", "m$a2$n", SDDS_DOUBLE) ||
+  if (
+      !SDDS_DefineSimpleParameter(&SDDSout, "S11", "m$a2$n", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "S12", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "S22", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "S66", "", SDDS_DOUBLE) ||
@@ -287,6 +288,21 @@ int main(
       !SDDS_DefineSimpleParameter(&SDDSout, "S26", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "S36", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "S46", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S11Sigma", "m$a2$n", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S12Sigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S22Sigma", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S66Sigma", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S33Sigma", "m$a2$n", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S34Sigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S44Sigma", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S13Sigma", "m$a2$n", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S14Sigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S23Sigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S24Sigma", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S16Sigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S26Sigma", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S36Sigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "S46Sigma", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "goodFits", "", SDDS_LONG) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "averageFitPoints", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "S11Data", "m$a2$n", SDDS_DOUBLE) ||
@@ -316,6 +332,11 @@ int main(
   
   if (!SDDS_WriteLayout(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
+  /* suppress compiler warnings */
+  R11 = R12 = R33 = R34 = R16 = R26 = NULL;
+  S11 = S33 = S13 = NULL;
+  S11Sigma = S33Sigma = S13Sigma = NULL;
 
   while (SDDS_ReadTable(&SDDSin)>0) {
     n_configs = SDDS_CountRowsOfInterest(&SDDSin);
@@ -363,10 +384,26 @@ int main(
            "S11", SijSum[0][0]/nGoodFits[0], "S12", SijSum[0][1]/nGoodFits[0], "S22", SijSum[1][1]/nGoodFits[0],
            NULL))
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
+      if (!SDDS_SetParameters
+          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+           "S11Sigma", sqrt(SijSum2[0][0]/nGoodFits[0] - sqr(SijSum[0][0]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
+           "S12Sigma", sqrt(SijSum2[0][1]/nGoodFits[0] - sqr(SijSum[0][1]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
+           "S22Sigma", sqrt(SijSum2[1][1]/nGoodFits[0] - sqr(SijSum[1][1]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
+           NULL))
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       
       if (!SDDS_SetParameters
           (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
            "S16", SijSum[0][4]/nGoodFits[0], "S26", SijSum[1][4]/nGoodFits[0], "S66", SijSum[4][4]/nGoodFits[0],
+           NULL))
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      
+      if (!SDDS_SetParameters
+          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+           "S16Sigma", sqrt(SijSum2[0][4]/nGoodFits[0] - sqr(SijSum[0][4]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
+           "S26Sigma", sqrt(SijSum2[1][4]/nGoodFits[0] - sqr(SijSum[0][4]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
+           "S66Sigma", sqrt(SijSum2[4][4]/nGoodFits[0] - sqr(SijSum[4][4]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
            NULL))
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       
@@ -378,6 +415,14 @@ int main(
     
       if (!SDDS_SetParameters
           (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+           "S33Sigma", sqrt(SijSum2[2][2]/nGoodFits[1] - sqr(SijSum[2][2]/nGoodFits[1]))/sqrt(nGoodFits[1]), 
+           "S34Sigma", sqrt(SijSum2[2][3]/nGoodFits[1] - sqr(SijSum[2][3]/nGoodFits[1]))/sqrt(nGoodFits[1]), 
+           "S44Sigma", sqrt(SijSum2[3][3]/nGoodFits[1] - sqr(SijSum[3][3]/nGoodFits[1]))/sqrt(nGoodFits[1]), 
+           NULL))
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      
+      if (!SDDS_SetParameters
+          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
            "S13", SijSum[0][2]/nGoodFits[2], "S14", SijSum[0][3]/nGoodFits[2], 
            "S23", SijSum[1][2]/nGoodFits[2], "S24", SijSum[1][3]/nGoodFits[2],
            NULL))
@@ -385,7 +430,23 @@ int main(
 
       if (!SDDS_SetParameters
           (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+           "S13Sigma", sqrt(SijSum2[0][2]/nGoodFits[2] - sqr(SijSum[0][2]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
+           "S14Sigma", sqrt(SijSum2[0][3]/nGoodFits[2] - sqr(SijSum[0][3]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
+           "S23Sigma", sqrt(SijSum2[1][2]/nGoodFits[2] - sqr(SijSum[1][2]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
+           "S24Sigma", sqrt(SijSum2[1][3]/nGoodFits[2] - sqr(SijSum[1][3]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
+           NULL))
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      
+      if (!SDDS_SetParameters
+          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
            "S36", SijSum[2][4]/nGoodFits[2], "S46", SijSum[3][4]/nGoodFits[2],
+           NULL))
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      
+      if (!SDDS_SetParameters
+          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+           "S36Sigma", sqrt(SijSum2[2][4]/nGoodFits[2] - sqr(SijSum[2][4]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
+           "S46Sigma", sqrt(SijSum2[3][4]/nGoodFits[2] - sqr(SijSum[3][4]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
            NULL))
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       
