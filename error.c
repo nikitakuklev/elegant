@@ -20,6 +20,7 @@
 #include "error.h"
 
 long duplicate_name(char **list, long n_list, char *name);
+void assignRandomizedIntegersToArray(long *sequence, long n, long min, long step);
 
 #define DEBUG 0
 
@@ -51,26 +52,37 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
           fflush(stdout);
 	}
         for (i=0; i<errcon->n_items; i++) {
-            switch (errcon->error_type[i]) {
-                case UNIFORM_ERRORS:
-                case GAUSSIAN_ERRORS:
-                    printf("%8s:  %sadditive %s errors with amplitude %e %s and cutoff %e %s\n",
-                        errcon->quan_name[i], (errcon->flags[i]&NONADDITIVE_ERRORS?"non-":""),
-                        known_error_type[errcon->error_type[i]], 
-                        (errcon->flags[i]&FRACTIONAL_ERRORS?100:1)*errcon->error_level[i],
-                        errcon->flags[i]&FRACTIONAL_ERRORS?"%":errcon->quan_unit[i], 
-                        errcon->error_cutoff[i], (errcon->flags[i]&POST_CORRECTION?"(post-correction)":""));
-                    fflush(stdout);
-                    break;
-                case PLUS_OR_MINUS_ERRORS:
-                    printf("%8s:  %sadditive %s errors with amplitude %e\n", 
-                        errcon->quan_name[i], 
-                        (errcon->flags[i]&NONADDITIVE_ERRORS?"non-":""),
-                        known_error_type[errcon->error_type[i]],
-                        errcon->error_level[i]);
-                    fflush(stdout);
-                    break;
-	    }
+	  switch (errcon->error_type[i]) {
+	  case UNIFORM_ERRORS:
+	  case GAUSSIAN_ERRORS:
+	    printf("%8s:  %sadditive %s errors with amplitude %e %s and cutoff %e %s\n",
+		   errcon->quan_name[i], (errcon->flags[i]&NONADDITIVE_ERRORS?"non-":""),
+		   known_error_type[errcon->error_type[i]], 
+		   (errcon->flags[i]&FRACTIONAL_ERRORS?100:1)*errcon->error_level[i],
+		   errcon->flags[i]&FRACTIONAL_ERRORS?"%":errcon->quan_unit[i], 
+		   errcon->error_cutoff[i], (errcon->flags[i]&POST_CORRECTION?"(post-correction)":""));
+	    fflush(stdout);
+	    break;
+	  case PLUS_OR_MINUS_ERRORS:
+	    printf("%8s:  %sadditive %s errors with amplitude %e\n", 
+		   errcon->quan_name[i], 
+		   (errcon->flags[i]&NONADDITIVE_ERRORS?"non-":""),
+		   known_error_type[errcon->error_type[i]],
+		   errcon->error_level[i]);
+	    fflush(stdout);
+	    break;
+	  case SAMPLED_ERRORS:
+	    printf("%8s:  %serrors sampled (%s) with multiplicative amplitude %e\n", 
+		   errcon->quan_name[i], 
+		   (errcon->flags[i]&NONADDITIVE_ERRORS?"non-":""),
+		   sampleModeChoice[errcon->errorSamples[errcon->sampleIndex[i]].mode],
+		   errcon->error_level[i]);
+	    fflush(stdout);
+	    break;
+	  default:
+	    bombElegant("Invalid error type seen. Seek professional help!", NULL);
+	    break;
+	  }
 	}
         log_exit("error_setup");
         return;
@@ -126,8 +138,11 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
 
 void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline)
 {
-    long n_items, n_added, i_start, firstIndexInGroup;
+    long n_items, n_added, i_start, firstIndexInGroup, errorDistCode;
     ELEMENT_LIST *context;
+    long sampleModeCode=-1, nSampleValues = 0, sampleDataIsCopy = 0;
+    double *sampleValue = NULL;
+    char *sampleFile = NULL;
     double sMin = -DBL_MAX, sMax = DBL_MAX;
     
     log_entry("add_error_element");
@@ -153,12 +168,43 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
     /* check for valid input and copy to errcon arrays */
     if (item==NULL)
         bombElegant("item name missing in error namelist", NULL);
-    if (match_string(type, known_error_type, N_ERROR_TYPES, 0)<0)
+    if ((errorDistCode=match_string(type, known_error_type, N_ERROR_TYPES, 0))<0)
         bombElegant("unknown error type specified", NULL);
+    if (errorDistCode==SAMPLED_ERRORS) {
+      SDDS_DATASET SDDSin;
+      if (!sample_file || !strlen(sample_file))
+	bombElegant("give valid value for sample_file in sampled error mode", NULL);
+      if (!sample_file_column || !strlen(sample_file_column))
+	bombElegant("give valid value for sample_file_column in sampled error mode", NULL);
+      if (!sample_mode || (sampleModeCode=match_string(sample_mode, sampleModeChoice, N_SAMPLE_MODES, 0))<0)
+	bombElegant("give valid value for sample_mode in sampled error mode", NULL);
+      if (!SDDS_InitializeInputFromSearchPath(&SDDSin, sample_file))
+	bombElegant(NULL, NULL);
+      switch (SDDS_ReadPage(&SDDSin)) {
+      case 0:
+      case -1:
+	bombElegantVA("Error: error_element: no data in file %s\n", sample_file);
+	break;
+      default:
+	if ((nSampleValues=SDDS_RowCount(&SDDSin))<1)
+	  bombElegantVA("Error: error_element: insufficient data in file %s\n", sample_file);
+	if (!(sampleValue=SDDS_GetColumnInDoubles(&SDDSin, sample_file_column)))
+	  bombElegant(NULL, NULL);
+	printf("Read %ld values from %s\n", nSampleValues, sample_file);
+	break;
+      }
+    } else {
+      if (sample_file && strlen(sample_file))
+	printWarning("error_element", "sample_file given but error type is not \"sampled\"");
+      if (sample_file_column && strlen(sample_file_column))
+	printWarning("error_element", "sample_file_column given but error type is not \"sampled\"");
+      if (sample_mode && strlen(sample_mode))
+	printWarning("error_element", "sample_mode given but error type is not \"sampled\"");
+    }
     if (bind_number<0)
-        bombElegant("bind_number < 0", NULL);
+      bombElegant("bind_number < 0", NULL);
     if (!additive && fractional)
-        bombElegant("fractional errors must be additive", NULL);
+      bombElegant("fractional errors must be additive", NULL);
 
     context = NULL;
     n_added = 0;
@@ -234,12 +280,32 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             errcon->sMin             = trealloc(errcon->sMin, sizeof(*errcon->sMin)*(n_items+1));
             errcon->sMax             = trealloc(errcon->sMax, sizeof(*errcon->sMax)*(n_items+1));
             errcon->boundTo          = trealloc(errcon->boundTo, sizeof(*errcon->boundTo)*(n_items+1));
+            errcon->sampleIndex      = trealloc(errcon->sampleIndex, sizeof(*errcon->sampleIndex)*(n_items+1));
+	    errcon->sampleIndex[n_items] = -1;
+
+	    if (errorDistCode==SAMPLED_ERRORS) {
+	      long nSeq;
+	      if (firstIndexInGroup==-1) {
+		errcon->sampleIndex[n_items] = nSeq = errcon->nErrorSampleSets;
+		errcon->errorSamples = trealloc(errcon->errorSamples, sizeof(*errcon->errorSamples)*(nSeq+1));
+		errcon->errorSamples[nSeq].sourceData = sampleValue;
+		if (sampleModeCode==SAMPLE_RANDOM_EXHAUST_REUSE) {
+		  errcon->errorSamples[nSeq].sequence = tmalloc(sizeof(*errcon->errorSamples[nSeq].sequence)*nSampleValues);
+		  assignRandomizedIntegersToArray(errcon->errorSamples[nSeq].sequence, nSampleValues, 0, 1);
+		}
+		errcon->errorSamples[nSeq].nValues = nSampleValues;
+		errcon->errorSamples[nSeq].iSequence = 0;
+		errcon->errorSamples[nSeq].mode = sampleModeCode;
+		errcon->nErrorSampleSets += 1;
+	      } else
+		errcon->sampleIndex[n_items] = errcon->nErrorSampleSets-1;
+	    }
 
             cp_str(errcon->item+n_items, str_toupper(item));
             cp_str(errcon->name+n_items, context->name);
             errcon->error_level[n_items] = amplitude*error_factor;
             errcon->error_cutoff[n_items] = cutoff;
-            errcon->error_type[n_items] = match_string(type, known_error_type, N_ERROR_TYPES, 0);
+            errcon->error_type[n_items] = errorDistCode; /* match_string(type, known_error_type, N_ERROR_TYPES, 0); */
             errcon->quan_name[n_items] = tmalloc(sizeof(char*)*(strlen(context->name)+strlen(item)+4));
             errcon->quan_final_index[n_items] = -1;
             sprintf(errcon->quan_name[n_items], "d%s.%s", context->name, item);
@@ -314,7 +380,30 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         errcon->sMin             = trealloc(errcon->sMin, sizeof(*errcon->sMin)*(n_items+1));
         errcon->sMax             = trealloc(errcon->sMax, sizeof(*errcon->sMax)*(n_items+1));
         errcon->boundTo          = trealloc(errcon->boundTo, sizeof(*errcon->boundTo)*(n_items+1));
-
+	errcon->sampleIndex      = trealloc(errcon->sampleIndex, sizeof(*errcon->sampleIndex)*(n_items+1));
+	errcon->sampleIndex[n_items] = -1;
+	
+	if (errorDistCode==SAMPLED_ERRORS) {
+	  long nSeq;
+	  nSeq = errcon->nErrorSampleSets;
+	  errcon->sampleIndex[n_items] = nSeq;
+	  errcon->errorSamples = trealloc(errcon->errorSamples, sizeof(*errcon->errorSamples)*(nSeq+1));
+	  errcon->errorSamples[nSeq].sourceData = sampleValue;
+	  if (sampleModeCode==SAMPLE_RANDOM_EXHAUST_REUSE) {
+	    long ii;
+	    errcon->errorSamples[nSeq].sequence = tmalloc(sizeof(*errcon->errorSamples[nSeq].sequence)*nSampleValues);
+	    assignRandomizedIntegersToArray(errcon->errorSamples[nSeq].sequence, nSampleValues, 0, 1);
+	    for (ii=0; ii<nSampleValues; ii++)
+	      printf("%ld: %ld\n", ii, errcon->errorSamples[nSeq].sequence[ii]);
+	    exit(0);
+	  } else
+	    errcon->errorSamples[nSeq].sequence = NULL;
+	  errcon->errorSamples[nSeq].nValues = nSampleValues;
+	  errcon->errorSamples[nSeq].iSequence = 0;
+	  errcon->errorSamples[nSeq].mode = sampleModeCode;
+	  errcon->nErrorSampleSets += 1;
+	}
+	
         cp_str(errcon->item+n_items, str_toupper(item));
         cp_str(errcon->name+n_items, context->name);
         errcon->error_level[n_items] = amplitude;
@@ -363,6 +452,8 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         fflush(stdout);
         exitElegant(1);
         }
+    if (sampleFile)
+      free(sampleFile);
     log_exit("add_error_element");
     }
 
@@ -407,8 +498,9 @@ double parameter_value(char *pname, long elem_type, long param, LINE_LIST *beaml
     return(0.0);
     }
 
-double perturbation(double xamplitude, double xcutoff, long xerror_type)
+double perturbation(double xamplitude, double xcutoff, long xerror_type, long sampleIndex, ERROR_SAMPLES *errorSamples)
 {
+  double value;
     switch (xerror_type) {
         case UNIFORM_ERRORS:
             return(2*xamplitude*(random_1_elegant(0)-0.5));
@@ -417,6 +509,28 @@ double perturbation(double xamplitude, double xcutoff, long xerror_type)
         case PLUS_OR_MINUS_ERRORS:
             /* return either -x or x */ 
             return(xamplitude*(random_1_elegant(0)>0.5?1.0:-1.0));
+        case SAMPLED_ERRORS:
+	  if (errorSamples[sampleIndex].iSequence>=errorSamples[sampleIndex].nValues) {
+	    errorSamples[sampleIndex].iSequence = 0;
+	    if (errorSamples[sampleIndex].mode==SAMPLE_RANDOM_EXHAUST_REUSE)
+	      assignRandomizedIntegersToArray(errorSamples[sampleIndex].sequence, errorSamples[sampleIndex].nValues, 0, 1);
+	  }
+	  value = 0;
+	  switch (errorSamples[sampleIndex].mode) {
+	  case SAMPLE_RANDOM_REPLACE:
+	    value = errorSamples[sampleIndex].sourceData[(long)(errorSamples[sampleIndex].nValues*random_1_elegant(0))];
+	    break;
+	  case SAMPLE_RANDOM_EXHAUST_REUSE:
+	    value = errorSamples[sampleIndex].sourceData[errorSamples[sampleIndex].sequence[errorSamples[sampleIndex].iSequence]];
+	    break;
+	  case SAMPLE_SEQUENTIAL_REUSE:
+	    value = errorSamples[sampleIndex].sourceData[errorSamples[sampleIndex].iSequence];
+	    break;
+	  }
+	  if (errorSamples[sampleIndex].mode!=SAMPLE_RANDOM_REPLACE)
+	    errorSamples[sampleIndex].iSequence += 1;
+	  return value;
+	  break;
         default:
             bombElegant("unknown error type in perturbation()", NULL);
             exitElegant(1);
@@ -432,3 +546,27 @@ long duplicate_name(char **list, long n_list, char *name)
             return(1);
     return(0);
     }
+
+
+void assignRandomizedIntegersToArray(long *sequence, long n, long min, long step)
+/* generate sequential integers from min to min+(n-1)*step, then randomize the order */
+{
+  double *randomValue;
+  long *sortedIndex, i;
+
+  if (n<2)
+    return;
+
+  /* generate random values and sort them to get the (randomized) indices */
+  randomValue = tmalloc(sizeof(*randomValue)*n);
+  for (i=0; i<n; i++) 
+    randomValue[i] = random_1_elegant(0);
+  sortedIndex = sort_and_return_index(randomValue, SDDS_DOUBLE, n, 0);
+
+  /* assign sequential integers (with a step size) in random order */
+  for (i=0; i<n; i++)
+    sequence[sortedIndex[i]] = min + step*i;
+
+  free(randomValue);
+  free(sortedIndex);
+}
