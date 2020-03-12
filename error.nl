@@ -30,12 +30,24 @@
     long allow_missing_elements = 0;
     STRING before = NULL;
     STRING after = NULL;
+    STRING sample_file = NULL;
+    STRING sample_file_column = NULL;
+    STRING sample_mode = NULL;
 #end
 
 #define UNIFORM_ERRORS 0
 #define GAUSSIAN_ERRORS 1
 #define PLUS_OR_MINUS_ERRORS 2
-#define N_ERROR_TYPES 3
+#define SAMPLED_ERRORS 3
+#define N_ERROR_TYPES 4
 static char *known_error_type[N_ERROR_TYPES] = {
-    "uniform", "gaussian", "plus_or_minus"
-    };
+  "uniform", "gaussian", "plus_or_minus", "sampled"
+};
+
+#define SAMPLE_RANDOM_REPLACE 0
+#define SAMPLE_RANDOM_EXHAUST_REUSE 1
+#define SAMPLE_SEQUENTIAL_REUSE 2
+#define N_SAMPLE_MODES 3
+static char *sampleModeChoice[N_SAMPLE_MODES] = {
+  "random", "shuffle", "sequential",
+};

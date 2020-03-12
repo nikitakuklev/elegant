@@ -528,7 +528,16 @@ typedef struct {
     } VARY;
 void check_VARY_structure(VARY *_control, char *caller);
 
-/* structure containing information for random errors */
+/* structures containing information for random errors */
+
+typedef struct {
+  double *sourceData; /* data supplied from file */
+  long nValues;       /* number of values supplied from file */
+  long *sequence;     /* sequence of indices for use of sourceData */
+  long iSequence;     /* position in the sequence */
+  short mode;         /* valid modes are defined in error.nl */
+} ERROR_SAMPLES;
+
 typedef struct {
     long n_items;
     char **name;                 /* names of elements being varied, e.g., "Q1" */
@@ -542,6 +551,7 @@ typedef struct {
     long *error_type;
     long *elem_type;             /* type code of element, e.g., T_QUAD */
     long *param_number;          /* parameter number of varied value */
+    long *sampleIndex;           /* if non-negative, index of the sequence in errorSamples array */
     long *flags;                 /* flag bits follow: */      
 #define BIND_ERRORS 1
 #define FRACTIONAL_ERRORS 2
@@ -560,6 +570,8 @@ typedef struct {
     FILE *fp_log;                /* file to log error values to */
     long new_data_read;          /* new data has been read for control of tracking */
     long no_errors_first_step;   /* if nonzero, first step is perfect lattice */
+    ERROR_SAMPLES *errorSamples;
+    long nErrorSampleSets;
     } ERRORVAL;
 
 /* structure containing information for modulations */
@@ -3924,7 +3936,7 @@ void printMessageAndTime(FILE *fp, char *message);
 extern void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST *beamline);
 extern void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
 extern double parameter_value(char *pname, long elem_type, long param, LINE_LIST *beamline);
-extern double perturbation(double xamplitude, double xcutoff, long xerror_type);
+extern double perturbation(double xamplitude, double xcutoff, long xerror_type, long sampleIndex, ERROR_SAMPLES *errorSamples);
  
 /* prototypes for extend_list.c: */
 extern void extend_line_list(LINE_LIST **lptr);
@@ -4177,7 +4189,7 @@ extern void assert_parameter_values(char **elem_name, long *param_number, long *
 long get_parameter_value(double *value, char *elem_name, long param_number, long type, LINE_LIST *beamline);
 extern void assert_perturbations(char **elem_name, long *param_number, long *type, long n_elems,
     double *amplitude, double *cutoff, long *error_type, double *perturb, long *elem_perturb_flags,
-    long *bind_number, long *boundTo, double *sMin, double *sMax,
+    long *bind_number, long *boundTo, double *sMin, double *sMax, long *sampleIndex, ERROR_SAMPLES *errorSamples,
     FILE *fp_log, long step, LINE_LIST *beamline, long permit_flags);
 extern long compute_changed_matrices(LINE_LIST *beamline, RUN *run);
 
@@ -4672,6 +4684,7 @@ extern long filterParticlesWithObstructions(double **coord, long np, double **ac
                                             long segment, long nSegments);
 extern long insideObstruction(double *part, long segment, long nSegments);
 extern long insideObstruction_xy(double x, double y, double tilt, long particleID, long segment, long nSegments);
+extern long insideObstruction_xy_dz(double x, double y, double tilt, long particleID, double dz);
 
 #ifdef __cplusplus
 }

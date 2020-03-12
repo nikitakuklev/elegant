@@ -122,7 +122,7 @@ long insideObstruction(double *part, long segment, long nSegments)
 
 long insideObstruction_xy(double x, double y, double xyTilt, long particleID, long segment, long nSegments)
 {
-  static double part[7] ={0,0,0,0,0,0,0};
+  double part[7] ={0,0,0,0,0,0,0};
   double sin_tilt, cos_tilt;
   sin_tilt = sin(xyTilt);
   cos_tilt = cos(xyTilt);
@@ -130,6 +130,39 @@ long insideObstruction_xy(double x, double y, double xyTilt, long particleID, lo
   part[2] =  x*sin_tilt + y*cos_tilt;
   part[6] = particleID;
   return insideObstruction(part, segment, nSegments);
+}
+
+long insideObstruction_xy_dz(double x, double y, double xyTilt, long particleID, double dz)
+{
+  TRACKING_CONTEXT context;
+  ELEMENT_LIST *eptr;
+  long ic;
+  double Z, X, Y;
+  double part[7] ={0,0,0,0,0,0,0};
+  double sin_tilt, cos_tilt;
+
+  if (!obstructionDataSets.initialized) return 0;
+
+  getTrackingContext(&context);
+  if (!(eptr=context.element)) return 0;
+
+  sin_tilt = sin(xyTilt);
+  cos_tilt = cos(xyTilt);
+  part[0] =  x*cos_tilt - y*sin_tilt;
+  part[2] =  x*sin_tilt + y*cos_tilt;
+  part[6] = particleID;
+
+  convertLocalCoordinatesToGlobal(&Z, &X, &Y, part, eptr, 0, 1);
+  Z += dz;
+
+  for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
+    if (pointIsInsideContour(Z, X, 
+                             obstructionDataSets.data[ic].Z, 
+                             obstructionDataSets.data[ic].X, 
+                             obstructionDataSets.data[ic].points))
+      return 1;
+  }
+  return 0;
 }
 
 

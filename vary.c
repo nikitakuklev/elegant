@@ -423,7 +423,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
     assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
                          errcon->n_items, errcon->error_level, errcon->error_cutoff, errcon->error_type, 
                          errcon->error_value, errcon->flags, errcon->bind_number,
-                         errcon->boundTo, errcon->sMin, errcon->sMax,
+                         errcon->boundTo, errcon->sMin, errcon->sMax, errcon->sampleIndex, errcon->errorSamples,
                          errcon->fp_log, _control->i_step, beamline, 
                          PRE_CORRECTION+
                          ((_control->i_step==0 && errcon->no_errors_first_step)?FORCE_ZERO_ERRORS:0));
@@ -520,7 +520,7 @@ long perturb_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *bea
         assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
             errcon->n_items, errcon->error_level, errcon->error_cutoff, errcon->error_type, 
             errcon->error_value, errcon->flags, errcon->bind_number, errcon->boundTo,
-            errcon->sMin, errcon->sMax,                             
+	    errcon->sMin, errcon->sMax, errcon->sampleIndex, errcon->errorSamples,                             
             errcon->fp_log, _control->i_step-1, beamline, POST_CORRECTION+
                              ((_control->i_step==0 && errcon->no_errors_first_step)?FORCE_ZERO_ERRORS:0));
         /* set element flags to indicate perturbation of parameters that change the matrix */
@@ -764,9 +764,9 @@ long get_parameter_value(double *value, char *elem_name, long param_number, long
     }
 
 void assert_perturbations(char **elem_name, long *param_number, long *type, long n_elems,
-        double *amplitude, double *cutoff, long *error_type, double *perturb, long *elem_perturb_flags, 
-        long *bind_number, long *bound_to, double *sMin, double *sMax,
-        FILE *fp_log, long step, LINE_LIST *beamline, long permit_flags)
+			  double *amplitude, double *cutoff, long *error_type, double *perturb, long *elem_perturb_flags, 
+			  long *bind_number, long *bound_to, double *sMin, double *sMax, long *sampleIndex, ERROR_SAMPLES *errorSamples,
+			  FILE *fp_log, long step, LINE_LIST *beamline, long permit_flags)
 {
     ELEMENT_LIST *eptr;
     char *p_elem;
@@ -834,7 +834,7 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                       if (!(elem_perturb_flags[i_elem]&BIND_ERRORS_MASK) || 
                           (bind_number[i_elem]>=1 && i_group%bind_number[i_elem]==0) ||
                           i_group==0) 
-                        delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem]);
+                        delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem], sampleIndex[i_elem], errorSamples);
                       if (bound_to[i_elem]>=0)
                         delta = perturb[bound_to[i_elem]];
                       if (elem_perturb_flags[i_elem]&FRACTIONAL_ERRORS)
@@ -871,7 +871,7 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                       if (!(elem_perturb_flags[i_elem]&BIND_ERRORS_MASK) || 
                           (bind_number[i_elem]>=1 && i_group%bind_number[i_elem]==0) ||
                           i_group==0) 
-                        delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem]);
+                        delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem], sampleIndex[i_elem], errorSamples);
                       else if (bound_to[i_elem]>=0)
                         delta = perturb[bound_to[i_elem]];
                       if (elem_perturb_flags[i_elem]&FRACTIONAL_ERRORS)
@@ -896,7 +896,7 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                       if (!(elem_perturb_flags[i_elem]&BIND_ERRORS_MASK) || 
                           (bind_number[i_elem]>=1 && i_group%bind_number[i_elem]==0) ||
                           i_group==0) 
-                        delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem]);
+                        delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem], sampleIndex[i_elem], errorSamples);
                       else if (bound_to[i_elem]>=0)
                         delta = perturb[bound_to[i_elem]];
                       if (elem_perturb_flags[i_elem]&FRACTIONAL_ERRORS)

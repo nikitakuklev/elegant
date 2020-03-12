@@ -236,6 +236,9 @@ static long n_particles_done = 0;
 static double length_mult_sum = 0;
 static long n_invalid_particles = 0;
 
+static double lostParticleCoordinate[8] = {0,0,0,0,0,0,0};
+static long isLost = 0;
+
 void lorentz_report(void)
 {
     if (n_lorentz_calls) {
@@ -356,6 +359,7 @@ long do_lorentz_integration(double *coord, void *field)
     fill_double_array(tiny , 8, 1e-16);
     fill_double_array(accuracy, 8, tolerance);
     fill_long_array(misses, 8, 0);
+    isLost = 0;
 
     if (integrator!=NULL) {
         /* use adaptive integration or another compatible routine */
@@ -392,6 +396,8 @@ long do_lorentz_integration(double *coord, void *field)
                     printf("warning: exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
                     fflush(stdout);
                     log_exit("do_lorentz_integration");
+                    isLost = 1;
+                    memcpy(&lostParticleCoordinate, &q, sizeof(q[0])*8);
                     return(0);
                     }
                 break;
@@ -430,12 +436,18 @@ long do_lorentz_integration(double *coord, void *field)
         copy_doubles(q, qout, 8);
         }                
 
+    if (isLost) 
+      memcpy(q, lostParticleCoordinate, sizeof(q[0])*8);
+
     (*coord_transform)(q, coord, field, 1);
 #ifdef DEBUG
     printf("length from integration routine: %le\n", s_start);
 #endif
 
     log_exit("do_lorentz_integration");
+
+    if (isLost)
+      return 0;
 
     return(1);
     }
@@ -1822,7 +1834,13 @@ void bmapxyz_deriv_function(double *qp, double *q, double s)
       n_invalid_particles++;
       return;
     }
-    
+    if (insideObstruction_xy_dz(x, y, 0.0, 0, z)) {
+      if (!isLost)
+        for (ix=0; ix<8; ix++)
+          lostParticleCoordinate[ix] = q[ix];
+      isLost = 1;
+    }
+
     /* w is the velocity */
     w  = q+3;
     wp = qp+3;
