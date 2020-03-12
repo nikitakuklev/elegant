@@ -71,6 +71,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Added the \verb|rfc_reference_output| parameter to the \verb|run_setup| command, which allows recording the
   internally-determined reference times for \verb|RFCA| and \verb|RFCW| elements. This can be useful in improving
   backtracking in linacs.
+\item The \verb|error_element| command now supports using sampled values in an external files as the source for perturbation
+  values.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -439,7 +441,7 @@ nothing special needs to be done about the order of the voltage values.  One mus
 \verb|reset_rf_for_each_step = 1| and \verb|first_is_fiducial = 0| in in \verb|run_control|,
 and \verb|CHANGE_P0=1| on all rf cavity elements.  (See the \verb|bunchComp/energySweep| example.)
 
-\item {\em Simulation of phase and voltage jitter:}  In this case, one uses the \verb|error_elements|
+\item {\em Simulation of phase and voltage jitter:}  In this case, one uses the \verb|error_element|
 command to impart errors to the \verb|PHASE| and \verb|VOLT| parameters of rf cavity elements.
 However, the first beam through the system must not see any errors.  This is accomplished by
 setting \verb|no_errors_for_first_step=1| in \verb|error_control|.  One can also (optionally) use
@@ -1923,6 +1925,9 @@ and \verb|SOLE|.
     long allow_missing_elements = 0;
     STRING after = NULL;
     STRING before = NULL;
+    STRING sample_file = NULL;
+    STRING sample_file_column = NULL;
+    STRING sample_mode = NULL;
 &end
 \end{verbatim}
 
@@ -1932,8 +1937,10 @@ and \verb|SOLE|.
  which the errors should be applied.  E.g., \verb|element_type=*MON*| would match all beam position monitors.
  If this item is given, then \verb|name| may be left blank.
 \item \verb|item| --- The parameter of the elements to which the error pertains.
-\item \verb|type| --- The type of random distribution to use.  May be one of ``uniform'', ``gaussian'', or ``plus\_or\_minus''.
-A ``plus\_or\_minus'' error is equal in magnitude to the amplitude given, with the sign randomly chosen.
+\item \verb|type| --- The type of random distribution to use.  May be one of ``uniform'', ``gaussian'', ``plus\_or\_minus'',
+  or ``sampled''.
+  A ``plus\_or\_minus'' error is equal in magnitude to the amplitude given, with the sign randomly chosen.
+  A ``sampled'' error is drawn from a set of user-supplied values, as described below.
 \item \verb|amplitude| --- The amplitude of the errors.
 \item \verb|cutoff| --- The cutoff for the gaussian random distribution in units of the amplitude.  Ignored for other distribution types.
 \item \verb|bind|, \verb|bind_number|, \verb|bind_across_names| ---
@@ -1961,6 +1968,20 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
  that follow the named element in the beamline.
 \item \verb|before| --- The name of an element.  If given, the error is applied only to elements
  that precede the named element in the beamline.
+
+\item \verb|sample_file|, \verb|sample_file_column|, \verb |sample_mode|---
+  If the error type is ``sampled'', then \verb|sample_file| must contain the name of an SDDS containing the numerical column
+  named by \verb|sample_file_column|. The values in this column from the first page of the file are used for assigning
+  error values. \verb|sample_mode| may be one of ``random'', ``shuffle'', or ``sequentual'', with the following meanings:
+  \begin{itemize}
+    \item \verb|random| --- Values are drawn randomly from the list as needed, without regard to reuse of a given value.
+    \item \verb|shuffle| --- Values are drawn from the list in a random order until all are used, then a new random order
+      is created. This ensures that all values are used with equal probability.
+    \item \verb|sequential| --- Values are used in the order given until all are used, repeatedly as needed starting from
+      the beginning of the list.
+  \end{itemize}
+  This feature can be used to assign errors based on a set of measured values or, using \verb|sddssampledist|, an arbitrary
+  external distribution.
 \end{itemize}
 
 %\begin{latexonly}
@@ -7798,7 +7819,7 @@ terminal input and terminal output, respectively.
   two internally.  The new script \verb|wake2impedance| illustrates how to create a longitudinal impedance from a wake 
   function using \verb|sddsfft|.
 \item The matrix for the \verb|MULT| element, used in computation of twiss parameters and beam moments, was not being updated
-  when parameters were changed during a run (e.g., with \verb|vary_element| or \verb|error_elements|).
+  when parameters were changed during a run (e.g., with \verb|vary_element| or \verb|error_element|).
 \item Synchrotron radiation was computed incorrectly for \verb|KQUAD| and \verb|KSEXT| elements when the \verb|HKICK| or
   \verb|VKICK| steering parameters were non-zero, as reported by G. Penn (LBNL).
 \end{itemize}
