@@ -86,7 +86,6 @@ char *option[N_OPTIONS] = {
 #define USAGE "sddsemitproc\n\
  [<inputfile>] [<outputfile>] [-pipe=[input][,output]]\n\
  [-nErrorSets=<number> [-seed=<integer>]]\n\
- [-deviationLimit=<valueInSigma>] [-limitMode={resolution | zero}[{,reject}]\n\
  [-resolution=<xResolutionm>,<yResolutionm>]\n\
  [-seed=integer] [-verbosity=level]\n\n\
 Program by Michael Borland. (This is version 1, July 2019)"
@@ -103,8 +102,8 @@ USAGE,
 "(e.g., using sddsxref). \n",
 "-nErrorsSets is used to specify the number of randomizations of the data",
 "    to use in estimating errors in the sigma-matrix determination.",
-"    Error levels are given by columns S11Sigma, S33Sigma, and S13Sigma, representing the",
-"    error in determination of the S11, S33, and S13 values for a given row.",
+"    Error levels are given by columns S11StDev, S33StDev, and S13StDev, giving"
+"    the standard deviation of the measured S11, S33, and S13 values for a given row.",
 "-limitMode is used to specify what to do if a randomized measurement lies",
 "    too far from the fit.",
 "-deviationLimit is used to define what \"too far\" from the fit means.",
@@ -119,15 +118,14 @@ double solve_normal_form(MATRIX *F, MATRIX *sF, MATRIX *P, MATRIX *M, MATRIX *C,
 double solve_normal_form_opt(MATRIX *F, MATRIX *sF, MATRIX *P, MATRIX *M, MATRIX *C, double dev_limit,
     long *n_used, double *s2_fit);
 double propagate_errors_for_emittance(double **Sigma, double **Covar);
-void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, long n_configs, long equal_weights);
+void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, long nConfigs, long equal_weights);
 double estimate_uncertainty(double *uncert, MATRIX *S, MATRIX *sS, MATRIX *R, MATRIX *s2, MATRIX *K, 
-    double dev_limit, long n_configs, double uncert_min, double *fit_sig2_return);
+    double dev_limit, long nConfigs, double uncert_min, double *fit_sig2_return);
 long SetSigmaData(SDDS_DATASET *SDDSout, char *dataName, MATRIX *s2, char *fitName, double *fitSigSqr, 
                   long configs);
-double *solveForSigmaMatrix(int i, int j, double *SMeasured, double *SSigma, 
+void solveForSigmaMatrix(int i, int j, double *SMeasured, double *SStDev,
                          double *R11, double *R12, double *R33, double *R34, double *R16, double *R26, 
-                         long nConfigs, long nErrorSets, long *nValidReturn, double resolution,
-                         double SijSum[5][5], double SijSum2[5][5]);
+                         long nConfigs, double Sij[5][5], double *SFit);
 
 #define GAUSSIAN_ERRORS 0
 #define UNIFORM_ERRORS  1
@@ -152,20 +150,23 @@ int main(
 {
   SDDS_TABLE SDDSin, SDDSout;
   double *R11, *R12, *R33, *R34, *R16, *R26;
-  long n_configs, i_config;
-  double *S11, *S11Sigma;             /* measured <x^2> for ith config, plus measurement uncertainty */
-  double *S33, *S33Sigma;             /* measured <y^2> for ith config, plus measurement uncertainty */
-  double *S13, *S13Sigma;             /* measured <xy> for ith config, plus measurement uncertainty */
+  double *S11, *S11StDev;             /* measured <x^2> for ith config, plus measurement uncertainty */
+  double *S33, *S33StDev;             /* measured <y^2> for ith config, plus measurement uncertainty */
+  double *S13, *S13StDev;             /* measured <xy> for ith config, plus measurement uncertainty */
+  double *S11e, *S33e, *S13e;         /* with errors added for Monte Carlo */
+  double Sij[5][5];
   double SijSum[5][5], SijSum2[5][5]; /* sum of inferred sigma matrix values, their squares */
+  double SbetaSum[4][4], emitSum[2], betaSum[2], alphaSum[2], etaSum[2], etapSum[2];
+  double SbetaSum2[4][4], emitSum2[2], betaSum2[2], alphaSum2[2], etaSum2[2], etapSum2[2];
   double *S11Fit, *S33Fit, *S13Fit;
-  long i_variable, seed;
-  long nErrorSets, nGoodFits[3];
+  double *S11FitSum, *S33FitSum, *S13FitSum;
+  double *S11FitSum2, *S33FitSum2, *S13FitSum2;
+  long seed, nErrorSets;
   SCANNED_ARG *scanned;
-  long i_arg, i, j;
+  long i_arg, i, j, iConfig, iSet, nConfigs;
   char *input, *output;
   double x_resol, y_resol;
-  double x_limit=0.0, y_limit=0.0, deviationLimit=0;
-  long limit_code, reject_at_limit;
+  double deviationLimit=0;
   long verbosity;
   unsigned long pipeFlags;
   
@@ -183,8 +184,6 @@ int main(
   nErrorSets = 0;
   seed = -1;
   x_resol = y_resol = 0;
-  limit_code = LIMIT_AT_ZERO;
-  reject_at_limit = 0;
   verbosity = 0;
   pipeFlags = 0;
   
@@ -218,18 +217,6 @@ int main(
             x_resol<0 || y_resol<0) 
           bomb("invalid -resolution syntax", USAGE);
         break;
-      case SET_LIMIT_MODE:
-        if (scanned[i_arg].n_items<2 || scanned[i_arg].n_items>4 ||
-            (limit_code=match_string(scanned[i_arg].list[1], limit_option,
-                                     N_LIMIT_OPTIONS, 0))<0)
-          bomb("invalid -limit_mode syntax", USAGE);
-        if (scanned[i_arg].n_items==3) {
-          if (scanned[i_arg].list[2][0]=='r')
-            reject_at_limit = 1;
-          else
-            bomb("invalid -limit_mode syntax", USAGE);
-        }
-        break;
       case SET_VERBOSITY:
         if (scanned[i_arg].n_items!=2 ||
             !sscanf(scanned[i_arg].list[1], "%ld", &verbosity) ||
@@ -257,9 +244,6 @@ int main(
 
   processFilenames("sdds4x4sigmaproc", &input, &output, pipeFlags, 0, NULL);
 
-  x_limit = (limit_code==LIMIT_AT_ZERO?0.0:x_resol);
-  y_limit = (limit_code==LIMIT_AT_ZERO?0.0:y_resol);
-
   if (seed<0)
     /* generate seed from system clock */
     seed = (int)time(NULL);
@@ -272,8 +256,7 @@ int main(
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   if (!SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 1, NULL, NULL, output))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-  if (
-      !SDDS_DefineSimpleParameter(&SDDSout, "S11", "m$a2$n", SDDS_DOUBLE) ||
+  if (!SDDS_DefineSimpleParameter(&SDDSout, "S11", "m$a2$n", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "S12", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "S22", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "S66", "", SDDS_DOUBLE) ||
@@ -305,6 +288,28 @@ int main(
       !SDDS_DefineSimpleParameter(&SDDSout, "S46Sigma", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "goodFits", "", SDDS_LONG) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "averageFitPoints", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "ex", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "ey", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "Sdelta", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "exSigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "eySigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "SdeltaSigma", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "betax", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "betay", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "betaxSigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "betaySigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "alphax", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "alphay", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "alphaxSigma", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "alphaySigma", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "etax", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "etay", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "etaxSigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "etaySigma", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "etaxp", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "etayp", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "etaxpSigma", "", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "etaypSigma", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "S11Data", "m$a2$n", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "S11Fit", "m$a2$n", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "S33Data", "m$a2$n", SDDS_DOUBLE) ||
@@ -325,10 +330,10 @@ int main(
       SDDS_GetColumnIndex(&SDDSin, "R26")<0)
     SDDS_Bomb("input file missing required quantities. Need S11, S33, S13, R11, R12, R33, R34, R16, and R26.");
   
-  if (SDDS_GetColumnIndex(&SDDSin, "S11Sigma")<0 ||
-      SDDS_GetColumnIndex(&SDDSin, "S33Sigma")<0 ||
-      SDDS_GetColumnIndex(&SDDSin, "S13Sigma")<0 )
-    SDDS_Bomb("input file missing required quantities. Need S11Sigma, S33Sigma, and S13Sigma.");
+  if (SDDS_GetColumnIndex(&SDDSin, "S11StDev")<0 ||
+      SDDS_GetColumnIndex(&SDDSin, "S33StDev")<0 ||
+      SDDS_GetColumnIndex(&SDDSin, "S13StDev")<0 )
+    SDDS_Bomb("input file missing required quantities. Need S11StDev, S33StDev, and S13StDev.");
   
   if (!SDDS_WriteLayout(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -336,10 +341,10 @@ int main(
   /* suppress compiler warnings */
   R11 = R12 = R33 = R34 = R16 = R26 = NULL;
   S11 = S33 = S13 = NULL;
-  S11Sigma = S33Sigma = S13Sigma = NULL;
+  S11StDev = S33StDev = S13StDev = NULL;
 
   while (SDDS_ReadTable(&SDDSin)>0) {
-    n_configs = SDDS_CountRowsOfInterest(&SDDSin);
+    nConfigs = SDDS_CountRowsOfInterest(&SDDSin);
     if (!(R11 = SDDS_GetColumn(&SDDSin, "R11")) ||
         !(R12 = SDDS_GetColumn(&SDDSin, "R12")) ||
         !(R33 = SDDS_GetColumn(&SDDSin, "R33")) ||
@@ -353,115 +358,247 @@ int main(
         !(S13 = SDDS_GetColumn(&SDDSin, "S13")) )
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
-    if (!(S11Sigma = SDDS_GetColumn(&SDDSin, "S11Sigma")) || 
-        !(S33Sigma = SDDS_GetColumn(&SDDSin, "S33Sigma")) ||
-        !(S13Sigma = SDDS_GetColumn(&SDDSin, "S13Sigma")) )
+    if (!(S11StDev = SDDS_GetColumn(&SDDSin, "S11StDev")) || 
+        !(S33StDev = SDDS_GetColumn(&SDDSin, "S33StDev")) ||
+        !(S13StDev = SDDS_GetColumn(&SDDSin, "S13StDev")) )
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
-    if (n_configs<4)
+    if (nConfigs<4)
       continue;
 
-    if (!SDDS_StartPage(&SDDSout, n_configs) || !SDDS_CopyColumns(&SDDSout, &SDDSin)) 
+    if (!SDDS_StartPage(&SDDSout, nConfigs) || !SDDS_CopyColumns(&SDDSout, &SDDSin)) 
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
     for (i=0; i<5; i++)
       for (j=0; j<5; j++)
         SijSum[i][j] = SijSum2[i][j] = 0;
+    for (i=0; i<4; i++)
+      for (j=0; j<4; j++) 
+        SbetaSum[i][j] = SbetaSum2[i][j] = 0;
+    for (i=0; i<2; i++)
+      emitSum[i] = emitSum2[i] = betaSum[i] = betaSum2[i] = alphaSum[i] = alphaSum2[i] = 
+        etaSum[i] = etapSum[i] = 0;
 
-    S11Fit = solveForSigmaMatrix(1, 1, S11, S11Sigma, R11, R12, R33, R34, R16, R26, n_configs, 
-                                 nErrorSets, &nGoodFits[0], x_resol, SijSum, SijSum2);
-    S33Fit = solveForSigmaMatrix(3, 3, S33, S33Sigma, R11, R12, R33, R34, R16, R26, n_configs, 
-                                 nErrorSets, &nGoodFits[1], y_resol, SijSum, SijSum2);
-    S13Fit = solveForSigmaMatrix(1, 3, S13, S13Sigma, R11, R12, R33, R34, R16, R26, n_configs, 
-                                 nErrorSets, &nGoodFits[2], sqrt(x_resol*y_resol), SijSum, SijSum2);
-    
-    if (nGoodFits[0] && nGoodFits[1] && nGoodFits[2]) {
-      if (!SDDS_StartPage(&SDDSout, n_configs)) 
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    S11e = calloc(nConfigs, sizeof(*S11e));
+    S13e = calloc(nConfigs, sizeof(*S13e));
+    S33e = calloc(nConfigs, sizeof(*S33e));
+    S11Fit = calloc(nConfigs, sizeof(*S11Fit));
+    S13Fit = calloc(nConfigs, sizeof(*S13Fit));
+    S33Fit = calloc(nConfigs, sizeof(*S33Fit));
+    S11FitSum = calloc(nConfigs, sizeof(*S11FitSum));
+    S13FitSum = calloc(nConfigs, sizeof(*S13FitSum));
+    S33FitSum = calloc(nConfigs, sizeof(*S33FitSum));
+    S11FitSum2 = calloc(nConfigs, sizeof(*S11FitSum2));
+    S13FitSum2 = calloc(nConfigs, sizeof(*S13FitSum2));
+    S33FitSum2 = calloc(nConfigs, sizeof(*S33FitSum2));
 
-      if (!SDDS_SetParameters
-          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-           "S11", SijSum[0][0]/nGoodFits[0], "S12", SijSum[0][1]/nGoodFits[0], "S22", SijSum[1][1]/nGoodFits[0],
-           NULL))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    for (iSet=0; iSet<nErrorSets; iSet++) {
+      double beta[2], alpha[2], eta[2], etap[2], emit[2];
+      double Sbeta[4][4];
+      short goodResult;
 
-      if (!SDDS_SetParameters
-          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-           "S11Sigma", sqrt(SijSum2[0][0]/nGoodFits[0] - sqr(SijSum[0][0]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
-           "S12Sigma", sqrt(SijSum2[0][1]/nGoodFits[0] - sqr(SijSum[0][1]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
-           "S22Sigma", sqrt(SijSum2[1][1]/nGoodFits[0] - sqr(SijSum[1][1]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
-           NULL))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      
-      if (!SDDS_SetParameters
-          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-           "S16", SijSum[0][4]/nGoodFits[0], "S26", SijSum[1][4]/nGoodFits[0], "S66", SijSum[4][4]/nGoodFits[0],
-           NULL))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      
-      if (!SDDS_SetParameters
-          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-           "S16Sigma", sqrt(SijSum2[0][4]/nGoodFits[0] - sqr(SijSum[0][4]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
-           "S26Sigma", sqrt(SijSum2[1][4]/nGoodFits[0] - sqr(SijSum[0][4]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
-           "S66Sigma", sqrt(SijSum2[4][4]/nGoodFits[0] - sqr(SijSum[4][4]/nGoodFits[0]))/sqrt(nGoodFits[0]), 
-           NULL))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      
-      if (!SDDS_SetParameters
-          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-           "S33", SijSum[2][2]/nGoodFits[1], "S34", SijSum[2][3]/nGoodFits[1], "S44", SijSum[3][3]/nGoodFits[1],
-           NULL))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-    
-      if (!SDDS_SetParameters
-          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-           "S33Sigma", sqrt(SijSum2[2][2]/nGoodFits[1] - sqr(SijSum[2][2]/nGoodFits[1]))/sqrt(nGoodFits[1]), 
-           "S34Sigma", sqrt(SijSum2[2][3]/nGoodFits[1] - sqr(SijSum[2][3]/nGoodFits[1]))/sqrt(nGoodFits[1]), 
-           "S44Sigma", sqrt(SijSum2[3][3]/nGoodFits[1] - sqr(SijSum[3][3]/nGoodFits[1]))/sqrt(nGoodFits[1]), 
-           NULL))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      
-      if (!SDDS_SetParameters
-          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-           "S13", SijSum[0][2]/nGoodFits[2], "S14", SijSum[0][3]/nGoodFits[2], 
-           "S23", SijSum[1][2]/nGoodFits[2], "S24", SijSum[1][3]/nGoodFits[2],
-           NULL))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      goodResult = 0;
+      do {
+        for (iConfig=0; iConfig<nConfigs; iConfig++) {
+          S11e[iConfig] = S11[iConfig] + gauss_rn_lim(0.0, S11StDev[iConfig], 2, random_1);
+          S13e[iConfig] = S13[iConfig] + gauss_rn_lim(0.0, S13StDev[iConfig], 2, random_1);
+          S33e[iConfig] = S33[iConfig] + gauss_rn_lim(0.0, S33StDev[iConfig], 2, random_1);
+        }
 
-      if (!SDDS_SetParameters
-          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-           "S13Sigma", sqrt(SijSum2[0][2]/nGoodFits[2] - sqr(SijSum[0][2]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
-           "S14Sigma", sqrt(SijSum2[0][3]/nGoodFits[2] - sqr(SijSum[0][3]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
-           "S23Sigma", sqrt(SijSum2[1][2]/nGoodFits[2] - sqr(SijSum[1][2]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
-           "S24Sigma", sqrt(SijSum2[1][3]/nGoodFits[2] - sqr(SijSum[1][3]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
-           NULL))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      
-      if (!SDDS_SetParameters
-          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-           "S36", SijSum[2][4]/nGoodFits[2], "S46", SijSum[3][4]/nGoodFits[2],
-           NULL))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      
-      if (!SDDS_SetParameters
-          (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-           "S36Sigma", sqrt(SijSum2[2][4]/nGoodFits[2] - sqr(SijSum[2][4]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
-           "S46Sigma", sqrt(SijSum2[3][4]/nGoodFits[2] - sqr(SijSum[3][4]/nGoodFits[2]))/sqrt(nGoodFits[2]), 
-           NULL))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      
-      if (!SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S11, n_configs, "S11Data") ||
-          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S33, n_configs, "S33Data") ||
-          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S13, n_configs, "S13Data") ||
-          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S11Fit, n_configs, "S11Fit") ||
-          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S33Fit, n_configs, "S33Fit") ||
-          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S13Fit, n_configs, "S13Fit") ||
-          !SDDS_WritePage(&SDDSout))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        solveForSigmaMatrix(1, 1, S11e, S11StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S11Fit);
+        solveForSigmaMatrix(3, 3, S33e, S33StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S33Fit);
+        solveForSigmaMatrix(1, 3, S13e, S13StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S13Fit);
+        goodResult = 1;
+        for (i=0; i<5; i++) {
+          if (Sij[i][i]<0) {
+            fprintf(stderr, "Sij[%ld][%ld] = %le, <0 !\n", i, i, Sij[i][i]);
+            goodResult = 0;
+            break;
+          }
+          for (j=0; j<5; j++) {
+            if (isnan(Sij[i][j]) || isinf(Sij[i][j])) {
+              fprintf(stderr, "Sij[%ld][%ld] = %le !\n", i, j, Sij[i][j]);
+              goodResult = 0;
+              break;
+            }
+          }
+        }
+      } while (!goodResult);
+
+      for (i=0; i<nConfigs; i++) {
+        S11FitSum[i] += S11Fit[i];
+        S13FitSum[i] += S13Fit[i];
+        S33FitSum[i] += S33Fit[i];
+        S11FitSum2[i] += sqr(S11Fit[i]);
+        S13FitSum2[i] += sqr(S13Fit[i]);
+        S33FitSum2[i] += sqr(S33Fit[i]);
+      }
+
+      for (i=0; i<2; i++) {
+        eta[i]  = Sij[2*i+0][4]/Sij[4][4];
+        etap[i] = Sij[2*i+1][4]/Sij[4][4];
+        etaSum[i]   += eta[i];
+        etaSum2[i]  += sqr(eta[i]);
+        etapSum[i]  += etap[i];
+        etapSum2[i] += sqr(etap[i]);
+
+        Sbeta[2*i+0][2*i+0] = Sij[2*i+0][2*i+0] - sqr(eta[i])*Sij[4][4];
+        Sbeta[2*i+1][2*i+1] = Sij[2*i+1][2*i+1] - sqr(etap[i])*Sij[4][4];
+        Sbeta[2*i+0][2*i+1] = Sij[2*i+0][2*i+1] - eta[i]*etap[i]*Sij[4][4];
+        Sbeta[2*i+1][2*i+0] = Sbeta[2*i+0][2*i+1];
+
+        emit[i] = sqrt(Sbeta[2*i+0][2*i+0]*Sbeta[2*i+1][2*i+1]-sqr(Sbeta[2*i+0][2*i+1]));
+        beta[i] = Sbeta[2*i+0][2*i+0]/emit[i];
+        alpha[i] = -Sbeta[2*i+0][2*i+1]/emit[i];        
+      }
+
+      for (i=0; i<5; i++)
+        for (j=0; j<5; j++) {
+          SijSum[i][j] += Sij[i][j];
+          SijSum2[i][j] += sqr(Sij[i][j]);
+        }
+      for (i=0; i<4; i++)
+        for (j=0; j<4; j++) {
+          SbetaSum[i][j] += Sbeta[i][j];
+          SbetaSum2[i][j] += sqr(Sbeta[i][j]);
+        }
+      for (i=0; i<2; i++) {
+        emitSum[i] += emit[i];
+        emitSum2[i] += sqr(emit[i]);
+        betaSum[i] += beta[i];
+        betaSum2[i] += sqr(beta[i]);
+        alphaSum[i] += alpha[i];
+        alphaSum2[i] += sqr(alpha[i]);
+      }
     }
+
+    if (!SDDS_StartPage(&SDDSout, nConfigs)) 
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
+    if (!SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+         "ex", emitSum[0]/nErrorSets, 
+         "exSigma", sqrt(emitSum2[0]/nErrorSets-sqr(emitSum[0]/nErrorSets)),
+         "ey", emitSum[1]/nErrorSets, 
+         "eySigma", sqrt(emitSum2[1]/nErrorSets-sqr(emitSum[1]/nErrorSets)),
+         "betax", betaSum[0]/nErrorSets, 
+         "betaxSigma", sqrt(betaSum2[0]/nErrorSets-sqr(betaSum[0]/nErrorSets)),
+         "betay", betaSum[1]/nErrorSets, 
+         "betaySigma", sqrt(betaSum2[1]/nErrorSets-sqr(betaSum[1]/nErrorSets)),
+         "alphax", alphaSum[0]/nErrorSets, 
+         "alphaxSigma", sqrt(alphaSum2[0]/nErrorSets-sqr(alphaSum[0]/nErrorSets)),
+         "alphay", alphaSum[1]/nErrorSets, 
+         "alphaySigma", sqrt(alphaSum2[1]/nErrorSets-sqr(alphaSum[1]/nErrorSets)),
+         "etax", etaSum[0]/nErrorSets,
+         "etaxSigma", sqrt(etaSum2[0]/nErrorSets-sqr(etaSum[0]/nErrorSets)),
+         "etay", etaSum[1]/nErrorSets,
+         "etaySigma", sqrt(etaSum2[1]/nErrorSets-sqr(etaSum[1]/nErrorSets)),
+         "etaxp", etapSum[0]/nErrorSets,
+         "etaxpSigma", sqrt(etapSum2[0]/nErrorSets-sqr(etapSum[0]/nErrorSets)),
+         "etayp", etapSum[1]/nErrorSets,
+         "etaypSigma", sqrt(etapSum2[1]/nErrorSets-sqr(etapSum[1]/nErrorSets)),
+         "Sdelta", sqrt(SijSum[4][4]/nErrorSets), 
+         "SdeltaSigma", sqrt(SijSum2[4][4]/nErrorSets-sqr(SijSum[4][4]/nErrorSets)),
+         NULL)) 
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
+    if (!SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+         "S11", SijSum[0][0]/nErrorSets, "S12", SijSum[0][1]/nErrorSets, "S22", SijSum[1][1]/nErrorSets,
+         NULL))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+    if (!SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+         "S11Sigma", sqrt(SijSum2[0][0]/nErrorSets - sqr(SijSum[0][0]/nErrorSets)), 
+         "S12Sigma", sqrt(SijSum2[0][1]/nErrorSets - sqr(SijSum[0][1]/nErrorSets)), 
+         "S22Sigma", sqrt(SijSum2[1][1]/nErrorSets - sqr(SijSum[1][1]/nErrorSets)), 
+         NULL))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+    if (!SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+         "S16", SijSum[0][4]/nErrorSets, "S26", SijSum[1][4]/nErrorSets, "S66", SijSum[4][4]/nErrorSets,
+         NULL))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+    if (!SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+         "S16Sigma", sqrt(SijSum2[0][4]/nErrorSets - sqr(SijSum[0][4]/nErrorSets)), 
+         "S26Sigma", sqrt(SijSum2[1][4]/nErrorSets - sqr(SijSum[0][4]/nErrorSets)), 
+         "S66Sigma", sqrt(SijSum2[4][4]/nErrorSets - sqr(SijSum[4][4]/nErrorSets)), 
+         NULL))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+    if (!SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+         "S33", SijSum[2][2]/nErrorSets, "S34", SijSum[2][3]/nErrorSets, "S44", SijSum[3][3]/nErrorSets,
+         NULL))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+    if (!SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+         "S33Sigma", sqrt(SijSum2[2][2]/nErrorSets - sqr(SijSum[2][2]/nErrorSets)), 
+         "S34Sigma", sqrt(SijSum2[2][3]/nErrorSets - sqr(SijSum[2][3]/nErrorSets)), 
+         "S44Sigma", sqrt(SijSum2[3][3]/nErrorSets - sqr(SijSum[3][3]/nErrorSets)), 
+         NULL))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+    if (!SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+         "S13", SijSum[0][2]/nErrorSets, "S14", SijSum[0][3]/nErrorSets, 
+         "S23", SijSum[1][2]/nErrorSets, "S24", SijSum[1][3]/nErrorSets,
+         NULL))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+    if (!SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+         "S13Sigma", sqrt(SijSum2[0][2]/nErrorSets - sqr(SijSum[0][2]/nErrorSets)), 
+         "S14Sigma", sqrt(SijSum2[0][3]/nErrorSets - sqr(SijSum[0][3]/nErrorSets)), 
+         "S23Sigma", sqrt(SijSum2[1][2]/nErrorSets - sqr(SijSum[1][2]/nErrorSets)), 
+         "S24Sigma", sqrt(SijSum2[1][3]/nErrorSets - sqr(SijSum[1][3]/nErrorSets)), 
+         NULL))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+    if (!SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+         "S36", SijSum[2][4]/nErrorSets, "S46", SijSum[3][4]/nErrorSets,
+         NULL))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+    if (!SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+         "S36Sigma", sqrt(SijSum2[2][4]/nErrorSets - sqr(SijSum[2][4]/nErrorSets)), 
+         "S46Sigma", sqrt(SijSum2[3][4]/nErrorSets - sqr(SijSum[3][4]/nErrorSets)), 
+         NULL))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
+    for (i=0; i<nConfigs; i++) {
+      S11FitSum[i] /= nErrorSets;
+      S13FitSum[i] /= nErrorSets;
+      S33FitSum[i] /= nErrorSets;
+    }
+    if (!SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S11, nConfigs, "S11Data") ||
+        !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S33, nConfigs, "S33Data") ||
+        !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S13, nConfigs, "S13Data") ||
+        !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S11FitSum, nConfigs, "S11Fit") ||
+        !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S33FitSum, nConfigs, "S33Fit") ||
+        !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S13FitSum, nConfigs, "S13Fit") ||
+        !SDDS_WritePage(&SDDSout))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
     free(S11Fit);
     free(S33Fit);
     free(S13Fit);
+    free(S11FitSum);
+    free(S33FitSum);
+    free(S13FitSum);
+    free(S11FitSum2);
+    free(S33FitSum2);
+    free(S13FitSum2);
+    free(S11e);
+    free(S13e);
+    free(S33e);
   }
 
   if (!SDDS_Terminate(&SDDSin) || !SDDS_Terminate(&SDDSout))
@@ -470,25 +607,20 @@ int main(
   return(0);
 }
 
-double *solveForSigmaMatrix(int i, int j,
-                         double *SMeasured, double *SSigma, /* measured Sij, sigma of same */
+void solveForSigmaMatrix(int i, int j,
+                         double *SMeasured, /* measured Sij with error added */
+                         double *SStDev,    /* standard deviation in values */
                          double *R11, double *R12, double *R33, double *R34, double *R16, double *R26,
                          long nConfigs,
-                         long nErrorSets,
-                         long *nValidReturn,
-                         double resolution,
-                         double SijSum[5][5],
-                         double SijSum2[5][5]
+                         double Sij[5][5], double *SFit
                          )
 {
   /* Sets up problem to solve M = P.F for one of the three cases described in the comment at the top
      of this file.
   */
-  long iConfig, iErrorSet, nUnknowns, nConfigUsed, nValid;
+  long iConfig, nUnknowns, nConfigUsed, nValid;
   MATRIX *P, *F, *M, *K, *FSigma;
-  double *s2Fit, *s2FitSaved;
-  long i1, i2;
-  short badPoint;
+  double *s2Fit;
 
   if (i==j && i==1) {
     nUnknowns = 6;
@@ -496,8 +628,10 @@ double *solveForSigmaMatrix(int i, int j,
     nUnknowns = 3;
   } else if (i==1 && j==3) {
     nUnknowns = 6;
-  } else
+  } else {
     bomb("Invalid parameters for solveForSigmaMatrix. Seek expert help.", NULL);
+    return;
+  }
 
   m_alloc(&P, nConfigs, nUnknowns);
   m_alloc(&F, nUnknowns, 1);
@@ -530,72 +664,44 @@ double *solveForSigmaMatrix(int i, int j,
     }
   }
 
-  /* Setup inverse covariance matrix */
+  /* Setup covariance matrix */
   m_zero(K);
   for (iConfig=0; iConfig<nConfigs; iConfig++) 
-    K->a[iConfig][iConfig] = 1/SSigma[iConfig];
+    K->a[iConfig][iConfig] = 1/sqr(2*SStDev[iConfig]);
 
-  s2Fit = tmalloc(sizeof(*s2Fit)*nConfigs);
-  s2FitSaved = NULL;
-  nValid = 0;
-  for (iErrorSet=0; iErrorSet<nErrorSets; iErrorSet++) {
-    /* Set up problem for new error instance */
-    for (iConfig=badPoint=0; iConfig<nConfigs; iConfig++) 
-      if ((M->a[iConfig][0] = SMeasured[iConfig] + gauss_rn_lim(0.0, SSigma[iConfig], 2, random_1) - sqr(resolution))<=0 && i==j)
-        badPoint = 1;
-    if (badPoint)
-      continue;
-    solve_normal_form_opt(F, FSigma, P, M, K, 0.0, &nConfigUsed, s2Fit);
-    if (nConfigUsed>4) {
-      nValid++;
-      s2FitSaved = s2Fit;
-      if (i==j) {
-        if (i==1) {
-          SijSum[0][0] += F->a[0][0];
-          SijSum[0][1] += F->a[1][0];
-          SijSum[1][1] += F->a[2][0];
-          SijSum[0][4] += F->a[3][0];
-          SijSum[1][4] += F->a[4][0];
-          SijSum[4][4] += F->a[5][0];
-          SijSum2[0][0] += sqr(F->a[0][0]);
-          SijSum2[0][1] += sqr(F->a[1][0]);
-          SijSum2[1][1] += sqr(F->a[2][0]);
-          SijSum2[0][4] += sqr(F->a[3][0]);
-          SijSum2[1][4] += sqr(F->a[4][0]);
-          SijSum2[4][4] += sqr(F->a[5][0]);
-        } else {
-          SijSum[2][2] += F->a[0][0];
-          SijSum[2][3] += F->a[1][0];
-          SijSum[3][3] += F->a[2][0];
-          SijSum2[2][2] += sqr(F->a[0][0]);
-          SijSum2[2][3] += sqr(F->a[1][0]);
-          SijSum2[3][3] += sqr(F->a[2][0]);
-        }
-      } else {
-        SijSum[0][2] += F->a[0][0];
-        SijSum[0][3] += F->a[1][0];
-        SijSum[1][2] += F->a[2][0];
-        SijSum[1][3] += F->a[3][0];
-        SijSum[2][4] += F->a[4][0];
-        SijSum[3][4] += F->a[5][0];
-        SijSum2[0][2] += sqr(F->a[0][0]);
-        SijSum2[0][3] += sqr(F->a[1][0]);
-        SijSum2[1][2] += sqr(F->a[2][0]);
-        SijSum2[1][3] += sqr(F->a[3][0]);
-        SijSum2[2][4] += sqr(F->a[4][0]);
-        SijSum2[3][4] += sqr(F->a[5][0]);
-      }
+  for (iConfig=0; iConfig<nConfigs; iConfig++) 
+    M->a[iConfig][0] = SMeasured[iConfig];
+
+  solve_normal_form(F, FSigma, P, M, K, SFit);
+  if (i==j) {
+    if (i==1) {
+      Sij[0][0] = F->a[0][0];
+      Sij[0][1] = F->a[1][0];
+      Sij[1][1] = F->a[2][0];
+      Sij[0][4] = F->a[3][0];
+      Sij[1][4] = F->a[4][0];
+      Sij[4][4] = F->a[5][0];
+    } else {
+      Sij[2][2] = F->a[0][0];
+      Sij[2][3] = F->a[1][0];
+      Sij[3][3] = F->a[2][0];
     }
+  } else {
+    Sij[0][2] = F->a[0][0];
+    Sij[0][3] = F->a[1][0];
+    Sij[1][2] = F->a[2][0];
+    Sij[1][3] = F->a[3][0];
+    Sij[2][4] = F->a[4][0];
+    Sij[3][4] = F->a[5][0];
   }
-  
+
   m_free(&P);
   m_free(&F);
   m_free(&FSigma);
   m_free(&M);
   m_free(&K);
 
-  *nValidReturn = nValid;
-  return s2FitSaved;
+  return;
 }
 
 double solve_normal_form_opt(
@@ -779,12 +885,12 @@ double solve_normal_form(
   return(rms_error);
 }
 
-void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, long n_configs, long equal_weights)
+void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, long nConfigs, long equal_weights)
 /* actually, K is the inverse of the covariance matrix */
 {
   long i_config;
 
-  for (i_config=0; i_config<n_configs; i_config++) {
+  for (i_config=0; i_config<nConfigs; i_config++) {
     if (sigma[i_config]==0 || uncert[i_config]==0 || equal_weights)
       K->a[i_config][i_config] = 1;
     else
@@ -793,7 +899,7 @@ void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, long n_c
 }
 
 double estimate_uncertainty(double *uncert, MATRIX *S, MATRIX *sS, MATRIX *R, MATRIX *s2, 
-                            MATRIX *K, double dev_limit, long n_configs, double uncert_min, double *fit_sig2_return)
+                            MATRIX *K, double dev_limit, long nConfigs, double uncert_min, double *fit_sig2_return)
 {
   double md, *fit_sig2;
   long n_used, i_config;
@@ -801,7 +907,7 @@ double estimate_uncertainty(double *uncert, MATRIX *S, MATRIX *sS, MATRIX *R, MA
   if (fit_sig2_return)
     fit_sig2 = fit_sig2_return;
   else
-    fit_sig2 = tmalloc(sizeof(*fit_sig2)*n_configs);
+    fit_sig2 = tmalloc(sizeof(*fit_sig2)*nConfigs);
 
   /* find initial fit with supplied covariance matrix */
   md = solve_normal_form_opt(S, sS, R, s2, K, 0.0, &n_used, fit_sig2);
@@ -809,7 +915,7 @@ double estimate_uncertainty(double *uncert, MATRIX *S, MATRIX *sS, MATRIX *R, MA
     bomb("unable to find initial fit (1)", NULL);
 
   /* calculate new covariance matrix */
-  for (i_config=0; i_config<n_configs; i_config++)
+  for (i_config=0; i_config<nConfigs; i_config++)
     K->a[i_config][i_config] = 1./sqr(2*md)/s2->a[i_config][0];
 
   /* do second fit, excluding points that lie to far out */
@@ -820,7 +926,7 @@ double estimate_uncertainty(double *uncert, MATRIX *S, MATRIX *sS, MATRIX *R, MA
   /* calculate new covariance matrix */
   if (uncert_min && md<uncert_min)
     md = uncert_min;
-  for (i_config=0; i_config<n_configs; i_config++) {
+  for (i_config=0; i_config<nConfigs; i_config++) {
     K->a[i_config][i_config] = 1./sqr(2*md)/s2->a[i_config][0];
     uncert[i_config] = md;
   }
