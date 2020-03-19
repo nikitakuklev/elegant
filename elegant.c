@@ -1854,6 +1854,7 @@ char **argv;
       if (!do_floor_coordinates)
         bombElegant("floor_coordinate command required for obstruction_data to work", NULL);
       readObstructionInput(&namelist_text, &run_conditions);
+      printWarning("The obstruction_data command and implementation are experimental. See the manual for limitations.", NULL);
       break;
     case LINEAR_CHROMATIC_TRACKING_SETUP:
       if (do_twiss_output)
