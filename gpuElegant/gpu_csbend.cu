@@ -1052,6 +1052,7 @@ extern "C"
 
 } // extern "C"
 
+
 __device__ long
 gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2,
                           double s, int n, double rho0,
@@ -1102,6 +1103,11 @@ gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2,
 
   for (i = 0; i < n; i++)
     {
+      if (apData && !gpu_checkMultAperture(X, Y, apData))
+        {
+          s_lost = dist;
+          return 0;
+        }
       if (i == 0)
         {
           /* do half-length drift */
@@ -1244,12 +1250,13 @@ gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2,
           s_lost = dist;
           return 0;
         }
-      if (apData && !gpu_checkMultAperture(X, Y, apData))
-        {
-          s_lost = dist;
-          return 0;
-        }
     }
+  if (apData && !gpu_checkMultAperture(X, Y, apData))
+    {
+      s_lost = dist;
+      return 0;
+    }
+  
 
   Qf[4] += dist;
   return 1;
@@ -1309,6 +1316,11 @@ gpu_integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
   for (i = 0; i < n; i++)
     {
+      if (apData && !gpu_checkMultAperture(X, Y, apData))
+        {
+          s_lost = dist;
+          return 0;
+        }
       if (i == 0)
         {
           /* do half-length drift */
@@ -1391,11 +1403,11 @@ gpu_integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
           s_lost = dist;
           return 0;
         }
-      if (apData && !gpu_checkMultAperture(X, Y, apData))
-        {
-          s_lost = dist;
-          return 0;
-        }
+    }
+  if (apData && !gpu_checkMultAperture(X, Y, apData))
+    {
+      s_lost = dist;
+      return 0;
     }
 
   Qf[4] += dist;
@@ -1449,6 +1461,11 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
   s /= n;
   for (i = 0; i < n; i++)
     {
+      if (apData && !gpu_checkMultAperture(X, Y, apData))
+        {
+          s_lost = dist;
+          return 0;
+        }
       if (i > 0)
         {
           d_gauss_rn1++;
@@ -1639,11 +1656,6 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
       dist += factor * (1 + DPoP);
       f = cos_phi / cosi;
       X = rho0 * (f - 1) + f * X;
-      if (apData && !gpu_checkMultAperture(X, Y, apData))
-        {
-          s_lost = dist;
-          return 0;
-        }
 
       if (d_refTrajectoryMode == RECORD_TRAJECTORY)
         {
@@ -1662,6 +1674,11 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
           QY -= d_refTrajectoryData[i * 5 + 3];
           dist -= d_refTrajectoryData[i * 5 + 4];
         }
+    }
+  if (apData && !gpu_checkMultAperture(X, Y, apData))
+    {
+      s_lost = dist;
+      return 0;
     }
 
   Qf[4] += dist;
@@ -1719,6 +1736,12 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
   s /= n;
   for (i = 0; i < n; i++)
     {
+      if (apData && !gpu_checkMultAperture(X, Y, apData))
+        {
+          s_lost = dist;
+          return 0;
+        }
+
       if (i > 0)
         {
           d_gauss_rn1++;
@@ -1829,11 +1852,6 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       X += QX * dsh / (1 + DPoP);
       Y += QY * dsh / (1 + DPoP);
       QX += dsh * (1 + DPoP) / (2 * rho0);
-      if (apData && !gpu_checkMultAperture(X, Y, apData))
-        {
-          s_lost = dist;
-          return 0;
-        }
 
       if (d_refTrajectoryMode == RECORD_TRAJECTORY)
         {
@@ -1852,6 +1870,11 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
           QY -= d_refTrajectoryData[i * 5 + 3];
           dist -= d_refTrajectoryData[i * 5 + 4];
         }
+    }
+  if (apData && !gpu_checkMultAperture(X, Y, apData))
+    {
+      s_lost = dist;
+      return 0;
     }
 
   Qf[4] += dist;
@@ -3584,10 +3607,11 @@ extern "C"
     double *d_dGamma;
     double Po, ctLower, dct, factor;
     unsigned int nBins1;
+    short csr;
 
   gpu_track_through_driftCSR_kernel2(double *d_dGamma, double Po,
-                                     double ctLower, double dct, double factor, unsigned int nBins1) : d_dGamma(d_dGamma), Po(Po), ctLower(ctLower), dct(dct),
-      factor(factor), nBins1(nBins1){};
+                                     double ctLower, double dct, double factor, unsigned int nBins1, short csr) : d_dGamma(d_dGamma), Po(Po), ctLower(ctLower), dct(dct),
+      factor(factor), nBins1(nBins1), csr(csr){};
 
     __device__ unsigned int operator()(gpuParticleAccessor &coord)
     {
@@ -3601,7 +3625,8 @@ extern "C"
           f -= iBin;
           if (iBin < nBins1)
             {
-              coord[5] += ((1 - f) * d_dGamma[iBin] + f * d_dGamma[iBin + 1]) / Po * factor;
+              if (csr)
+                coord[5] += ((1 - f) * d_dGamma[iBin] + f * d_dGamma[iBin + 1]) / Po * factor;
               binned = 1;
             }
           //} else {
@@ -3681,7 +3706,7 @@ extern "C"
       getTrackingContext(&tContext);
 
 #if (!USE_MPI)
-      if (np <= 1 || !csrWake.valid || !csrDrift->csr)
+      if (np <= 1 || !csrWake.valid || !(csrDrift->csr || csrDrift->LSCBins))
         {
 #else
           if (notSinglePart)
@@ -3693,7 +3718,7 @@ extern "C"
           else
             np_total = np;
 
-          if (np_total <= 1 || !csrWake.valid || !csrDrift->csr)
+          if (np_total <= 1 || !csrWake.valid || !(csrDrift->csr || csrDrift->LSCBins))
             {
               if (isSlave || !notSinglePart)
                 {
@@ -3952,7 +3977,7 @@ extern "C"
                     d_dGamma = NULL;
                   binned = gpuUnsignedIntParticleReduction(np,
                                                            gpu_track_through_driftCSR_kernel2(d_dGamma, Po,
-                                                                                              ct0, dct, factor, nBins1),
+                                                                                              ct0, dct, factor, nBins1, 1),
                                                            Add<unsigned int>());
                 }
 #if USE_MPI
@@ -4119,6 +4144,7 @@ extern "C"
                 lscKick.lowFrequencyCutoff1 = csrDrift->LSCLowFrequencyCutoff1;
                 lscKick.highFrequencyCutoff0 = csrDrift->LSCHighFrequencyCutoff0;
                 lscKick.highFrequencyCutoff1 = csrDrift->LSCHighFrequencyCutoff1;
+                lscKick.backtrack = 0;
               }
             for (iKick = 0; iKick < nKicks; iKick++)
               {
@@ -4339,7 +4365,7 @@ extern "C"
                                    cudaMemcpyHostToDevice);
                         binned = gpuUnsignedIntParticleReduction(np,
                                                                  gpu_track_through_driftCSR_kernel2(d_dGamma, Po,
-                                                                                                    ctLower, dct, 1.0, nBins1),
+                                                                                                    ctLower, dct, 1.0, nBins1, csrDrift->csr),
                                                                  Add<unsigned int>());
                       }
 

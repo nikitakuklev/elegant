@@ -78,6 +78,7 @@ class gpu_multipole_tracking2_kernel
   int present;
   double xMax, xCen, yMax, yCen, srGaussianLimit;
   int radial;
+  double refTilt;
 
  gpu_multipole_tracking2_kernel(unsigned int *d_sortIndex,
                                 double *d_sigmaDelta2, curandState_t *state, double dx, double dy,
@@ -85,14 +86,14 @@ class gpu_multipole_tracking2_kernel
                                 double *KnL, double drift, double z_start, long *order, short *skew,
                                 int n_parts, int integ_order, int multDataOrders, int edgeMultDataOrders,
                                 int steeringMultDataOrders, int present, double xMax, double xCen,
-                                double yMax, double yCen, int radial, double srGaussianLimit, short expandHamiltonian) : d_sortIndex(d_sortIndex), d_sigmaDelta2(d_sigmaDelta2),
+                                double yMax, double yCen, int radial, double refTilt, double srGaussianLimit, short expandHamiltonian) : d_sortIndex(d_sortIndex), d_sigmaDelta2(d_sigmaDelta2),
     state(state), dx(dx), dy(dy), xkick(xkick), ykick(ykick), Po(Po),
     rad_coef(rad_coef), isr_coef(isr_coef), KnL(KnL), drift(drift),
     z_start(z_start), order(order), skew(skew), n_parts(n_parts),
     integ_order(integ_order), multDataOrders(multDataOrders),
     edgeMultDataOrders(edgeMultDataOrders),
     steeringMultDataOrders(steeringMultDataOrders), present(present),
-    xMax(xMax), xCen(xCen), yMax(yMax), yCen(yCen), radial(radial),
+    xMax(xMax), xCen(xCen), yMax(yMax), yCen(yCen), radial(radial), refTilt(refTilt),
     srGaussianLimit(srGaussianLimit), expandHamiltonian(expandHamiltonian){};
 
   __device__ unsigned int operator()(gpuParticleAccessor &coord)
@@ -107,12 +108,12 @@ class gpu_multipole_tracking2_kernel
     if (integ_order == 4)
       {
         particle_lost = !gpu_integrate_kick_multipole_ord4(coord, order, KnL, skew, n_parts,
-                                                           drift, &dzLoss, tSigmaDelta2, radial, srGaussianLimit, expandHamiltonian);
+                                                           drift, &dzLoss, tSigmaDelta2, radial, refTilt, srGaussianLimit, expandHamiltonian);
       }
     else if (integ_order == 2)
       {
         particle_lost = !gpu_integrate_kick_multipole_ord2(coord, order, KnL, skew, n_parts,
-                                                           drift, &dzLoss, tSigmaDelta2, radial, srGaussianLimit, expandHamiltonian);
+                                                           drift, &dzLoss, tSigmaDelta2, radial, refTilt, srGaussianLimit, expandHamiltonian);
       }
     if (particle_lost)
       {
@@ -133,7 +134,7 @@ class gpu_multipole_tracking2_kernel
 
   __device__ int
     gpu_integrate_kick_multipole_ord2(gpuParticleAccessor &coord, long *order, double *KnL, short *skew, long n_kicks,
-                                      double drift, double *dzLoss, double *sigmaDelta2, int radial,
+                                      double drift, double *dzLoss, double *sigmaDelta2, int radial, double refTilt,
                                       double srGaussianLimit, short expandHamiltonian)
   {
     double p, qx, qy, beta0, beta1, s;
@@ -214,7 +215,12 @@ class gpu_multipole_tracking2_kernel
           {
             return 0;
           }
-
+        /* obstructions are not implemented in GPU code
+        if (insideObstruction_xy(x, y, refTilt, (long)coord[6], i_kick, n_kicks))
+          {
+            return 0;
+          }
+        */
         sum_Fx = sum_Fy = 0;
 
         if (!radial) {
@@ -359,7 +365,7 @@ class gpu_multipole_tracking2_kernel
 
   __device__ int
     gpu_integrate_kick_multipole_ord4(gpuParticleAccessor &coord, long *order, double *KnL, short *skew, long n_kicks,
-                                      double drift, double *dzLoss, double *sigmaDelta2, int radial,
+                                      double drift, double *dzLoss, double *sigmaDelta2, int radial, double refTilt,
                                       double srGaussianLimit, short expandHamiltonian)
   {
     double p, qx, qy, beta0, beta1, s;
@@ -430,6 +436,12 @@ class gpu_multipole_tracking2_kernel
           {
             return 0;
           }
+        /* obstructions are not implemented in GPU code
+        if (insideObstruction_xy(x, y, refTilt, (long)coord[6], i_kick, n_parts))
+          {
+            return 0;
+          }
+        */
         for (step = 0; step < 4; step++)
           {
             if (drift)
@@ -533,14 +545,18 @@ class gpu_multipole_tracking2_kernel
               }
           }
       }
-
     if (present &&
         ((xMax && fabs(x + dx - xCen) > xMax) ||
          (yMax && fabs(y + dy - yCen) > yMax)))
       {
         return 0;
       }
-
+    /* obstructions are not implemented in GPU code
+    if (insideObstruction_xy(x, y, refTilt, (long)coord[6], i_kick, n_parts))
+      {
+        return 0;
+      }
+    */
     if (edgeMultDataOrders >= 0)
       {
         for (imult = 0; imult < edgeMultDataOrders; imult++)
@@ -712,7 +728,8 @@ extern "C"
                                              kquad->randomMultipoleFactor,
                                              &(kquad->steeringMultipoleData),
                                              kquad->steeringMultipoleFactor,
-                                             KnL[0], 1, 1);
+                                             KnL[0], 1, 1,
+                                             kquad->minMultipoleOrder, kquad->maxMultipoleOrder);
             kquad->totalMultipolesComputed = 1;
           }
         multData = &(kquad->totalMultipoleData);
@@ -787,7 +804,8 @@ extern "C"
                                              ksext->randomMultipoleFactor,
                                              &(ksext->steeringMultipoleData),
                                              ksext->steeringMultipoleFactor,
-                                             KnL[0], 2, 1);
+                                             KnL[0], 2, 1,
+                                       ksext->minMultipoleOrder, ksext->maxMultipoleOrder);
             ksext->totalMultipolesComputed = 1;
           }
         multData = &(ksext->totalMultipoleData);
@@ -845,7 +863,8 @@ extern "C"
                                              1.0,
                                              NULL,
                                              1.0,
-                                             KnL[0], 3, 1);
+                                             KnL[0], 3, 1,
+                                             NULL, NULL);
             koct->totalMultipolesComputed = 1;
           }
         multData = &(koct->totalMultipoleData);
@@ -1045,7 +1064,7 @@ extern "C"
                                                           edgeMultData ? edgeMultData->orders : -1,
                                                           steeringMultData ? steeringMultData->orders : -1, apertureData.present,
                                                           apertureData.xMax, apertureData.xCen, apertureData.yMax,
-                                                          apertureData.yCen, elem->type == T_KQUAD ? kquad->radial : 0, srGaussianLimit, host_expandHamiltonian));
+                                                          apertureData.yCen, elem->type == T_KQUAD ? kquad->radial : 0, tilt, srGaussianLimit, host_expandHamiltonian));
     gpuErrorHandler("gpu_multipole_tracking2::gpu_multipole_tracking2_kernel");
 
     if (sigmaDelta2)
@@ -1216,3 +1235,4 @@ __device__ int gpu_convertMomentaToSlopes(double *xp, double *yp, double qx, dou
     }
   return 1;
 }
+

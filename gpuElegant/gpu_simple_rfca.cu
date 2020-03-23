@@ -524,6 +524,10 @@ extern "C"
     unsigned int particlePitch = gpubase->gpu_array_pitch;
     double *d_temp_particles = gpubase->d_temp_particles;
     long same_dgamma, nKicks, linearize, ik, matrixMethod;
+
+    long ip;
+    double dc4, gamma, gamma1, dt, dgamma=0.0;
+
     double timeOffset;
     double P, phase, length, dtLight, volt, To;
     double coord[6], t, t0, omega, beta_i, tau, tAve = 0, dgammaAve = 0;
@@ -685,7 +689,25 @@ extern "C"
             if (rfca->tReference != -1)
               t0 = rfca->tReference;
             else
-              t0 = gpu_findFiducialTime(np, zEnd - rfca->length, length / 2, *P_central, mode);
+              {
+                if (!rfca->backtrack || matrixMethod)
+                  t0 = gpu_findFiducialTime(np, zEnd - rfca->length, length / 2, *P_central, mode);
+                else {
+                  double beta, P;
+                  long ik0;
+                  /* t0 = findFiducialTime(part, np, zEnd, -(fabs(rfca->length)-fabs(length/2)), *P_central, mode); */
+                  t0 = gpu_findFiducialTime(np, 0.0, 0.0, *P_central, mode);
+                  P = *P_central;
+                  beta = beta_from_delta(P, 0.0);
+                  for (ik0=0; ik0<nKicks; ik0++) {
+                    t0 -= fabs(length/2)/(beta*c_mks);
+                    P += volt*sin(rfca->phase*PI/180);
+                    beta = beta_from_delta(P, 0.0);
+                    if (ik0!=(nKicks-1))
+                      t0 -= fabs(length/2)/(beta*c_mks);
+                  }
+                }
+              }
 
             rfca->phase_fiducial = -omega * t0;
             rfca->fiducial_seen = 1;
@@ -703,6 +725,7 @@ extern "C"
     if (omega)
       {
         t0 = -rfca->phase_fiducial / omega;
+        rfca->t_fiducial = t0; /* in case the user asks us to save it */
         To = PIx2 / omega;
       }
     else
@@ -809,94 +832,215 @@ extern "C"
         cudaMemset(d_dgammaOverGammaAve, 0, sizeof(double) * np);
         cudaMemset(d_dgammaOverGammaNp, 0, sizeof(long) * np);
 
-        for (ik = 0; ik < nKicks; ik++)
-          {
-            if (isSlave || !notSinglePart)
-              {
-                gpuDriver(np,
-                          gpuRfTracFunction3(length, *P_central, c_mks, timeOffset,
-                                             t0, tAve, omega, volt, dtLight, phase, tau, dgammaAve,
-                                             rfca->change_t, rfca->end1Focus, ik, same_dgamma, linearize,
-                                             lockPhase, d_dgammaOverGammaNp, d_dgammaOverGammaAve, d_inverseF));
-                dgammaOverGammaNp = gpuReduceAddLong(d_dgammaOverGammaNp, np);
-                dgammaOverGammaAve = gpuReduceAdd(d_dgammaOverGammaAve, np);
-              }
+        if (!rfca->backtrack) {
+          for (ik = 0; ik < nKicks; ik++)
+            {
+              if (isSlave || !notSinglePart)
+                {
+                  gpuDriver(np,
+                            gpuRfTracFunction3(length, *P_central, c_mks, timeOffset,
+                                               t0, tAve, omega, volt, dtLight, phase, tau, dgammaAve,
+                                               rfca->change_t, rfca->end1Focus, ik, same_dgamma, linearize,
+                                               lockPhase, d_dgammaOverGammaNp, d_dgammaOverGammaAve, d_inverseF));
+                  dgammaOverGammaNp = gpuReduceAddLong(d_dgammaOverGammaNp, np);
+                  dgammaOverGammaAve = gpuReduceAdd(d_dgammaOverGammaAve, np);
+                }
 
-            if (!wakesAtEnd)
-              {
-                /* do wakes */
-                if (wake)
-                  gpu_track_through_wake(np, wake, P_central, run, iPass, charge);
-                if (trwake)
-                  gpu_track_through_trwake(np, trwake, *P_central, run, iPass, charge);
-                if (LSCKick)
-                  {
+              if (!wakesAtEnd)
+                {
+                  /* do wakes */
+                  if (wake)
+                    gpu_track_through_wake(np, wake, P_central, run, iPass, charge);
+                  if (trwake)
+                    gpu_track_through_trwake(np, trwake, *P_central, run, iPass, charge);
+                  if (LSCKick)
+                    {
 #if !USE_MPI
-                    if (dgammaOverGammaNp)
-                      dgammaOverGammaAve /= dgammaOverGammaNp;
-#else
-                    if (notSinglePart)
-                      {
-                        double t1 = dgammaOverGammaAve;
-                        long t2 = dgammaOverGammaNp;
-                        MPI_Allreduce(&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                        MPI_Allreduce(&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-                        if (dgammaOverGammaNp)
-                          dgammaOverGammaAve /= dgammaOverGammaNp;
-                      }
-                    else if (dgammaOverGammaNp)
-                      dgammaOverGammaAve /= dgammaOverGammaNp;
-
-#endif
-                    gpu_addLSCKick(d_particles, particlePitch, np, LSCKick, *P_central,
-                                   charge, length, dgammaOverGammaAve, d_temp_particles);
-                  }
-              }
-
-            if (length)
-              {
-                if (isSlave || !notSinglePart)
-                  {
-                    /* apply final drift and focus kick if needed */
-                    gpuDriver(np,
-                              gpuRfTracFunction4(length, rfca->end2Focus, ik, nKicks, d_inverseF));
-                  }
-              }
-
-            if (wakesAtEnd)
-              {
-                /* do wakes */
-                if (wake)
-                  gpu_track_through_wake(np, wake, P_central, run, iPass, charge);
-                if (trwake)
-                  gpu_track_through_trwake(np, trwake, *P_central, run, iPass, charge);
-                if (LSCKick)
-                  {
-                    if (dgammaOverGammaNp)
-#if !USE_MPI
-                      dgammaOverGammaAve /= dgammaOverGammaNp;
-#else
-                    if (notSinglePart)
-                      {
-                        double t1 = dgammaOverGammaAve;
-                        long t2 = dgammaOverGammaNp;
-                        MPI_Allreduce(&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
-                        MPI_Allreduce(&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);
+                      if (dgammaOverGammaNp)
                         dgammaOverGammaAve /= dgammaOverGammaNp;
-                      }
-                    else
-                      dgammaOverGammaAve /= dgammaOverGammaNp;
+#else
+                      if (notSinglePart)
+                        {
+                          double t1 = dgammaOverGammaAve;
+                          long t2 = dgammaOverGammaNp;
+                          MPI_Allreduce(&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                          MPI_Allreduce(&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+                          if (dgammaOverGammaNp)
+                            dgammaOverGammaAve /= dgammaOverGammaNp;
+                        }
+                      else if (dgammaOverGammaNp)
+                        dgammaOverGammaAve /= dgammaOverGammaNp;
+
 #endif
-                    gpu_addLSCKick(d_particles, particlePitch, np, LSCKick, *P_central,
-                                   charge, length, dgammaOverGammaAve, d_temp_particles);
+                      gpu_addLSCKick(d_particles, particlePitch, np, LSCKick, *P_central,
+                                     charge, length, dgammaOverGammaAve, d_temp_particles);
+                    }
+                }
+
+              if (length)
+                {
+                  if (isSlave || !notSinglePart)
+                    {
+                      /* apply final drift and focus kick if needed */
+                      gpuDriver(np,
+                                gpuRfTracFunction4(length, rfca->end2Focus, ik, nKicks, d_inverseF));
+                    }
+                }
+
+              if (wakesAtEnd)
+                {
+                  /* do wakes */
+                  if (wake)
+                    gpu_track_through_wake(np, wake, P_central, run, iPass, charge);
+                  if (trwake)
+                    gpu_track_through_trwake(np, trwake, *P_central, run, iPass, charge);
+                  if (LSCKick)
+                    {
+                      if (dgammaOverGammaNp)
+#if !USE_MPI
+                        dgammaOverGammaAve /= dgammaOverGammaNp;
+#else
+                      if (notSinglePart)
+                        {
+                          double t1 = dgammaOverGammaAve;
+                          long t2 = dgammaOverGammaNp;
+                          MPI_Allreduce(&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
+                          MPI_Allreduce(&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);
+                          dgammaOverGammaAve /= dgammaOverGammaNp;
+                        }
+                      else
+                        dgammaOverGammaAve /= dgammaOverGammaNp;
+#endif
+                      gpu_addLSCKick(d_particles, particlePitch, np, LSCKick, *P_central,
+                                     charge, length, dgammaOverGammaAve, d_temp_particles);
+                    }
+                }
+            }
+        }
+        else
+          {
+            /* backtracking */
+            double *dgammaSave=NULL, *tSave=NULL;
+            for (ik=0; ik<nKicks; ik++) {
+              dgammaOverGammaAve = dgammaOverGammaNp = 0;
+              if (isSlave || !notSinglePart) {
+                dgammaSave = (double *)tmalloc(sizeof(*dgammaSave)*np);
+                tSave = (double *)tmalloc(sizeof(*tSave)*np);
+                for (ip=0; ip<np; ip++) {
+                  getParticleFromGPU(coord, ip, 5, d_particles, particlePitch);
+                  //coord = part[ip];
+                  if (coord[5]==-1)
+                    continue;
+                  if (length)
+                    /* compute distance traveled to center of this section */
+                    dc4 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+                  else 
+                    dc4 = 0;
+              
+                  /* compute energy kick */
+                  P     = *P_central*(1+coord[5]);
+                  beta_i = P/(gamma=sqrt(sqr(P)+1));
+                  t     = (coord[4]+dc4)/(c_mks*beta_i) - timeOffset;
+                  if (ik==0 && timeOffset && rfca->change_t) 
+                    coord[4] = t*c_mks*beta_i-dc4;
+                  if ((dt = t-t0)<0)
+                    dt = 0;
+                  if  (!same_dgamma) {
+                    if (!linearize)
+                      dgamma = volt*sin(omega*(t-(lockPhase?tAve:0)+(nKicks-1-ik)*dtLight)+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
+                    else
+                      dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*(tAve-timeOffset)+phase);
                   }
+                  tSave[ip] = t;
+                  dgammaSave[ip] = dgamma;
+                  if (gamma) {
+                    dgammaOverGammaNp ++;
+                    dgammaOverGammaAve += dgamma/gamma;
+                  }
+              
+                  if (length) {
+                    if (rfca->end1Focus && ik==0) {
+                      /* apply focus kick */
+                      d_inverseF[ip] = dgamma/(2*gamma*length);
+                      coord[1] -= coord[0]*d_inverseF[ip];
+                      coord[3] -= coord[2]*d_inverseF[ip];
+                    } 
+                    /* apply initial drift */
+                    coord[0] += coord[1]*length/2;
+                    coord[2] += coord[3]*length/2;
+                    coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+                  } 
+                }
               }
+
+              /* do wakes */
+              if (LSCKick) {
+#if !USE_MPI
+                if (dgammaOverGammaNp)
+                  dgammaOverGammaAve /= dgammaOverGammaNp;           
+#else
+                if (notSinglePart) {
+                  double t1 = dgammaOverGammaAve;
+                  long t2 = dgammaOverGammaNp;
+                  MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                  MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+                  if (dgammaOverGammaNp)
+                    dgammaOverGammaAve /= dgammaOverGammaNp; 
+                } else if (dgammaOverGammaNp)
+                  dgammaOverGammaAve /= dgammaOverGammaNp;
+            
+#endif
+                gpu_addLSCKick(d_particles, particlePitch, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve, d_temp_particles);
+              }
+              if (trwake)
+                gpu_track_through_trwake(np, trwake, *P_central, run, iPass, charge);
+              if (wake) 
+                gpu_track_through_wake(np, wake, P_central, run, iPass, charge);
+
+              if (isSlave || !notSinglePart) {
+                /* apply final drift and focus kick if needed */
+                for (ip=0; ip<np; ip++) {
+                  getParticleFromGPU(coord, ip, 5, d_particles, particlePitch);
+                  //coord = part[ip];
+                  if (coord[5]==-1)
+                    continue;
+                  if (length)
+                    /* compute distance traveled to center of this section */
+                    dc4 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+                  else 
+                    dc4 = 0;
+
+                  /* apply energy kick */
+                  t = tSave[ip];
+                  P     = *P_central*(1+coord[5]);
+                  beta_i = P/(gamma=sqrt(sqr(P)+1));
+                  dgamma = dgammaSave[ip];
+                  add_to_particle_energy(coord, t, *P_central, dgamma);
+                  if ((gamma1 = gamma+dgamma)<=1)
+                    coord[5] = -1;
+                  else 
+                    /* compute inverse focal length for exit kick */
+                    d_inverseF[ip] = -dgamma/(2*gamma1*length);
+                  getParticleFromGPU(coord, ip, 5, d_particles, particlePitch);
+                  //coord = part[ip];
+                  coord[0] += coord[1]*length/2;
+                  coord[2] += coord[3]*length/2;
+                  coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+                  if (rfca->end2Focus && (ik==nKicks-1)) {
+                    coord[1] -= coord[0]*d_inverseF[ip];
+                    coord[3] -= coord[2]*d_inverseF[ip];
+                  }
+                }
+                free(dgammaSave);
+                free(tSave);
+              }
+            }
           }
         cudaFree(d_inverseF);
       }
     else
       {
-
+        /* matrix method */
         for (ik = 0; ik < nKicks; ik++)
           {
             dgammaOverGammaAve = dgammaOverGammaNp = 0;
@@ -1014,6 +1158,7 @@ extern "C"
     rfcw->rfca.nKicks = rfcw->length ? rfcw->nKicks : 1;
     rfcw->rfca.dx = rfcw->dx;
     rfcw->rfca.dy = rfcw->dy;
+    rfcw->rfca.tReference = rfcw->tReference;
     rfcw->rfca.linearize = rfcw->linearize;
     if (!rfcw->initialized)
       {
