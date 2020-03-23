@@ -1853,6 +1853,9 @@ char **argv;
         bombElegant("run_setup must precede obstruction_data namelist", NULL);
       if (!do_floor_coordinates)
         bombElegant("floor_coordinate command required for obstruction_data to work", NULL);
+#if HAVE_GPU
+      bombElegant("The obstruction_data command is not implemented for the GPU version of elegant.", NULL);
+#endif
       readObstructionInput(&namelist_text, &run_conditions);
       printWarning("The obstruction_data command and implementation are experimental. See the manual for limitations.", NULL);
       break;
