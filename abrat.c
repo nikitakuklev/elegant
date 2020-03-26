@@ -227,6 +227,7 @@ int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inpu
       fprintf(stderr, "%s\n", USAGE);
       return (1);
     }
+  quiet = 0;
   nx_fmap = nz_fmap = 0;
   integ_tol = 1e-12;
   theta = 0;
@@ -618,7 +619,8 @@ int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inpu
 
   zCenter = (zNomEntry + zNomExit) / 2;
   xCenter = (xNomEntry + xNomExit) / 2;
-  central_length = 100 * (zNomExit - zNomEntry);
+  if ((central_length = 100 * (zNomExit - zNomEntry))<=0)
+    bomb("nominal entry and exit have same Z coordinate", NULL);
   if (!idealMode)
     {
       if (arc_scan)

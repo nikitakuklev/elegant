@@ -981,6 +981,10 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
     double interpParamValue;
     interpolationParameterUnits = NULL;
     interpParameter = 0;
+    if (!quiet) {
+      printf("2D field map mode\n");
+      fflush(stdout);
+    }
     do {
       if (!single_scan) {
         if (firstPage) {
@@ -1033,15 +1037,21 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
         if (nx==1) {
           single_scan = 1;
           xi = xf = 0;
-          if (!quiet)
+          if (!quiet) {
             printf("data treated as single scan\n");
+            fflush(stdout);
+          }
         }
-        else if (!quiet)
+        else if (!quiet) {
           printf("data grid:\n    x: [%.8f, %.8f]m   dx = %.8fm   nx = %ld\n",
                  xi, xf, dx, nx);
-        if (!quiet)
-          printf("    z: [%.8f, %.8f]m   dz = %.8fm   nz = %ld\n",
+          fflush(stdout);
+        }
+        if (!quiet){
+          printf("     z: [%.8f, %.8f]m   dz = %.8fm   nz = %ld\n",
                  zi, zf, dz, nz);
+          fflush(stdout);        
+        }
       } else {
         if (interpolationParameter)
           bomb("interpolation not supported for single scan", NULL);
@@ -1069,6 +1079,7 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
           printf("data grid:\n    ");
           printf("    z: [%.8f, %.8f]m   dz = %.8fm   nz = %ld\n",
                  zi, zf, dz, nz);
+          fflush(stdout);
         }
       }
       
@@ -1155,6 +1166,7 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
         bomb("extremal B value is zero", NULL);
       if (!quiet) {
         printf("Maximum value of B is %.8f T\n", Bmax);
+        fflush(stdout);
       }
       /* 
          if (!quiet)
@@ -1202,11 +1214,18 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
             iz0 = iz-1;
           }
           dBnormdz[ix][iz] = (Bnorm[ix][iz1]-Bnorm[ix][iz0])/dz0;
-          dBnormdx[ix][iz] = (Bnorm[ix1][iz]-Bnorm[ix0][iz])/dx0;
+          if (!single_scan)
+            dBnormdx[ix][iz] = (Bnorm[ix1][iz]-Bnorm[ix0][iz])/dx0;
+          else 
+            dBnormdx[ix][iz] = 0;
         }
       }
       if (interpolationParameter)
         add2dMapList(interpParamValue);
+      if (!quiet) {
+        printf("Finished processing page from field file\n"); 
+        fflush(stdout);
+      }
     } while (interpolationParameter && SDDS_ReadPage(&SDDS_table)>0 && (rows=SDDS_CountRowsOfInterest(&SDDS_table))>0);
     if (interpolationParameter) {
       if (length2dMapList<=1)
