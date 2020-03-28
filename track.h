@@ -438,10 +438,10 @@ typedef struct {
     char **item;                 /* name of item to vary for each element, e.g., "K1" */
     long *parameterNumber;       /* parameter number of varied value */
     unsigned long *flags;        /* flag bits follow: */      
-#define DIFFERENTIAL_MOD   0x01
-#define MULTIPLICATIVE_MOD 0x02
-#define VERBOSE_MOD        0x04
-#define REFRESH_MATRIX_MOD 0x08
+#define DIFFERENTIAL_MOD   0x01UL
+#define MULTIPLICATIVE_MOD 0x02UL
+#define VERBOSE_MOD        0x04UL
+#define REFRESH_MATRIX_MOD 0x08UL
     double *verboseThreshold;    /* fractional change for verbose output */
     double *lastVerboseValue;    /* last value for which a change was announced */
     double *unperturbedValue;    /* value without modulation */
@@ -461,10 +461,10 @@ typedef struct {
     char **item;                 /* name of item to vary for each element, e.g., "K1" */
     long *parameterNumber;       /* parameter number of varied value */
     unsigned long *flags;        /* flag bits follow: */      
-#define DIFFERENTIAL_RAMP   0x01
-#define MULTIPLICATIVE_RAMP 0x02
-#define VERBOSE_RAMP        0x04
-#define REFRESH_MATRIX_RAMP 0x08
+#define DIFFERENTIAL_RAMP   0x01UL
+#define MULTIPLICATIVE_RAMP 0x02UL
+#define VERBOSE_RAMP        0x04UL
+#define REFRESH_MATRIX_RAMP 0x08UL
     double *unperturbedValue;    /* value without modulation */
     long *startPass, *endPass;
     double *startValue, *endValue, *exponent;
