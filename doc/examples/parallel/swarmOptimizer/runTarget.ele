@@ -1,0 +1,23 @@
+! Compute a more-or-less random case, which will try to return to
+! with the optimizer
+
+&run_setup
+	lattice = lattice.lte
+	p_central_mev = 1000
+	element_divisions = 10
+&end
+
+&alter_elements name=Q1, item=K1, value=-1 &end
+&alter_elements name=Q2, item=K1, value=1 &end
+&alter_elements name=Q3, item=K1, value=-1.5 &end
+&alter_elements name=Q4, item=K1, value=1.7 &end
+
+&twiss_output
+	filename = %s.twi
+	matched = 0
+	beta_x = 1
+	beta_y = 1
+&end
+
+
+

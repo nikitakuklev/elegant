@@ -1,0 +1,49 @@
+&run_setup
+	lattice = lattice.lte
+	p_central_mev = 1000
+	final = %s.fin
+	parameters = %s.param
+&end
+
+&rpn_load
+	filename = runTarget.twi
+	tag = target
+&end
+
+&run_control
+&end
+
+&parallel_optimization_setup
+	method = swarm,
+	population_log = %s.pop
+	print_all_individuals = 1
+&end
+
+&optimization_variable
+	name = Q1, item = K1, lower_limit = -2, upper_limit = 2, step_size = 1e-3 &end
+&optimization_variable
+	name = Q2, item = K1, lower_limit = -2, upper_limit = 2, step_size = 1e-3 &end
+&optimization_variable
+	name = Q3, item = K1, lower_limit = -2, upper_limit = 2, step_size = 1e-3 &end
+&optimization_variable
+	name = Q4, item = K1, lower_limit = -2, upper_limit = 2, step_size = 1e-3 &end
+
+&optimization_term
+	term = "betax target.betax / 1 .1 sene" &end
+&optimization_term
+	term = "betay target.betay / 1 .1 sene" &end
+&optimization_term
+	term = "alphax target.alphax .1 sene" &end
+&optimization_term
+	term = "alphay target.alphay .1 sene" &end
+
+&twiss_output
+	matched = 0
+	beta_x = 1
+	beta_y = 1
+&end
+
+&bunched_beam &end
+
+&optimize &end
+

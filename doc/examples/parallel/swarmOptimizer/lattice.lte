@@ -1,0 +1,9 @@
+Q1: quad,l=0.5,k1=-0.5
+Q2: quad,l=0.5,k1=1.5
+Q3: quad,l=0.5,k1=-1.0
+Q4: quad,l=0.5,k1=1.0
+D1: drift,l=1
+D2: drift,l=1
+D3: drift,l=1
+D4: drift,l=1
+bl: line=(q1,d1,q2,d2,q3,d3,q4,d4)

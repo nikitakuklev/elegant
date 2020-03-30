@@ -1,0 +1,20 @@
+&run_setup
+	lattice = lattice.lte
+	p_central_mev = 1000
+	magnets = %s.mag
+	element_divisions = 10
+&end
+
+&load_parameters
+	filename = runOpt3.param,
+	change_defined_values = 1
+	include_item_pattern = K1
+&end
+
+&twiss_output
+	filename = %s.twi
+	matched = 0
+	beta_x = 1
+	beta_y = 1
+&end
+

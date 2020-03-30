@@ -1,0 +1,12 @@
+#!/bin/bash
+
+elegant runTarget.ele
+mpiexec -np 8 Pelegant runOpt1.ele
+mpiexec -np 8 Pelegant runOpt2.ele
+mpiexec -np 8 Pelegant runOpt3.ele
+elegant evalOpt3.ele
+
+sddsplot -groupby=names -sep=names -join=x -layout=1,2 -unsup=y -graph=line,vary \
+	 -column=s,beta? runTarget.twi -legend=spec=Target \
+	 -column=s,beta? evalOpt3.twi -legend=spec=Optim. \
+	 -column=s,Profile evalOpt3.mag -overlay=xmode=norm,yfact=0.04 -omni
