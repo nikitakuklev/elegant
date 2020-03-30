@@ -17,7 +17,7 @@
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
                              BEAM *beam, double **part, long np, 
                              char *mainRootname, long iPass, long driftOrder, double z,
-                             long forceSerial, long occurence)
+                             long forceSerial, long occurence, long backtrack)
 {
   long doDrift;
   doDrift = 0;
@@ -56,14 +56,14 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
         warned = 1;
       }
     }
-    return transformBeamWithScript_p(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence);
+    return transformBeamWithScript_p(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence, backtrack);
   } else {
     if (myid!=0)
       printf("*** Warning: myid=%d in forced serial transformBeamWithScript\n", myid);
-    return transformBeamWithScript_s(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence);
+    return transformBeamWithScript_s(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence, backtrack);
   }
 #else
-  return transformBeamWithScript_s(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence);
+  return transformBeamWithScript_s(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence, backtrack);
 #endif
 }
 
@@ -128,7 +128,8 @@ void determineScriptNames(SCRIPT *script, char **rootname0, char **input0, char 
   *nameLength0 = nameLength;
 }
 
-void prepareScriptCommand(SCRIPT *script, long iPass, char *rootname, char *input, char *output, char **cmdBufferRet, long occurence)
+void prepareScriptCommand(SCRIPT *script, long iPass, char *rootname, char *input, char *output, char **cmdBufferRet, long occurence,
+                          long backtrack)
 {
   char *cmdBuffer0, *cmdBuffer1=NULL;
   long i;
@@ -158,9 +159,11 @@ void prepareScriptCommand(SCRIPT *script, long iPass, char *rootname, char *inpu
   replaceString(cmdBuffer0, script->command, "%i", input, 9, 0);
   replaceString(cmdBuffer1, cmdBuffer0, "%o", output, 9, 0);
   replaceString(cmdBuffer0, cmdBuffer1, "%p", passString, 9, 0);
+  replaceString(cmdBuffer1, cmdBuffer0, "%b", backtrack?"1":"0", 9, 0);
   sprintf(occurenceString, "%ld", occurence);
-  replaceString(cmdBuffer1, cmdBuffer0, "%c", occurenceString, 9, 0);
-  
+  replaceString(cmdBuffer0, cmdBuffer1, "%c", occurenceString, 9, 0);
+  strcpy(cmdBuffer1, cmdBuffer0);
+
   /* substitute numerical parameters */
   for (i=0; i<10; i++) {
     long count = 0;
@@ -210,7 +213,7 @@ void prepareScriptCommand(SCRIPT *script, long iPass, char *rootname, char *inpu
 long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge, 
 			       BEAM *beam, double **part, long np, 
                                char *mainRootname, long iPass, long driftOrder, double z,
-			       long occurence)
+			       long occurence, long backtrack)
 {
   char *rootname=NULL, *input, *output=NULL;
   char *cmdBuffer1=NULL;
@@ -232,7 +235,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
     printf("SCRIPT rootname: %s\n", rootname);
     fflush(stdout);
   }
-  prepareScriptCommand(script, iPass, rootname, input, output, &cmdBuffer1, occurence);
+  prepareScriptCommand(script, iPass, rootname, input, output, &cmdBuffer1, occurence, backtrack);
   if (script->verbosity>0) {
     printf("%s\n", cmdBuffer1);
     fflush(stdout);
@@ -490,7 +493,8 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
 #if USE_MPI
 long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge, 
                                BEAM *beam, double **part, long np, 
-                               char *mainRootname, long iPass, long driftOrder, double z, long occurence)
+                               char *mainRootname, long iPass, long driftOrder, double z, long occurence,
+                               long backtrack)
 {
   char *rootname=NULL, *input, *output=NULL;
   char *cmdBuffer1=NULL;
@@ -519,7 +523,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
 
   determineScriptNames(script, &rootname, &input, &output, &nameLength, mainRootname, 0, iPass, occurence);
 
-  prepareScriptCommand(script, iPass, rootname, input, output, &cmdBuffer1, occurence);
+  prepareScriptCommand(script, iPass, rootname, input, output, &cmdBuffer1, occurence, backtrack);
   if (script->verbosity>0) {
     printf("%s\n", cmdBuffer1);
     fflush(stdout);

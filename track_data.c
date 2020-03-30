@@ -1940,7 +1940,10 @@ PARAMETER matter_param[N_MATTER_PARAMS] = {
     {"ELECTRON_RECOIL", "", IS_LONG, 0, (long)((char *)&matter_example.electronRecoil), NULL, 0.0, 0, "If non-zero, electron recoil during Coulomb scattering is included (results in energy change)."},
     {"Z", "", IS_LONG, 0, (long)((char *)&matter_example.Z), NULL, 0.0, 0, "Atomic number"},
     {"A", "AMU", IS_DOUBLE, 0, (long)((char *)&matter_example.A), NULL, 0.0, 0, "Atomic mass"},
-    {"RHO", "KG/M^3", IS_DOUBLE, 0, (long)((char *)&matter_example.rho), NULL, 0.0, 0, "Density"},       
+    {"RHO", "KG/M^3", IS_DOUBLE, 0, (long)((char *)&matter_example.rho), NULL, 0.0, 0, "Density"},
+    {"PRESSURE", "PASCAL", IS_DOUBLE, 0, (long)((char *)&matter_example.pressure), NULL, 0.0, 0, "Pressure. Used with temperature and atomic mass to compute density for ideal gas."},
+    {"TEMPERATURE", "K", IS_DOUBLE, 0, (long)((char *)&matter_example.temperature), NULL, 0.0, 0, "Temperature. Used with pressure and atomic mass to compute density for ideal gas."},
+    {"MULTIPLICITY", "", IS_LONG, 0, (long)((char *)&matter_example.multiplicity), NULL, 0.0, 1, "Atoms per gas molecule."},
     {"PLIMIT", "", IS_DOUBLE, 0, (long)((char *)&matter_example.pLimit), NULL, 0.05, 0, "Probability cutoff for each slice"},
     {"WIDTH", "M", IS_DOUBLE, 0, (long)((char *)&matter_example.width), NULL, 0.0, 0, "Full width of slots. If 0, no slots are present."},
     {"SPACING", "M", IS_DOUBLE, 0, (long)((char *)&matter_example.spacing), NULL, 0.0, 0, "Center-to-center spacing of slots. If 0, no slots are present."},
@@ -3629,7 +3632,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_CLEAN_PARAMS,  0|NO_APERTURE, sizeof(CLEAN), clean_param },
     { N_TWISSELEMENT_PARAMS, HAS_MATRIX|DONT_CONCAT|MPALGORITHM,  sizeof(TWISSELEMENT), twissElement_param},
     { N_WIGGLER_PARAMS, MAT_LEN|MATRIX_TRACKING, sizeof(WIGGLER), wiggler_param},
-    { N_SCRIPT_PARAMS,  MAT_LEN|DONT_CONCAT|MPALGORITHM, sizeof(SCRIPT),    script_param     }, 
+    { N_SCRIPT_PARAMS,  MAT_LEN|DONT_CONCAT|MPALGORITHM|BACKTRACK, sizeof(SCRIPT),    script_param     }, 
     { N_FLOORELEMENT_PARAMS,  0|NO_APERTURE, sizeof(FLOORELEMENT),    floor_param     }, 
     { N_LTHINLENS_PARAMS,  HAS_MATRIX|IS_MAGNET|MATRIX_TRACKING,       sizeof(LTHINLENS),    lthinlens_param     },
     {  N_LMIRROR_PARAMS,  HAS_MATRIX|IS_MAGNET|MATRIX_TRACKING,       sizeof(LMIRROR),    lmirror_param     },
@@ -3771,4 +3774,3 @@ char *mpiAbortDescription[N_MPI_ABORT_TYPES] = {
 char *chamberShapeChoice[N_CHAMBER_SHAPES] = {
   "round", "rect.", "ellip.", "sup.ellip.", "?",
 };
-

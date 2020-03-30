@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2020.2\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 2020.3\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,46 +35,32 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2020.2}
+\section{Highlights of What's New in Version 2020.3}
 
-Here is a summary of what's changed since release 2020.1.
-Historical change logs are collected in Section \ref{sect:changeLog}.
+Here is a summary of what's changed since release 2020.2.  Historical change logs are collected in Section
+\ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|CSRDRIFT| element was not including longitudinal space charge as requested when CSR effects were turned off.
-  This was reported by Y. Park (UCLA).
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The parameters file created by the \verb|run_setup| command had negative values for certain drift lengths when 
-  backtracking was used.   This was reported by Y. Park (UCLA).
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added \verb|MIN_NORMAL_ORDER|, \verb|MAX_NORMAL_ORDER|, \verb|MIN_SKEW_ORDER|, and \verb|MAX_SKEW_ORDER| 
-  to the \verb|KQUAD|, \verb|KSEXT|, and \verb|CCBEND| elements.
-  This allows easily restricting which systematic and random multipole orders are included without changing the data files.
-\item Added the \verb|T_REFERENCE| parameter to \verb|RFCW|, which is useful in backtracking in linacs.
+\item The \verb|SCRIPT| element can now be used in backtracking mode. See the manual page for details.
+\item The \verb|MATTER| element now accepts \verb|PRESSURE| and \verb|TEMPERATURE| values, which are used to
+  compute the density according to the ideal gas law, allowing easier simulation of scattering from gasses.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added the \verb|obstruction_data| command, which permits specifying obstructions in global coordinates.
-  At present, this is experimental and only enforced inside \verb|CSBEND|, \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|,
-  and \verb|KQUSE| elements, and at the end of elements.
-\item Added the \verb|losses_include_global_coordinates| to the \verb|run_setup| command, which allows requesting
-  that the losses file contains global coordinates of lost particles (as opposed to only Frenet-Serret coordinates).
-\item The \verb|closed_orbit| command now includes a parameter in the output file that indicates if the orbit determination
-  has failed.
-\item Added the \verb|rfc_reference_output| parameter to the \verb|run_setup| command, which allows recording the
-  internally-determined reference times for \verb|RFCA| and \verb|RFCW| elements. This can be useful in improving
-  backtracking in linacs.
-\item The \verb|error_element| command now supports using sampled values in an external files as the source for perturbation
-  values.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -85,8 +71,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Changes Specific to the GPU Version}
 
-{\bf The GPU version continues to be an alpha release and contains bugs.}
-Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+{\bf The GPU version continues to be an alpha release and contains bugs.}  Users are encouraged to check results against
+the serial or parallel versions and report issues to the developers.
 
 \begin{itemize}
 \item None.
@@ -95,7 +81,7 @@ Users are encouraged to check results against the serial or parallel versions an
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item \verb|sddsbrightness| now computes the undulator linewidth (FWHM).
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -7797,6 +7783,70 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 2020.2}
+
+Here is a summary of what's changed since release 2020.1.  Historical change logs are collected in Section
+\ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The \verb|CSRDRIFT| element was not including longitudinal space charge as requested when CSR effects were turned
+off.  This was reported by Y. Park (UCLA).
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The parameters file created by the \verb|run_setup| command had negative values for certain drift lengths when
+backtracking was used.  This was reported by Y. Park (UCLA).
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item Added \verb|MIN_NORMAL_ORDER|, \verb|MAX_NORMAL_ORDER|, \verb|MIN_SKEW_ORDER|, and \verb|MAX_SKEW_ORDER| to the
+\verb|KQUAD|, \verb|KSEXT|, and \verb|CCBEND| elements.  This allows easily restricting which systematic and random
+multipole orders are included without changing the data files.
+\item Added the \verb|T_REFERENCE| parameter to \verb|RFCW|, which is useful in backtracking in linacs.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item Added the \verb|obstruction_data| command, which permits specifying obstructions in global coordinates.  At
+present, this is experimental and only enforced inside \verb|CSBEND|, \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, and
+\verb|KQUSE| elements, and at the end of elements.
+\item Added the \verb|losses_include_global_coordinates| to the \verb|run_setup| command, which allows requesting that
+the losses file contains global coordinates of lost particles (as opposed to only Frenet-Serret coordinates).
+\item The \verb|closed_orbit| command now includes a parameter in the output file that indicates if the orbit
+determination has failed.
+\item Added the \verb|rfc_reference_output| parameter to the \verb|run_setup| command, which allows recording the
+internally-determined reference times for \verb|RFCA| and \verb|RFCW| elements. This can be useful in improving
+backtracking in linacs.
+\item The \verb|error_element| command now supports using sampled values in an external files as the source for
+perturbation values.
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}  Users are encouraged to check results against
+the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item \verb|sddsbrightness| now computes the undulator linewidth (FWHM).
+\end{itemize}
+
 
 \subsection{Highlights of What's New in Version 2020.1.1}
 

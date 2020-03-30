@@ -1020,7 +1020,7 @@ extern char *entity_text[N_TYPES];
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 75
-#define N_MATTER_PARAMS 18
+#define N_MATTER_PARAMS 21
 #define N_RFMODE_PARAMS 56
 #define N_TRFMODE_PARAMS 25
 #define N_TWMTA_PARAMS 17
@@ -2480,7 +2480,9 @@ typedef struct {
     double length, lEffective;
     double Xo;       /* radiation length */
     long energyDecay, energyStraggle, nuclearBremsstrahlung, electronRecoil, Z;
-    double A, rho, pLimit;
+    double A, rho, pressure, temperature;
+    long multiplicity;
+    double pLimit;
     double width, spacing, tilt, center;
     long nSlots;
     long startPass, endPass;
@@ -3737,12 +3739,12 @@ void setTrackingOmniWedgeFunction(void (*wedgeFunc)(double **part, long np, long
 void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *nLost, double ***accepted, long n_processors, int myid, double *round);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
                              long np, char *mainRootname, long iPass, long driftOrder, double z, long forceSerial,
-			     long occurence);
+			     long occurence, long backtrack);
 long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
-			       long np, char *mainRootname, long iPass, long driftOrder, double z, long occurence);
+			       long np, char *mainRootname, long iPass, long driftOrder, double z, long occurence, long backtrack);
 #ifdef USE_MPI
 long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
-                               long np, char *mainRootname, long iPass, long driftOrder, double z, long occurence);
+                               long np, char *mainRootname, long iPass, long driftOrder, double z, long occurence, long bracktrack);
 #endif
 void convertToCanonicalCoordinates(double **coord, long np, double p0, long includeTimeCoordinate);
 void convertFromCanonicalCoordinates(double **coord, long np, double p0, long includeTimeCoordinate);

@@ -2076,7 +2076,7 @@ long do_tracking(
 #endif
 	      nLeft = transformBeamWithScript((SCRIPT*)eptr->p_elem, *P_central, charge, 
 					      beam, coord, nToTrack, run->rootname, i_pass, run->default_order, z, 0,
-					      eptr->occurence);
+					      eptr->occurence, run->backtrack);
               nLost = nToTrack-nLeft;
 #if USE_MPI
 	      nToTrack = nLeft;
