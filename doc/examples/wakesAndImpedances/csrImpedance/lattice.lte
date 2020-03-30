@@ -1,0 +1,6 @@
+q: charge,total=10e-9
+csrz: zlongit,zreal="csrZ.sdds=f+ZReal",zimag="csrZ.sdds=f+ZImag",interpolate=1
+b1: csrcsbend,steady_state=1,l=0.1,angle=0.01,e1=0,e2=0,bins=80,n_kicks=100,sg_halfwidth=4,&
+    high_frequency_cutoff0=0.2,high_frequency_cutoff1=0.25
+blz: line=(q,csrz)
+blb: line=(q,b1)

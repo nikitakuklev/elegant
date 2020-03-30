@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Number of bins per sigma of bunch duration
+n=20
+
+csrImpedance csrZ.sdds -height=0.1 -radius=10 \
+	     -freq=min=0,max=`rpnl 333e-15 rec $n mult` -n=14 -angle=0.01 \
+	     -filter=0.2,0.25
+
+elegant runZ.ele
+
+elegant runB.ele -macro=n=$n
+
+sddsplot  -graph=dot,vary -mode=x=meancenter \
+	  -col=t,p runZ.out -legend=spec=ZLONGIT \
+	  -col=t,p runB.out -legend=spec=CSRCSBEND
+
