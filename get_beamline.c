@@ -689,7 +689,7 @@ double compute_end_positions(LINE_LIST *lptr)
     double z, l, theta, z_recirc;
     static ELEMENT_LIST *eptr;
     long i_elem, recircPresent;
-    
+
     /* use length data to establish z coordinates at end of each element */
     /* also check for duplicate recirculation elements and set occurence numbers to 0 */
     eptr = &(lptr->elem);
@@ -726,8 +726,10 @@ double compute_end_positions(LINE_LIST *lptr)
             z_recirc = z;
             recircPresent = 1;
             }
-        if (l<0 && negativeLengthWarningsLeft>0) {
-            printf("warning(1): element %s has negative length = %e\n", eptr->name, l);
+        if ( ((!(lptr->flags&BEAMLINE_BACKTRACKING) && l<0) || (lptr->flags&BEAMLINE_BACKTRACKING && l>0)) &&
+	     negativeLengthWarningsLeft>0) {
+            printf("warning(1): element %s has negative length = %e\n", eptr->name,
+		   lptr->flags&BEAMLINE_BACKTRACKING?-l:l);
             if (--negativeLengthWarningsLeft==0)
               printf("Further negative length warnings will be suppressed.\n");
             fflush(stdout);
@@ -739,15 +741,16 @@ double compute_end_positions(LINE_LIST *lptr)
         } while ((eptr=eptr->succ));
 
     resolveBranchPoints(lptr);
-    
-    if (lptr->flags&BEAMLINE_BACKTRACKING) {
-      printf("Offseting z coordinates by %le for backtracking\n", -z);
+
+    /* if ((lptr->flags&BEAMLINE_BACKTRACKING) && z<0) { */
+    if ((lptr->flags&BEAMLINE_BACKTRACKING)) {
+      printf("Offsetting z coordinates by %le for backtracking\n", -z);
       eptr = &(lptr->elem);
       do {
         eptr->end_pos -= z;
-        } while ((eptr=eptr->succ));
+      } while ((eptr=eptr->succ));
     }
-
+    
     /* Compute revolution length, respecting BRANCH elements */
     eptr = &(lptr->elem);
     z = z_recirc = 0;
