@@ -734,7 +734,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
     }
     m_copy(V0, V1);
     m_copy(W0, W1);
-    elem->end_pos = s;
+    /* elem->end_pos = s; */
     last_elem = elem;
     elem = elem->succ;
   }
@@ -750,7 +750,8 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
                             NULL, last_elem, NULL, 0);
   }
 
-  if (beamline->flags&BEAMLINE_BACKTRACKING) {
+  /*
+  if (beamline->flags&BEAMLINE_BACKTRACKING && s<0) {
     ELEMENT_LIST *eptr;
     printf("Offseting z coordinates by %le for backtracking\n", -s);
     eptr = &(beamline->elem);
@@ -758,6 +759,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
       eptr->end_pos -= s;
     } while ((eptr=eptr->succ));
   }
+  */
 
   m_free(&V0);
   m_free(&V1);
