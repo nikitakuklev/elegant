@@ -362,12 +362,13 @@ long do_tracking(
 #ifdef VAX_VMS
   is_batch = job_mode(getpid())==2?1:0;
 #endif
-
+  
   eptr = &(beamline->elem);
   if (entity_description[eptr->type].flags&HAS_LENGTH)
     z = z_recirc = last_z = beamline->elem.end_pos - ((DRIFT*)beamline->elem.p_elem)->length;
   else
     z = z_recirc = last_z = beamline->elem.end_pos;
+
   i_sums = i_sums_recirc = 0;
   x_max = y_max = 0;
   nToTrack = nLeft = nMaximum = nOriginal;
@@ -1044,8 +1045,14 @@ long do_tracking(
       name = eptr->name;
 #endif
       last_z = z;
-      z = eptr->end_pos;
-
+      if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem)
+        z += ((DRIFT*)eptr->p_elem)->length;
+      else {
+        if (eptr->pred)
+          z += eptr->end_pos - eptr->pred->end_pos;
+        else
+          z += eptr->end_pos;
+      }
       /* fill a structure that can be used to pass to other routines 
        * information on the tracking context 
        */
