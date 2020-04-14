@@ -74,6 +74,7 @@
 typedef struct {
   char *filename;
   BMAPXYZ_DATA *data;
+  double fieldLength;
 } STORED_BMAPXYZ_DATA;
 static STORED_BMAPXYZ_DATA *storedBmapxyzData = NULL;
 static long nStoredBmapxyzData = 0;
@@ -1955,6 +1956,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   }
   if (imap<nStoredBmapxyzData) {
     bmapxyz->data = storedBmapxyzData[imap].data;
+    bmapxyz->fieldLength = storedBmapxyzData[imap].fieldLength;
     return;
   }
 
@@ -2096,7 +2098,8 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
     bmapxyz->fieldLength = data->zmax-data->zmin;
     printf("Set LFIELD for %s to %21.15e\n", bmapxyz->filename, bmapxyz->fieldLength);
   }
-  
+  storedBmapxyzData[imap].fieldLength = bmapxyz->fieldLength;
+
   if (bmapxyz->checkFields) {
     /* compute the maximum values of |div B| and |curl B| */
     double divB, curlB[3], magCurlB, maxDivB, maxCurlB;
