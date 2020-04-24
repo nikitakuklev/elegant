@@ -70,7 +70,7 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
 }
 
 /* Returns 0 if not obstructed */
-long insideObstruction(double *part, long segment, long nSegments)
+long insideObstruction(double *part, short mode, double dz, long segment, long nSegments)
 {
   TRACKING_CONTEXT context;
   ELEMENT_LIST *eptr;
@@ -104,7 +104,12 @@ long insideObstruction(double *part, long segment, long nSegments)
   }
   */
 
-  convertLocalCoordinatesToGlobal(&Z, &X, &Y, part, eptr, segment, nSegments);
+  convertLocalCoordinatesToGlobal(&Z, &X, &Y, mode, part, eptr, dz, segment, nSegments);
+  /*
+    printf("Checking obstruction for x=%le, y=%le, s=%le, segment=%ld/%ld: Z=%le, X=%le, Y=%le\n",
+         part[0], part[2], part[4], segment, nSegments, Z, X, Y);
+  */
+
   /* 
   fprintf(fpObs, "%le %le %ld\n", Z, X, (long)part[6]); 
   */
@@ -120,59 +125,45 @@ long insideObstruction(double *part, long segment, long nSegments)
   return 0;
 }
 
-long insideObstruction_xy(double x, double y, double xyTilt, long particleID, long segment, long nSegments)
+long insideObstruction_xyz
+(
+ double x, /* local x coordinate */
+ double y, /* local y coordinate */
+ double xyTilt, /* tilt of element */
+ short mode,
+ double dz,
+ long segment,  /* for segmented elements, the segment index */
+ long nSegments /* For segmented elements, the number of segments.
+                * If non-positive, the s value is used to determine the
+                * longitudinal position more accurately.
+                */
+ )
 {
-  double part[7] ={0,0,0,0,0,0,0};
-  double sin_tilt, cos_tilt;
-  sin_tilt = sin(xyTilt);
-  cos_tilt = cos(xyTilt);
-  part[0] =  x*cos_tilt - y*sin_tilt;
-  part[2] =  x*sin_tilt + y*cos_tilt;
-  part[6] = particleID;
-  return insideObstruction(part, segment, nSegments);
-}
-
-long insideObstruction_xy_dz(double x, double y, double xyTilt, long particleID, double dz)
-{
-  TRACKING_CONTEXT context;
-  ELEMENT_LIST *eptr;
-  long ic;
-  double Z, X, Y;
   double part[7] ={0,0,0,0,0,0,0};
   double sin_tilt, cos_tilt;
 
   if (!obstructionDataSets.initialized) return 0;
 
-  getTrackingContext(&context);
-  if (!(eptr=context.element)) return 0;
-
-  sin_tilt = sin(xyTilt);
-  cos_tilt = cos(xyTilt);
+  if (xyTilt) {
+    sin_tilt = sin(xyTilt);
+    cos_tilt = cos(xyTilt);
+  } else {
+    sin_tilt = 0;
+    cos_tilt = 1;
+  }
   part[0] =  x*cos_tilt - y*sin_tilt;
   part[2] =  x*sin_tilt + y*cos_tilt;
-  part[6] = particleID;
-
-  convertLocalCoordinatesToGlobal(&Z, &X, &Y, part, eptr, 0, 1);
-  Z += dz;
-
-  for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
-    if (pointIsInsideContour(Z, X, 
-                             obstructionDataSets.data[ic].Z, 
-                             obstructionDataSets.data[ic].X, 
-                             obstructionDataSets.data[ic].points))
-      return 1;
-  }
-  return 0;
+  part[4] = 0;
+  part[6] = 0;
+  return insideObstruction(part, mode, dz, segment, nSegments);
 }
 
-
-long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double Po,
-                                     long segment, long nSegments)
+long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double Po)
 {
   long ip, itop;
   itop = np - 1;
   for (ip=0; ip<=itop; ip++) {
-    if (insideObstruction(coord[ip], segment, nSegments)) {
+    if (insideObstruction(coord[ip], GLOBAL_LOCAL_MODE_SEG, 0.0, 1, 1)) {
       TRACKING_CONTEXT context;
       getTrackingContext(&context);
       if (ip!=itop)

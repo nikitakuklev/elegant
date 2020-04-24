@@ -1,3 +1,4 @@
+
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -121,6 +122,7 @@ static double fexit_intercept;
 static double rexit_intercept;
 
 static double central_length, tolerance;
+static long lastParticleID;
 
 /* prototypes and other information for NIBEND element */
 void nibend_coord_transform(double *q, double *coord, void *field, long which_end);
@@ -237,7 +239,7 @@ static long n_particles_done = 0;
 static double length_mult_sum = 0;
 static long n_invalid_particles = 0;
 
-static double lostParticleCoordinate[8] = {0,0,0,0,0,0,0};
+static double lostParticleCoordinate[9] = {0,0,0,0,0,0,0,0};
 static long isLost = 0;
 
 void lorentz_report(void)
@@ -307,13 +309,15 @@ long lorentz(
     for (i_part=0; i_part<=i_top; i_part++) {
         coord = part[i_part];
         if (!do_lorentz_integration(coord, field)) {
+          if (i_part!=i_top) {
             swapParticles(part[i_part], part[i_top]);
-            part[i_top][5] = P_central*(1+part[i_top][5]);
             if (accepted)
-                swapParticles(accepted[i_part], accepted[i_top]);
-            i_top--;
-            i_part--;
-            }
+              swapParticles(accepted[i_part], accepted[i_top]);
+          }
+          part[i_top][5] = P_central*(1+part[i_top][5]);
+          i_top--;
+          i_part--;
+        }
         if (field_type==T_BMAPXYZ) {
           BMAPXYZ *bmxyz;
           bmxyz = (BMAPXYZ*)field;
@@ -326,12 +330,12 @@ long lorentz(
       }
 
     lorentz_terminate(field, field_type, part, n_part, P_central);
-    
+
     if (field_type==T_BMAPXYZ) {
       BMAPXYZ *bmxyz;
       bmxyz = (BMAPXYZ*)field;
       if ((bmxyz->fieldLength>0 && bmxyz->length!=bmxyz->fieldLength) && !bmxyz->injectAtZero) 
-        exactDrift(part, n_part, (bmxyz->length-bmxyz->fieldLength)/2);
+        exactDrift(part, i_top, (bmxyz->length-bmxyz->fieldLength)/2);
     }
 
     log_exit("lorentz");
@@ -391,19 +395,23 @@ long do_lorentz_integration(double *coord, void *field)
                 break;
             case DIFFEQ_END_OF_INTERVAL:
                 log_exit("do_lorentz_integration");
+                printf("Integration reached end of interval\n"); fflush(stdout);
                 return(0);
+                break;
             default:
                 if ((exvalue = (*exit_function)(NULL, q, central_length))>exit_toler)  {
                     printf("warning: exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
                     fflush(stdout);
                     log_exit("do_lorentz_integration");
-                    isLost = 1;
-                    memcpy(&lostParticleCoordinate, &q, sizeof(q[0])*8);
-                    return(0);
+                    if (!isLost) {
+                      isLost = 1;
+                      memcpy(&lostParticleCoordinate, &q, sizeof(q[0])*8);
                     }
+                    return(0);
+                }
                 break;
             }
-        }
+    }
     else {
         /* non-adpative integration */
         length_multiplier = 1+tolerance;
@@ -435,12 +443,16 @@ long do_lorentz_integration(double *coord, void *field)
             } while (1);
         length_mult_sum += length_multiplier;
         copy_doubles(q, qout, 8);
-        }                
+    }                
 
-    if (isLost) 
+    if (isLost)
       memcpy(q, lostParticleCoordinate, sizeof(q[0])*8);
-
+      
     (*coord_transform)(q, coord, field, 1);
+
+    if (isLost)
+      coord[4] = lostParticleCoordinate[8]; /* need z, not s */
+
 #ifdef DEBUG
     printf("length from integration routine: %le\n", s_start);
 #endif
@@ -449,7 +461,7 @@ long do_lorentz_integration(double *coord, void *field)
 
     if (isLost)
       return 0;
-
+    
     return(1);
     }
 
@@ -1835,11 +1847,40 @@ void bmapxyz_deriv_function(double *qp, double *q, double s)
       n_invalid_particles++;
       return;
     }
-    if (insideObstruction_xy_dz(x, y, 0.0, 0, z)) {
-      if (!isLost)
-        for (ix=0; ix<8; ix++)
-          lostParticleCoordinate[ix] = q[ix];
-      isLost = 1;
+    if (!isLost) {
+      double zOffset, dzHardEdge;
+      zOffset = (bmapxyz->fieldLength-bmapxyz->length)/2;
+      if ((dzHardEdge = z - zOffset)>=0 && dzHardEdge<=bmapxyz->length) {
+        if (insideObstruction_xyz(x, y, bmapxyz->tilt, GLOBAL_LOCAL_MODE_DZ, dzHardEdge, 0, 0)) {
+          /*static FILE *fp; */
+          TRACKING_CONTEXT tcontext;
+          getTrackingContext(&tcontext);
+          /* 
+          if (!fp) {
+#if USE_MPI
+            char buffer[256];
+            sprintf(buffer, "lorentz.los-%03d", myid);
+            fp = fopen_e(buffer, "w", 0);
+#else
+            fp = fopen_e("lorentz.los", "w", 0);
+#endif
+            fprintf(fp, "SDDS1\n&column name=ElementName type=string &end\n&column name=z type=double units=m &end\n");
+            fprintf(fp, "&column name=dzHardEdge type=double units=m &end\n");
+            fprintf(fp, "&column name=s type=double units=m &end\n");
+            fprintf(fp, "&column name=x type=double units=m &end\n");
+            fprintf(fp, "&column name=wx type=double &end\n");
+            fprintf(fp, "&column name=particleID, type=long &end\n");
+            fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+          }
+          fprintf(fp, "%s %le %le %le %le %le %ld\n", 
+                  tcontext.elementName, tcontext.zStart+dzHardEdge, dzHardEdge, q[6], x, q[4], lastParticleID);
+          */
+          for (ix=0; ix<8; ix++)
+            lostParticleCoordinate[ix] = q[ix];
+          lostParticleCoordinate[ix] = tcontext.zStart+dzHardEdge;
+          isLost = 1;
+        }
+      }
     }
 
     /* w is the velocity */
@@ -1927,6 +1968,7 @@ void bmapxyz_coord_transform(double *q, double *coord, void *field, long which_e
     q[2] = coord[2];
     q[6] = coord[4];
     q[7] = coord[5];
+    lastParticleID = coord[6];
   } else {
     /* transform q into coord at exit refence plane */
     coord[0] = q[1];
@@ -2165,7 +2207,9 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
     printf("Maximum |curl B|/max|B|*max(dx,dy,dz): %le\n", maxCurlB/maxB*maxDxyz);
     fflush(stdout);
   }
-  
+
+  printf("Field setup completed for data from file %s\n", bmapxyz->filename);
+  fflush(stdout);
 }
 
 /*

@@ -364,9 +364,11 @@ long do_tracking(
 #endif
   
   eptr = &(beamline->elem);
-  if (entity_description[eptr->type].flags&HAS_LENGTH)
+  if (eptr->type==T_FTABLE) {
+    z = z_recirc = last_z = beamline->elem.end_pos - ((FTABLE*)beamline->elem.p_elem)->arcLength;
+  } else if (entity_description[eptr->type].flags&HAS_LENGTH) {
     z = z_recirc = last_z = beamline->elem.end_pos - ((DRIFT*)beamline->elem.p_elem)->length;
-  else
+  } else
     z = z_recirc = last_z = beamline->elem.end_pos;
 
   i_sums = i_sums_recirc = 0;
@@ -2447,7 +2449,7 @@ long do_tracking(
 #endif
       if ((!USE_MPI || !notSinglePart) || (USE_MPI && active)) {
         nLeft = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nLeft, accepted, z, *P_central, 0, 0);
-        nLeft = filterParticlesWithObstructions(coord, nLeft, accepted, z, *P_central, 1, 1);
+        nLeft = filterParticlesWithObstructions(coord, nLeft, accepted, z, *P_central);
 	if (eptr->type!=T_SCRIPT) { /* For the SCRIPT element, the lost particle coordinate will be recorded inside the element */
 	  if (nLeft!=nToTrack)
             recordLostParticles(coord, nLeft, nToTrack, lostBeam, i_pass);

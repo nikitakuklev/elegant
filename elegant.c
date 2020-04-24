@@ -695,7 +695,6 @@ char **argv;
       break;
     case RUN_SETUP:
       beam_type = -1;
-      
       initialize_structures(NULL, &run_control, &error_control, &correct, &beam, &output_data,
                             &optimize, &chrom_corr_data, &tune_corr_data, &links);
       reset_alter_specifications();
@@ -706,13 +705,15 @@ char **argv;
       run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
         fl_do_tune_correction = do_floor_coordinates = 0;
       do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = do_find_aperture = do_rf_setup = 0;
-      linear_chromatic_tracking_setup_done = 0;
+      linear_chromatic_tracking_setup_done = losses_include_global_coordinates = 0;
 
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
       set_print_namelist_flags(0);
       if (processNamelist(&run_setup, &namelist_text)==NAMELIST_ERROR)
         bombElegant(NULL, NULL);
+
       if (echoNamelists) print_namelist(stdout, &run_setup);
+
       setSearchPath(search_path);
       /* check for validity of namelist inputs */
       if (lattice==NULL) {

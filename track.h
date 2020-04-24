@@ -994,7 +994,7 @@ extern char *entity_text[N_TYPES];
 #define N_CEPL_PARAMS 16
 #define N_TWPL_PARAMS 16
 #define N_WATCH_PARAMS 19
-#define N_MALIGN_PARAMS 12
+#define N_MALIGN_PARAMS 13
 #define N_TWLA_PARAMS 20
 #define N_PEPPOT_PARAMS 6
 #define N_ENERGY_PARAMS 4
@@ -1807,7 +1807,7 @@ extern PARAMETER malign_param[N_MALIGN_PARAMS] ;
 
 typedef struct {
     double dxp, dyp, dx, dy, dz, dt, dp, de;
-    long on_pass, forceModifyMatrix, startPID, endPID;
+    long on_pass, forceModifyMatrix, startPID, endPID, floor;
     } MALIGN;
 
 /* Traveling-Wave Linear Accelerator, using NAG and first space harmonic 
@@ -3314,7 +3314,7 @@ typedef struct {
   /* for internal use only */
   short initialized;
   short dataIsCopy;
-  double length;
+  double length, arcLength;
   ntuple *Bx, *By, *Bz;
 } FTABLE;  
 
@@ -4391,8 +4391,12 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
                              double *XYZMin, double *XYZMax);
-void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *coord, ELEMENT_LIST *eptr,
-                                       long segment, long nSegments);
+#define GLOBAL_LOCAL_MODE_Z   1
+#define GLOBAL_LOCAL_MODE_DZ  2
+#define GLOBAL_LOCAL_MODE_SEG 3
+void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, short mode,
+                                     double *coord, ELEMENT_LIST *eptr, double dZ,
+                                     long segment, long nSegments);
 
 long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST *eptr, double Po, double **accepted, double z_start, double *sigmaDelta2);
 
@@ -4682,11 +4686,9 @@ extern void summarizeWarnings();
 
 extern void resetObstructionData(OBSTRUCTION_DATASETS *obsData);
 extern void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run);
-extern long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double P_central,
-                                            long segment, long nSegments);
-extern long insideObstruction(double *part, long segment, long nSegments);
-extern long insideObstruction_xy(double x, double y, double tilt, long particleID, long segment, long nSegments);
-extern long insideObstruction_xy_dz(double x, double y, double tilt, long particleID, double dz);
+extern long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double P_central);
+extern long insideObstruction(double *part, short mode, double dz, long segment, long nSegments);
+extern long insideObstruction_xyz(double x, double y, double tilt, short mode, double dz, long segment, long nSegments);
 
 #ifdef __cplusplus
 }

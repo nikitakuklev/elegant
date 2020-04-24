@@ -806,8 +806,7 @@ void do_track_beam_output(RUN *run, VARY *control,
 	  MPI_Reduce (&n_lost, &total_lost, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	} else 
 	  total_lost = beam->lostBeam.nLost;
-	printf("n_lost = %ld\n", 
-		total_lost);
+	printf("n_lost = %ld\n", total_lost);
       }
 #else
       printf("n_lost = %ld\n", beam->lostBeam.nLost);

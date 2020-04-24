@@ -336,18 +336,23 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
         is_bend = 1;
         angle = ftable->angle;
         rho = ftable->l0/2./sin(angle/2.);      
-        length = rho * angle;
+        ftable->arcLength = length = rho * angle;
         tilt = ftable->tilt;
       }
       break;
     case T_MALIGN:
       malign = (MALIGN*)elem->p_elem;
-      dX = malign->dx;
-      dY = malign->dy;
-      dZ = malign->dz;
-      angle = atan(sqrt(sqr(malign->dxp)+sqr(malign->dyp)));
-      tilt = atan2(malign->dyp, -malign->dxp);
-      is_misalignment = 1;
+      if (malign->floor) {
+        dX = malign->dx;
+        dY = malign->dy;
+        dZ = malign->dz;
+        angle = atan(sqrt(sqr(malign->dxp)+sqr(malign->dyp)));
+        tilt = atan2(malign->dyp, -malign->dxp);
+        is_misalignment = 1;
+      } else {
+        dX = dY = dZ = angle = tilt = 0;
+        is_misalignment = 0;
+      }
       break;
     case T_ALPH:
       is_alpha = 1;
@@ -930,8 +935,23 @@ void store_vertex_floor_coordinates(char *name, long occurence, double *ve, doub
   }
 }
 
-void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *coord, ELEMENT_LIST *eptr,
-                                     long segment, long nSegments)
+static double lastGlobalParticleCoordinates[3];
+void getLastGlobalParticleCoordinates(double *buffer)
+{
+  memcpy(buffer, lastGlobalParticleCoordinates, 3*sizeof(double));
+}
+
+void convertLocalCoordinatesToGlobal
+(
+ double *Z, double *X, double *Y,
+ short mode, 
+ double *coord, 
+ ELEMENT_LIST *eptr,
+ double zOrDz, /* mode==GLOBAL_LOCAL_MODE_DZ: distance to particle z-plane relative to start of element 
+                  mode==GLOBAL_LOCAL_MODE_Z: total value of z (central trajectory length) for the particle loss position
+                */
+ long segment, long nSegments /* mode==GLOBAL_LOCAL_MODE_SEG: distance to z plane is segment/nSegments*length */
+)
 {
   double theta1;
   double dZ, dX, Z1, X1, length;
@@ -964,13 +984,25 @@ void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *co
                     entity_name[eptr->type], eptr->name);
     rho = length/angle;
     /* compute floor coordinate offsets in frame of the magnet (initial trajectory parallel to line X=Y=0 */
-    if (nSegments) {
-      dtheta = (angle*segment)/nSegments;
-    } else {
-      /* estimate from path length at loss */
-      double ds;
-      ds = length-(eptr->end_pos-coord[4]);
-      dtheta = angle*ds/length;
+    dtheta = 0;
+    switch (mode) {
+    case GLOBAL_LOCAL_MODE_SEG:
+      if (nSegments>0) 
+        dtheta = (angle*segment)/nSegments;
+      else
+        bombElegant("programming error for local-to-global coordinates (1)---seek help from developers", NULL);
+      break;
+    case GLOBAL_LOCAL_MODE_Z:
+      if (eptr->pred)
+        zOrDz = zOrDz - eptr->pred->end_pos;
+      dtheta = angle*zOrDz/length;
+      break;
+    case GLOBAL_LOCAL_MODE_DZ:
+      dtheta = angle*zOrDz/length;
+      break;
+    default:
+      bombElegant("programming error for local-to-global coordinates (2)---seek help from developers", NULL);
+      break;
     }
     dX = (rho+coord[0])*cos(dtheta) - rho;
     dZ = (rho+coord[0])*sin(dtheta);
@@ -996,19 +1028,48 @@ void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *co
       Z1 = eptr->pred->floorCoord[2];
       X1 = eptr->pred->floorCoord[0];
       theta1 = -eptr->pred->floorAngle[0];
+      /* printf("Used eptr->pred: Z1 = %le, X1 = %le, theta1 = %le\n", Z1, X1, theta1); */
     } else {
       Z1 = Z0;
       X1 = X0;
       theta1 = theta0;
+      /* printf("Used start: Z1 = %le, X1 = %le, theta1 = %le\n", Z1, X1, theta1); */
     }
-    if (nSegments)
-      dZ = (length*segment)/nSegments;
-    else
-      /* estimate from path length at loss */
-      dZ = length-(eptr->end_pos-coord[4]);
+    dZ = 0;
+    switch (mode) {
+    case GLOBAL_LOCAL_MODE_SEG:
+      if (nSegments>0)
+        dZ = (length*segment)/nSegments;
+      else
+        bombElegant("programming error for local-to-global coordinates (3)---seek help from developers", NULL);
+      break;
+    case GLOBAL_LOCAL_MODE_Z:
+      /* someone provides the z value for us */
+      dZ = zOrDz - (eptr->pred?eptr->pred->end_pos:0);
+      break;
+    case GLOBAL_LOCAL_MODE_DZ:
+      /* someone provides the dz value for us */
+      dZ = zOrDz;
+      break;
+    default:
+      bombElegant("programming error for local-to-global coordinates (4)---seek help from developers", NULL);
+      break;
+    }
     dX = coord[0];
     *Z = Z1 + dX*sin(theta1) + dZ*cos(theta1);
     *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
     *Y = coord[2];
+    if (dZ<-1e-6 || (eptr->pred && (dZ-(eptr->end_pos-eptr->pred->end_pos))>1e-6) || (!eptr->pred && (dZ-eptr->end_pos)>1e-6)) {
+#if USE_MPI
+      dup2(fd, fileno(stdout));
+#endif
+      printf("Problem Converting to global for particle %ld:\nZ1 = %21.15le, X1 = %21.15le, dZ = %21.15le, dX = %21.15le, theta1 = %21.15le\n -> Z = %21.15le, X = %21.15le\n",
+             (long)coord[6], Z1, X1, dZ, dX, theta1, *Z, *X);
+      printf("End pos: %21.15le (%s), %21.15le (%s)\n", 
+             eptr->pred?eptr->pred->end_pos:-DBL_MAX, 
+             eptr->pred?eptr->pred->name:NULL,
+             eptr->end_pos, eptr->name);
+      exit(1);
+      }
   }
 }

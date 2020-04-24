@@ -717,6 +717,7 @@ double compute_end_positions(LINE_LIST *lptr)
         else if (eptr->type==T_FTABLE && ((FTABLE*)eptr->p_elem)->angle) {
             theta += ((FTABLE*)eptr->p_elem)->angle;
             l = ((FTABLE*)eptr->p_elem)->l0/2./sin(((FTABLE*)eptr->p_elem)->angle/2.)*((FTABLE*)eptr->p_elem)->angle;
+            ((FTABLE*)eptr->p_elem)->arcLength = l;
         } 
         else if (eptr->type==T_RECIRC) {
             if (recircPresent)
@@ -774,10 +775,8 @@ double compute_end_positions(LINE_LIST *lptr)
         l = 0;
       else
         l = (*((double*)eptr->p_elem));
-      if (eptr->type==T_FTABLE && ((FTABLE*)eptr->p_elem)->angle) {
-        theta += ((FTABLE*)eptr->p_elem)->angle;
-        l = ((FTABLE*)eptr->p_elem)->l0/2./sin(((FTABLE*)eptr->p_elem)->angle/2.)*((FTABLE*)eptr->p_elem)->angle;
-      } 
+      if (eptr->type==T_FTABLE && ((FTABLE*)eptr->p_elem)->angle)
+        l = ((FTABLE*)eptr->p_elem)->arcLength;
       else if (eptr->type==T_RECIRC) {
         if (recircPresent)
           bombElegant("multiple recirculation (RECIRC) elements in beamline--this doesn't make sense", NULL);
