@@ -1449,8 +1449,13 @@ void dump_twiss_parameters(
   }
 
   if (!final_values_only_inner_scope) {
+    ELEMENT_LIST *eptr;
     row_count = 0;
-    data[0] = 0;     /* position */
+    eptr = elem;
+    if (!entity_description[eptr->type].flags&HAS_LENGTH) 
+      data[0] = 0;     /* position */
+    else 
+      data[0] = eptr->end_pos - ((DRIFT*)eptr->p_elem)->length;
     copy_doubles(data+1, (double*)twiss0, N_DOUBLE_COLUMNS-2);
     data[N_DOUBLE_COLUMNS-1] = elem->Pref_input;
     for (j=0; j<N_DOUBLE_COLUMNS; j++)
@@ -1465,7 +1470,6 @@ void dump_twiss_parameters(
     }
 
     if (s_dependent_driving_terms_file) {
-      ELEMENT_LIST *eptr;
       if (!SDDS_StartTable(&SDDS_SDrivingTerms, beamline->n_elems+1)) {
         SDDS_SetError((char*)"Unable to start SDDS table (s_dependent_driving_terms_file)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
