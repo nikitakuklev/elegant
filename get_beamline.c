@@ -698,6 +698,7 @@ double compute_end_positions(LINE_LIST *lptr)
     i_elem = 0;
     recircPresent = 0;
     do {
+      eptr->beg_pos = z;
         if (!(entity_description[eptr->type].flags&HAS_LENGTH))
             l = 0;
         else
@@ -748,6 +749,7 @@ double compute_end_positions(LINE_LIST *lptr)
       printf("Offsetting z coordinates by %le for backtracking\n", -z);
       eptr = &(lptr->elem);
       do {
+        eptr->beg_pos -= z;
         eptr->end_pos -= z;
       } while ((eptr=eptr->succ));
     }

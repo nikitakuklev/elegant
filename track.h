@@ -261,7 +261,7 @@ typedef struct {
 /* Node structure for linked-list of element definitions: */
 
 typedef struct element_list {
-    double end_pos, end_theta;
+    double beg_pos, end_pos, end_theta;
     double floorCoord[3], floorAngle[3]; /* (X, Y, Z), (theta, phi, psi) at exit */
     char *name, *group;
     char *definition_text;
