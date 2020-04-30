@@ -775,6 +775,30 @@ void trackWithIonEffects
 
     doIonEffectsIonHistogramOutput(ionEffects, iBunch, iPass, tNow);
 
+
+      // write out coordinates of each ion, not presently used
+    /*
+    if ((verbosity > 20) && (ionEffects->sLocation > 688) && (ionEffects->sLocation < 692) && (iPass < 10)) {
+      double xtemp, ytemp, qtemp; 
+      int jMacro = 0;
+      FILE * fion;
+      fion = fopen("ion_coord_all.dat", "a");
+      for (int iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+	for (int jMacro=0; jMacro < ionEffects->nIons[iSpecies]; jMacro++) {
+	  xtemp = ionEffects->coordinate[iSpecies][jMacro][0];
+	  ytemp = ionEffects->coordinate[iSpecies][jMacro][2];
+	  qtemp = ionEffects->coordinate[iSpecies][jMacro][4];
+	  //fprintf(fion, "%f  %f  %f  %e  %d \n",  ionEffects->t, xtemp, ytemp, qtemp, iSpecies);
+	  fprintf(fion, "%d %d  %e  %e  %e  %d \n",  iPass, iBunch, xtemp, ytemp, qtemp, iSpecies);
+	}
+      }
+      fclose(fion);
+    }
+    */
+
+
+
+
 #if USE_MPI
 #ifdef DEBUG
     printf("Preparing to wait on barrier at end of loop for bucket %ld\n", iBunch);
@@ -1352,6 +1376,12 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
         yDataSum += yData[i];
       result = find_min_max(&minVal, &peakVal, yData, nData);
       find_min_max(&xMin, &xMax, xData, nData);
+
+      //subtract baseline (minimum point) before fitting
+      if (ion_fit_subtract_baseline) {
+	for (int i=0; i<nData; i++)
+	  yData[i] -= minVal;
+      }
       
       /* smaller sigma is close to the beam size, larger is close to ion sigma */
       if (mFunctions==2) {
@@ -1387,7 +1417,8 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
           lowerLimit[0] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]; 
         lowerLimit[1] = xMin/10;
         lowerLimit[2] = peakVal/20;
-        upperLimit[0] = paramValue[0]*10;
+        //upperLimit[0] = paramValue[0]*10;
+	upperLimit[0] = 10*bunchSigma[2*plane];
         if (upperLimit[0]<lowerLimit[0])
           upperLimit[0] = 2*lowerLimit[0];
         upperLimit[1] = xMax/10;
@@ -1402,7 +1433,8 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
           lowerLimit[3] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
         lowerLimit[4] = xMin/10;
         lowerLimit[5] = paramDelta[5]/5;
-        upperLimit[3] = paramValue[3]*10;
+        //upperLimit[3] = paramValue[3]*10;
+	upperLimit[3] = 10*bunchSigma[2*plane];
         if (upperLimit[3]<lowerLimit[3])
           upperLimit[3] = 2*lowerLimit[3];
         upperLimit[4] = xMax/10;
@@ -1447,17 +1479,25 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
       
       for (int i=0; i<3*mFunctions; i++) {
 	if (lowerLimit[i]>paramValue[i]) {
+	  paramValue[i] = 1.1*lowerLimit[i];
+	}
+	/*
 	  if (paramValue[i]<0)
 	    lowerLimit[i] = 10*paramValue[i];
 	  else
 	    lowerLimit[i] = paramValue[i]/10;
 	}
+	*/
 	if (upperLimit[i]<paramValue[i]) {
+	  paramValue[i] = 0.9*upperLimit[i];
+	}
+	/*
 	  if (paramValue[i]<0)
 	    upperLimit[i] = paramValue[i]/10;
 	  else
 	    upperLimit[i] = paramValue[i]*10;
-	}
+	*/
+	//}
       }
 
 #if USE_MPI
@@ -1583,6 +1623,8 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	printf("\n");
 	fflush(stdout);
       }
+
+
 #if USE_MPI
       MPI_Barrier(MPI_COMM_WORLD);
       min_location = 1;
@@ -2753,6 +2795,7 @@ void applyIonKicksToElectronBunch
     // multi-gaussian or multi-lorentzian kick
     
     /* We take a return value here for future improvement in which the fitting function is automatically selected. */
+
     ionEffects->ionFieldMethod = 
       multipleWhateverFit(bunchSigma, bunchCentroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
 
@@ -2881,16 +2924,36 @@ void applyIonKicksToElectronBunch
 	break;
       case ION_FIELD_BIGAUSSIAN:
       case ION_FIELD_TRIGAUSSIAN:
+	double maxkick[2], tempart[4];
+ 	maxkick[0] = maxkick[1] = 0;
+	for (int i=0; i<nFunctions*nFunctions; i++)  {
+ 	  tempart[0] = tempCentroid[i][0] + tempSigma[i][0];
+ 	  tempart[2] = 0;
+ 	  gaussianBeamKick(tempart, tempCentroid[i], tempSigma[i], 0, tempkick, tempQ[i], me_mks, 1);
+ 	  maxkick[0] += 4 * abs(tempkick[0]);
+ 
+ 	  tempart[2] = tempCentroid[i][1] + tempSigma[i][1];
+ 	  tempart[0] = 0;
+ 	  gaussianBeamKick(tempart, tempCentroid[i], tempSigma[i], 0, tempkick, tempQ[i], me_mks, 1);
+ 	  maxkick[1] += 4 * abs(tempkick[1]);
+ 	}
 	for (ip=0; ip<np; ip++) {
 	  kick[0] = kick[1] = 0;
 	  for (int i=0; i<nFunctions*nFunctions; i++)  {
 	    if (tempQ[i]) {
 	      gaussianBeamKick(part[ip], tempCentroid[i], tempSigma[i], 0, tempkick, tempQ[i], me_mks, 1);
-	      if (!isnan(tempkick[0]) && !isinf(tempkick[0]) && !isnan(tempkick[1]) && !isinf(tempkick[1])) {
+	      if (!isnan(tempkick[0]) && !isinf(tempkick[0]) && !isnan(tempkick[1]) && !isinf(tempkick[1]) && 
+		  (abs(tempkick[0]) < maxkick[0]) && (abs(tempkick[1]) < maxkick[1])) {
 		kick[0] += tempkick[0];
 		kick[1] += tempkick[1];
-	      } else
+	      } else {
+		//printf("kick %3.2e,%3.2e > maxkick %3.2e,%3.2e: turn %ld , bunch %ld , cx1=%3.2e, cy=%3.2e, cx2=%3.2e, 
+		//cy2=%3.2e, sx1=%3.2e, sy1=%3.2e, sx2=%3.2e, sy2=%3.2e, x=%3.2e, y=%3.2e \n", 
+		//tempkick[0], tempkick[1], maxkick[0], maxkick[1], iPass, iBunch, tempCentroid[0][0],  
+		//tempCentroid[0][1],  tempCentroid[1][0], tempCentroid[1][1], tempSigma[0][0], 
+		//tempSigma[0][1], tempSigma[1][0], tempSigma[1][1], part[ip][0], part[ip][2]);
 		circuitBreaker[i] ++;
+	      }
 	    }
 	  }
 	  part[ip][1] += kick[0] / c_mks / Po;

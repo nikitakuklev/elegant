@@ -43,6 +43,7 @@
 	  long disable_until_pass = 0;
 	  long freeze_ions_until_pass = 0;
 	  long freeze_electrons_until_pass = 0;
-          long verbosity = 0;
+	  long ion_fit_subtract_baseline = 1;
+	  long verbosity = 0;		   
 #end
 
