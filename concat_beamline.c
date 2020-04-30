@@ -27,7 +27,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
     long new_seq, n_seqs, in_seq;
     long n_matrices, n_nonmatrices;
     char s[100];
-    double z, last_z;
+    double z, last_z, z_begin, z_end;
     ELEMENT_LIST *pred, *succ;
     
     log_entry("concatenate_beamline");
@@ -56,7 +56,9 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
     new_seq = 1;
     n_seqs = in_seq = 0;
     n_matrices = n_nonmatrices = 0;
-    z = 0;
+    z = elem->beg_pos;
+    z_begin = elem->beg_pos;
+    z_end = elem->end_pos;
     beamline->ncat_elems = 0;
     do {
 #if DEBUG
@@ -69,6 +71,8 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
         last_z = z;
         if (entity_description[elem->type].flags&HAS_LENGTH)
             z += ((DRIFT*)elem->p_elem)->length;
+        else 
+            z += elem->end_pos - elem->beg_pos;
         if (entity_description[elem->type].flags&HAS_MATRIX && elem->matrix->order<=run->concat_order &&
             !(entity_description[elem->type].flags&DONT_CONCAT) ) {
 #if DEBUG
@@ -82,6 +86,8 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
                 fflush(stdout);
 #endif
                 copy_matrices1(M1, elem->matrix);
+                z_begin = elem->beg_pos;
+                z_end = elem->end_pos;
                 new_seq = 0;
                 }
             else {
@@ -89,6 +95,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
                                 entity_description[elem->type].flags&HAS_RF_MATRIX?
                                 CONCAT_EXCLUDE_S0:0);
                 tmp = M1;  M1 = M2;  M2 = tmp;
+                z_end = elem->end_pos;
                 }
             in_seq = 1;
             }
@@ -104,7 +111,8 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
                 sprintf(s, "M%ld", n_seqs++);
                 cp_str(&ecat->name, s);
                 ecat->type = T_MATR;
-                ecat->end_pos = last_z;
+                ecat->end_pos = z_end;
+                ecat->beg_pos = z_begin;
                 ecat->flags = 0;
                 ecat->p_elem = NULL;
 #if DEBUG
@@ -156,7 +164,8 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
         sprintf(s, "M%ld", n_seqs++);
         cp_str(&ecat->name, s);
         ecat->type = T_MATR;
-        ecat->end_pos = z;
+        ecat->end_pos = z_end;
+        ecat->beg_pos = z_begin;
         ecat->flags = 0;
         ecat->p_elem = NULL;
         ecat->twiss = lastelem->twiss;

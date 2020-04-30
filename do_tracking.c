@@ -364,12 +364,7 @@ long do_tracking(
 #endif
   
   eptr = &(beamline->elem);
-  if (eptr->type==T_FTABLE) {
-    z = z_recirc = last_z = beamline->elem.end_pos - ((FTABLE*)beamline->elem.p_elem)->arcLength;
-  } else if (entity_description[eptr->type].flags&HAS_LENGTH) {
-    z = z_recirc = last_z = beamline->elem.end_pos - ((DRIFT*)beamline->elem.p_elem)->length;
-  } else
-    z = z_recirc = last_z = beamline->elem.end_pos;
+  z = z_recirc = last_z = beamline->elem.beg_pos;
 
   i_sums = i_sums_recirc = 0;
   x_max = y_max = 0;
@@ -642,7 +637,7 @@ long do_tracking(
 
     if (run->wrap_around) {
       i_sums = i_sums_recirc;  /* ==0 for i_pass==0 */
-      z = z_recirc;            /* ditto */
+      z = z_recirc;            /* ditto, for forward-tracking at least */
       last_z = z;
     }
     if (run->final_pass && sums_vs_z && n_z_points)
@@ -929,8 +924,10 @@ long do_tracking(
 			     charge ? charge->macroParticleCharge : 0.0,
 			     NULL, 0.0, 0.0, 0, 0, 0);
         (*sums_vs_z)[i_sums].z = z;
+        /*
         if (run->backtrack && i_sums==0)
           (*sums_vs_z)[i_sums].z = beamline->elem.end_pos;
+        */
 #if defined(BEAM_SUMS_DEBUG)
         printMessageAndTime(stdout, "Done accumulating beam sums\n");
         printf("beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
@@ -1049,12 +1046,8 @@ long do_tracking(
       last_z = z;
       if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem)
         z += ((DRIFT*)eptr->p_elem)->length;
-      else {
-        if (eptr->pred)
-          z += eptr->end_pos - eptr->pred->end_pos;
-        else
-          z += eptr->end_pos;
-      }
+      else
+        z += eptr->end_pos - eptr->beg_pos;
       /* fill a structure that can be used to pass to other routines 
        * information on the tracking context 
        */
@@ -1078,7 +1071,8 @@ long do_tracking(
               MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	  }
 #endif
-          printf("Starting %s#%ld at s=%le m (%le), pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, 
+          printf("Starting %s#%ld at s=%le m (%le), pass %ld, %ld particles, memory %ld kB\n", 
+                 eptr->name, eptr->occurence, 
                  eptr->end_pos, last_z, i_pass, 
 #if USE_MPI
                   myid==0 ? (beam?beam->n_to_track_total:-1) : nToTrack,
@@ -2600,12 +2594,8 @@ long do_tracking(
         }
         if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem)
           z += ((DRIFT*)eptr->p_elem)->length;
-        else {
-          if (eptr->pred)
-            z += eptr->end_pos - eptr->pred->end_pos;
-          else
-            z += eptr->end_pos;
-        }
+        else
+          z += eptr->end_pos - eptr->beg_pos;
         switch (eptr->type) {
         case T_TFBDRIVER:
           flushTransverseFeedbackDriverFiles((TFBDRIVER *)(eptr->p_elem));
