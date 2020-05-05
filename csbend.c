@@ -137,7 +137,7 @@ void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlin
     bombElegant("expansion order >10 for CSBEND or CSRCSBEND", NULL);
 
   hasSkew = hasNormal = 0;
-  for (i=0; i<expansionOrder; i++) {
+  for (i=0; i<8; i++) {
     if (b[i])
       hasNormal = 1;
     if (c[i]) 
