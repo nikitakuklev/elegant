@@ -167,26 +167,40 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       }
       if (!(rows=SDDS_CountRowsOfInterest(&SDDS_table)))
         bomb("no data in BRAT field file", NULL);
+      printf("%ld rows of data\n", rows);
+      fflush(stdout);
       if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
           SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
           SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+        printf("units wrong on x, y, or z\n");
+        fflush(stdout);
         exit(1);
+      }
+      printf("x, y, and z found with expected units\n");
+      fflush(stdout);
+      if (!(xd = SDDS_GetColumnInDoubles(&SDDS_table, "x")) ||
+          !(yd = SDDS_GetColumnInDoubles(&SDDS_table, "y")) ||
+          !(zd = SDDS_GetColumnInDoubles(&SDDS_table, "z")) ) {
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
       if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
           SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
           SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+        printf("units wrong on Bx, By, or Bz\n");
+        fflush(stdout);
         exit(1);
       }
-      if (!(xd = SDDS_GetColumnInDoubles(&SDDS_table, "x")) ||
-          !(yd = SDDS_GetColumnInDoubles(&SDDS_table, "y")) ||
-          !(zd = SDDS_GetColumnInDoubles(&SDDS_table, "z")) ||
-          !(Bxd = SDDS_GetColumnInDoubles(&SDDS_table, "Bx")) ||
+      printf("Bx, By, and Bz found with expected units\n");
+      fflush(stdout);
+      if (!(Bxd = SDDS_GetColumnInDoubles(&SDDS_table, "Bx")) ||
           !(Byd = SDDS_GetColumnInDoubles(&SDDS_table, "By")) ||
           !(Bzd = SDDS_GetColumnInDoubles(&SDDS_table, "Bz"))) {
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
       if (!SDDS_Terminate(&SDDS_table)) 
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      printf("Finished reading data from file\n");
+      fflush(stdout);
 
       /* It is assumed that the data is ordered so that x changes fastest.
        * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
