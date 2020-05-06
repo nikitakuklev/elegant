@@ -1486,6 +1486,8 @@ VMATRIX *compute_matrix(
             csbend->trackingMatrix = 3;
           elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, csbend->trackingMatrix));
         } else {
+          if (csbend->xKick || csbend->yKick)
+            bombElegant("Error: can't have XKICK or YKICK nonzero unless TRACKING_MATRIX is used for CSBEND", NULL);
           elem->matrix = bend_matrix(csbend->length, csbend->angle, csbend->e[csbend->e1Index], csbend->e[csbend->e2Index], 
                                      csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], 
                                      (csbend->use_bn ? csbend->b1*csbend->angle/csbend->length : csbend->k1)

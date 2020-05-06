@@ -773,6 +773,12 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
     if (plane!=0 && param_offset==find_parameter_offset("VKICK", type))
       coef = 1.0;
     break;
+  case T_CSBEND:
+    if (plane==0 && param_offset==find_parameter_offset("XKICK", type))
+      coef = 1.0;
+    if (plane!=0 && param_offset==find_parameter_offset("YKICK", type))
+      coef = 1.0;
+    break;
   default:
     if (entity_description[elem->type].flags&HAS_MATRIX) {
       VMATRIX *M1, *M2, *M0;
