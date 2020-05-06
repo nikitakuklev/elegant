@@ -1511,8 +1511,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       csbend.isr = 0;
       csbend.angle /= nSlices;
       length = (csbend.length /= nSlices);
-      csbend.xkick /= nSlices;
-      csbend.ykick /= nSlices;
+      csbend.xKick /= nSlices;
+      csbend.yKick /= nSlices;
       csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
       csbend.refTrajectoryChangeSet = 0;
       csbend.refLength = 0;
