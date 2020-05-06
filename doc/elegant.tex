@@ -43,7 +43,8 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
+\item The \verb|KQUAD| and \verb|KSEXT| elements had a bug when computing beam moments with \verb|moments_output|
+  if the \verb|XKICK| or \verb|YKICK| values were nonzero. This was reported by G. Penn (LBNL).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -60,7 +61,8 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item The \verb|twiss_output| command can now compute lattice functions for a half periodic cell, i.e., a 
+  cell with mirror symmetry, by setting \verb|matched=-1|. This was inspired by a forum question from \verb|mcarla|.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -5394,7 +5396,11 @@ I.e., one wants the maximum stable region for momentum and position deviations w
 \item \verb|filename| --- The (incomplete) name of an SDDS file to which the Twiss parameters will be written.
  Recommended value: ``\%s.twi''.
 \item \verb|matched| --- A flag indicating, if set, that the periodic or matched Twiss parameters should be found.
-  If zero, calculations are performed in transport line mode starting from the given initial values of \verb|betax|, \verb|alphax|, etc. 
+  If zero, calculations are performed in transport line mode starting from the given initial values of \verb|betax|, \verb|alphax|,
+  etc. 
+  As a special case, if \verb|matched=-1| the solution is for a half periodic cell, with mirror symmetry; this will probably
+  cause problems for higher-order calculations.
+
   N.B.: This may give different values for the chromaticity even if the initial values are identical to those for a periodic solution.
   The reason has to do with different assumptions about the initial conditions for particles in a transport line vs a ring.
 \item \verb|output_at_each_step| --- A flag indicating, if set, that output is desired at each step of the simulation.
