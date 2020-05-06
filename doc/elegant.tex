@@ -45,18 +45,30 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
 \begin{itemize}
 \item The \verb|KQUAD| and \verb|KSEXT| elements had a bug when computing beam moments with \verb|moments_output|
   if the \verb|XKICK| or \verb|YKICK| values were nonzero. This was reported by G. Penn (LBNL).
+\item The \verb|MALIGN| was affecting floor coordinates, which actually doesn't make much sense. This was changed, but
+  the prior behavior can be restored by setting \verb|FLOOR=1|.
+\item Lost particle coordinates inside \verb|CSBEND| elements were recording the wrong value of the longitudinal coordinate.
+  The reported coordinate was a mixture of the central path length and the individual particle's path length, whereas the
+  correct coordinate should be just the central path length.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item Issues were resolved with the computation of the \verb|s| coordinate for \verb|sigma| and \verb|centroid|
+  output files when invoking backtracking mode from \verb|run_setup|.
+\item The \verb|ion_effects| command had a bug in the automatic bin size selection code that could result in pathological changes in the
+  bin size over several bunches. This was found and fixed by J. Calvey (APS).
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|SCRIPT| element can now be used in backtracking mode. See the manual page for details.
+\item The \verb|SCRIPT| element can now be used in backtracking mode. See the manual page for details. This was requested
+  by Y. Park (UCLA).
 \item The \verb|MATTER| element now accepts \verb|PRESSURE| and \verb|TEMPERATURE| values, which are used to
   compute the density according to the ideal gas law, allowing easier simulation of scattering from gasses.
+\item The \verb|CSBEND| element now supports steering fields via the \verb|XKICK| and \verb|YKICK| parameters.
+\item The \verb|BMXYZ| element now supports testing of particle locations against the global-coordinate obstruction
+  contours specified by the \verb|obstruction_data| command.
 \end{itemize}
 
 \subsection{New and Modified Commands}
