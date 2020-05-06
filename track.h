@@ -1019,7 +1019,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 75
+#define N_CSBEND_PARAMS 77
 #define N_MATTER_PARAMS 21
 #define N_RFMODE_PARAMS 56
 #define N_TRFMODE_PARAMS 25
@@ -2316,7 +2316,7 @@ typedef struct {
     double k1, k2, k3, k4, k5, k6, k7, k8;
     double e[2], tilt;
     double h[2], hgap, fintBoth, fint[2];
-    double dx, dy, dz;
+    double dx, dy, dz, xKick, yKick;
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
     double etilt;   /* error tilt angle */
     long n_kicks;
@@ -2336,7 +2336,7 @@ typedef struct {
     short referenceCorrection, trackingMatrix, fseCorrection;
     /* for internal use only: */
     unsigned short edgeFlags;
-    double b[8], c[8], fseCorrectionValue, fseCorrectionPathError;
+    double b[9], c[9], fseCorrectionValue, fseCorrectionPathError;
     short refTrajectoryChangeSet;
     double refLength, refAngle, **refTrajectoryChange;
     short refKicks;
@@ -2410,7 +2410,7 @@ typedef struct {
     /* for internal use only: */
     short wakeFileActive, particleFileActive, backtrack;
     SDDS_DATASET *SDDSout, *SDDSpart;
-    double b[8], c[8];
+    double b[9], c[9];
     short xIndex, xpIndex, tIndex, pIndex;
     long wffValues;
     double *wffFreqValue, *wffRealFactor, *wffImagFactor;
@@ -3837,8 +3837,8 @@ void setup_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 /* prototypes for twiss.c: */
 VMATRIX *compute_periodic_twiss(double *betax, double *alphax, double *etax, double *etaxp,
-    double *phix, double *betay, double *alphay, double *etay, double *etayp, double *phiy,
-    ELEMENT_LIST *elem, double *clorb, RUN *run, unsigned long *unstable, double *eta2, double *eta3);
+                                double *phix, double *betay, double *alphay, double *etay, double *etayp, double *phiy,
+                                ELEMENT_LIST *elem, double *clorb, RUN *run, unsigned long *unstable, double *eta2, double *eta3);
 void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                                 RADIATION_INTEGRALS *radIntegrals,
                                 ELEMENT_LIST *elem, RUN *run, double *traj,
@@ -4058,7 +4058,8 @@ extern void filter_matrices(VMATRIX *M, double threshold);
 extern void random_matrices(VMATRIX *M, double C0, double R0, double T0, double Q0);
 extern void copy_matrices(VMATRIX *M1, VMATRIX *M0);
 extern long check_matrix(VMATRIX *M, char *comment);
- 
+extern long reverse_matrix(VMATRIX *Mr, VMATRIX *M);
+
 /* prototypes for motion4.c: */
 extern long motion(double **part, long n_part, void *field, long field_type, double *P_central, double *dgamma,
     double *dP, double **accepted, double z_start);

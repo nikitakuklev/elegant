@@ -57,7 +57,7 @@ void print_matrices1(FILE *fp, char *string, char *format, VMATRIX *M)
         fputc('\n', fp);
         }
 
-    if (M->order>=2) {
+    if (M->T && M->order>=2) {
         for (i=0; i<6; i++) {
             for (j=0; j<6; j++) {
                 fprintf(fp, "T%ld%ld: ", i+1, j+1);
@@ -68,7 +68,7 @@ void print_matrices1(FILE *fp, char *string, char *format, VMATRIX *M)
             }
         }
 
-    if (M->order>=3) {
+    if (M->Q && M->order>=3) {
         for (i=0; i<6; i++) {
             for (j=0; j<6; j++) {
                 for (k=0; k<=j; k++) {
@@ -891,4 +891,46 @@ long check_matrix(VMATRIX *M, char *comment)
     return(3);
     }
 
+long reverse_matrix(VMATRIX *Mr, VMATRIX *M)
+{
+  /* the reverse matrix of R is J*Inv(R)*J, where
+   * Jij =  0  i!=j
+   * Jii =  1  i=0,2,5
+   * Jii = -1  i=1,3,4
+   */
+  long i, j;
+  static MATRIX *R=NULL, *Rr=NULL, *J=NULL, *InvR=NULL, *Tmp=NULL;
+  if (!R) {
+    m_alloc(&R, 6, 6);
+    m_alloc(&Rr, 6, 6);
+    m_alloc(&J, 6, 6);
+    m_alloc(&InvR, 6, 6);
+    m_alloc(&Tmp, 6, 6);
 
+    for (i=0; i<6; i++)
+      for (j=0; j<6; j++) {
+        if (i!=j)
+          J->a[i][j] = 0;
+        else if (i==0 || i==2 || i==5) /* yes, 5 is correct here due to sign conventions in elegant */
+          J->a[i][i] = 1;
+        else
+          J->a[i][i] = -1;
+      }
+  }
+
+  for (i=0; i<6; i++) 
+    for (j=0; j<6; j++)
+      R->a[i][j] = M->R[i][j];
+
+  if (!m_invert(InvR, R)) {
+    printf("Error: matrix inversion failed when forming reverse matrix\n");
+    return 0;
+  }
+  m_mult(Tmp, InvR, J);
+  m_mult(Rr, J, Tmp);
+  for (i=0; i<6; i++)
+    for (j=0; j<6; j++)
+      Mr->R[i][j] = Rr->a[i][j];
+
+  return 1;
+}

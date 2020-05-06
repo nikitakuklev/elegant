@@ -104,8 +104,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
       fflush(stdout);
       /* M =  */
       beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
-                                                    &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
-                                                    beamline->elem_twiss, NULL, run, &unstable, NULL, NULL);
+                                                &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
+                                                beamline->elem_twiss, NULL, run, &unstable, NULL, NULL);
       beamline->twiss0->betax  = beta_x;
       beamline->twiss0->alphax = alpha_x;
       beamline->twiss0->phix   = 0;

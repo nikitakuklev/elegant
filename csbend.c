@@ -124,10 +124,10 @@ void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlin
 
   if (expansionOrder==0) {
     /* set the order to be <highestMultipole>+2 */
-    for (i=7; i>=0; i--)
+    for (i=8; i>=0; i--)
       if (b[i] || c[i])
         break;
-    if ((expansionOrder = i+3)<4)
+    if ((expansionOrder = i+2)<4)
       /* make minimum value 4 for backward compatibility */
       expansionOrder = 4;  
   }
@@ -137,7 +137,7 @@ void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlin
     bombElegant("expansion order >10 for CSBEND or CSRCSBEND", NULL);
 
   hasSkew = hasNormal = 0;
-  for (i=0; i<8; i++) {
+  for (i=0; i<9; i++) {
     if (b[i])
       hasNormal = 1;
     if (c[i]) 
@@ -158,13 +158,18 @@ void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlin
   for (i=1; i<20; i++)
     h[i] = h[i-1]*h1;
 
-  Fx_xy[0][0] = 0;
+  Fx_xy[0][0] = c[0];
+  Fy_xy[0][0] = 1 - b[0];
+
+  /* these increments allow using the previous indexing from when c[0] and b[0] where the quadrupole etc. */
+  b += 1;
+  c += 1;
+  
   Fx_xy[0][1] = b[0];
   Fy_xy[1][0] = b[0];
-  Fy_xy[0][0] = 1;
   Fy_xy[0][1] = c[0];
   Fx_xy[1][0] = -c[0];
-  
+
   if (nonlinear) {
     Fy_xy[0][2] = -(h[1]*b[0])/2 - b[1]/2;
     Fy_xy[0][3] = (h[2]*c[0])/6 - (h[1]*c[1])/3 - c[2]/6;
@@ -716,25 +721,27 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   rho0 =  csbend->length/csbend->angle;
   if (csbend->use_bn) {
-    csbend->b[0] = csbend->b1;
-    csbend->b[1] = csbend->b2;
-    csbend->b[2] = csbend->b3;
-    csbend->b[3] = csbend->b4;
-    csbend->b[4] = csbend->b5;
-    csbend->b[5] = csbend->b6;
-    csbend->b[6] = csbend->b7;
-    csbend->b[7] = csbend->b8;
+    csbend->b[0] = 0;
+    csbend->b[1] = csbend->b1;
+    csbend->b[2] = csbend->b2;
+    csbend->b[3] = csbend->b3;
+    csbend->b[4] = csbend->b4;
+    csbend->b[5] = csbend->b5;
+    csbend->b[6] = csbend->b6;
+    csbend->b[7] = csbend->b7;
+    csbend->b[8] = csbend->b8;
   } else {
-    csbend->b[0] = csbend->k1*rho0;
-    csbend->b[1] = csbend->k2*rho0;
-    csbend->b[2] = csbend->k3*rho0;
-    csbend->b[3] = csbend->k4*rho0;
-    csbend->b[4] = csbend->k5*rho0;
-    csbend->b[5] = csbend->k6*rho0;
-    csbend->b[6] = csbend->k7*rho0;
-    csbend->b[7] = csbend->k8*rho0;
+    csbend->b[0] = 0;
+    csbend->b[1] = csbend->k1*rho0;
+    csbend->b[2] = csbend->k2*rho0;
+    csbend->b[3] = csbend->k3*rho0;
+    csbend->b[4] = csbend->k4*rho0;
+    csbend->b[5] = csbend->k5*rho0;
+    csbend->b[6] = csbend->k6*rho0;
+    csbend->b[7] = csbend->k7*rho0;
+    csbend->b[8] = csbend->k8*rho0;
   }
-  for (j=0; j<8; j++)
+  for (j=0; j<9; j++)
     csbend->c[j] = 0;
   if (csbend->xReference>0) {
     double term = 1/csbend->xReference, f[8], g[8];
@@ -756,17 +763,20 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     g[6] = csbend->g7;
     g[7] = csbend->g8;
     for (i=0; i<8; i++) {
-      csbend->b[i] += f[i]*term;
-      csbend->c[i] += g[i]*term;
+      csbend->b[i+1] += f[i]*term;
+      csbend->c[i+1] += g[i]*term;
       term *= (i+2)/csbend->xReference;
     }    
   }
   /* these adjustments ensure that we don't apply FSE+FSEDIPOLE twice for quadrupole and sextupole terms */
-  csbend->b[0] *= (1+csbend->fse+csbend->fseQuadrupole)/(1+csbend->fse+csbend->fseDipole);
-  csbend->c[0] *= (1+csbend->fse+csbend->fseQuadrupole)/(1+csbend->fse+csbend->fseDipole);
-  csbend->b[1] *= (1+csbend->fse)/(1+csbend->fse+csbend->fseDipole);
-  csbend->c[1] *= (1+csbend->fse)/(1+csbend->fse+csbend->fseDipole);
-  
+  csbend->b[1] *= (1+csbend->fse+csbend->fseQuadrupole)/(1+csbend->fse+csbend->fseDipole);
+  csbend->c[1] *= (1+csbend->fse+csbend->fseQuadrupole)/(1+csbend->fse+csbend->fseDipole);
+  csbend->b[2] *= (1+csbend->fse)/(1+csbend->fse+csbend->fseDipole);
+  csbend->c[2] *= (1+csbend->fse)/(1+csbend->fse+csbend->fseDipole);
+
+  csbend->b[0] = csbend->xKick/csbend->angle;
+  csbend->c[0] = csbend->yKick/csbend->angle;
+
   he1 = csbend->h[csbend->e1Index];
   he2 = csbend->h[csbend->e2Index];
   if (csbend->angle<0) {
@@ -777,7 +787,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     etilt = csbend->etilt*csbend->etiltSign;
     tilt  = csbend->tilt + PI;      /* work in rotated system */
     rho0  = csbend->length/angle;
-    for (i=0; i<8; i+=2) {
+    for (i=1; i<9; i+=2) {
       csbend->b[i] *= -1;
       csbend->c[i] *= -1;
     }
@@ -859,7 +869,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   
   fse = csbend->fse + csbend->fseDipole + (csbend->fseCorrection?csbend->fseCorrectionValue:0);
   h = 1/rho0;
-  n = -csbend->b[0]/h;
+  n = -csbend->b[1]/h;
   if (fse>-1)
     rho_actual = 1/((1+fse)*h);
   else
@@ -1011,7 +1021,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
         convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
-        dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, 
+        dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[1]/rho0, e1, 2*csbend->hgap, 
                         csbend->fint[csbend->e1Index]>=0?csbend->fint[csbend->e1Index]:csbend->fintBoth,
                         csbend->h[csbend->e1Index]);
         /* retrieve coordinates from arrays */
@@ -1134,7 +1144,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
         convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
-        dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, 
+        dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[1]/rho0, e2, 2*csbend->hgap, 
                         csbend->fint[csbend->e2Index]>=0?csbend->fint[csbend->e2Index]:csbend->fintBoth, 
                         csbend->h[csbend->e2Index]);
         /* retrieve coordinates from arrays */
@@ -2090,25 +2100,27 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
   rho0 = csbend->length/csbend->angle;
   if (csbend->use_bn) {
-    csbend->b[0] = csbend->b1;
-    csbend->b[1] = csbend->b2;
-    csbend->b[2] = csbend->b3;
-    csbend->b[3] = csbend->b4;
-    csbend->b[4] = csbend->b5;
-    csbend->b[5] = csbend->b6;
-    csbend->b[6] = csbend->b7;
-    csbend->b[7] = csbend->b8;
+    csbend->b[0] = 0;
+    csbend->b[1] = csbend->b1;
+    csbend->b[2] = csbend->b2;
+    csbend->b[3] = csbend->b3;
+    csbend->b[4] = csbend->b4;
+    csbend->b[5] = csbend->b5;
+    csbend->b[6] = csbend->b6;
+    csbend->b[7] = csbend->b7;
+    csbend->b[8] = csbend->b8;
   } else {
-    csbend->b[0] = csbend->k1*rho0;
-    csbend->b[1] = csbend->k2*rho0;
-    csbend->b[2] = csbend->k3*rho0;
-    csbend->b[3] = csbend->k4*rho0;
-    csbend->b[4] = csbend->k5*rho0;
-    csbend->b[5] = csbend->k6*rho0;
-    csbend->b[6] = csbend->k7*rho0;
-    csbend->b[7] = csbend->k8*rho0;
+    csbend->b[0] = 0;
+    csbend->b[1] = csbend->k1*rho0;
+    csbend->b[2] = csbend->k2*rho0;
+    csbend->b[3] = csbend->k3*rho0;
+    csbend->b[4] = csbend->k4*rho0;
+    csbend->b[5] = csbend->k5*rho0;
+    csbend->b[6] = csbend->k6*rho0;
+    csbend->b[7] = csbend->k7*rho0;
+    csbend->b[8] = csbend->k8*rho0;
   }
-  for (j=0; j<8; j++)
+  for (j=0; j<9; j++)
     csbend->c[j] = 0;
 
   he1 = csbend->h[csbend->e1Index];
@@ -2121,7 +2133,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     etilt = csbend->etilt*csbend->etiltSign;
     tilt  = csbend->tilt + PI;
     rho0  = csbend->length/angle;
-    for (i=0; i<8; i+=2) {
+    for (i=1; i<9; i+=2) {
       csbend->b[i] *= -1;
       csbend->c[i] *= -1;
     }
@@ -2145,7 +2157,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   }
   
   h = 1/rho0;
-  n = -csbend->b[0]/h;
+  n = -csbend->b[1]/h;
   fse = csbend->fse;
   if (fse>-1)
     rho_actual = 1/((1+fse)*h);
@@ -2182,7 +2194,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     Me1 = edge_matrix(e1, 1./(rho0/(1+csbend->fse)), 0.0, n, -1, Kg, 1, 0, 0, csbend->length);
     Msection = bend_matrix(csbend->length/csbend->n_kicks, 
                            angle/csbend->n_kicks, 0.0, 0.0, 
-                           0.0, 0.0, csbend->b[0]*h,  0.0,
+                           0.0, 0.0, csbend->b[1]*h,  0.0,
                            0.0, 0.0, 0.0, 0.0, csbend->fse, 0.0, 0.0, 
                            csbend->etilt*csbend->etiltSign, 1, 1, 0, 0);
     Me2 = edge_matrix(e2, 1./(rho0/(1+csbend->fse)), 0.0, n, 1, Kg, 1, 0, 0, csbend->length);
@@ -2391,7 +2403,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  Qi[4] = 0;  
 	  Qi[5] = DP;
           convertToDipoleCanonicalCoordinates(Qi, 0);
-          dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e1Index]);
+          dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[1]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e1Index]);
 	  /* retrieve coordinates from arrays */
           convertFromDipoleCanonicalCoordinates(Qf, 0);
 	  X  = Qf[0];  
@@ -2972,7 +2984,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             Qi[4] = 0;  
             Qi[5] = DP;
             convertToDipoleCanonicalCoordinates(Qi, 0);
-            dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e2Index]);
+            dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[1]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e2Index]);
             /* retrieve coordinates from arrays */
             convertFromDipoleCanonicalCoordinates(Qf, 0);
             X  = Qf[0];  

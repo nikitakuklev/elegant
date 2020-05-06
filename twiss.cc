@@ -109,6 +109,7 @@ static TWISS_ANALYSIS_REQUEST *twissAnalysisRequest = NULL;
 static short mustResetRfcaMatrices = 0;
 static short periodicTwissComputed = 0;
 static TWISS lastPeriodicTwiss;
+static short mirror;
 static long nRfca = 0;
 static ELEMENT_LIST **rfcaElem = NULL;
 static FILE *fpRf = NULL;
@@ -127,6 +128,9 @@ VMATRIX *compute_periodic_twiss(
   static short noticeCounter = 0;
   
   log_entry((char*)"compute_periodic_twiss");
+
+  if (mirror!=0 && mirror!=1 && matched!=1)
+    bombElegant("problem with value of mirror parameter in call to compute_periodic_twiss---may result from attempt to correct chromaticity when matched is not 1 in &twiss_output", NULL);
 
   *unstable = 0;
 
@@ -211,10 +215,30 @@ VMATRIX *compute_periodic_twiss(
   report_stats(stdout, "computed revolution matrix: ");
 #endif
 
-  R = M->R;
-  T = M->T;
-  Q = M->Q;
-  
+  if (mirror) {
+    /* create reverse matrix, then concatenate with forward matrix */
+    VMATRIX *Mr, *Mt;
+    Mr = (VMATRIX*)tmalloc(sizeof(*Mr));
+    initialize_matrices(Mr, 1);
+    if (!reverse_matrix(Mr, M))
+      bombElegant("Problem creating reverse matrix for mirror-image twiss parameters", NULL);
+    Mt = (VMATRIX*)tmalloc(sizeof(*Mt));
+    initialize_matrices(Mt, 1);
+    concat_matrices(Mt, Mr, M, 0);
+    R = (double**)czarray_2d(sizeof(double), 6, 6);
+    for (i=0; i<6; i++)
+      for (j=0; j<6; j++)
+        R[i][j] = Mt->R[i][j];
+    free_matrices(Mr);
+    free_matrices(Mt);
+    T = NULL;
+    Q = NULL;
+  } else {
+    R = M->R;
+    T = M->T;
+    Q = M->Q;
+  }
+
   /* allocate matrices for computing dispersion, which I do
    * in 4-d using 
    * eta[i] = Inv(I - R)[i][j] R[j][5]
@@ -303,7 +327,7 @@ VMATRIX *compute_periodic_twiss(
     }
     beta[i/2] = fabs(R[i][i+1]/sin(acos(cos_phi)));
     sin_phi   = R[i][i+1]/beta[i/2];
-    phi[i/2]  = atan2(sin_phi, cos_phi);
+    phi[i/2]  = atan2(sin_phi, cos_phi)/(mirror?2:1);
     if (phi[i/2]<0)
       phi[i/2] += PIx2;
     alpha[i/2] = (R[i][i]-R[i+1][i+1])/(2*sin_phi);
@@ -330,6 +354,9 @@ VMATRIX *compute_periodic_twiss(
   lastPeriodicTwiss.etay = etay[0];
   lastPeriodicTwiss.etapy = etapy[0];
   
+  if (mirror)
+    free_czarray_2d((void**)R, 6, 6);
+
   log_exit((char*)"compute_periodic_twiss");
 #ifdef DEBUG
   report_stats(stdout, "exiting compute_periodic_twiss: ");
@@ -1624,6 +1651,9 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
     bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &twiss_output);
   
+  mirror = 0;
+  if (matched==-1)
+    mirror = 1;
   if (filename)
     filename = compose_filename(filename, run->rootname);
   if (s_dependent_driving_terms_file) {
