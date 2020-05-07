@@ -335,7 +335,7 @@ long lorentz(
       BMAPXYZ *bmxyz;
       bmxyz = (BMAPXYZ*)field;
       if ((bmxyz->fieldLength>0 && bmxyz->length!=bmxyz->fieldLength) && !bmxyz->injectAtZero) 
-        exactDrift(part, i_top, (bmxyz->length-bmxyz->fieldLength)/2);
+        exactDrift(part, i_top+1, (bmxyz->length-bmxyz->fieldLength)/2);
     }
 
     log_exit("lorentz");
