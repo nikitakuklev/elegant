@@ -211,6 +211,9 @@ void bmapxyz_coord_transform(double *q, double *coord, void *field, long which_e
 void bmapxyz_field_setup(BMAPXYZ *bmapxyz);
 long interpolate_bmapxyz(double *F0, double *F1, double *F2, BMAPXYZ *bmapxyz, double x, double y, double z);
 
+int interpolate2dFieldMapHigherOrder(double *Foutput, long ix, long iy, long nx, long ny,
+				     double fx, double fy, double *F0, double *F1, double *F2, long order);
+
 long method_code = 0;
 #define RUNGE_KUTTA 0
 #define BULIRSCH_STOER 1
@@ -2212,9 +2215,9 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   fflush(stdout);
 }
 
-/*
+
 static FILE *fpdeb = NULL;
-*/
+
 
 long interpolate_bmapxyz(double *F0, double *F1, double *F2,
                          BMAPXYZ *bmapxyz, 
@@ -2240,36 +2243,62 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
     Fq[1] = bmapxyz->data->Fx;
     Fq[2] = bmapxyz->data->Fy;
 
-    for (iq=0; iq<3; iq++) {
-      /* interpolate vs z to get four points in a x-y grid */
-      /* (ix, iy) */
-      Finterp1[0][0] = (1-fz)*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
-        fz*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
-      /* (ix+1, iy) */        
-      Finterp1[1][0] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
-        fz*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
-      /* (ix, iy+1) */
-      Finterp1[0][1] = (1-fz)*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
-        fz*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
-      /* (ix+1, iy+1) */
-      Finterp1[1][1] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
-        fz*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+    if (bmapxyz->xyInterpolationOrder>1) {
+      double FOutput1[3], FOutput2[3];
+      long offset;
+      ix -= (bmapxyz->xyInterpolationOrder-2);
+      iy -= (bmapxyz->xyInterpolationOrder-2);
+      if (ix<0)
+	ix = 0;
+      if (iy<0)
+	iy = 0;
+      if ((ix+bmapxyz->xyInterpolationOrder)>=bmapxyz->data->nx)
+	ix = bmapxyz->data->nx-1-bmapxyz->xyInterpolationOrder;
+      if ((iy+bmapxyz->xyInterpolationOrder)>=bmapxyz->data->ny)
+	iy = bmapxyz->data->ny-1-bmapxyz->xyInterpolationOrder;
+      fx = (x-(ix*bmapxyz->data->dx+bmapxyz->data->xmin))/bmapxyz->data->dx;
+      fy = (y-(iy*bmapxyz->data->dy+bmapxyz->data->ymin))/bmapxyz->data->dy;
+      offset = iz*bmapxyz->data->nx*bmapxyz->data->ny;
+      interpolate2dFieldMapHigherOrder(&FOutput1[0], ix, iy, bmapxyz->data->nx, bmapxyz->data->ny, fx, fy, 
+				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, bmapxyz->xyInterpolationOrder);
+      offset = (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny;
+      interpolate2dFieldMapHigherOrder(&FOutput2[0], ix, iy, bmapxyz->data->nx, bmapxyz->data->ny, fx, fy, 
+				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, bmapxyz->xyInterpolationOrder);
+      *F0 = (1-fz)*FOutput1[0] + fz*FOutput2[0];
+      *F1 = (1-fz)*FOutput1[1] + fz*FOutput2[1];
+      *F2 = (1-fz)*FOutput1[2] + fz*FOutput2[2];
+    } else {
+      for (iq=0; iq<3; iq++) {
+	/* interpolate vs z to get four points in a x-y grid */
+	/* (ix, iy) */
+	Finterp1[0][0] = (1-fz)*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	  fz*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	/* (ix+1, iy) */        
+	Finterp1[1][0] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	  fz*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	/* (ix, iy+1) */
+	Finterp1[0][1] = (1-fz)*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	  fz*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	/* (ix+1, iy+1) */
+	Finterp1[1][1] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	  fz*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	
+	/* interpolate vs y to get two points spaced by dx */
+	/* ix */
+	Finterp2[0] = (1-fy)*Finterp1[0][0] + fy*Finterp1[0][1];
+	/* ix+1 */
+	Finterp2[1] = (1-fy)*Finterp1[1][0] + fy*Finterp1[1][1];
+	
+	/* interpolate vs x to get 1 value */
+	Freturn[iq] = (1-fx)*Finterp2[0] + fx*Finterp2[1];
+      }
       
-      /* interpolate vs y to get two points spaced by dx */
-      /* ix */
-      Finterp2[0] = (1-fy)*Finterp1[0][0] + fy*Finterp1[0][1];
-      /* ix+1 */
-      Finterp2[1] = (1-fy)*Finterp1[1][0] + fy*Finterp1[1][1];
-    
-      /* interpolate vs x to get 1 value */
-      Freturn[iq] = (1-fx)*Finterp2[0] + fx*Finterp2[1];
+      *F0 = bmapxyz->strength*Freturn[0];
+      *F1 = bmapxyz->strength*Freturn[1];
+      *F2 = bmapxyz->strength*Freturn[2];
     }
+    
 
-    *F0 = bmapxyz->strength*Freturn[0];
-    *F1 = bmapxyz->strength*Freturn[1];
-    *F2 = bmapxyz->strength*Freturn[2];
-
-    /*
     if (!fpdeb) {
       fpdeb = fopen("bmapxyz.deb", "w");
       fprintf(fpdeb, "SDDS1\n");
@@ -2289,16 +2318,118 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
       fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
     }
    
-  if (x>0)
     fprintf(fpdeb, "%ld %ld %ld %le %le %le %le %le %le %le %le %le %le\n",
             ix, iy, iz,
             x, y, z,
             fx, fy, fz,
             *F1, *F2,*F0, bmapxyz->strength);
-  */
-
   }
 
   return 1;
 }
 
+int interpolate2dFieldMapHigherOrder
+(
+ double *Foutput,    /* output of interpolation */
+ long ix, long iy,
+ long nx, long ny,
+ double fx, double fy,
+ double *F0, double *F1, double *F2, /* maps to interpolate, ignored if NULL */
+ long order
+ )
+/* Performs 2nd-order interpolation of uniformly-spaced 2d field maps.
+   Method is to solve XY*A = F, where
+   XY is a 6x6 matrix for the grid such that XY[i][j] = (1, y[i], y[i]^2, x[i], x[i]*y[i], x[i]^2)
+   F = Trans[(f[0][0], f[0][1], f[0][2], f[1][0], f[1][1], f[2][0])]
+   A is determined from Inv[XY]*F, then used to determine F values of x and y not on the grid
+ */
+  
+{
+  static MATRIX *XY=NULL, *XYInv=NULL, *A=NULL, *F=NULL, *xy=NULL, *FOut=NULL;
+  double *Field[3] = {NULL, NULL, NULL};
+  long i, j, l, k, m, n, f;
+  double xp, yp;
+  static long lastOrder = -1, dim = -1;
+  
+  if (lastOrder!=order) {
+    if (XY) {
+      m_free(&XY);
+      m_free(&XYInv);
+      m_free(&A);
+      m_free(&F);
+      m_free(&xy);
+      m_free(&FOut);
+    }
+    lastOrder = order;
+
+    dim = (order+1)*(order+2)/2;
+    m_alloc(&XY, dim, dim);
+    m_alloc(&XYInv, dim, dim);
+    m_alloc(&A, dim, 1);
+    m_alloc(&F, dim, 1);
+    m_alloc(&xy, 1, dim);
+    m_alloc(&FOut, 1, 1);
+
+    for (i=l=0; i<=order; i++) {
+      /* i is (xGrid-x0)/dx */
+      for (j=0; j<=(order-i); j++, l++) {
+	/* j is (yGrid-y0)/dy */
+	for (m=k=0; m<=order; m++) {
+	  /* m is the power for x */
+	  xp = ipow(i, m);
+	  for (n=0; n<=(order-m); n++, k++) {
+	    /* n is the power for y */
+	    yp = ipow(j, n);
+	    if (l>=dim || k>=dim)
+	      bombElegant("Problem with indexing in higher-order 2d interpolation (1)", NULL);
+	    XY->a[l][k] = xp*yp;
+	  }
+	}
+      }
+    }
+    if (!m_invert(XYInv, XY))
+      return 0;
+  }
+
+  for (m=k=0; m<=order; m++) {
+    xp = ipow(fx, m);
+    for (n=0; n<=(order-m); n++, k++) {
+      yp = ipow(fy, n);
+      xy->a[0][k] = xp*yp;
+    }
+  }
+  if (k!=dim)
+    bombElegant("Problem with indexing in higher-order 2d interpolation (2)", NULL);
+  
+  Field[0] = F0;
+  Field[1] = F1;
+  Field[2] = F2;
+  for (f=0; f<3; f++) {
+    if (!Field[f])
+      continue;
+    for (i=k=0; i<=order; i++) {
+      for (j=0; j<=(order-i); j++, k++) {
+	F->a[k][0] = *(Field[f]+(ix+i)+(iy+j)*nx);
+      }
+    }
+
+    if (k!=dim)
+      bombElegant("Problem with indexing in higher-order 2d interpolation (3)", NULL);
+    m_mult(A, XYInv, F);
+
+    for (m=k=0; m<=order; m++) {
+      xp = ipow(fx, m);
+      for (n=0; n<=(order-m); n++, k++) {
+	yp = ipow(fy, n);
+	xy->a[0][k] = xp*yp;
+      }
+    }
+    if (k!=dim)
+      bombElegant("Problem with indexing in higher-order 2d interpolation (2)", NULL);
+  
+    m_mult(FOut, xy, A);
+    Foutput[f] = FOut->a[0][0];
+  }
+  
+  return 1;
+}
