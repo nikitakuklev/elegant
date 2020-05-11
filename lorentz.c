@@ -2216,8 +2216,9 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
 }
 
 
+/*
 static FILE *fpdeb = NULL;
-
+*/
 
 long interpolate_bmapxyz(double *F0, double *F1, double *F2,
                          BMAPXYZ *bmapxyz, 
@@ -2298,7 +2299,7 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
       *F2 = bmapxyz->strength*Freturn[2];
     }
     
-
+    /*
     if (!fpdeb) {
       fpdeb = fopen("bmapxyz.deb", "w");
       fprintf(fpdeb, "SDDS1\n");
@@ -2323,6 +2324,7 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
             x, y, z,
             fx, fy, fz,
             *F1, *F2,*F0, bmapxyz->strength);
+    */
   }
 
   return 1;
