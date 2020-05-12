@@ -366,6 +366,8 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 
   for (ip=0; ip<np; ip++) {
     double accelCoord[6], q[10];
+    printf("Integrating particle %ld of %ld\n", ip, np);
+    fflush(stdout);
 
     for (ic=0; ic<6; ic++)
       accelCoord[ic] = part[ip][ic];
@@ -1556,6 +1558,7 @@ void BRAT_B_field(double *F, double *Qg)
     Fq[0] = BzNorm;
     Fq[1] = BxNorm;
     Fq[2] = ByNorm;
+
 #ifdef DEBUG
     fprintf(stderr, "Doing 3d interpolation: x=(%le, %le, %le), i=(%ld, %ld, %ld), f=(%le, %le, %le)\n", 
             x, y, z, ix, iy, iz, fx, fy, fz);
@@ -1781,44 +1784,45 @@ int interpolate2dFieldMapHigherOrder
  */
   
 {
-  static MATRIX *XY=NULL, *XYInv=NULL, *A=NULL, *F=NULL, *xy=NULL, *FOut=NULL;
+  static MATRIX *XY=NULL, *XYInv=NULL, *F=NULL, *xy=NULL, *FOut=NULL, *xyXYInv;
   double *Field[3] = {NULL, NULL, NULL};
   long i, j, l, k, m, n, f;
-  double xp, yp;
+  double xpow, ypow, xypow;
   static long lastOrder = -1, dim = -1;
   
   if (lastOrder!=order) {
     if (XY) {
       m_free(&XY);
       m_free(&XYInv);
-      m_free(&A);
       m_free(&F);
       m_free(&xy);
       m_free(&FOut);
+      m_free(&xyXYInv);
     }
     lastOrder = order;
 
     dim = (order+1)*(order+2)/2;
     m_alloc(&XY, dim, dim);
     m_alloc(&XYInv, dim, dim);
-    m_alloc(&A, dim, 1);
     m_alloc(&F, dim, 1);
     m_alloc(&xy, 1, dim);
     m_alloc(&FOut, 1, 1);
+    m_alloc(&xyXYInv, 1, dim);
 
+    /* this could be coded more efficiently, but it is run only occassionally */
     for (i=l=0; i<=order; i++) {
       /* i is (xGrid-x0)/dx */
       for (j=0; j<=(order-i); j++, l++) {
 	/* j is (yGrid-y0)/dy */
 	for (m=k=0; m<=order; m++) {
 	  /* m is the power for x */
-	  xp = ipow(i, m);
+	  xpow = ipow(i, m);
 	  for (n=0; n<=(order-m); n++, k++) {
 	    /* n is the power for y */
-	    yp = ipow(j, n);
+	    ypow = ipow(j, n);
 	    if (l>=dim || k>=dim)
 	      bombElegant("Problem with indexing in higher-order 2d interpolation (1)", NULL);
-	    XY->a[l][k] = xp*yp;
+	    XY->a[l][k] = xpow*ypow;
 	  }
 	}
       }
@@ -1827,44 +1831,32 @@ int interpolate2dFieldMapHigherOrder
       return 0;
   }
 
+  xpow = 1;
   for (m=k=0; m<=order; m++) {
-    xp = ipow(fx, m);
+    xypow = xpow;
     for (n=0; n<=(order-m); n++, k++) {
-      yp = ipow(fy, n);
-      xy->a[0][k] = xp*yp;
+      xy->a[0][k] = xypow;
+      xypow *= fy;
     }
+    xpow *= fx;
   }
   if (k!=dim)
     bombElegant("Problem with indexing in higher-order 2d interpolation (2)", NULL);
-  
+
+  m_mult(xyXYInv, xy, XYInv);
+
   Field[0] = F0;
   Field[1] = F1;
   Field[2] = F2;
   for (f=0; f<3; f++) {
     if (!Field[f])
       continue;
+    Foutput[f] = 0;
     for (i=k=0; i<=order; i++) {
       for (j=0; j<=(order-i); j++, k++) {
-	F->a[k][0] = *(Field[f]+(ix+i)+(iy+j)*nx);
+        Foutput[f] +=  *(Field[f]+(ix+i)+(iy+j)*nx) * xyXYInv->a[0][k];
       }
     }
-
-    if (k!=dim)
-      bombElegant("Problem with indexing in higher-order 2d interpolation (3)", NULL);
-    m_mult(A, XYInv, F);
-
-    for (m=k=0; m<=order; m++) {
-      xp = ipow(fx, m);
-      for (n=0; n<=(order-m); n++, k++) {
-	yp = ipow(fy, n);
-	xy->a[0][k] = xp*yp;
-      }
-    }
-    if (k!=dim)
-      bombElegant("Problem with indexing in higher-order 2d interpolation (2)", NULL);
-  
-    m_mult(FOut, xy, A);
-    Foutput[f] = FOut->a[0][0];
   }
   
   return 1;
