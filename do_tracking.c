@@ -1159,6 +1159,7 @@ long do_tracking(
             char buffer[16384];
             snprintf(buffer, 16384, " Element in question is %s, C5=%le\n", eptr->name, eptr->matrix->C[5]);
             printWarning("Matrix with C5!=0 detected in matrix multiplier. All particles considered lost!", buffer);
+            print_elem(stdout, eptr);
             nLeft = 0;
           } else {
             if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
