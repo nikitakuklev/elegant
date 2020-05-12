@@ -1567,16 +1567,16 @@ void BRAT_B_field(double *F, double *Qg)
     if (xyInterpolationOrder>1) {
       double FOutput1[3], FOutput2[3];
       long offset;
-      ix -= (xyInterpolationOrder-2);
-      iy -= (xyInterpolationOrder-2);
+      ix -= xyInterpolationOrder/2;
+      iy -= xyInterpolationOrder/2;
       if (ix<0)
 	ix = 0;
       if (iy<0)
 	iy = 0;
-      if ((ix+xyInterpolationOrder)>=nx)
-	ix = nx-1-xyInterpolationOrder;
-      if ((iy+xyInterpolationOrder)>=ny)
-	iy = ny-1-xyInterpolationOrder;
+      if ((ix+2*xyInterpolationOrder)>=nx)
+	ix = nx-1-2*xyInterpolationOrder;
+      if ((iy+2*xyInterpolationOrder)>=ny)
+	iy = ny-1-2*xyInterpolationOrder;
       fx = (x-(ix*dx+xi))/dx;
       fy = (y-(iy*dy+yi))/dy;
       offset = iz*nx*ny;
@@ -1776,43 +1776,46 @@ int interpolate2dFieldMapHigherOrder
  double *F0, double *F1, double *F2, /* maps to interpolate, ignored if NULL */
  long order
  )
-/* Performs 2nd-order interpolation of uniformly-spaced 2d field maps.
-   Method is to solve XY*A = F, where
-   XY is a 6x6 matrix for the grid such that XY[i][j] = (1, y[i], y[i]^2, x[i], x[i]*y[i], x[i]^2)
-   F = Trans[(f[0][0], f[0][1], f[0][2], f[1][0], f[1][1], f[2][0])]
-   A is determined from Inv[XY]*F, then used to determine F values of x and y not on the grid
+/* Performs 2nd- and  higher order interpolation of uniformly-spaced 2d field maps.
+   Method is to solve XY*A = F, where for 2nd order
+   XY is a 16x6 matrix for the grid such that XY[i][j] = (1, y[i], y[i]^2, x[i], x[i]*y[i], x[i]^2), i=0, ..., 15
+   F is 16x1 with F = Trans[(f[0][0], f[0][1], f[0][2], f[0][3], f[1][0], f[1][1], f[1][2], f[1][3], ... f[3][3])]
+   A is determined from Inv[XY*Transpose[XY]]*Tranpose[XY]*F, then used to determine F values of x and y not on the grid
  */
   
 {
-  static MATRIX *XY=NULL, *XYInv=NULL, *F=NULL, *xy=NULL, *FOut=NULL, *xyXYInv;
+  static MATRIX *XY=NULL, *F=NULL, *xy=NULL, *XYTrans=NULL, *XYTransXY=NULL, *S=NULL, *T=NULL, *U=NULL;
   double *Field[3] = {NULL, NULL, NULL};
-  long i, j, l, k, m, n, f;
+  long i, j, l, k, m, n, f, nc;
   double xpow, ypow, xypow;
   static long lastOrder = -1, dim = -1;
   
   if (lastOrder!=order) {
     if (XY) {
       m_free(&XY);
-      m_free(&XYInv);
+      m_free(&XYTrans);
+      m_free(&T);
+      m_free(&S);
       m_free(&F);
+      m_free(&U);
       m_free(&xy);
-      m_free(&FOut);
-      m_free(&xyXYInv);
     }
     lastOrder = order;
 
-    dim = (order+1)*(order+2)/2;
-    m_alloc(&XY, dim, dim);
-    m_alloc(&XYInv, dim, dim);
+    dim = sqr(2*(order/2)+2);
+    nc = (order+2)*(order+1)/2;
+    m_alloc(&XY, dim, nc);
+    m_alloc(&XYTrans, nc, dim);
+    m_alloc(&XYTransXY, nc, nc);
+    m_alloc(&T, nc, nc);
+    m_alloc(&S, nc, dim);
+    m_alloc(&xy, 1, nc);
+    m_alloc(&U, 1, dim);
     m_alloc(&F, dim, 1);
-    m_alloc(&xy, 1, dim);
-    m_alloc(&FOut, 1, 1);
-    m_alloc(&xyXYInv, 1, dim);
 
-    /* this could be coded more efficiently, but it is run only occassionally */
     for (i=l=0; i<=order; i++) {
       /* i is (xGrid-x0)/dx */
-      for (j=0; j<=(order-i); j++, l++) {
+      for (j=0; j<=order; j++, l++) {
 	/* j is (yGrid-y0)/dy */
 	for (m=k=0; m<=order; m++) {
 	  /* m is the power for x */
@@ -1820,14 +1823,18 @@ int interpolate2dFieldMapHigherOrder
 	  for (n=0; n<=(order-m); n++, k++) {
 	    /* n is the power for y */
 	    ypow = ipow(j, n);
-	    if (l>=dim || k>=dim)
-	      bombElegant("Problem with indexing in higher-order 2d interpolation (1)", NULL);
 	    XY->a[l][k] = xpow*ypow;
 	  }
 	}
       }
     }
-    if (!m_invert(XYInv, XY))
+    if (!m_trans(XYTrans, XY))
+      return 0;
+    if (!m_mult(XYTransXY, XYTrans, XY))
+      return 0;
+    if (!m_invert(T, XYTransXY))
+      return 0;
+    if (!m_mult(S, T, XYTrans))
       return 0;
   }
 
@@ -1840,10 +1847,8 @@ int interpolate2dFieldMapHigherOrder
     }
     xpow *= fx;
   }
-  if (k!=dim)
-    bombElegant("Problem with indexing in higher-order 2d interpolation (2)", NULL);
 
-  m_mult(xyXYInv, xy, XYInv);
+  m_mult(U, xy, S);
 
   Field[0] = F0;
   Field[1] = F1;
@@ -1853,8 +1858,8 @@ int interpolate2dFieldMapHigherOrder
       continue;
     Foutput[f] = 0;
     for (i=k=0; i<=order; i++) {
-      for (j=0; j<=(order-i); j++, k++) {
-        Foutput[f] +=  *(Field[f]+(ix+i)+(iy+j)*nx) * xyXYInv->a[0][k];
+      for (j=0; j<=order; j++, k++) {
+        Foutput[f] +=  *(Field[f]+(ix+i)+(iy+j)*nx) * U->a[0][k];
       }
     }
   }

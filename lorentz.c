@@ -2245,16 +2245,16 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
     if (bmapxyz->xyInterpolationOrder>1) {
       double FOutput1[3], FOutput2[3];
       long offset;
-      ix -= (bmapxyz->xyInterpolationOrder-2);
-      iy -= (bmapxyz->xyInterpolationOrder-2);
+      ix -= bmapxyz->xyInterpolationOrder/2;
+      iy -= bmapxyz->xyInterpolationOrder/2;
       if (ix<0)
 	ix = 0;
       if (iy<0)
 	iy = 0;
-      if ((ix+bmapxyz->xyInterpolationOrder)>=bmapxyz->data->nx)
-	ix = bmapxyz->data->nx-1-bmapxyz->xyInterpolationOrder;
-      if ((iy+bmapxyz->xyInterpolationOrder)>=bmapxyz->data->ny)
-	iy = bmapxyz->data->ny-1-bmapxyz->xyInterpolationOrder;
+      if ((ix+2*bmapxyz->xyInterpolationOrder)>=bmapxyz->data->nx)
+	ix = bmapxyz->data->nx-1-2*bmapxyz->xyInterpolationOrder;
+      if ((iy+2*bmapxyz->xyInterpolationOrder)>=bmapxyz->data->ny)
+	iy = bmapxyz->data->ny-1-2*bmapxyz->xyInterpolationOrder;
       fx = (x-(ix*bmapxyz->data->dx+bmapxyz->data->xmin))/bmapxyz->data->dx;
       fy = (y-(iy*bmapxyz->data->dy+bmapxyz->data->ymin))/bmapxyz->data->dy;
       offset = iz*bmapxyz->data->nx*bmapxyz->data->ny;
