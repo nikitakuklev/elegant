@@ -3289,6 +3289,7 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"YAWMAP", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.yawMap), NULL, 0.0, 0, "yaw of map about x=z=0"},
     {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.fieldFactor), NULL, 1.0, 0, "factor by which to multiply fields"},
     {"USE_FTABLE", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.useFTABLE), NULL, 0.0, 0, "If nonzero, use FTABLE method for integration. Value gives the number of kicks."},
+    {"XY_INTERPOLATION_ORDER", "", IS_SHORT, 0, (long)((char *)&brat_example.xyInterpolationOrder), NULL, 0.0, 1, "Order of interpolation in x and y."},
 };  
 
 

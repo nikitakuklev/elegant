@@ -1081,7 +1081,7 @@ extern char *entity_text[N_TYPES];
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
 #define N_BMAPXYZ_PARAMS 16
-#define N_BRAT_PARAMS 17
+#define N_BRAT_PARAMS 18
 #define N_BGGEXP_PARAMS 25
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
@@ -2996,7 +2996,7 @@ typedef struct {
   double dxMap, dzMap;
   double yawMap;
   double fieldFactor;
-  short useFTABLE;
+  short useFTABLE, xyInterpolationOrder;
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;
@@ -4678,6 +4678,8 @@ extern int makeInitialParticleEnsemble(double ***initial, double *reference, dou
 extern time_t get_mtime(char *filename);  
 
 extern long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **accepted);
+extern int interpolate2dFieldMapHigherOrder(double *Foutput, long ix, long iy, long nx, long ny,
+				     double fx, double fy, double *F0, double *F1, double *F2, long order);
 
 extern void printWarning(char *text,  char *detail);
 extern void printWarningForTracking(char *text, char *detail);
