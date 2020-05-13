@@ -2263,9 +2263,9 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
       offset = (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny;
       interpolate2dFieldMapHigherOrder(&FOutput2[0], ix, iy, bmapxyz->data->nx, bmapxyz->data->ny, fx, fy, 
 				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, bmapxyz->xyInterpolationOrder);
-      *F0 = (1-fz)*FOutput1[0] + fz*FOutput2[0];
-      *F1 = (1-fz)*FOutput1[1] + fz*FOutput2[1];
-      *F2 = (1-fz)*FOutput1[2] + fz*FOutput2[2];
+      *F0 = bmapxyz->strength*((1-fz)*FOutput1[0] + fz*FOutput2[0]);
+      *F1 = bmapxyz->strength*((1-fz)*FOutput1[1] + fz*FOutput2[1]);
+      *F2 = bmapxyz->strength*((1-fz)*FOutput1[2] + fz*FOutput2[2]);
     } else {
       for (iq=0; iq<3; iq++) {
 	/* interpolate vs z to get four points in a x-y grid */
