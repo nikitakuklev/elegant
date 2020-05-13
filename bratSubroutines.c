@@ -366,9 +366,6 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 
   for (ip=0; ip<np; ip++) {
     double accelCoord[6], q[10];
-    printf("Integrating particle %ld of %ld\n", ip, np);
-    fflush(stdout);
-
     for (ic=0; ic<6; ic++)
       accelCoord[ic] = part[ip][ic];
 
