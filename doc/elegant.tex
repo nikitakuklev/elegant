@@ -3129,6 +3129,11 @@ matrix output will be printed (as text).  Recommended value: ``\%s.mpr''.
 \item \verb|full_matrix_only| --- A flag indicating that only the matrix of
 the entire accelerator is to be output.
 \item \verb|print_element_data| --- A flag indicating whether the element data should be printed out.
+\item \verb|mathematica_full_matrix| --- If non-zero, print the full linear matrix in a format that can read by Mathematica.
+  \begin{itemize}
+  \item \verb|mathematica_matrix_name| --- The name of the Mathematica variable to which the linear matrix will be assigned.
+  \item \verb|mathematica_matrix_file| --- The name a file to which the Mathematica-format matrix will be written.
+  \end{itemize}
 \item \verb|SDDS_output| --- The (incomplete) name of an SDDS 
 file to which the matrix will be written.  Recommended value: ``\%s.mat''.
 \item \verb|SDDS_output_order| --- The order to which the matrix is output in SDDS format.
@@ -3141,7 +3146,7 @@ is desired at every simulation step.
 \item \verb|start_from| --- The optional name of the accelerator element
 from which to begin concatenation and output.
 \item \verb|start_from_occurence| --- If \verb|start_from| is not NULL, the
-number of the occurrence of the named element from which to start.
+  number of the occurrence of the named element from which to start.
 \end{itemize}
 
 %\begin{latexonly}
