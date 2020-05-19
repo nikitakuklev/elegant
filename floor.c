@@ -1059,17 +1059,14 @@ void convertLocalCoordinatesToGlobal
     *Z = Z1 + dX*sin(theta1) + dZ*cos(theta1);
     *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
     *Y = coord[2];
-    if (dZ<-1e-6 || (eptr->pred && (dZ-(eptr->end_pos-eptr->pred->end_pos))>1e-6) || (!eptr->pred && (dZ-eptr->end_pos)>1e-6)) {
+    if (eptr->end_pos>eptr->beg_pos && (dZ<-1e-6 || (dZ-(eptr->end_pos-eptr->beg_pos))>1e-6)) {
 #if USE_MPI
       dup2(fd, fileno(stdout));
 #endif
       printf("Problem Converting to global for particle %ld:\nZ1 = %21.15le, X1 = %21.15le, dZ = %21.15le, dX = %21.15le, theta1 = %21.15le\n -> Z = %21.15le, X = %21.15le\n",
              (long)coord[6], Z1, X1, dZ, dX, theta1, *Z, *X);
-      printf("End pos: %21.15le (%s), %21.15le (%s)\n", 
-             eptr->pred?eptr->pred->end_pos:-DBL_MAX, 
-             eptr->pred?eptr->pred->name:NULL,
-             eptr->end_pos, eptr->name);
+      printf("Beg pos: %21.15le, End pos: %21.15le\n", eptr->beg_pos, eptr->end_pos);
       exit(1);
-      }
+    }
   }
 }

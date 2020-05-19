@@ -471,8 +471,8 @@ void computeMagneticFieldFromOffAxisExpansion
   double delz = 0;
   double *fieldData;
 
-  if (boa->order!=1)
-    bombElegant("Only order=1 implemented for BOFFAXE", NULL);
+  if (boa->order!=1 && boa->order!=2)
+    bombElegant("Only ORDER=1 and ORDER=2 implemented for BOFFAXE", NULL);
   if (iz<0 || iz>=boaData->nz)
     B[0] = B[1] = B[2] = 0;
   else {
@@ -486,27 +486,61 @@ void computeMagneticFieldFromOffAxisExpansion
         for (j=i+1; j<boaData->nDz1; j++)
           fieldData[i] += boaData->fieldData[j][iz]*ipow(delz, j-i)/dfactorial(j-i);
     }
-    B[0] = fieldData[0]*y;
-    B[1] = fieldData[0]*x;
-    B[2] = 0;
-    /* Probably the dumbest possible way to do this... */
-    if (boaData->nDz1>1 && (boa->expansionOrder==0 || boa->expansionOrder>1)) {
-      B[2] = fieldData[1]*x*y;
-      if (boaData->nDz1>2 && (boa->expansionOrder==0 || boa->expansionOrder>2)) {
-        B[0] -= fieldData[2]*(x*x*y/4     + ipow(y,3)/12);
-        B[1] -= fieldData[2]*(ipow(x,3)/12 + x*y*y/4);
-        if (boaData->nDz1>3 && (boa->expansionOrder==0 || boa->expansionOrder>3)) {
-          B[2] -= fieldData[3]*(ipow(x, 3)*y + x*ipow(y, 3))/12;
-          if (boaData->nDz1>4 && (boa->expansionOrder==0 || boa->expansionOrder>4)) {
-            B[0] += fieldData[4]*(ipow(x, 2)*ipow(y, 3)/36 + (5*ipow(x, 4)*y + ipow(y, 5))/720);
-            B[1] += fieldData[4]*(ipow(x, 3)*ipow(y, 2)/36 + (ipow(x, 5) + 5*x*ipow(y, 4))/720);
-            if (boaData->nDz1>5 && (boa->expansionOrder==0 || boa->expansionOrder>5)) {
-              B[2] += fieldData[5]*(ipow(x*y, 3)/108 + (ipow(x, 5)*y + x*ipow(y, 5))/720);
-              if (boaData->nDz1>6 && (boa->expansionOrder==0 || boa->expansionOrder>6)) {
-                B[0] -= fieldData[6]*(5*ipow(x, 4)*ipow(y, 3) + 3*ipow(x, 2)*ipow(y, 5))/4320;
-                B[1] -= fieldData[6]*(3*ipow(x, 5)*ipow(y, 2) + 5*ipow(x, 3)*ipow(y, 4))/4320;
-                if (boaData->nDz1>7 && (boa->expansionOrder==0 || boa->expansionOrder>7)) {
-                  B[2] -= fieldData[7]*(ipow(x, 5)*ipow(y, 3) + ipow(x, 3)*ipow(y, 5))/4320;
+    if (boa->order==1) {
+      /* quadrupole */
+      B[0] = fieldData[0]*y;
+      B[1] = fieldData[0]*x;
+      B[2] = 0;
+      /* Probably the dumbest possible way to do this... */
+      if (boaData->nDz1>1 && (boa->expansionOrder==0 || boa->expansionOrder>1)) {
+        B[2] = fieldData[1]*x*y;
+        if (boaData->nDz1>2 && (boa->expansionOrder==0 || boa->expansionOrder>2)) {
+          B[0] -= fieldData[2]*(x*x*y/4     + ipow(y,3)/12);
+          B[1] -= fieldData[2]*(ipow(x,3)/12 + x*y*y/4);
+          if (boaData->nDz1>3 && (boa->expansionOrder==0 || boa->expansionOrder>3)) {
+            B[2] -= fieldData[3]*(ipow(x, 3)*y + x*ipow(y, 3))/12;
+            if (boaData->nDz1>4 && (boa->expansionOrder==0 || boa->expansionOrder>4)) {
+              B[0] += fieldData[4]*(ipow(x, 2)*ipow(y, 3)/36 + (5*ipow(x, 4)*y + ipow(y, 5))/720);
+              B[1] += fieldData[4]*(ipow(x, 3)*ipow(y, 2)/36 + (ipow(x, 5) + 5*x*ipow(y, 4))/720);
+              if (boaData->nDz1>5 && (boa->expansionOrder==0 || boa->expansionOrder>5)) {
+                B[2] += fieldData[5]*(ipow(x*y, 3)/108 + (ipow(x, 5)*y + x*ipow(y, 5))/720);
+                if (boaData->nDz1>6 && (boa->expansionOrder==0 || boa->expansionOrder>6)) {
+                  B[0] -= fieldData[6]*(5*ipow(x, 4)*ipow(y, 3) + 3*ipow(x, 2)*ipow(y, 5))/4320;
+                  B[1] -= fieldData[6]*(3*ipow(x, 5)*ipow(y, 2) + 5*ipow(x, 3)*ipow(y, 4))/4320;
+                  if (boaData->nDz1>7 && (boa->expansionOrder==0 || boa->expansionOrder>7)) {
+                    B[2] -= fieldData[7]*(ipow(x, 5)*ipow(y, 3) + ipow(x, 3)*ipow(y, 5))/4320;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } else {
+      /* quadrupole */
+      B[0] = fieldData[0]*x*y;
+      B[1] = 0.5*fieldData[0]*(x*x-y*y);
+      B[2] = 0;
+      /* Probably the dumbest possible way to do this... */
+      if (boaData->nDz1>1 && (boa->expansionOrder==0 || boa->expansionOrder>1)) {
+        B[2] = fieldData[1]*(0.5*sqr(x)*y - ipow(y,3)/6);
+        if (boaData->nDz1>2 && (boa->expansionOrder==0 || boa->expansionOrder>2)) {
+          B[0] -= fieldData[2]*(x*ipow(y,3)/24 + ipow(x,3)*y/8);
+          B[1] += fieldData[2]*(5*ipow(y,4)/96- ipow(x*y,2)/16 - ipow(x,4)/32);
+          if (boaData->nDz1>3 && (boa->expansionOrder==0 || boa->expansionOrder>3)) {
+            B[2] += fieldData[3]*(ipow(y,5)/96 - sqr(x)*ipow(y,3)/48 - ipow(x,4)*y/32);
+            if (boaData->nDz1>4 && (boa->expansionOrder==0 || boa->expansionOrder>4)) {
+              B[0] += fieldData[4]*(x*ipow(y,5)/1920 + ipow(x*y,3)/192 + 3*ipow(x,5)*y/640);
+              B[1] += fieldData[4]*(-7*ipow(y,6)/3840 + ipow(x*sqr(y),2)/768 + ipow(sqr(x)*y,2)/256 + ipow(x,6)/1280);
+              if (boaData->nDz1>5 && (boa->expansionOrder==0 || boa->expansionOrder>5)) {
+                B[2] += fieldData[5]*(-ipow(y,7)/3840 + sqr(x)*ipow(y,5)/3840 + ipow(x,4)*ipow(y,3)/768 + ipow(x,6)*y/1280);
+                if (boaData->nDz1>6 && (boa->expansionOrder==0 || boa->expansionOrder>6)) {
+                  B[0] += fieldData[6]*(-ipow(x,3)*ipow(y,5)/11520 - ipow(x,5)*ipow(y,3)/5760 - ipow(x,7)*y/11520);
+                  B[1] += fieldData[6]*(ipow(y,8)/30720 - ipow(x,6)*sqr(y)/11520 - ipow(x*y,4)/9216 - ipow(x,8)/92160);
+                  if (boaData->nDz1>7 && (boa->expansionOrder==0 || boa->expansionOrder>7)) {
+                    B[2] += fieldData[7]*(ipow(y,9)/276480 - ipow(x,4)*ipow(y,5)/46080 - ipow(x,6)*ipow(y,3)/34560 
+                                          - ipow(x,8)*y/92160);
+                  }
                 }
               }
             }

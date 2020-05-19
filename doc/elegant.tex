@@ -75,6 +75,7 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
 \begin{itemize}
 \item The \verb|twiss_output| command can now compute lattice functions for a half periodic cell, i.e., a 
   cell with mirror symmetry, by setting \verb|matched=-1|. This was inspired by a forum question from \verb|mcarla|.
+\item The \verb|BOFFAXE| element now supports a high-order off-axis expansion for $z$-dependent sextupole fields.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -2328,7 +2329,7 @@ programs such as TRACY and MAD \cite{BuesingPC}.
 \item \verb|echo_namelists| --- By default, \verb|elegant| echoes all namelist input to the terminal.  If this parameter
   is set to 0, this output will be inhibited.
 \item \verb|SR_gaussian_limit| --- By default, \verb|elegant| uses a 3-$\sigma$ cutoff for the gaussian random numbers used
-  in simulation of synchrotron radiation from \verb|CSBEND|, \verb|CSRCSBEND|, \verb|KQUAD|, \verb|KSEXT, and \verb|SREFFECTS|.
+  in simulation of synchrotron radiation from \verb|CSBEND|, \verb|CSRCSBEND|, \verb|KQUAD|, \verb|KSEXT|, and \verb|SREFFECTS|.
   This parameter allows changing the cutoff.
 \item \verb|inhibit_seed_permutation| --- If nonzero, randomization of the user-supplied random number seed is {\em not} performed.
   This feature is useful in that it provides a higher degree of apparent randomness, in that small changes in the seed result
