@@ -35,11 +35,14 @@ These equations satisfy Maxwell's curl equation exactly while satisfying the div
 10$^{th}$ order.
 A similar expansion is available in the code for sextupoles.
 
-The gradient $g(z)$ is specified in the column named by the \verb|FIELD_COLUMN| parameter.
-The names for the columns containing z derivatives of $g(z)$ are constructed from the name of the gradient.
+For quadrupoles, at minimum the z-dependent gradient $B_1(z)$ must be given, while for
+sextupoles $B_2(z)$ is required.
+$B_n(z)$ is specified in the column named by the \verb|FIELD_COLUMN| parameter.
+The names for the columns containing z derivatives of $B_n(z)$ are constructed from the name of the primary
+column.
 Assume for concreteness that \verb|FIELD_COLUMN="Gradient"|. 
-{\tt elegant} looks for $g^{(1)}(z)$ in column \verb|GradientDeriv| and 
-$g^{(n)}(z)$ for $n>1$ in columns \verb|GradientDeriv2|, \verb|GradientDeriv3|,  etc.
+{\tt elegant} looks for $B_n^{(1)}(z)$ in column \verb|GradientDeriv| and 
+$B_n^{(m)}(z)$ for $m>1$ in columns \verb|GradientDeriv2|, \verb|GradientDeriv3|,  etc.
 Even if the expansion is limited by the \verb|ORDER| parameter, all gradients will be used
 for interpolation with respect to $z$ if the \verb|Z_SUBDIVISIONS| parameter is larger than 1.
 The expansion is truncated if the needed columns do not exist in the input file.
