@@ -517,7 +517,7 @@ void computeMagneticFieldFromOffAxisExpansion
         }
       }
     } else {
-      /* quadrupole */
+      /* sextupole */
       B[0] = fieldData[0]*x*y;
       B[1] = 0.5*fieldData[0]*(x*x-y*y);
       B[2] = 0;
