@@ -1,6 +1,6 @@
 This somewhat experimental element simulates transport through a 3D magnetic field constructed from
 an off-axis expansion.
-At present, it is restricted to non-bending elements and in fact to quadrupoles.
+At present, it is restricted to non-bending elements and in fact to quadrupoles and sextupoles.
 
 This method of expanding the fields is prone to corruption by noise, to a much greater degree than
 the generalized gradient expansion used by \verb|BGGEXP|.
@@ -33,6 +33,7 @@ B_z = \frac{x^5 y^5 g^{(9)}(z)}{86400}-\frac{g^{(7)}(z) \left(x^5 y^3+x^3 y^5\ri
 \end{equation}
 These equations satisfy Maxwell's curl equation exactly while satisfying the divergence equation to 
 10$^{th}$ order.
+A similar expansion is available in the code for sextupoles.
 
 The gradient $g(z)$ is specified in the column named by the \verb|FIELD_COLUMN| parameter.
 The names for the columns containing z derivatives of $g(z)$ are constructed from the name of the gradient.
