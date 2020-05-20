@@ -1762,8 +1762,8 @@ int interpolate2dFieldMapHigherOrder
  double xmax, double ymax,
  long nx, long ny,
  double *F0, double *F1, double *F2, /* maps to interpolate, ignored if NULL */
- long order,
- long gridType /* 0==big, 1=medium, 2=small/miminal */
+ short order,
+ short gridType /* 0==big, 1=medium, 2=small/miminal */
  )
 /* Performs 2nd- and  higher order interpolation of uniformly-spaced 2d field maps.
    Method is to solve XY*A = F, where for 2nd order
@@ -1803,9 +1803,6 @@ int interpolate2dFieldMapHigherOrder
     }
     dim = sqr(ng);              /* number of points in the ng x ng grid*/
     nc = (order+2)*(order+1)/2; /* number of polynomial coefficients */
-    printf("Using %ld x %ld grid for order=%ld interpolation in BRAT/BMXYZ elements\n",
-	   ng, ng, order);
-    fflush(stdout);
     m_alloc(&XY, dim, nc);      /* array of polynomial terms */
     m_alloc(&XYTrans, nc, dim); 
     m_alloc(&XYTransXY, nc, nc);
@@ -1813,6 +1810,9 @@ int interpolate2dFieldMapHigherOrder
     m_alloc(&S, nc, dim);
     m_alloc(&xy, 1, nc);
     m_alloc(&U, 1, dim);
+    printf("Using %ld x %ld grid for order=%ld interpolation in BRAT/BMXYZ elements (%ld coefficients, %ld fit points)\n",
+	   ng, ng, order, nc, dim);
+    fflush(stdout);
     xPow = tmalloc(sizeof(*xPow)*(order+1));
     yPow = tmalloc(sizeof(*yPow)*(order+1));
 
@@ -1866,13 +1866,13 @@ int interpolate2dFieldMapHigherOrder
   ix -= gridOffset;
   if (ix<0)
     ix = 0;
-  if ((ix+2*order)>=nx)
+  if ((ix+ng)>=nx)
     ix = nx-1-ng;
 
   iy -= gridOffset;
   if (iy<0)
     iy = 0;
-  if ((iy+2*order)>=ny)
+  if ((iy+ng)>=ny)
     iy = ny-1-ng;
 
   fx = (x-(ix*dx+xmin))/dx;
