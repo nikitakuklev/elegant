@@ -1841,41 +1841,24 @@ int interpolate2dFieldMapHigherOrder
       return 0;
   }
 
-  ix = (x-xmin)/dx;
-  if (ix>=nx-1) {
-    ix = nx-2;
-    x  = xmax;
-  }
-  if (ix<0) {
-    ix = 0;
-    x = xmin;
-  }
-  fx = (x-xmin)/dx-ix;
-
-  iy = (y-ymin)/dy;
-  if (iy>=ny-1) {
-    iy = ny-2;
-    y = ymax;
-  }
-  if (iy<0) {
-    iy = 0;
-    y = yi;
-  }
-  fy = (y-ymin)/dy-iy;
-  
-  ix -= gridOffset;
+  /* calculate minimum x index for the grid points */
+  ix = (x-xmin)/dx - gridOffset;
+  /* ensure that all the points are within the full grid */
+  if ((ix+ng)>(nx-1))
+    ix = nx-1-ng;
   if (ix<0)
     ix = 0;
-  if ((ix+ng)>=nx)
-    ix = nx-1-ng;
+  /* fractional position of the particle for the reduced (local) grid */
+  fx = (x-(ix*dx+xmin))/dx;
 
-  iy -= gridOffset;
+  /* calculate minimum y index for the grid points */
+  iy = (y-ymin)/dy - gridOffset;
+  /* ensure that all the points are within the full grid */
+  if ((iy+ng)>(ny-1))
+    iy = ny-1-ng;
   if (iy<0)
     iy = 0;
-  if ((iy+ng)>=ny)
-    iy = ny-1-ng;
-
-  fx = (x-(ix*dx+xmin))/dx;
+  /* fractional position of the particle for the reduced (local) grid */
   fy = (y-(iy*dy+ymin))/dy;
   
   xPow[0] = yPow[0] = 1;
