@@ -112,7 +112,7 @@ static long quiet=1;
 static long useFTABLE = 0;
 static double Po;
 
-static short idealMode = 0, fieldMapDimension=2, xyInterpolationOrder;
+static short idealMode = 0, fieldMapDimension=2, xyInterpolationOrder, xyGridType=0;
 /* static double idealB; */
 static double idealChord, idealEdgeAngle;
 
@@ -331,7 +331,8 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   nz = brat3dData[brat->dataIndex].nz;
 
   xyInterpolationOrder = brat->xyInterpolationOrder;
-  
+  xyGridType = brat->xyGridType;
+
   zStart = zi-dz;
   z_outer = MAX(fabs(zi), fabs(zf));
 
@@ -1566,10 +1567,10 @@ void BRAT_B_field(double *F, double *Qg)
       long offset;
       offset = iz*nx*ny;
       interpolate2dFieldMapHigherOrder(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, xyInterpolationOrder);
+				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, xyInterpolationOrder, xyGridType);
       offset = (iz+1)*nx*ny;
       interpolate2dFieldMapHigherOrder(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, xyInterpolationOrder);
+				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, xyInterpolationOrder, xyGridType);
       for (iq=0; iq<3; iq++)
 	Freturn[iq] = (1-fz)*FOutput1[iq] + fz*FOutput2[iq];
     } else {
@@ -1761,7 +1762,8 @@ int interpolate2dFieldMapHigherOrder
  double xmax, double ymax,
  long nx, long ny,
  double *F0, double *F1, double *F2, /* maps to interpolate, ignored if NULL */
- long order
+ long order,
+ long gridType /* 0==big, 1=medium, 2=small/miminal */
  )
 /* Performs 2nd- and  higher order interpolation of uniformly-spaced 2d field maps.
    Method is to solve XY*A = F, where for 2nd order
@@ -1775,7 +1777,7 @@ int interpolate2dFieldMapHigherOrder
   double *Field[3] = {NULL, NULL, NULL};
   long i, j, l, k, m, n, f, nc;
   static double *xPow=NULL, *yPow=NULL;
-  static long lastOrder = -1, dim = -1, ng = -1;
+  static long lastOrder = -1, dim = -1, ng = -1, gridOffset = -1;
   long ix, iy;
   double fx, fy;
   
@@ -1792,7 +1794,13 @@ int interpolate2dFieldMapHigherOrder
     }
     lastOrder = order;
 
-    ng = 2*(order/2) + 2;       /* dimension of x-y grid */
+    if (gridType==0) {
+      ng = 2*(order/2) + 2;       /* dimension of x-y grid */
+      gridOffset = (order/2);
+    } else {
+      ng = order + 1;
+      gridOffset = ((order-1)/2);
+    }
     dim = sqr(ng);              /* number of points in the ng x ng grid*/
     nc = (order+2)*(order+1)/2; /* number of polynomial coefficients */
     m_alloc(&XY, dim, nc);      /* array of polynomial terms */
@@ -1852,17 +1860,17 @@ int interpolate2dFieldMapHigherOrder
   }
   fy = (y-ymin)/dy-iy;
   
-  ix -= order/2;
+  ix -= gridOffset;
   if (ix<0)
     ix = 0;
   if ((ix+2*order)>=nx)
-    ix = nx-1-2*order;
+    ix = nx-1-ng;
 
-  iy -= order/2;
+  iy -= gridOffset;
   if (iy<0)
     iy = 0;
   if ((iy+2*order)>=ny)
-    iy = ny-1-2*order;
+    iy = ny-1-ng;
 
   fx = (x-(ix*dx+xmin))/dx;
   fy = (y-(iy*dy+ymin))/dy;

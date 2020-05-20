@@ -3267,6 +3267,7 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
     {"INJECT_AT_Z0", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.injectAtZero), NULL, 0.0, 0, "By default, particles are placed at the entrance to the field map regardless of the z coordinate values. If nonzero, particles start at z=0."},
     {"DRIFT_MATRIX", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.driftMatrix), NULL, 0.0, 0, "If non-zero, instead of tracking to determine the matrix, just assume a drift-space matrix."},
     {"XY_INTERPOLATION_ORDER", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.xyInterpolationOrder), NULL, 0.0, 1, "Order of interpolation in x and y."},
+    {"XY_GRID_TYPE", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.xyGridType), NULL, 0.0, 0, "0=large, 1=medium."},
     {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output inside element. Use for debugging only in serial version."},
 };  
 
@@ -3290,6 +3291,7 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.fieldFactor), NULL, 1.0, 0, "factor by which to multiply fields"},
     {"USE_FTABLE", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.useFTABLE), NULL, 0.0, 0, "If nonzero, use FTABLE method for integration. Value gives the number of kicks."},
     {"XY_INTERPOLATION_ORDER", "", IS_SHORT, 0, (long)((char *)&brat_example.xyInterpolationOrder), NULL, 0.0, 1, "Order of interpolation in x and y."},
+    {"XY_GRID_TYPE", "", IS_SHORT, 0, (long)((char *)&brat_example.xyGridType), NULL, 0.0, 0, "0=large, 1=medium."},
 };  
 
 

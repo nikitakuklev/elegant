@@ -1080,8 +1080,8 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 15
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
-#define N_BMAPXYZ_PARAMS 16
-#define N_BRAT_PARAMS 18
+#define N_BMAPXYZ_PARAMS 17
+#define N_BRAT_PARAMS 19
 #define N_BGGEXP_PARAMS 25
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
@@ -2977,7 +2977,7 @@ typedef struct {
   double dxError, dyError, dzError, tilt;
   double fieldLength, strength, accuracy;
   char *method, *filename;
-  short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder;
+  short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridType;
   char *particleOutputFile;
   /* internal variables */
   BMAPXYZ_DATA *data; 
@@ -2996,7 +2996,7 @@ typedef struct {
   double dxMap, dzMap;
   double yawMap;
   double fieldFactor;
-  short useFTABLE, xyInterpolationOrder;
+  short useFTABLE, xyInterpolationOrder, xyGridType;
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;
@@ -4683,7 +4683,7 @@ extern int interpolate2dFieldMapHigherOrder(double *Foutput, double x, double y,
                                             double xmin, double ymin,
                                             double xmax, double ymax,
                                             long nx, long ny,
-                                            double *F0, double *F1, double *F2, long order);
+                                            double *F0, double *F1, double *F2, short order, short gridType);
 extern void printWarning(char *text,  char *detail);
 extern void printWarningForTracking(char *text, char *detail);
 extern void printWarningWithContext(char *context1, char  *context2, char *text,  char *detail);
