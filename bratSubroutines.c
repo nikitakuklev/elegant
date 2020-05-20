@@ -1803,6 +1803,9 @@ int interpolate2dFieldMapHigherOrder
     }
     dim = sqr(ng);              /* number of points in the ng x ng grid*/
     nc = (order+2)*(order+1)/2; /* number of polynomial coefficients */
+    printf("Using %ld x %ld grid for order=%ld interpolation in BRAT/BMXYZ elements\n",
+	   ng, ng, order);
+    fflush(stdout);
     m_alloc(&XY, dim, nc);      /* array of polynomial terms */
     m_alloc(&XYTrans, nc, dim); 
     m_alloc(&XYTransXY, nc, nc);
