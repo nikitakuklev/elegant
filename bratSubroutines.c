@@ -1781,11 +1781,11 @@ int interpolate2dFieldMapHigherOrder
  */
   
 {
-  static MATRIX *XY=NULL, *F=NULL, *xy=NULL, *XYTrans=NULL, *XYTransXY=NULL, *S=NULL, *T=NULL, *U=NULL;
+  static MATRIX *XY=NULL, *xy=NULL, *XYTrans=NULL, *XYTransXY=NULL, *S=NULL, *T=NULL, *U=NULL;
   double *Field[3] = {NULL, NULL, NULL};
   long i, j, l, k, m, n, f, nc;
   double xpow, ypow, xypow;
-  static long lastOrder = -1, dim = -1;
+  static long lastOrder = -1, dim = -1, ng = -1;
   
   if (lastOrder!=order) {
     if (XY) {
@@ -1793,26 +1793,25 @@ int interpolate2dFieldMapHigherOrder
       m_free(&XYTrans);
       m_free(&T);
       m_free(&S);
-      m_free(&F);
       m_free(&U);
       m_free(&xy);
     }
     lastOrder = order;
 
-    dim = sqr(2*(order/2)+2);
-    nc = (order+2)*(order+1)/2;
-    m_alloc(&XY, dim, nc);
-    m_alloc(&XYTrans, nc, dim);
+    ng = 2*(order/2) + 2;       /* dimension of x-y grid */
+    dim = sqr(ng);              /* number of points in the ng x ng grid*/
+    nc = (order+2)*(order+1)/2; /* number of polynomial coefficients */
+    m_alloc(&XY, dim, nc);      /* array of polynomial terms */
+    m_alloc(&XYTrans, nc, dim); 
     m_alloc(&XYTransXY, nc, nc);
     m_alloc(&T, nc, nc);
     m_alloc(&S, nc, dim);
     m_alloc(&xy, 1, nc);
     m_alloc(&U, 1, dim);
-    m_alloc(&F, dim, 1);
 
-    for (i=l=0; i<=order; i++) {
+    for (i=l=0; i<ng; i++) {
       /* i is (xGrid-x0)/dx */
-      for (j=0; j<=order; j++, l++) {
+      for (j=0; j<ng; j++, l++) {
 	/* j is (yGrid-y0)/dy */
 	for (m=k=0; m<=order; m++) {
 	  /* m is the power for x */
@@ -1854,8 +1853,8 @@ int interpolate2dFieldMapHigherOrder
     if (!Field[f])
       continue;
     Foutput[f] = 0;
-    for (i=k=0; i<=order; i++) {
-      for (j=0; j<=order; j++, k++) {
+    for (i=k=0; i<ng; i++) {
+      for (j=0; j<ng; j++, k++) {
         Foutput[f] +=  *(Field[f]+(ix+i)+(iy+j)*nx) * U->a[0][k];
       }
     }
