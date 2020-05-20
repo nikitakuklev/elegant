@@ -1784,7 +1784,8 @@ int interpolate2dFieldMapHigherOrder
   static MATRIX *XY=NULL, *xy=NULL, *XYTrans=NULL, *XYTransXY=NULL, *S=NULL, *T=NULL, *U=NULL;
   double *Field[3] = {NULL, NULL, NULL};
   long i, j, l, k, m, n, f, nc;
-  double xpow, ypow, xypow;
+  double xpow, ypow;
+  static double *xPow=NULL, *yPow=NULL;
   static long lastOrder = -1, dim = -1, ng = -1;
   
   if (lastOrder!=order) {
@@ -1795,6 +1796,8 @@ int interpolate2dFieldMapHigherOrder
       m_free(&S);
       m_free(&U);
       m_free(&xy);
+      free(xPow);
+      free(yPow);
     }
     lastOrder = order;
 
@@ -1808,6 +1811,8 @@ int interpolate2dFieldMapHigherOrder
     m_alloc(&S, nc, dim);
     m_alloc(&xy, 1, nc);
     m_alloc(&U, 1, dim);
+    xPow = tmalloc(sizeof(*xPow)*(order+1));
+    yPow = tmalloc(sizeof(*yPow)*(order+1));
 
     for (i=l=0; i<ng; i++) {
       /* i is (xGrid-x0)/dx */
@@ -1834,14 +1839,14 @@ int interpolate2dFieldMapHigherOrder
       return 0;
   }
 
-  xpow = 1;
+  xPow[0] = yPow[0] = 1;
+  for (m=1; m<=order; m++) {
+    xPow[m] = fx*xPow[m-1];
+    yPow[m] = fy*yPow[m-1];
+  }
   for (m=k=0; m<=order; m++) {
-    xypow = xpow;
-    for (n=0; n<=(order-m); n++, k++) {
-      xy->a[0][k] = xypow;
-      xypow *= fy;
-    }
-    xpow *= fx;
+    for (n=0; n<=(order-m); n++, k++)
+      xy->a[0][k] = xPow[m]*yPow[n];
   }
 
   m_mult(U, xy, S);
