@@ -2245,23 +2245,19 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
     if (bmapxyz->xyInterpolationOrder>1) {
       double FOutput1[3], FOutput2[3];
       long offset;
-      ix -= bmapxyz->xyInterpolationOrder/2;
-      iy -= bmapxyz->xyInterpolationOrder/2;
-      if (ix<0)
-	ix = 0;
-      if (iy<0)
-	iy = 0;
-      if ((ix+2*bmapxyz->xyInterpolationOrder)>=bmapxyz->data->nx)
-	ix = bmapxyz->data->nx-1-2*bmapxyz->xyInterpolationOrder;
-      if ((iy+2*bmapxyz->xyInterpolationOrder)>=bmapxyz->data->ny)
-	iy = bmapxyz->data->ny-1-2*bmapxyz->xyInterpolationOrder;
-      fx = (x-(ix*bmapxyz->data->dx+bmapxyz->data->xmin))/bmapxyz->data->dx;
-      fy = (y-(iy*bmapxyz->data->dy+bmapxyz->data->ymin))/bmapxyz->data->dy;
       offset = iz*bmapxyz->data->nx*bmapxyz->data->ny;
-      interpolate2dFieldMapHigherOrder(&FOutput1[0], ix, iy, bmapxyz->data->nx, bmapxyz->data->ny, fx, fy, 
+      interpolate2dFieldMapHigherOrder(&FOutput1[0], 
+                                       x, y, bmapxyz->data->dx, bmapxyz->data->dy,
+                                       bmapxyz->data->xmin, bmapxyz->data->ymin,
+                                       bmapxyz->data->xmax, bmapxyz->data->ymax,
+                                       bmapxyz->data->nx, bmapxyz->data->ny, 
 				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, bmapxyz->xyInterpolationOrder);
       offset = (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny;
-      interpolate2dFieldMapHigherOrder(&FOutput2[0], ix, iy, bmapxyz->data->nx, bmapxyz->data->ny, fx, fy, 
+      interpolate2dFieldMapHigherOrder(&FOutput2[0], 
+                                       x, y, bmapxyz->data->dx, bmapxyz->data->dy,
+                                       bmapxyz->data->xmin, bmapxyz->data->ymin,
+                                       bmapxyz->data->xmax, bmapxyz->data->ymax,
+                                       bmapxyz->data->nx, bmapxyz->data->ny, 
 				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, bmapxyz->xyInterpolationOrder);
       *F0 = bmapxyz->strength*((1-fz)*FOutput1[0] + fz*FOutput2[0]);
       *F1 = bmapxyz->strength*((1-fz)*FOutput1[1] + fz*FOutput2[1]);

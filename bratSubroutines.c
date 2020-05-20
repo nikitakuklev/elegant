@@ -1564,23 +1564,11 @@ void BRAT_B_field(double *F, double *Qg)
     if (xyInterpolationOrder>1) {
       double FOutput1[3], FOutput2[3];
       long offset;
-      ix -= xyInterpolationOrder/2;
-      iy -= xyInterpolationOrder/2;
-      if (ix<0)
-	ix = 0;
-      if (iy<0)
-	iy = 0;
-      if ((ix+2*xyInterpolationOrder)>=nx)
-	ix = nx-1-2*xyInterpolationOrder;
-      if ((iy+2*xyInterpolationOrder)>=ny)
-	iy = ny-1-2*xyInterpolationOrder;
-      fx = (x-(ix*dx+xi))/dx;
-      fy = (y-(iy*dy+yi))/dy;
       offset = iz*nx*ny;
-      interpolate2dFieldMapHigherOrder(&FOutput1[0], ix, iy, nx, ny, fx, fy, 
+      interpolate2dFieldMapHigherOrder(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
 				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, xyInterpolationOrder);
       offset = (iz+1)*nx*ny;
-      interpolate2dFieldMapHigherOrder(&FOutput2[0], ix, iy, nx, ny, fx, fy, 
+      interpolate2dFieldMapHigherOrder(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
 				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, xyInterpolationOrder);
       for (iq=0; iq<3; iq++)
 	Freturn[iq] = (1-fz)*FOutput1[iq] + fz*FOutput2[iq];
@@ -1767,9 +1755,11 @@ void add2dMapList(double interpValue)
 int interpolate2dFieldMapHigherOrder
 (
  double *Foutput,    /* output of interpolation */
- long ix, long iy,
+ double x, double y,
+ double dx, double dy,
+ double xmin, double ymin,
+ double xmax, double ymax,
  long nx, long ny,
- double fx, double fy,
  double *F0, double *F1, double *F2, /* maps to interpolate, ignored if NULL */
  long order
  )
@@ -1786,6 +1776,8 @@ int interpolate2dFieldMapHigherOrder
   long i, j, l, k, m, n, f, nc;
   static double *xPow=NULL, *yPow=NULL;
   static long lastOrder = -1, dim = -1, ng = -1;
+  long ix, iy;
+  double fx, fy;
   
   if (lastOrder!=order) {
     if (XY) {
@@ -1838,6 +1830,43 @@ int interpolate2dFieldMapHigherOrder
       return 0;
   }
 
+  ix = (x-xmin)/dx;
+  if (ix>=nx-1) {
+    ix = nx-2;
+    x  = xmax;
+  }
+  if (ix<0) {
+    ix = 0;
+    x = xmin;
+  }
+  fx = (x-xmin)/dx-ix;
+
+  iy = (y-ymin)/dy;
+  if (iy>=ny-1) {
+    iy = ny-2;
+    y = ymax;
+  }
+  if (iy<0) {
+    iy = 0;
+    y = yi;
+  }
+  fy = (y-ymin)/dy-iy;
+  
+  ix -= order/2;
+  if (ix<0)
+    ix = 0;
+  if ((ix+2*order)>=nx)
+    ix = nx-1-2*order;
+
+  iy -= order/2;
+  if (iy<0)
+    iy = 0;
+  if ((iy+2*order)>=ny)
+    iy = ny-1-2*order;
+
+  fx = (x-(ix*dx+xmin))/dx;
+  fy = (y-(iy*dy+ymin))/dy;
+  
   xPow[0] = yPow[0] = 1;
   for (m=1; m<=order; m++) {
     xPow[m] = fx*xPow[m-1];

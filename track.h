@@ -4678,9 +4678,12 @@ extern int makeInitialParticleEnsemble(double ***initial, double *reference, dou
 extern time_t get_mtime(char *filename);  
 
 extern long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **accepted);
-extern int interpolate2dFieldMapHigherOrder(double *Foutput, long ix, long iy, long nx, long ny,
-				     double fx, double fy, double *F0, double *F1, double *F2, long order);
-
+extern int interpolate2dFieldMapHigherOrder(double *Foutput, double x, double y,
+                                            double dx, double dy,
+                                            double xmin, double ymin,
+                                            double xmax, double ymax,
+                                            long nx, long ny,
+                                            double *F0, double *F1, double *F2, long order);
 extern void printWarning(char *text,  char *detail);
 extern void printWarningForTracking(char *text, char *detail);
 extern void printWarningWithContext(char *context1, char  *context2, char *text,  char *detail);
