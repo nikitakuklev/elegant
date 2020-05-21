@@ -112,7 +112,7 @@ static long quiet=1;
 static long useFTABLE = 0;
 static double Po;
 
-static short idealMode = 0, fieldMapDimension=2, xyInterpolationOrder, xyGridType=0;
+static short idealMode = 0, fieldMapDimension=2, xyInterpolationOrder, xyGridExcess=0;
 /* static double idealB; */
 static double idealChord, idealEdgeAngle;
 
@@ -331,7 +331,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   nz = brat3dData[brat->dataIndex].nz;
 
   xyInterpolationOrder = brat->xyInterpolationOrder;
-  xyGridType = brat->xyGridType;
+  xyGridExcess = brat->xyGridExcess;
 
   zStart = zi-dz;
   z_outer = MAX(fabs(zi), fabs(zf));
@@ -1567,10 +1567,10 @@ void BRAT_B_field(double *F, double *Qg)
       long offset;
       offset = iz*nx*ny;
       interpolate2dFieldMapHigherOrder(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, xyInterpolationOrder, xyGridType);
+				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, xyInterpolationOrder, xyGridExcess);
       offset = (iz+1)*nx*ny;
       interpolate2dFieldMapHigherOrder(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, xyInterpolationOrder, xyGridType);
+				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, xyInterpolationOrder, xyGridExcess);
       for (iq=0; iq<3; iq++)
 	Freturn[iq] = (1-fz)*FOutput1[iq] + fz*FOutput2[iq];
     } else {
@@ -1763,7 +1763,7 @@ int interpolate2dFieldMapHigherOrder
  long nx, long ny,
  double *F0, double *F1, double *F2, /* maps to interpolate, ignored if NULL */
  short order,
- short gridType /* 0==big, 1=medium, 2=small/miminal */
+ short gridExcess
  )
 /* Performs 2nd- and  higher order interpolation of uniformly-spaced 2d field maps.
    Method is to solve XY*A = F, where for 2nd order
@@ -1778,7 +1778,7 @@ int interpolate2dFieldMapHigherOrder
   long i, j, l, k, m, n, f, nc;
   static double *xPow=NULL, *yPow=NULL;
   static long lastOrder = -1, dim = -1, ng = -1, gridOffset = -1;
-  long ix, iy;
+  long ix, iy, minGrid;
   double fx, fy;
   
   if (lastOrder!=order) {
@@ -1794,25 +1794,33 @@ int interpolate2dFieldMapHigherOrder
     }
     lastOrder = order;
 
-    if (gridType==0) {
-      ng = 2*(order/2) + 2;       /* dimension of x-y grid */
-      gridOffset = (order/2);
-    } else {
-      ng = order + 1;
-      gridOffset = ((order-1)/2);
-    }
-    dim = sqr(ng);              /* number of points in the ng x ng grid*/
-    nc = (order+2)*(order+1)/2; /* number of polynomial coefficients */
-    m_alloc(&XY, dim, nc);      /* array of polynomial terms */
-    m_alloc(&XYTrans, nc, dim); 
-    m_alloc(&XYTransXY, nc, nc);
-    m_alloc(&T, nc, nc);
-    m_alloc(&S, nc, dim);
-    m_alloc(&xy, 1, nc);
-    m_alloc(&U, 1, dim);
+    nc = (order+2)*(order+1)/2;   /* number of polynomial coefficients */
+    /* ensure that we have sufficient data for the required number of coefficients */
+    minGrid = sqrt(nc);
+    while (nc>(minGrid*minGrid))
+      minGrid ++;
+    /* add the user's "excess" number of rows and columns */
+    if (gridExcess<0)
+      gridExcess = 0;
+    ng = minGrid + gridExcess;    /* number of rows and columns of data to use */
+    dim = sqr(ng);                /* number of points in the ng x ng grid*/
+    if (dim<nc)
+      bombElegant("Something wrong with setting up the number of rows and columns of data for higher-order x-y fitting", NULL);
+    gridOffset = (ng-1)/2;
+
+    m_alloc(&XY, dim, nc);        /* array of polynomial terms */
+    m_alloc(&XYTrans, nc, dim);   /* transpose of same */
+    m_alloc(&XYTransXY, nc, nc);  /* product of transpose and XY */
+    m_alloc(&T, nc, nc);          /* inverse of (XYTrans*XY) */
+    m_alloc(&S, nc, dim);         /* T*(XYTrans*XY)^{-1} */
+    m_alloc(&xy, 1, nc);          /* vector of polynomial terms for fit evaluation */
+    m_alloc(&U, 1, dim);          /* xy*S */
+
     printf("Using %ld x %ld grid for order=%ld interpolation in BRAT/BMXYZ elements (%ld coefficients, %ld fit points)\n",
 	   ng, ng, order, nc, dim);
     fflush(stdout);
+
+    /* arrays of stored powers of x and y */
     xPow = tmalloc(sizeof(*xPow)*(order+1));
     yPow = tmalloc(sizeof(*yPow)*(order+1));
 

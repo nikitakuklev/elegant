@@ -2252,7 +2252,7 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
                                        bmapxyz->data->xmax, bmapxyz->data->ymax,
                                        bmapxyz->data->nx, bmapxyz->data->ny, 
 				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, 
-				       bmapxyz->xyInterpolationOrder, bmapxyz->xyGridType);
+				       bmapxyz->xyInterpolationOrder, bmapxyz->xyGridExcess);
       offset = (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny;
       interpolate2dFieldMapHigherOrder(&FOutput2[0], 
                                        x, y, bmapxyz->data->dx, bmapxyz->data->dy,
@@ -2260,7 +2260,7 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
                                        bmapxyz->data->xmax, bmapxyz->data->ymax,
                                        bmapxyz->data->nx, bmapxyz->data->ny, 
 				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, 
-				       bmapxyz->xyInterpolationOrder, bmapxyz->xyGridType);
+				       bmapxyz->xyInterpolationOrder, bmapxyz->xyGridExcess);
       *F0 = bmapxyz->strength*((1-fz)*FOutput1[0] + fz*FOutput2[0]);
       *F1 = bmapxyz->strength*((1-fz)*FOutput1[1] + fz*FOutput2[1]);
       *F2 = bmapxyz->strength*((1-fz)*FOutput1[2] + fz*FOutput2[2]);

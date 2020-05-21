@@ -2977,7 +2977,7 @@ typedef struct {
   double dxError, dyError, dzError, tilt;
   double fieldLength, strength, accuracy;
   char *method, *filename;
-  short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridType;
+  short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridExcess;
   char *particleOutputFile;
   /* internal variables */
   BMAPXYZ_DATA *data; 
@@ -2996,7 +2996,7 @@ typedef struct {
   double dxMap, dzMap;
   double yawMap;
   double fieldFactor;
-  short useFTABLE, xyInterpolationOrder, xyGridType;
+  short useFTABLE, xyInterpolationOrder, xyGridExcess;
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;
@@ -4683,7 +4683,7 @@ extern int interpolate2dFieldMapHigherOrder(double *Foutput, double x, double y,
                                             double xmin, double ymin,
                                             double xmax, double ymax,
                                             long nx, long ny,
-                                            double *F0, double *F1, double *F2, short order, short gridType);
+                                            double *F0, double *F1, double *F2, short order, short gridExcess);
 extern void printWarning(char *text,  char *detail);
 extern void printWarningForTracking(char *text, char *detail);
 extern void printWarningWithContext(char *context1, char  *context2, char *text,  char *detail);
