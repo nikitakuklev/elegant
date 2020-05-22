@@ -2912,6 +2912,8 @@ PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS] = {
    {"RAOVERQ", "Ohm", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.RaOverQ), NULL, 0.0, 0, "Shunt impedance, Ra/Q=V^2/(P*Q)."},
    {"QLOADED", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.QLoaded), NULL, 0.0, 0, "Loaded Q of the cavity."},
    {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&tfbDriver_example.outputFile), NULL, 0.0, 0, "File for logging filter output and driver output"},
+   {"GAIN_FACTOR_FILE", "", IS_STRING, 0, (long)((char*)&tfbDriver_example.gainFactorFile), NULL, 0.0, 0, "File providing gain factors for individual bunches."},
+   {"GAIN_FACTOR_COLUMN", "", IS_STRING, 0, (long)((char*)&tfbDriver_example.gainFactorColumn), NULL, 0.0, 0, "Column from GAIN_FACTOR_FILE containing gain factors."},
    {"DELAY", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.delay), NULL, 0.0, 0, "Delay (in turns)"},
    {"A0", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[0]), NULL, 1.0, 0, "Filter coefficient"},
    {"A1", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[1]), NULL, 0.0, 0, "Filter coefficient"},

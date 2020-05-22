@@ -277,11 +277,13 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   printf("TFBDRIVER: %ld bunches\n", nBuckets);
   fflush(stdout);
 #endif
-  
+
   if (tfbd->initialized==0) {
     if (nPasses<tfbd->outputInterval)
       tfbd->outputInterval = nPasses;
     initializeTransverseFeedbackDriver(tfbd, beamline, nPasses*nBuckets, rootname);
+    if (tfbd->nGainFactors && tfbd->nGainFactors!=nBuckets)
+      printWarningForTracking("Number of gain factors not equal to number of bunches", NULL);
   }
   
   if ((tfbd->pickup->iPlane==5 || tfbd->pickup->iPlane==4) && !tfbd->longitudinal)
@@ -365,6 +367,8 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     printf("TFBDRIVER: kick = %le\n", kick);
     fflush(stdout);
 #endif
+    if (iBucket<tfbd->nGainFactors)
+      kick *= tfbd->gainFactor[iBucket];
     if (tfbd->kickLimit>0 && fabs(kick)>tfbd->kickLimit)
       kick = SIGN(kick)*tfbd->kickLimit;
     phase = tfbd->phase*PI/180;
@@ -591,6 +595,19 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
 
   if (tfbd->ID==NULL || !strlen(tfbd->ID))
     bombElegant("you must give an ID string for TFBDRIVER", NULL);
+  if (tfbd->gainFactorFile) {
+    SDDS_DATASET SDDSgff;
+    if (!strlen(tfbd->gainFactorFile))
+      bombElegant("TFBDRIVER GAIN_FACTOR_FILE is invalid", NULL);
+    if (!tfbd->gainFactorColumn || !strlen(tfbd->gainFactorColumn))
+      bombElegant("TFBDRIVER GAIN_FACTOR_COLUMN is invalid", NULL);
+    if (!SDDS_InitializeInputFromSearchPath(&SDDSgff, tfbd->gainFactorFile) ||
+	SDDS_ReadPage(&SDDSgff)!=1 || (tfbd->nGainFactors=SDDS_RowCount(&SDDSgff))<1 ||
+	!(tfbd->gainFactor=SDDS_GetColumnInDoubles(&SDDSgff, tfbd->gainFactorColumn))) {
+      fprintf(stderr, "Error: GAIN_FACTOR_FILE file %s is unreadable, has insufficient data, or is missing column %s.\n", tfbd->gainFactorFile, tfbd->gainFactorColumn);
+      exitElegant(1);
+    }
+  }
   if (tfbd->RaOverQ>0)
     count ++;
   if (tfbd->QLoaded>0)

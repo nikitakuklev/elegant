@@ -1054,7 +1054,7 @@ extern char *entity_text[N_TYPES];
 #define N_FRFMODE_PARAMS  14
 #define N_FTRFMODE_PARAMS 17
 #define N_TFBPICKUP_PARAMS 40
-#define N_TFBDRIVER_PARAMS 48
+#define N_TFBDRIVER_PARAMS 50
 #define N_LSCDRIFT_PARAMS  14
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 27
@@ -3197,7 +3197,7 @@ extern PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS];
 typedef struct {
   char *ID;
   double strength, kickLimit, frequency, driveFrequency, clockFrequency, clockOffset, phase, RaOverQ, QLoaded;
-  char *outputFile;
+  char *outputFile, *gainFactorFile, *gainFactorColumn;
   long delay;
   double a[TFB_FILTER_LENGTH];
   long updateInterval, outputInterval;
@@ -3213,6 +3213,8 @@ typedef struct {
   TFBPICKUP *pickup;
   SDDS_DATASET *SDDSout;
   long nBunches;
+  double *gainFactor; /* for individual bunches */
+  long nGainFactors;  /* should equal number of bunches */
   /* circular buffer for storing output signal */
   long maxDelay;
   double **driverSignal;
