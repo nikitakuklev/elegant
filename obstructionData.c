@@ -158,14 +158,64 @@ long insideObstruction_xyz
   return insideObstruction(part, mode, dz, segment, nSegments);
 }
 
+long insideObstruction_XYZ
+/* Used for elements with internal Cartesian coordinate system that
+ * may be offset and rotated relative to global coordinates.
+ * E.g., BRAT element.
+ */
+(
+ /* magnet-frame coordinates of particle */
+ double X  , double Y  , double Z  , 
+ /* coordinate offsets of the nominal entrance */
+ double dXi, double dYi, double dZi, 
+ /* angle of the internal Z axis w.r.t. nominal incoming trajectory */
+ double thetai,
+ /* return of global loss coordinates (X, Y, Z) */
+ double *lossCoordinates
+ )
+{
+  TRACKING_CONTEXT context;
+  double C, S;
+  double X1, Y1, Z1;
+  long ic;
+
+  if (!obstructionDataSets.initialized) return 0;
+
+  X -= dXi;
+  Y -= dYi;
+  Z -= dZi;
+
+  getTrackingContext(&context);
+
+  thetai += context.element->floorAngle[0];
+  C = cos(thetai);
+  S = sin(thetai);
+  X1 = C*X - S*Z + context.element->floorCoord[0];
+  Y1 = Y + context.element->floorCoord[1];
+  Z1 = S*X + C*Z + context.element->floorCoord[2];
+
+  for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
+    if (pointIsInsideContour(Z1, X1, 
+                             obstructionDataSets.data[ic].Z, 
+                             obstructionDataSets.data[ic].X, 
+                             obstructionDataSets.data[ic].points)) {
+      if (lossCoordinates) {
+        lossCoordinates[0] = X1;
+        lossCoordinates[1] = Y1;
+        lossCoordinates[2] = Z1;
+      }
+      return 1;
+    }
+  }
+  return 0;
+}
+
 long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double Po)
 {
   long ip, itop;
   itop = np - 1;
   for (ip=0; ip<=itop; ip++) {
     if (insideObstruction(coord[ip], GLOBAL_LOCAL_MODE_SEG, 0.0, 1, 1)) {
-      TRACKING_CONTEXT context;
-      getTrackingContext(&context);
       if (ip!=itop)
         swapParticles(coord[ip], coord[itop]);
       coord[itop][4] = z;

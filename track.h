@@ -4697,6 +4697,8 @@ extern void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run);
 extern long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double P_central);
 extern long insideObstruction(double *part, short mode, double dz, long segment, long nSegments);
 extern long insideObstruction_xyz(double x, double y, double tilt, short mode, double dz, long segment, long nSegments);
+extern long insideObstruction_XYZ(double X, double Y, double Z, double dXi, double dYi, double dZi, 
+                                  double thetai, double *lossCoordinates);
 
 #ifdef __cplusplus
 }

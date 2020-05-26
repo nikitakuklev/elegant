@@ -186,6 +186,7 @@ int make_fieldmap_file(char *filename, char *data_file, double Zi, double Zf, lo
 int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inputfile, char *field_map_file,
                              double theta, double fse, long variable, char *interpolationParameter, char *interpolationParameterUnits);
 
+#define ABRAT_PROGRAM
 #include "bratSubroutines.c"
 
 #if defined(SUBROUTINE)

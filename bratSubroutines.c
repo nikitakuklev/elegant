@@ -33,7 +33,7 @@ double BRAT_setup_arc_field_data(char *input, char *sName, char *fieldName, doub
 void BRAT_setup_single_scan_field_data(char *input);
 double BRAT_exit_function(double *qp, double *q, double s);
 void BRAT_deriv_function(double *qp, double *q, double s);
-void BRAT_lorentz_integration(double *accelCoord, double *q, long doStoreData, double *BMaxReturn);
+long BRAT_lorentz_integration(double *accelCoord, double *q, long doStoreData, double *BMaxReturn);
 void BRAT_store_data(double *qp, double *q, double s, double exval);
 void BRAT_optimize_magnet(unsigned long flags);
 double refineAngle(double theta, double z0, double x0, double zv, double xv, 
@@ -96,8 +96,12 @@ static double zStart, zEnd;            /* starting and ending point of integrati
 static double xNomEntry, zNomEntry;    /* coordinates of hard-edge entry */
 static double xNomExit, zNomExit;      /* coordinates of hard-edge exit */
 static double xVertex, zVertex;
+static double thetaEntry;              /* angle of the initial nominal trajectory */
 static double rigidity;
 static double xCenter, zCenter;
+
+static long isLost = 0;
+static double lossCoordinates[3]; /* X, Y, Z */
 
 #define TOLERANCE_FACTOR 1e-14
 #define OPTIMIZE_ON        0x0001
@@ -135,7 +139,7 @@ static long nBrat3dData = 0;
 
 long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **accepted)
 {
-  long ip, ic;
+  long ip, ic, itop;
 
   Po = pCentral;
 
@@ -357,7 +361,8 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 
   theta = refineAngle(theta, zNomEntry, xNomEntry, zVertex, xVertex,
                       zNomExit, xNomExit);
-  
+  thetaEntry = atan2(zVertex-zNomEntry, xVertex-xNomEntry);
+
   rigidity = pCentral*particleMass*c_mks/particleCharge*particleRelSign;
   rhoMax = fabs(rigidity/brat3dData[brat->dataIndex].Bmax);
   
@@ -365,18 +370,29 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   zero_tol = integ_tol*10;
   useFTABLE = brat->useFTABLE;
 
-  for (ip=0; ip<np; ip++) {
+  itop = np-1;
+  for (ip=0; ip<=itop; ip++) {
     double accelCoord[6], q[10];
     for (ic=0; ic<6; ic++)
       accelCoord[ic] = part[ip][ic];
 
     BRAT_lorentz_integration(accelCoord, q, 0, NULL);
-
     for (ic=0; ic<6; ic++)
       part[ip][ic] = accelCoord[ic];
+#ifndef ABRAT_PROGRAM
+    if (isLost) {
+      for (ic=0; ic<6; ic++) 
+        part[ip][ic] = lossCoordinates[ic];
+      swapParticles(part[ip], part[itop]);
+      if (accepted) 
+        swapParticles(accepted[ip], accepted[itop]);
+      itop--;
+      ip--;
+    }
+#endif
   }
 
-  return np;
+  return itop+1;
 }
 
 
@@ -529,7 +545,7 @@ static double global_delta;
 #include "gsl/gsl_poly.h"
 #endif
 
-void BRAT_lorentz_integration(
+long BRAT_lorentz_integration(
                             double *accelCoord, 
                             double *q,   /* z, x, y, dz/dS, dx/dS, dy/dS, dF/dS */
                             long doStoreData,
@@ -601,13 +617,14 @@ void BRAT_lorentz_integration(
   BRAT_deriv_function(qptest, q, 0.0L);
   if (qptest[3]!=0 || qptest[4]!=0 || qptest[5]!=0)
     bomb("particle started inside the magnet!", NULL);
+  isLost = 0;
 
   if (!useFTABLE) {
     fill_long_array(accmode, n_eq, 2);
     fill_double_array(tiny, n_eq, TOLERANCE_FACTOR);
     fill_double_array(accuracy, n_eq, integ_tol);
     fill_long_array(misses, n_eq, 0);
-    
+
     /* use adaptive integration */
     s_start = 0;
     s_end   = central_length*2;
@@ -633,8 +650,10 @@ void BRAT_lorentz_integration(
     case DIFFEQ_END_OF_INTERVAL:
       break;
     default:
-      if ((exvalue = BRAT_exit_function(NULL, q, 0.0L))>exit_toler)
-        bomb("error: exit value of exceeds tolerance for BRAT (please report to developers)", NULL);
+      if (!isLost) {
+        if ((exvalue = BRAT_exit_function(NULL, q, 0.0L))>exit_toler)
+          bomb("error: exit value of exceeds tolerance for BRAT (please report to developers)", NULL);
+      }
       break;
     }
 #ifdef DEBUG
@@ -669,7 +688,7 @@ void BRAT_lorentz_integration(
     if (zStop<zf)
       zStop = zf;
 
-    while (xyz0[2]<=zStop) {
+    while (xyz0[2]<=zStop && !isLost) {
       BRAT_store_data_permuted(p0, p, xyz0, B, pathLength, 0.0);
       /* 2. get field at the middle point */
       xyz[0] = xyz0[0] + p[0]/p[2]*step/2.0;
@@ -763,26 +782,28 @@ void BRAT_lorentz_integration(
     q[2] = xyz0[1];
     s_start = pathLength;
   }
-  
-  /* drift back to reference plane */
-  slope = (xVertex-xNomExit)/(zVertex-zNomExit);
-  phi = -atan(slope);
-  ds = ((zNomExit-q[0])*cos(phi) - (xNomExit-q[1])*sin(phi))/(w[0]*cos(phi) - w[1]*sin(phi));
+
+  if (!isLost) {
+    /* drift back to reference plane */
+    slope = (xVertex-xNomExit)/(zVertex-zNomExit);
+    phi = -atan(slope);
+    ds = ((zNomExit-q[0])*cos(phi) - (xNomExit-q[1])*sin(phi))/(w[0]*cos(phi) - w[1]*sin(phi));
 #ifdef DEBUG
-  printf("exit: phi = %le, ds = %le\n", phi, ds);
+    printf("exit: phi = %le, ds = %le\n", phi, ds);
 #endif
-  q[0] += ds*w[0];
-  q[1] += ds*w[1];
-  q[2] += ds*w[2];
-  
-  /* convert back to accelerator coordinates */
-  dSds = 1./(-w[1]*sin(phi)+w[0]*cos(phi));
-  
-  accelCoord[1] = (w[1]*cos(phi)+w[0]*sin(phi))*dSds;
-  accelCoord[3] = w[2]*dSds;
-  accelCoord[0] = (q[0]-zNomExit)/sin(phi);
-  accelCoord[2] = q[2];
-  accelCoord[4] += s_start+ds;
+    q[0] += ds*w[0];
+    q[1] += ds*w[1];
+    q[2] += ds*w[2];
+    
+    /* convert back to accelerator coordinates */
+    dSds = 1./(-w[1]*sin(phi)+w[0]*cos(phi));
+    
+    accelCoord[1] = (w[1]*cos(phi)+w[0]*sin(phi))*dSds;
+    accelCoord[3] = w[2]*dSds;
+    accelCoord[0] = (q[0]-zNomExit)/sin(phi);
+    accelCoord[2] = q[2];
+    accelCoord[4] += s_start+ds;
+  }
 
   if (BMaxReturn)
     *BMaxReturn = BMaxOnTrajectory*BSignOnTrajectory;
@@ -798,12 +819,16 @@ void BRAT_lorentz_integration(
   fprintf(stderr, "ref plane: x=%e, xp=%e, y=%e, yp=%e, s=%e\n",
           accelCoord[0], accelCoord[1], accelCoord[2], accelCoord[3], accelCoord[4]);
 #endif
+
+  return isLost;
 }
 
 #undef DEBUG
 
 double BRAT_exit_function(double *qp, double *q, double s)
 {
+  if (isLost)
+    return 0.0;
   return q[0] - zEnd;
 }
 
@@ -1557,6 +1582,11 @@ void BRAT_B_field(double *F, double *Qg)
     Fq[1] = BxNorm;
     Fq[2] = ByNorm;
 
+#ifndef ABRAT_PROGRAM
+    if (!isLost && insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, lossCoordinates))
+      isLost = 1;
+#endif
+
 #ifdef DEBUG
     fprintf(stderr, "Doing 3d interpolation: x=(%le, %le, %le), i=(%ld, %ld, %ld), f=(%le, %le, %le)\n", 
             x, y, z, ix, iy, iz, fx, fy, fz);
@@ -1816,7 +1846,7 @@ int interpolate2dFieldMapHigherOrder
     m_alloc(&xy, 1, nc);          /* vector of polynomial terms for fit evaluation */
     m_alloc(&U, 1, dim);          /* xy*S */
 
-    printf("Using %ld x %ld grid for order=%ld interpolation in BRAT/BMXYZ elements (%ld coefficients, %ld fit points)\n",
+    printf("Using %ld x %ld grid for order=%ld interpolation in BRAT/BMXYZ elements (%d coefficients, %ld fit points)\n",
 	   ng, ng, order, nc, dim);
     fflush(stdout);
 
