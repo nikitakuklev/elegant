@@ -1708,6 +1708,8 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
     for (i=0; i<particles; i++) {
+      if (particle[i][5]>0) {
+        /* Indicates a particle lost with record of Frenet-Seret coordinates */
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                                0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
                                4, particle[i][4], 5, particle[i][5],
@@ -1725,6 +1727,24 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
         }
+      } else {
+        /* Indicates a particle lost with no information about of Frenet-Seret coordinates */
+        /* Instead, we have the global coordinates */
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
+                               0, 0.0, 1, 0.0, 2, 0.0, 3, 0.0, 
+                               4, particle[i][4], 5, -particle[i][5],
+                               6, (long)(particle[i][6]), 7, (long) particle[i][7], -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        if (eptr && eptr[i]) {
+          if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
+                                 8, particle[i][4], 9, particle[i][0], -1)) {
+            SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+        }
+      }
     }
     if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Step", step, NULL)) {
         SDDS_SetError("Problem setting SDDS parameters (dump_lost_particles)");

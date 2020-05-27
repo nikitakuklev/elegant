@@ -99,6 +99,7 @@ static double xVertex, zVertex;
 static double thetaEntry;              /* angle of the initial nominal trajectory */
 static double rigidity;
 static double xCenter, zCenter;
+static double global_delta;
 
 static long isLost = 0;
 static double lossCoordinates[3]; /* X, Y, Z */
@@ -381,8 +382,14 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       part[ip][ic] = accelCoord[ic];
 #ifndef ABRAT_PROGRAM
     if (isLost) {
-      for (ic=0; ic<6; ic++) 
-        part[ip][ic] = lossCoordinates[ic];
+      for (ic=0; ic<3; ic++) 
+        /* These are actually the global loss coordinates, a fact that we'll handle in dump_loss_coordinates().
+         */
+        part[ip][2*ic] = lossCoordinates[ic];
+      part[ip][1] = part[ip][3] = 0;
+      /* We set the momentum to a negative value as a kludgey flag to indicate that we only have global loss
+         coordinate data */
+      part[ip][5] = -pCentral*(1+global_delta);
       swapParticles(part[ip], part[itop]);
       if (accepted) 
         swapParticles(accepted[ip], accepted[itop]);
@@ -540,7 +547,6 @@ void BRAT_optimize_magnet(unsigned long flags)
 
 #define MIN_N_STEPS 100
 
-static double global_delta;
 #ifdef USE_GSL
 #include "gsl/gsl_poly.h"
 #endif
@@ -1583,8 +1589,12 @@ void BRAT_B_field(double *F, double *Qg)
     Fq[2] = ByNorm;
 
 #ifndef ABRAT_PROGRAM
-    if (!isLost && insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, lossCoordinates))
+    if (!isLost && insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, lossCoordinates)) {
+      printf("Loss coordinates: X = %le, Y = %le, Z = %le\n",
+             lossCoordinates[0], lossCoordinates[1], lossCoordinates[2]);
+      fflush(stdout);
       isLost = 1;
+    }
 #endif
 
 #ifdef DEBUG
@@ -1846,7 +1856,7 @@ int interpolate2dFieldMapHigherOrder
     m_alloc(&xy, 1, nc);          /* vector of polynomial terms for fit evaluation */
     m_alloc(&U, 1, dim);          /* xy*S */
 
-    printf("Using %ld x %ld grid for order=%ld interpolation in BRAT/BMXYZ elements (%d coefficients, %ld fit points)\n",
+    printf("Using %ld x %ld grid for order=%hd interpolation in BRAT/BMXYZ elements (%ld coefficients, %ld fit points)\n",
 	   ng, ng, order, nc, dim);
     fflush(stdout);
 

@@ -186,13 +186,19 @@ long insideObstruction_XYZ
   Z -= dZi;
 
   getTrackingContext(&context);
-
-  thetai += context.element->floorAngle[0];
+  thetai = 0;
+  if (context.element->pred)
+    thetai += context.element->pred->floorAngle[0];
   C = cos(thetai);
   S = sin(thetai);
-  X1 = C*X - S*Z + context.element->floorCoord[0];
-  Y1 = Y + context.element->floorCoord[1];
-  Z1 = S*X + C*Z + context.element->floorCoord[2];
+  X1 = C*X - S*Z;
+  Y1 = Y;
+  Z1 = S*X + C*Z;
+  if (context.element->pred) {
+    X1 += context.element->pred->floorCoord[0];
+    Y1 += context.element->pred->floorCoord[1];
+    Z1 += context.element->pred->floorCoord[2];
+  }
 
   for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
     if (pointIsInsideContour(Z1, X1, 
