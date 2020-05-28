@@ -930,6 +930,7 @@ char **argv;
       if (beam_type!=-1)
         bombElegant("beam setup (bunched_beam or sdds_beam) must follow correction setup", NULL);
       correction_setuped = 1;
+      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       correction_setup(&correct, &namelist_text, &run_conditions, beamline); 
       delete_phase_references();
       reset_special_elements(beamline, RESET_INCLUDE_RF);
@@ -1279,6 +1280,7 @@ char **argv;
     case MATRIX_OUTPUT:
       if (!run_setuped)
         bombElegant("run_setup must precede matrix_output namelist", NULL);
+      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       setup_matrix_output(&namelist_text, &run_conditions, beamline);
       do_matrix_output = 1;
       break;
@@ -1441,6 +1443,7 @@ char **argv;
       break;
     case CLOSED_ORBIT:
       do_closed_orbit = setup_closed_orbit(&namelist_text, &run_conditions, beamline);
+      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       /*
       if (correction_setuped)
         printWarning("You've asked to do both closed-orbit calculation and orbit correction, which may duplicate effort.\n");
@@ -1483,9 +1486,11 @@ char **argv;
         break;
       case ELASTIC_SCATTERING:
         setupElasticScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output||twiss_computed);
+        beamline->flags |= BEAMLINE_MATRICES_NEEDED;
         break;
       case INELASTIC_SCATTERING:
         setupInelasticScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output||twiss_computed);
+        beamline->flags |= BEAMLINE_MATRICES_NEEDED;
         break;
       case CHAOS_MAP:
         setupChaosMap(&namelist_text, &run_conditions, &run_control);
@@ -1714,6 +1719,7 @@ char **argv;
       add_steering_element(&correct, beamline, &run_conditions, &namelist_text);
       break;
     case AMPLIF_FACTORS:
+      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       if (parameters)
         dumpLatticeParameters(parameters, &run_conditions, beamline);
       compute_amplification_factors(&namelist_text, &run_conditions, &correct, do_closed_orbit, beamline);
@@ -1733,6 +1739,7 @@ char **argv;
       do_floor_coordinates = 1;
       break;
     case CORRECTION_MATRIX_OUTPUT:
+      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       if (!run_setuped)
         bombElegant("run setup must precede correction_matrix_output namelist", NULL);
       setup_correction_matrix_output(&namelist_text, &run_conditions, beamline, &correct,
@@ -1825,6 +1832,7 @@ char **argv;
       setupIgnoreElements(&namelist_text, &run_conditions, beamline);
       break;
     case INSERT_SCEFFECTS:
+      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       if (run_setuped)
         bombElegant("insert_sceffects must precede run_setup", NULL);
       setupSCEffect(&namelist_text, &run_conditions, beamline);
@@ -1864,6 +1872,7 @@ char **argv;
       printWarning("The obstruction_data command and implementation are experimental. See the manual for limitations.", NULL);
       break;
     case LINEAR_CHROMATIC_TRACKING_SETUP:
+      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       if (do_twiss_output)
         bombElegant("you can't give twiss_output and linear_chromatic_tracking_setup together", NULL);
       if (!run_setuped)
