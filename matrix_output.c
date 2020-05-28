@@ -258,6 +258,7 @@ void setup_matrix_output(
   else
     SDDS_matrix_initialized[n_outputs] = 0;
 
+  beamline->flags |= BEAMLINE_MATRICES_NEEDED;
   if (!output_at_each_step) {
     /* user wants output now */
     output_now = n_outputs;

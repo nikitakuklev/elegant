@@ -808,6 +808,31 @@ char **argv;
       if (run_conditions.apertureData.initialized && !run_conditions.apertureData.persistent)
         resetApertureData(&(run_conditions.apertureData)); 
 
+      /* parse the lattice file and create the beamline */
+      run_conditions.lattice = compose_filename(saved_lattice, rootname);
+      if (element_divisions>1)
+        addDivisionSpec("*", NULL, NULL, element_divisions, 0.0);
+#ifdef USE_MPE /* use the MPE library */
+      if (USE_MPE) {
+        int event1a, event1b;
+	event1a = MPE_Log_get_event_number();
+	event1b = MPE_Log_get_event_number();
+	if(isMaster) 
+	  MPE_Describe_state(event1a, event1b, "get_beamline", "blue");
+	MPE_Log_event(event1a, 0, "start get_beamline"); /* record time spent on reading input */ 
+#endif
+      beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice, back_tracking);
+#ifdef  USE_MPE
+	      MPE_Log_event(event1b, 0, "end get_beamline");
+      }
+#endif
+      printf("length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
+      fflush(stdout);
+      lattice = saved_lattice;
+      
+      if (final && strlen(final))
+        beamline->flags |= BEAMLINE_MATRICES_NEEDED;
+      
 #if !SDDS_MPI_IO
       if (isMaster)
 #endif
@@ -855,28 +880,6 @@ char **argv;
         if (fexists(semaphoreFile[2]))
           remove(semaphoreFile[2]);
       }
-      
-      /* parse the lattice file and create the beamline */
-      run_conditions.lattice = compose_filename(saved_lattice, rootname);
-      if (element_divisions>1)
-        addDivisionSpec("*", NULL, NULL, element_divisions, 0.0);
-#ifdef USE_MPE /* use the MPE library */
-      if (USE_MPE) {
-        int event1a, event1b;
-	event1a = MPE_Log_get_event_number();
-	event1b = MPE_Log_get_event_number();
-	if(isMaster) 
-	  MPE_Describe_state(event1a, event1b, "get_beamline", "blue");
-	MPE_Log_event(event1a, 0, "start get_beamline"); /* record time spent on reading input */ 
-#endif
-      beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice, back_tracking);
-#ifdef  USE_MPE
-	      MPE_Log_event(event1b, 0, "end get_beamline");
-      }
-#endif
-      printf("length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
-      fflush(stdout);
-      lattice = saved_lattice;
       
       /* output the magnet layout */
       if (magnets)

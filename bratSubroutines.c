@@ -376,7 +376,6 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
     double accelCoord[6], q[10];
     for (ic=0; ic<6; ic++)
       accelCoord[ic] = part[ip][ic];
-
     BRAT_lorentz_integration(accelCoord, q, 0, NULL);
     for (ic=0; ic<6; ic++)
       part[ip][ic] = accelCoord[ic];

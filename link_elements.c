@@ -615,8 +615,10 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
                 free_matrices(targ[i_elem]->matrix);
                 tfree(targ[i_elem]->matrix);
                 targ[i_elem]->matrix = NULL;
-                compute_matrix(targ[i_elem], run, NULL);
-                matrices_changed++;
+                if (beamline->flags&BEAMLINE_MATRICES_NEEDED) {
+                  compute_matrix(targ[i_elem], run, NULL);
+                  matrices_changed++;
+                }
               }
             }
         }

@@ -700,6 +700,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   coord[23][5] -= 3*stepSize[5];
   /* particle n_track-1 is the reference particle (coordinates set above) */
 
+  setObstructionsMode(0);
   switch (eptr->type) {
   case T_CSBEND:
     ltmp1 = ((CSBEND*)eptr->p_elem)->isr;
@@ -831,6 +832,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     exitElegant(1);
     break;
   }
+  setObstructionsMode(1);
   
   M = tmalloc(sizeof(*M));
   M->order = 1;
@@ -1089,8 +1091,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   }
 #endif
 
-
   if (my_nTrack) {
+    setObstructionsMode(0);
     switch (eptr->type) {
     case T_CSBEND:
       ltmp1 = ((CSBEND*)eptr->p_elem)->isr;
@@ -1218,7 +1220,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       printf("***        Seek professional help!\n");
       exitElegant(1);
       break;
-    }
+    }  
+    setObstructionsMode(1);
   }
 #if USE_MPI
   if (parallelTrackingBasedMatrices) {
@@ -1934,6 +1937,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   }
   sigmaDelta2 = 0;
   setTrackingContext(elem->name, elem->occurence, elem->type, run->rootname, elem);
+  setObstructionsMode(0);
   switch (elem->type) {
   case T_CSBEND:
     csbend = (CSBEND*)elem->p_elem;
@@ -1996,6 +2000,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     exitElegant(1);
     break;
   }
+  setObstructionsMode(1);
   if (ignoreRadiation)
     sigmaDelta2 = 0;
 

@@ -4,6 +4,12 @@
 
 OBSTRUCTION_DATASETS obstructionDataSets = {0, 0, 0, NULL, 0};
 
+static long obstructionsInForce = 1;
+void setObstructionsMode(long state) 
+{
+  obstructionsInForce = state;
+}
+
 void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
 {
   SDDS_DATASET SDDSin;
@@ -91,7 +97,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   }
   */
 
-  if (!obstructionDataSets.initialized) return 0;
+  if (!obstructionDataSets.initialized || !obstructionsInForce) return 0;
 
   getTrackingContext(&context);
   if (!(eptr=context.element)) return 0;
@@ -142,7 +148,7 @@ long insideObstruction_xyz
   double part[7] ={0,0,0,0,0,0,0};
   double sin_tilt, cos_tilt;
 
-  if (!obstructionDataSets.initialized) return 0;
+  if (!obstructionDataSets.initialized || !obstructionsInForce) return 0;
 
   if (xyTilt) {
     sin_tilt = sin(xyTilt);
@@ -179,7 +185,7 @@ long insideObstruction_XYZ
   double X1, Y1, Z1;
   long ic;
 
-  if (!obstructionDataSets.initialized) return 0;
+  if (!obstructionDataSets.initialized || !obstructionsInForce) return 0;
 
   X -= dXi;
   Y -= dYi;
@@ -210,6 +216,8 @@ long insideObstruction_XYZ
         lossCoordinates[1] = Y1;
         lossCoordinates[2] = Z1;
       }
+      printf("Lost on obstruction: %le, %le, %le\n", X, Y, Z);
+      fflush(stdout);
       return 1;
     }
   }

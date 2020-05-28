@@ -445,17 +445,18 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
     /* compute matrices for perturbed elements */
     rebaseline_element_links(links, run, beamline);
     _control->i_step -= step_incremented;
-    printf("%ld matrices (re)computed\n", 
-            (i=compute_changed_matrices(beamline, run)
-             + assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK))
-            + (_control->cell?compute_changed_matrices(_control->cell, run):0) );
+    i = 0;
+    if (beamline->flags&BEAMLINE_MATRICES_NEEDED) 
+      i += compute_changed_matrices(beamline, run);
+    i += assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
+    i += _control->cell?compute_changed_matrices(_control->cell, run):0;
     _control->i_step += step_incremented;
-    fflush(stdout);
     if (i) {
+      printf("%ld matrices (re)computed\n", i);
+      fflush(stdout);
       beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
       beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
       beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
-      
     }
     if (i && beamline->matrix) {
       free_matrices(beamline->matrix);
@@ -528,25 +529,27 @@ long perturb_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *bea
                     errcon->n_items, PARAMETERS_ARE_PERTURBED, VMATRIX_IS_PERTURBED, 0, POST_CORRECTION);
         }        
     if (_control->n_elements_to_vary || errcon->n_items) {
-        /* compute matrices for perturbed elements */
-        printf("%ld matrices (re)computed after correction\n", 
-               (i=compute_changed_matrices(beamline, run)
-                + assert_element_links(links, run, beamline, DYNAMIC_LINK+POST_CORRECTION_LINK))
-               + (_control->cell?compute_changed_matrices(_control->cell, run):0) );
+      /* compute matrices for perturbed elements */
+      i = 0;
+      if (beamline->flags&BEAMLINE_MATRICES_NEEDED)
+        i = compute_changed_matrices(beamline, run);
+      i += assert_element_links(links, run, beamline, DYNAMIC_LINK+POST_CORRECTION_LINK);
+      i += _control->cell?compute_changed_matrices(_control->cell, run):0;
+      if (i) {
+        printf("%ld matrices (re)computed after correction\n", i);
         fflush(stdout);
-        if (i) {
-            beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
-            beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
-            beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
-            }
-        if (i && beamline->matrix) {
-            free_matrices(beamline->matrix);
-            tfree(beamline->matrix);
-            beamline->matrix = NULL;
-            }
-        log_exit("perturb_beamline");
-        return(1);
-        }
+        beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
+        beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+        beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
+      }
+      if (i && beamline->matrix) {
+        free_matrices(beamline->matrix);
+        tfree(beamline->matrix);
+        beamline->matrix = NULL;
+      }
+      log_exit("perturb_beamline");
+      return(1);
+    }
     log_exit("perturb_beamline");
     return(0);
     }

@@ -264,6 +264,9 @@ long do_tracking(
 #endif 
 
   trajectoryTracking = (flags&TEST_PARTICLES);
+  if (flags&TEST_PARTICLES)
+    setObstructionsMode(0);
+
 #if MPI_DEBUG && USE_MPI
   printf("do_tracking called with nOriginal=%ld, beam=%x\n", nOriginal, beam);
   fflush(stdout);
@@ -3011,6 +3014,8 @@ long do_tracking(
     printf("returning with nToTrack = %ld\n", nToTrack);
     fflush(stdout);
 #endif
+
+  setObstructionsMode(1);
 
   return(nToTrack);
 }

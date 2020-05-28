@@ -150,7 +150,7 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
   
   if (verbosity>1)
     printf("\n* Computing coupled sigma matrix\n");
-  
+  beamline->flags |= BEAMLINE_MATRICES_NEEDED;
   if (emittances_from_twiss_command) {
     if (!(beamline->flags&BEAMLINE_TWISS_DONE)) {
       fprintf(stderr, "***WARNING: emittances_from_twiss_command was set but twiss calculations not seen\n");

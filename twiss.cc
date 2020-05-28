@@ -1839,6 +1839,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   beamline->sDrivingTerms.f20010 = beamline->sDrivingTerms.f11010 = NULL;
 
   /* beamline->flags &= ~BEAMLINE_BACKTRACKING; */
+  beamline->flags |= BEAMLINE_MATRICES_NEEDED;
   beamline->flags |= BEAMLINE_TWISS_WANTED;
   if (radiation_integrals)
     beamline->flags |= BEAMLINE_RADINT_WANTED;

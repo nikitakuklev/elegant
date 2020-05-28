@@ -533,6 +533,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   /* go through and do some basic initialization for each element */
   eptr = &(lptr->elem);
   totalElements = 0;
+  lptr->flags = 0;
   while (eptr) {
     eptr->occurence = 0;
     lptr->elast = eptr;
@@ -540,6 +541,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     if (eptr->type==T_SREFFECTS)
       lptr->flags |= BEAMLINE_TWISS_WANTED;
     totalElements ++;
+    if (entity_description[eptr->type].flags&MATRIX_TRACKING)
+      lptr->flags |= BEAMLINE_MATRICES_NEEDED;
     eptr = eptr->succ;
   }
 
@@ -572,7 +575,6 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 
   /* assign occurence numbers */
   eptr = &(lptr->elem);
-  lptr->flags = 0;
   while (eptr) {
     if (hfind(occurence_htab, eptr->name, strlen(eptr->name))==TRUE) {
       occurencePtr = hstuff(occurence_htab);

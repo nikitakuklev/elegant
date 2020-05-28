@@ -420,15 +420,16 @@ typedef struct line_list {
  * X_CURRENT : operation is current
  * X_DONE    : operation has been previously done, but may not be current
  */
-#define BEAMLINE_CONCAT_CURRENT   0x00000001
-#define BEAMLINE_CONCAT_DONE      0x00000002
-#define BEAMLINE_TWISS_CURRENT    0x00000004
-#define BEAMLINE_TWISS_DONE       0x00000008
-#define BEAMLINE_TWISS_WANTED     0x00000010
-#define BEAMLINE_RADINT_WANTED    0x00000020
-#define BEAMLINE_RADINT_CURRENT   0x00000040
-#define BEAMLINE_RADINT_DONE      0x00000080
-#define BEAMLINE_BACKTRACKING     0x00000100
+#define BEAMLINE_CONCAT_CURRENT   0x00000001UL
+#define BEAMLINE_CONCAT_DONE      0x00000002UL
+#define BEAMLINE_TWISS_CURRENT    0x00000004UL
+#define BEAMLINE_TWISS_DONE       0x00000008UL
+#define BEAMLINE_TWISS_WANTED     0x00000010UL
+#define BEAMLINE_RADINT_WANTED    0x00000020UL
+#define BEAMLINE_RADINT_CURRENT   0x00000040UL
+#define BEAMLINE_RADINT_DONE      0x00000080UL
+#define BEAMLINE_BACKTRACKING     0x00000100UL
+#define BEAMLINE_MATRICES_NEEDED  0x00000200UL
     unsigned long fiducial_flag;  /* same bits as used by VARY, but only used to keep track of status */
     } LINE_LIST;
 
@@ -4692,6 +4693,7 @@ extern void printWarningWithContext(char *context1, char  *context2, char *text,
 extern void setWarningFilePointer(FILE *fp);
 extern void summarizeWarnings();
 
+extern void setObstructionsMode(long state) ;
 extern void resetObstructionData(OBSTRUCTION_DATASETS *obsData);
 extern void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run);
 extern long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double P_central);
