@@ -65,6 +65,8 @@
  *                then the strength parameter (STRENGTH) is equivalent
  *                to K1.
  *                There's not much more to it. 
+ * 4. BMAPXYZ --- Numerically-integrated B-field maps in XYZ.
+ *                A 3D map for (Fx, Fy, Fz) is given as a function of (x, y, Z).
  *
  * Michael Borland, 1991, 1993, 1997, 2004
  */
