@@ -1685,18 +1685,24 @@ double refineAngle(double theta,
   mag1 = sqrt(sqr(xv-x1) + sqr(zv-z1));
   cos_theta = dot/(mag0*mag1);
 
-  theta1 = acos(cos_theta);
-  if (fabs(theta1-theta)<1e-2)
+  theta1 = acos(cos_theta)*SIGN(theta);
+  if (fabs(theta1-theta)<1e-4) {
+    printf("Refined BRAT angle from %21.15e to %21.15e (1)\n",
+	   theta, theta1);
     return theta1;
+  }
 
   theta1 = PIx2-theta1;
-  if (fabs(theta1-theta)<1e-2)
+  if (fabs(theta1-theta)<1e-4) {
+    printf("Refined BRAT angle from %21.15e to %21.15e (2)\n",
+	   theta, theta1);
     return theta1;
-  
+  }
+
   theta1 = acos(cos_theta);
 
-  printf("Error for BRAT: failed to figure out refined angle: theta = %le, theta1 = %le\n",
-         theta, theta1);
+  printf("Error for BRAT: failed to figure out refined angle:\nx0 = %le, z0 = %le\nxv = %le, zv = %le\nx1 = %le, z1 = %le\ntheta = %le, theta1 = %le\n",
+         x0, z0, xv, zv, x1, z1, theta, theta1);
   exit(1);
 }
 
