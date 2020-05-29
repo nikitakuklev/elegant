@@ -1082,7 +1082,7 @@ extern char *entity_text[N_TYPES];
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
 #define N_BMAPXYZ_PARAMS 17
-#define N_BRAT_PARAMS 19
+#define N_BRAT_PARAMS 20
 #define N_BGGEXP_PARAMS 25
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
@@ -2997,7 +2997,7 @@ typedef struct {
   double dxMap, dzMap;
   double yawMap;
   double fieldFactor;
-  short useFTABLE, xyInterpolationOrder, xyGridExcess;
+  short useFTABLE, xyInterpolationOrder, xyGridExcess, useSbenMatrix;
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;

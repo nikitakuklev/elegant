@@ -34,6 +34,10 @@ is needed for computation of twiss parameters and other operations.
 This can require some time, so {\tt elegant} will cache the matrices and re-use them for
 identical elements.
 
+If matrices are not of particular interest, significant time savings can be realized by setting
+\verb|USE_SBEND_MATRIX=1|. Of course, any matrix-based results (e.g., twiss parameters) are then
+dubious at best.
+
 {\bf Integration methods}
 
 The original (and default) integration method is Bulirsch-Stoer integration of the Lorentz force equation.

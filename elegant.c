@@ -357,7 +357,7 @@ char **argv;
   char *saved_lattice = NULL;
   long correction_setuped, run_setuped, run_controled, error_controled, beam_type, commandCode;
   long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0, do_coupled_twiss_output = 0;
-  long do_rf_setup = 0, do_floor_coordinates = 0;
+  long do_rf_setup = 0, do_floor_coordinates = 0, sceffects_inserted = 0;
   long do_moments_output = 0;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
   long last_default_order = 0, new_beam_flags, twiss_computed = 0;
@@ -830,7 +830,7 @@ char **argv;
       fflush(stdout);
       lattice = saved_lattice;
       
-      if (final && strlen(final))
+      if ((final && strlen(final)) || sceffects_inserted)
         beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       
 #if !SDDS_MPI_IO
@@ -1832,10 +1832,10 @@ char **argv;
       setupIgnoreElements(&namelist_text, &run_conditions, beamline);
       break;
     case INSERT_SCEFFECTS:
-      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       if (run_setuped)
         bombElegant("insert_sceffects must precede run_setup", NULL);
       setupSCEffect(&namelist_text, &run_conditions, beamline);
+      sceffects_inserted = 1;
       break;
     case INSERT_ELEMENTS:
       if (!run_setuped)

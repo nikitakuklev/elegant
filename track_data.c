@@ -3294,6 +3294,7 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"USE_FTABLE", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.useFTABLE), NULL, 0.0, 0, "If nonzero, use FTABLE method for integration. Value gives the number of kicks."},
     {"XY_INTERPOLATION_ORDER", "", IS_SHORT, 0, (long)((char *)&brat_example.xyInterpolationOrder), NULL, 0.0, 1, "Order of interpolation in x and y."},
     {"XY_GRID_EXCESS", "", IS_SHORT, 0, (long)((char *)&brat_example.xyGridExcess), NULL, 0.0, 0, "Number of rows or columns to add in each dimension to the minimum."},
+    {"USE_SBEN_MATRIX", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.useSbenMatrix), NULL, 0.0, 0, "If nonzero, instead of using tracking to determine the matrix, will just use a sector-bend matrix."},
 };  
 
 

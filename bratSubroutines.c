@@ -1589,9 +1589,11 @@ void BRAT_B_field(double *F, double *Qg)
 
 #ifndef ABRAT_PROGRAM
     if (!isLost && insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, lossCoordinates)) {
+      /*
       printf("Loss coordinates: X = %le, Y = %le, Z = %le\n",
              lossCoordinates[0], lossCoordinates[1], lossCoordinates[2]);
       fflush(stdout);
+      */
       isLost = 1;
     }
 #endif

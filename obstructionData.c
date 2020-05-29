@@ -216,8 +216,10 @@ long insideObstruction_XYZ
         lossCoordinates[1] = Y1;
         lossCoordinates[2] = Z1;
       }
+      /*
       printf("Lost on obstruction: %le, %le, %le\n", X, Y, Z);
       fflush(stdout);
+      */
       return 1;
     }
   }
