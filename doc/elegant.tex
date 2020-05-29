@@ -67,7 +67,10 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
 \item The \verb|MATTER| element now accepts \verb|PRESSURE| and \verb|TEMPERATURE| values, which are used to
   compute the density according to the ideal gas law, allowing easier simulation of scattering from gasses.
 \item The \verb|CSBEND| element now supports steering fields via the \verb|XKICK| and \verb|YKICK| parameters.
-\item The \verb|BMXYZ| element now supports testing of particle locations against the global-coordinate obstruction
+\item The \verb|BRAT| and \verb|BMXYZ| elements, which propagate particles through 3D field maps for
+  bending and non-bending elements, respectively, now offer higher-order 2D interpolation as an alternative to the
+  detail multi-linear interpolation.
+\item The \verb|BRAT| and \verb|BMXYZ| elements now supports testing of particle locations against the global-coordinate obstruction
   contours specified by the \verb|obstruction_data| command.
 \item The \verb|TFBDRIVER| element now supports individual gain factors for each bunch. This was requested by
   M. Venturini (LBNL).

@@ -117,7 +117,7 @@ static long quiet=1;
 static long useFTABLE = 0;
 static double Po;
 
-static short idealMode = 0, fieldMapDimension=2, xyInterpolationOrder, xyGridExcess=0;
+static short idealMode = 0, fieldMapDimension=2, xyInterpolationOrder, xyGridExcess=0, xyExtrapolate=1;
 /* static double idealB; */
 static double idealChord, idealEdgeAngle;
 
@@ -337,6 +337,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 
   xyInterpolationOrder = brat->xyInterpolationOrder;
   xyGridExcess = brat->xyGridExcess;
+  xyExtrapolate = brat->xyExtrapolate;
 
   zStart = zi-dz;
   z_outer = MAX(fabs(zi), fabs(zf));
@@ -1400,7 +1401,7 @@ void BRAT_B_field_permuted(
 
 void BRAT_B_field(double *F, double *Qg)
 {
-  long ix, iy, iz, j;
+  long ix, iy, iz, j, outside;
   double fx, fy, fz, val_z1, val_z2, f[3];
   double x, y, z, derivSign=1;
   double Q[3];
@@ -1540,14 +1541,17 @@ void BRAT_B_field(double *F, double *Qg)
     return;
   }
 
+  outside = 0;
   ix = (x-xi)/dx;
   if (ix>=nx-1) {
     ix = nx-2;
     x  = xf;
+    outside = 1;
   }
   if (ix<0) {
     ix = 0;
     x = xi;
+    outside = 1;
   }
   fx = (x-xi)/dx-ix;
 
@@ -1556,15 +1560,23 @@ void BRAT_B_field(double *F, double *Qg)
     if (iy>=ny-1) {
       iy = ny-2;
       y = yf;
+      outside = 1;
     }
     if (iy<0) {
       iy = 0;
       y = yi;
+      outside = 1;
     }
     fy = (y-yi)/dy-iy;
   } else {
     iy = 0;
     fy = 0;
+  }
+
+  if (outside && !xyExtrapolate) {
+    for (j=0; j<3; j++)
+      F[j] = 0;
+    return;
   }
   
   if (fieldMapDimension==2) {
