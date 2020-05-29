@@ -363,7 +363,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 
   theta = refineAngle(theta, zNomEntry, xNomEntry, zVertex, xVertex,
                       zNomExit, xNomExit);
-  thetaEntry = atan2(zVertex-zNomEntry, xVertex-xNomEntry);
+  thetaEntry = atan2(xVertex-xNomEntry, zVertex-zNomEntry);
 
   rigidity = pCentral*particleMass*c_mks/particleCharge*particleRelSign;
   rhoMax = fabs(rigidity/brat3dData[brat->dataIndex].Bmax);
@@ -1600,12 +1600,12 @@ void BRAT_B_field(double *F, double *Qg)
     Fq[2] = ByNorm;
 
 #ifndef ABRAT_PROGRAM
-    if (!isLost && insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, lossCoordinates)) {
-      /*
+    if (!isLost && 
+	(z>=zNomEntry && z<=zNomExit) &&
+	insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, lossCoordinates)) {
       printf("Loss coordinates: X = %le, Y = %le, Z = %le\n",
              lossCoordinates[0], lossCoordinates[1], lossCoordinates[2]);
       fflush(stdout);
-      */
       isLost = 1;
     }
 #endif

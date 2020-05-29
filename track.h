@@ -4398,6 +4398,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
 #define GLOBAL_LOCAL_MODE_Z   1
 #define GLOBAL_LOCAL_MODE_DZ  2
 #define GLOBAL_LOCAL_MODE_SEG 3
+#define GLOBAL_LOCAL_MODE_END 4
 void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, short mode,
                                      double *coord, ELEMENT_LIST *eptr, double dZ,
                                      long segment, long nSegments);

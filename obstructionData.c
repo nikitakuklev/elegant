@@ -184,6 +184,17 @@ long insideObstruction_XYZ
   double C, S;
   double X1, Y1, Z1;
   long ic;
+#ifdef DEBUG
+  static FILE *fp = NULL;
+
+  if (!fp) {
+    fp = fopen("obstructPath.sdds", "w");
+    fprintf(fp, "SDDS1\n&column name=Z type=double units=m &end\n");
+    fprintf(fp, "&column name=X type=double units=m &end\n");
+    fprintf(fp, "&column name=thetai type=double &end\n");
+    fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+#endif
 
   if (!obstructionDataSets.initialized || !obstructionsInForce) return 0;
 
@@ -192,19 +203,24 @@ long insideObstruction_XYZ
   Z -= dZi;
 
   getTrackingContext(&context);
-  thetai = 0;
   if (context.element->pred)
-    thetai += context.element->pred->floorAngle[0];
+    thetai -= context.element->pred->floorAngle[0];
+
   C = cos(thetai);
   S = sin(thetai);
-  X1 = C*X - S*Z;
+  X1 =  C*X - S*Z;
   Y1 = Y;
-  Z1 = S*X + C*Z;
+  Z1 =  S*X + C*Z;
   if (context.element->pred) {
     X1 += context.element->pred->floorCoord[0];
     Y1 += context.element->pred->floorCoord[1];
     Z1 += context.element->pred->floorCoord[2];
   }
+
+#ifdef DEBUG
+  fprintf(fp, "%le %le %le\n", Z1, X1, thetai);
+  return 0;
+#endif
 
   for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
     if (pointIsInsideContour(Z1, X1, 
@@ -231,7 +247,7 @@ long filterParticlesWithObstructions(double **coord, long np, double **accepted,
   long ip, itop;
   itop = np - 1;
   for (ip=0; ip<=itop; ip++) {
-    if (insideObstruction(coord[ip], GLOBAL_LOCAL_MODE_SEG, 0.0, 1, 1)) {
+    if (insideObstruction(coord[ip], GLOBAL_LOCAL_MODE_END, 0.0, 1, 1)) {
       if (ip!=itop)
         swapParticles(coord[ip], coord[itop]);
       coord[itop][4] = z;

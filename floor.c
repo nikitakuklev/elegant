@@ -976,6 +976,19 @@ void convertLocalCoordinatesToGlobal
   double dZ, dX, Z1, X1, length;
   /* convert (s, x, y, z) coordinates to (Z, X, Y) */
   /* For now, we assume that the beamline is flat ! */
+
+  if (mode==GLOBAL_LOCAL_MODE_END) {
+    /* We are at the end of the element, so use the floor coordinates there as the reference point */
+    X1 = eptr->floorCoord[0];
+    Z1 = eptr->floorCoord[2];
+    dX = coord[0];
+    theta1 = -eptr->floorAngle[0];
+    *Z = Z1 + dX*sin(theta1);
+    *X = X1 + dX*cos(theta1);
+    *Y = coord[2];
+    return;
+  }
+
   if (IS_BEND(eptr->type)) {
     double dtheta, angle, rho;
     length = 0;
