@@ -1674,7 +1674,12 @@ double refineAngle(double theta,
 {
   double dot, mag0, mag1;
   double cos_theta, theta1;
-  
+
+  if ((xv>x0 && theta<0)  || (xv<x0 && theta>0)) {
+    printf("Error for BRAT: angle and vertex-entry data are inconsistent in sign\n");
+    exit(1);
+  }
+
   dot = (xv-x0)*(x1-xv) + (zv-z0)*(z1-zv);
   mag0 = sqrt(sqr(xv-x0) + sqr(zv-z0));
   mag1 = sqrt(sqr(xv-x1) + sqr(zv-z1));
@@ -1689,7 +1694,8 @@ double refineAngle(double theta,
     return theta1;
   
   theta1 = acos(cos_theta);
-  printf("Error: failed to figure out refined angle: theta = %le, theta1 = %le\n",
+
+  printf("Error for BRAT: failed to figure out refined angle: theta = %le, theta1 = %le\n",
          theta, theta1);
   exit(1);
 }
