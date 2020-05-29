@@ -1856,10 +1856,11 @@ int interpolate2dFieldMapHigherOrder
     m_alloc(&S, nc, dim);         /* T*(XYTrans*XY)^{-1} */
     m_alloc(&xy, 1, nc);          /* vector of polynomial terms for fit evaluation */
     m_alloc(&U, 1, dim);          /* xy*S */
-
+    /*
     printf("Using %ld x %ld grid for order=%hd interpolation in BRAT/BMXYZ elements (%ld coefficients, %ld fit points)\n",
 	   ng, ng, order, nc, dim);
     fflush(stdout);
+    */
 
     /* arrays of stored powers of x and y */
     xPow = tmalloc(sizeof(*xPow)*(order+1));
