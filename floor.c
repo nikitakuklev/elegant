@@ -159,6 +159,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
       case T_CSBEND:
       case T_CSRCSBEND:
       case T_CCBEND:
+      case T_BRAT:
         n_points ++;
         break;
       case T_FTABLE:
@@ -261,7 +262,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   double dX, dY, dZ, rho=0.0, angle, coord[3], sangle[3], length;
   long is_bend, is_misalignment, is_magnet, is_rotation, i, is_alpha, is_mirror;
   BEND *bend; KSBEND *ksbend; CSBEND *csbend; CCBEND *ccbend; MALIGN *malign; CSRCSBEND *csrbend;
-  ROTATE *rotate; ALPH *alpha; FTABLE *ftable;
+  ROTATE *rotate; ALPH *alpha; FTABLE *ftable; BRAT *brat;
   char label[200];
   static MATRIX *temp33, *tempV, *R, *S, *T, *TInv;
   static long matricesAllocated = 0;
@@ -293,6 +294,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 
   is_bend = is_magnet = is_rotation = is_misalignment = is_alpha = is_mirror = 0;
   length = dX = dY = dZ = tilt = angle = 0;
+  brat = NULL;
   if (elem) {
     switch (elem->type) {
     case T_RBEN: case T_SBEN:
@@ -389,6 +391,10 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       length = 0;
       is_mirror = 1;
       break;
+    case T_BRAT:
+      brat = ((BRAT*)elem->p_elem);
+      angle = brat->angle;
+      break;
     default:
       if (entity_description[elem->type].flags&HAS_LENGTH)
         length = dZ = *((double*)(elem->p_elem));
@@ -401,7 +407,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   if (include_vertices || vertices_only) {
     ELEMENT_LIST *preceeds;
     
-    if (is_bend) {
+    if (is_bend || brat) {
       /* If this element is a bend, may need to record data for vertex computation */
 #ifdef DEBUG
       printf("%s is a bend\n", elem->name);
@@ -425,8 +431,9 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
         anglesVertex[2] = *psi;
         x1x2Ready = 1;
       }
-    } 
-    if ((!elem && IS_BEND(last_elem->type)) || (elem && !is_bend && elem->type!=T_MARK && elem->type!=T_WATCH && elem->type!=T_MAXAMP)) {
+    }
+    if ((!elem && (IS_BEND(last_elem->type) || last_elem->type==T_BRAT))
+	|| (elem && !is_bend && elem->type!=T_MARK && elem->type!=T_WATCH && elem->type!=T_MAXAMP)) {
 #ifdef DEBUG
       printf("preparing vertex output after %s\n", elem?elem->name:"END");
 #endif
@@ -511,7 +518,18 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   }
   if (!elem)
     return row_index;
-  if (elem->type!=T_FLOORELEMENT) {
+  if (elem->type==T_FLOORELEMENT) {
+    /* floor coordinate reset */
+    long i;
+    FLOORELEMENT *fep;
+    fep = (FLOORELEMENT*)(elem->p_elem);
+    for (i=0; i<3; i++) {
+      V1->a[i][0] = coord[i] = fep->position[i];
+      sangle[i] = fep->angle[i];
+    }
+    strcpy_ss(label, elem->name);
+    setupSurveyAngleMatrix(W1, fep->angle[0], fep->angle[1], fep->angle[2]);
+  } else {
     theta0 = *theta;
     phi0 = *phi;
     psi0 = *psi;
@@ -534,6 +552,18 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     } else if (is_misalignment || is_alpha) {
       R->a[0][0] = dX;
       R->a[1][0] = dY;
+      R->a[2][0] = dZ;
+      S->a[0][0] = S->a[2][2] = cos(angle);
+      S->a[2][0] = -(S->a[0][2] = -sin(angle));
+    } else if (brat) {
+      double t1, dX0, dZ0;
+      if ((angle>0 && (brat->xVertex-brat->xEntry)<0) || (angle<0 && (brat->xVertex-brat->xEntry)>0))
+	bombElegantVA("Error: ANGLE and XVERTEX-XENTRY are inconsistent in sign for BRAT element %s\n", elem->name);
+      t1 = atan2(brat->xVertex - brat->xEntry, brat->zVertex-brat->zEntry);
+      dZ =  cos(t1)*(brat->zExit-brat->zEntry) + sin(t1)*(brat->xExit-brat->xEntry);
+      dX = -sin(t1)*(brat->zExit-brat->zEntry) + cos(t1)*(brat->xExit-brat->xEntry);
+      R->a[0][0] = dX;
+      R->a[1][0] = 0;
       R->a[2][0] = dZ;
       S->a[0][0] = S->a[2][2] = cos(angle);
       S->a[2][0] = -(S->a[0][2] = -sin(angle));
@@ -590,17 +620,6 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     sangle[1] = *phi;
     sangle[2] = *psi;
     strcpy_ss(label, elem->name);
-  } else {
-    /* floor coordinate reset */
-    long i;
-    FLOORELEMENT *fep;
-    fep = (FLOORELEMENT*)(elem->p_elem);
-    for (i=0; i<3; i++) {
-      V1->a[i][0] = coord[i] = fep->position[i];
-      sangle[i] = fep->angle[i];
-    }
-    strcpy_ss(label, elem->name);
-    setupSurveyAngleMatrix(W1, fep->angle[0], fep->angle[1], fep->angle[2]);
   }
   for (i=0; i<3; i++) {
     elem->floorCoord[i] = coord[i];
@@ -863,7 +882,7 @@ ELEMENT_LIST *bendPreceeds(ELEMENT_LIST *elem)
   printf("Checking bendPreceeds for %s\n", elem->name);
 #endif
   while (eptr) {
-    if (IS_BEND(eptr->type)) {
+    if (IS_BEND(eptr->type) || eptr->type==T_BRAT) {
 #ifdef DEBUG
       printf("Returning bendPreceeds=1 for %s\n", elem->name);
 #endif
@@ -895,7 +914,7 @@ ELEMENT_LIST *bendFollows(ELEMENT_LIST *elem)
   printf("Checking bendFollows for %s\n", elem->name);
 #endif
   while (eptr) {
-    if (IS_BEND(eptr->type)) {
+    if (IS_BEND(eptr->type) || eptr->type==T_BRAT) {
 #ifdef DEBUG
       printf("Returning bendFollows=1 for %s\n", elem->name);
 #endif
