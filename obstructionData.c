@@ -75,6 +75,31 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   return;
 }
 
+void logInside(double X, double Z, long particleID, short where)
+{
+#if USE_MPI
+  static FILE *fpInside = NULL;
+  if (myid==1) {
+    TRACKING_CONTEXT context;
+    if (!fpInside) {
+      fpInside = fopen("insideObstruction.sdds", "w");
+      fprintf(fpInside, "SDDS1\n&column name=Z type=double units=m &end\n");
+      fprintf(fpInside, "&column name=X type=double units=m &end\n");
+      fprintf(fpInside, "&column name=particleID type=long &end\n");
+      fprintf(fpInside, "&column name=call type=short &end\n");
+      fprintf(fpInside, "&column name=ElementName type=string &end\n");
+      fprintf(fpInside, "&column name=ElementType type=string &end\n");
+      fprintf(fpInside, "&data mode=ascii no_row_counts=1 &end\n");
+    }
+    getTrackingContext(&context);
+    fprintf(fpInside, "%le %le %ld %hd %s %s\n", Z, X, particleID, where,
+	    context.element->name, entity_name[context.element->type]);
+    fflush(fpInside);
+  }
+#endif
+}
+
+
 /* Returns 0 if not obstructed */
 long insideObstruction(double *part, short mode, double dz, long segment, long nSegments)
 {
@@ -125,6 +150,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
                              obstructionDataSets.data[ic].Z, 
                              obstructionDataSets.data[ic].X, 
                              obstructionDataSets.data[ic].points)) {
+      logInside(X, Z, part[6], 0);
       return 1;
     }
   }
@@ -232,6 +258,7 @@ long insideObstruction_XYZ
         lossCoordinates[1] = Y1;
         lossCoordinates[2] = Z1;
       }
+      logInside(X1, Z1, -1, 1);
       /*
       printf("Lost on obstruction: %le, %le, %le\n", X, Y, Z);
       fflush(stdout);
