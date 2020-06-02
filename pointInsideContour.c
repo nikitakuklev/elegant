@@ -1,6 +1,7 @@
 /* This code found on multiple internet sources, translated to C */
 
 #include <stdio.h>
+#include <math.h>
 
 double pointIsLeftOfLine(long i1, long i2,     /* indices of vertex points to test */
 		      double *x, double *y, /* (x, y) of vertices */
