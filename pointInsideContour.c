@@ -21,12 +21,14 @@ int pointIsInsideContour
   long i1, i2;
 
   if (theta!=0 && center) {
-    double x1, y1;
-    /* rotate (x0, y0) by -theta about center */
+    double x1, y1, ct, st;
+    /* rotate (x0, y0) by theta about center */
     x0 -= center[0];
     y0 -= center[1];
-    x1 = x0*cos(theta) - y0*sin(theta) + center[0];
-    y1 = x0*sin(theta) + y0*cos(theta) + center[1];
+    ct = cos(theta);
+    st = sin(theta);
+    x1 = x0*ct - y0*st + center[0];
+    y1 = x0*st + y0*ct + center[1];
     x0 = x1;
     y0 = y1;
   }
