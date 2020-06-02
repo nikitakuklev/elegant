@@ -75,13 +75,14 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
 \item The \verb|BRAT| element now supports floor coordinate transformations.
 \item The \verb|TFBDRIVER| element now supports individual gain factors for each bunch. This was requested by
   M. Venturini (LBNL).
+\item The \verb|BOFFAXE| element now supports a high-order off-axis expansion for $z$-dependent sextupole fields.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item The \verb|twiss_output| command can now compute lattice functions for a half periodic cell, i.e., a 
   cell with mirror symmetry, by setting \verb|matched=-1|. This was inspired by a forum question from \verb|mcarla|.
-\item The \verb|BOFFAXE| element now supports a high-order off-axis expansion for $z$-dependent sextupole fields.
+\item The \verb|obstruction_data|  command now supports periodic replication of the obstructions for rings.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -3553,7 +3554,7 @@ Also, if it is desirable for the output from \verb|Pelegant| to have exactly the
     The obstructions are rotated about this center if periodic.
   \end{itemize}
 \item \verb|periods| --- Obstructions represented by the provided data are to be repeated in a 
-  periodic fashion the number of times given.
+  periodic fashion the number of times given. It is assumed that the system is a storage ring.
 \item \verb|disable| --- If nonzero, then the command is ignored.
 \end{itemize}
 
