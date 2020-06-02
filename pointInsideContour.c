@@ -7,12 +7,27 @@ double pointIsLeftOfLine(long i1, long i2,     /* indices of vertex points to te
 		      double x0, double y0  /* (x, y) of point to test */
 		      );
 
-int pointIsInsideContour(double x0, double y0,
-			  double *x, double *y, long n)
+int pointIsInsideContour
+(
+ double x0, double y0, /* point to check */
+ double *x, double *y, /* points on contour */
+ long n,               /* points in contour */
+ double *center,       /* center of rotation of contour */
+ double theta          /* clockwise angle to rotation of contour */
+ )
 {
   long winding_number = 0;
   long i1, i2;
-  
+
+  if (theta!=0 && center) {
+    double x1, y1;
+    /* rotate (x0, y0) by -theta about center */
+    x0 -= center[0];
+    y0 -= center[1];
+    x1 = x0*cos(theta) + y0*sin(theta) + center[0];
+    y1 = -x0*sin(theta) + y0*cos(theta) + center[1];
+  }
+
   for (i1=0; i1<n; i1++) {
     if (i1 == (n - 1))
       /* wrap */

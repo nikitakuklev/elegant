@@ -51,6 +51,34 @@ long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units)
   return(0);
 }
 
+long check_sdds_parameter(SDDS_TABLE *SDDS_table, char *name, char *units)
+{
+  char *units1;
+  if (SDDS_GetParameterIndex(SDDS_table, name)<0)
+    return(0);
+  if (SDDS_GetParameterInformation(SDDS_table, "units", &units1, SDDS_GET_BY_NAME, name)!=SDDS_STRING) {
+    SDDS_SetError("units field of parameter has wrong data type!");
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  if (!units || SDDS_StringIsBlank(units)) {
+    if (!units1)
+      return(1);
+    if (SDDS_StringIsBlank(units1)) {
+      free(units1);
+      return(1);
+    }
+    return(0);
+  }
+  if (!units1)
+    return(0);
+  if (strcmp(units, units1)==0) {
+    free(units1);
+    return(1);
+  }
+  free(units1);
+  return(0);
+}
+
 void reorganizeFTABLE(double **F, double **Ftmp, long nx, long ny, long nz);
 
 void readSimpleFtable(FTABLE *ftable)

@@ -3528,13 +3528,13 @@ Also, if it is desirable for the output from \verb|Pelegant| to have exactly the
 \item function: define obstructions in the global coordinate system $(Z, X)$
 \item sequence: must follow \verb|floor_coodinates| and preceed \verb|track|
 \item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
-\item N.B.: At present, this is experimental and only enforced inside \verb|CSBEND|, \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|,
-  and \verb|KQUSE| elements, and at the end of elements.
 \end{itemize}
 
 \begin{verbatim}
 &obstruction_data
           STRING input = NULL;
+          long periods = 1;
+          long disable = 0;
 &end
 \end{verbatim}
 
@@ -3544,6 +3544,17 @@ Also, if it is desirable for the output from \verb|Pelegant| to have exactly the
   \verb|X|, giving the global coordinates of points on the obstruction contour in the $Y=0$ plane, in units of meters.
   The file may contain more than one page, with each page giving a closed contour for a separate obstruction.
   At present, obstructions are considered to extend over $Y:[-\infty, \infty]$.
+  The file must also contain three parameters: 
+  \begin{itemize}
+  \item \verb|Superperiodicty| ---- integer parameter giving the number of repetitions of the
+    defined obstructions in the full ring. For example, for the 40-sector APS ring, if the obstruction data covered
+    a single sector, then the value would be 40.
+  \item \verb|XCenter|, \verb|ZCenter| --- floating point parameters giving the position of center of the ring in meters.
+    The obstructions are rotated about this center if periodic.
+  \end{itemize}
+\item \verb|periods| --- Obstructions represented by the provided data are to be repeated in a 
+  periodic fashion the number of times given.
+\item \verb|disable| --- If nonzero, then the command is ignored.
 \end{itemize}
 
 %\begin{latexonly}

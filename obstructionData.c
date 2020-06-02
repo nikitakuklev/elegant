@@ -1,8 +1,9 @@
 #include "track.h"
+#include "mdb.h"
 #include "math.h"
 #include "stdio.h"
 
-OBSTRUCTION_DATASETS obstructionDataSets = {0, 0, 0, NULL, 0};
+OBSTRUCTION_DATASETS obstructionDataSets = {0, 0, 0, {0.0, 0.0}, NULL, 0};
 
 static long obstructionsInForce = 1;
 void setObstructionsMode(long state) 
@@ -43,11 +44,29 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
     fflush(stdout);
     exitElegant(1);
   }
+  if (!check_sdds_parameter(&SDDSin, "ZCenter", "m") ||
+      !check_sdds_parameter(&SDDSin, "XCenter", "m") ||
+      !check_sdds_parameter(&SDDSin, "Superperiodicity", NULL) ) {
+    printf("Necessary data quantities (ZCenter, XCenter, Superperiodicity) have wrong type or units, or are not present in %s\n",
+            input);
+    fflush(stdout);
+    exitElegant(1);
+  }
 
-  obstructionDataSets.periodic = periodic;
-  obstructionDataSets.superperiodicity = superperiodicity;
-  
+  obstructionDataSets.periods = periods;
+
   while ((code=SDDS_ReadPage(&SDDSin))>0) {
+    if (code==1) {
+      int32_t superperiodicity;
+      if (!SDDS_GetParameterAsDouble(&SDDSin, "XCenter", &obstructionDataSets.center[1]) ||
+	  !SDDS_GetParameterAsDouble(&SDDSin, "ZCenter", &obstructionDataSets.center[0]) ||
+	  !SDDS_GetParameterAsLong(&SDDSin, "Superperiodicity", &superperiodicity)) {
+	sprintf(s, "Problem getting data from page %ld of obstruction input file %s", code, input);
+	SDDS_SetError(s);
+	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+      obstructionDataSets.superperiodicity = superperiodicity;
+    }
     obstructionDataSets.data = SDDS_Realloc(obstructionDataSets.data,
                                             sizeof(*(obstructionDataSets.data))*(obstructionDataSets.nDataSets+1));;
     if ((obstructionDataSets.data[obstructionDataSets.nDataSets].points=SDDS_RowCount(&SDDSin))<3) {
@@ -114,7 +133,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   static FILE *fpObs = NULL;
   static ELEMENT_LIST *lastEptr = NULL;
   */
-  long ic;
+  long ic, iperiod;
   double Z, X, Y;
 
   /*
@@ -128,12 +147,16 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   */
 
   if (!obstructionDataSets.initialized) {
+    /*
     printf("insideObstruction: obstructions not initialized\n");
+    */
     return 0;
   }
   
   if (!obstructionsInForce) {
+    /*
     printf("insideObstruction: obstructions not in force\n");
+    */
     return 0;
   }
 
@@ -161,18 +184,26 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   fprintf(fpObs, "%le %le %ld\n", Z, X, (long)part[6]); 
   */
 
-  for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
-    if (pointIsInsideContour(Z, X, 
-                             obstructionDataSets.data[ic].Z, 
-                             obstructionDataSets.data[ic].X, 
-                             obstructionDataSets.data[ic].points)) {
-      printf("Point X=%le, Z=%le is inside\n", X, Z);
-      logInside(X, Z, part[6], 0, 1);
-      return 1;
+  for (iperiod=0; iperiod<obstructionDataSets.periods; iperiod++) {
+    for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
+      if (pointIsInsideContour(Z, X, 
+			       obstructionDataSets.data[ic].Z, 
+			       obstructionDataSets.data[ic].X, 
+			       obstructionDataSets.data[ic].points,
+			       obstructionDataSets.center,
+			       (iperiod*PIx2)/obstructionDataSets.superperiodicity)) {
+      /*
+	printf("Point X=%le, Z=%le is inside\n", X, Z);
+	logInside(X, Z, part[6], 0, 1);
+      */
+	return 1;
+      }
     }
   }
+  /*
   logInside(X, Z, part[6], 0, 0);
   printf("Point X=%le, Z=%le is outside\n", X, Z);
+  */
   return 0;
 }
 
@@ -228,7 +259,7 @@ long insideObstruction_XYZ
   TRACKING_CONTEXT context;
   double C, S;
   double X1, Y1, Z1;
-  long ic;
+  long ic, iperiod;
 
   /*
   static FILE *fp = NULL;
@@ -271,22 +302,26 @@ long insideObstruction_XYZ
   fprintf(fp, "%21.15e %21.15e %21.15e\n", Z1, X1, thetai);
   */
 
-  for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
-    if (pointIsInsideContour(Z1, X1, 
-                             obstructionDataSets.data[ic].Z, 
-                             obstructionDataSets.data[ic].X, 
-                             obstructionDataSets.data[ic].points)) {
-      if (lossCoordinates) {
-        lossCoordinates[0] = X1;
-        lossCoordinates[1] = Y1;
-        lossCoordinates[2] = Z1;
+  for (iperiod=0; iperiod<obstructionDataSets.periods; iperiod++) {
+    for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
+      if (pointIsInsideContour(Z1, X1, 
+			       obstructionDataSets.data[ic].Z, 
+			       obstructionDataSets.data[ic].X, 
+			       obstructionDataSets.data[ic].points,
+			       obstructionDataSets.center, 
+			       (iperiod*PIx2)/obstructionDataSets.superperiodicity)) {
+	if (lossCoordinates) {
+	  lossCoordinates[0] = X1;
+	  lossCoordinates[1] = Y1;
+	  lossCoordinates[2] = Z1;
+	}
+	logInside(X1, Z1, -1, 1, 1);
+	/*
+	  printf("Lost on obstruction: %le, %le, %le\n", X, Y, Z);
+	  fflush(stdout);
+	*/
+	return 1;
       }
-      logInside(X1, Z1, -1, 1, 1);
-      /*
-      printf("Lost on obstruction: %le, %le, %le\n", X, Y, Z);
-      fflush(stdout);
-      */
-      return 1;
     }
   }
   logInside(X1, Z1, -1, 1, 0);
@@ -298,7 +333,7 @@ long filterParticlesWithObstructions(double **coord, long np, double **accepted,
   long ip, itop;
   itop = np - 1;
   for (ip=0; ip<=itop; ip++) {
-    printf("filterParticlesWithObstructions: ip=%ld, itop=%ld\n", ip, itop);
+    /* printf("filterParticlesWithObstructions: ip=%ld, itop=%ld\n", ip, itop); */
     if (insideObstruction(coord[ip], GLOBAL_LOCAL_MODE_END, 0.0, 0, 1)) {
       if (ip!=itop)
         swapParticles(coord[ip], coord[itop]);

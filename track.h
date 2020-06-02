@@ -163,8 +163,9 @@ typedef struct {
 } OBSTRUCTION_DATASET;
 
 typedef struct {
-  short periodic, initialized;
-  long superperiodicity;
+  short initialized;
+  long periods, superperiodicity;
+  double center[2]; /* Z, X */
   OBSTRUCTION_DATASET *data;
   long nDataSets;
 } OBSTRUCTION_DATASETS;
@@ -3992,7 +3993,7 @@ long imposeApertureData(double **coord, long np, double **accepted,
 void resetApertureData(APERTURE_DATA *apData);
 long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, double **accepted, double z,
                              double Po);
-int pointIsInsideContour(double x0, double y0, double *x, double *y, long n);
+int pointIsInsideContour(double x0, double y0, double *x, double *y, long n, double *center, double theta);
 long trackThroughApContour(double **initial, APCONTOUR *apcontour, long np, double **accepted, double z,
                            double Po);
 long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, double **accepted, double z,
@@ -4429,7 +4430,8 @@ extern long nearestInteger(double value);
 
 #define SDDS_EOS_NEWFILE 1
 #define SDDS_EOS_COMPLETE 2
-long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units);
+extern long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units);
+extern long check_sdds_parameter(SDDS_TABLE *SDDS_table, char *name, char *units);
 extern void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
                              char *contents, char *command_file, char *lattice_file, SDDS_DEFINITION *parameter_definition,
                              long n_parameters, SDDS_DEFINITION *column_definition, long n_columns,

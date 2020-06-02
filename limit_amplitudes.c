@@ -1366,8 +1366,6 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
   return(np);
 }
 
-int pointIsInsideContour(double x0, double y0, double *x, double *y, long n);
-
 long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
                            double Po
                            )
@@ -1431,18 +1429,18 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
     lost0 = lost1 = 0;
     if (pointIsInsideContour(coord[ip][0]+coord[ip][1]*z0,
 			     coord[ip][2]+coord[ip][3]*z0,
-			     apcontour->x, apcontour->y, apcontour->nPoints)==lossCode) {
+			     apcontour->x, apcontour->y, apcontour->nPoints, NULL, 0.0)==lossCode) {
       lost0 = 1;
     } else if (apcontour->length>0) {
       if (pointIsInsideContour(coord[ip][0]+coord[ip][1]*z1,
 			       coord[ip][2]+coord[ip][3]*z1,
-			       apcontour->x, apcontour->y, apcontour->nPoints)==lossCode) {
+			       apcontour->x, apcontour->y, apcontour->nPoints, NULL, 0.0)==lossCode) {
 	lost1 = 1;
 	while ((z1-z0)>apcontour->resolution) {
 	  zLost = (z0+z1)/2;
 	  lost2 = pointIsInsideContour(coord[ip][0]+coord[ip][1]*zLost,
 				       coord[ip][2]+coord[ip][3]*zLost,
-				       apcontour->x, apcontour->y, apcontour->nPoints)==lossCode;
+				       apcontour->x, apcontour->y, apcontour->nPoints, NULL, 0.0)==lossCode;
 	  if (lost2==lost1)
 	    z1 = zLost;
 	  else if (lost2==lost0)
