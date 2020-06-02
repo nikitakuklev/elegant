@@ -1455,6 +1455,20 @@ void BRAT_B_field(double *F, double *Qg)
     return ;
   }
 
+#ifndef ABRAT_PROGRAM
+  z = Q[0];
+  x = Q[1];
+  y = Q[2];
+  if (!isLost && 
+      (z>=zNomEntry && z<=zNomExit) && 
+      insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, lossCoordinates)) {
+    printf("Loss coordinates: X = %le, Y = %le, Z = %le\n",
+	   lossCoordinates[0], lossCoordinates[1], lossCoordinates[2]);
+    fflush(stdout);
+    isLost = 1;
+  }
+#endif
+
   if (magnetYaw) {
     double Qy[2];
     Qy[0] = Q[0];
@@ -1470,6 +1484,7 @@ void BRAT_B_field(double *F, double *Qg)
     z = -fabs(z);
     derivSign = -1;
   }
+
   z -= dZOffset;
   
   F[0] = F[1] = F[2] = 0;
@@ -1599,17 +1614,6 @@ void BRAT_B_field(double *F, double *Qg)
     Fq[1] = BxNorm;
     Fq[2] = ByNorm;
 
-#ifndef ABRAT_PROGRAM
-    if (!isLost && 
-	(z>=zNomEntry && z<=zNomExit) &&
-	insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, lossCoordinates)) {
-      printf("Loss coordinates: X = %le, Y = %le, Z = %le\n",
-             lossCoordinates[0], lossCoordinates[1], lossCoordinates[2]);
-      fflush(stdout);
-      isLost = 1;
-    }
-#endif
-
 #ifdef DEBUG
     fprintf(stderr, "Doing 3d interpolation: x=(%le, %le, %le), i=(%ld, %ld, %ld), f=(%le, %le, %le)\n", 
             x, y, z, ix, iy, iz, fx, fy, fz);
@@ -1687,15 +1691,19 @@ double refineAngle(double theta,
 
   theta1 = acos(cos_theta)*SIGN(theta);
   if (fabs(theta1-theta)<1e-4) {
+    /*
     printf("Refined BRAT angle from %21.15e to %21.15e (1)\n",
 	   theta, theta1);
+    */
     return theta1;
   }
 
   theta1 = PIx2-theta1;
   if (fabs(theta1-theta)<1e-4) {
+    /*
     printf("Refined BRAT angle from %21.15e to %21.15e (2)\n",
 	   theta, theta1);
+    */
     return theta1;
   }
 
