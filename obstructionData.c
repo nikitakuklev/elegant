@@ -75,27 +75,32 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   return;
 }
 
-void logInside(double X, double Z, long particleID, short where)
+void logInside(double X, double Z, long particleID, short where, short state)
 {
-#if USE_MPI
+#ifdef DEBUG
   static FILE *fpInside = NULL;
+  TRACKING_CONTEXT context;
+#if USE_MPI
   if (myid==1) {
-    TRACKING_CONTEXT context;
+#endif
     if (!fpInside) {
       fpInside = fopen("insideObstruction.sdds", "w");
       fprintf(fpInside, "SDDS1\n&column name=Z type=double units=m &end\n");
       fprintf(fpInside, "&column name=X type=double units=m &end\n");
       fprintf(fpInside, "&column name=particleID type=long &end\n");
       fprintf(fpInside, "&column name=call type=short &end\n");
+      fprintf(fpInside, "&column name=state type=short &end\n");
       fprintf(fpInside, "&column name=ElementName type=string &end\n");
       fprintf(fpInside, "&column name=ElementType type=string &end\n");
       fprintf(fpInside, "&data mode=ascii no_row_counts=1 &end\n");
     }
     getTrackingContext(&context);
-    fprintf(fpInside, "%le %le %ld %hd %s %s\n", Z, X, particleID, where,
+    fprintf(fpInside, "%le %le %ld %hd %hd %s %s\n", Z, X, particleID, where, state,
 	    context.element->name, entity_name[context.element->type]);
     fflush(fpInside);
+#if USE_MPI
   }
+#endif
 #endif
 }
 
@@ -122,10 +127,21 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   }
   */
 
-  if (!obstructionDataSets.initialized || !obstructionsInForce) return 0;
+  if (!obstructionDataSets.initialized) {
+    printf("insideObstruction: obstructions not initialized\n");
+    return 0;
+  }
+  
+  if (!obstructionsInForce) {
+    printf("insideObstruction: obstructions not in force\n");
+    return 0;
+  }
 
   getTrackingContext(&context);
-  if (!(eptr=context.element)) return 0;
+  if (!(eptr=context.element)) {
+    printf("No element pointer in insideObstruction()\n");
+    return 0;
+  }
 
   /*
   if (eptr!=lastEptr) {
@@ -150,10 +166,13 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
                              obstructionDataSets.data[ic].Z, 
                              obstructionDataSets.data[ic].X, 
                              obstructionDataSets.data[ic].points)) {
-      logInside(X, Z, part[6], 0);
+      printf("Point X=%le, Z=%le is inside\n", X, Z);
+      logInside(X, Z, part[6], 0, 1);
       return 1;
     }
   }
+  logInside(X, Z, part[6], 0, 0);
+  printf("Point X=%le, Z=%le is outside\n", X, Z);
   return 0;
 }
 
@@ -210,17 +229,22 @@ long insideObstruction_XYZ
   double C, S;
   double X1, Y1, Z1;
   long ic;
-#ifdef DEBUG
-  static FILE *fp = NULL;
 
+  /*
+  static FILE *fp = NULL;
   if (!fp) {
     fp = fopen("obstructPath.sdds", "w");
     fprintf(fp, "SDDS1\n&column name=Z type=double units=m &end\n");
     fprintf(fp, "&column name=X type=double units=m &end\n");
+    fprintf(fp, "&column name=dZi type=double units=m &end\n");
+    fprintf(fp, "&column name=dXi type=double units=m &end\n");
+    fprintf(fp, "&column name=Z1 type=double units=m &end\n");
+    fprintf(fp, "&column name=X1 type=double units=m &end\n");
     fprintf(fp, "&column name=thetai type=double &end\n");
     fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
   }
-#endif
+  fprintf(fp, "%21.15e %21.15e %21.15e %21.15e ", Z, X, dZi, dXi);
+  */
 
   if (!obstructionDataSets.initialized || !obstructionsInForce) return 0;
 
@@ -243,10 +267,9 @@ long insideObstruction_XYZ
     Z1 += context.element->pred->floorCoord[2];
   }
 
-#ifdef DEBUG
-  fprintf(fp, "%le %le %le\n", Z1, X1, thetai);
-  return 0;
-#endif
+  /*
+  fprintf(fp, "%21.15e %21.15e %21.15e\n", Z1, X1, thetai);
+  */
 
   for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
     if (pointIsInsideContour(Z1, X1, 
@@ -258,7 +281,7 @@ long insideObstruction_XYZ
         lossCoordinates[1] = Y1;
         lossCoordinates[2] = Z1;
       }
-      logInside(X1, Z1, -1, 1);
+      logInside(X1, Z1, -1, 1, 1);
       /*
       printf("Lost on obstruction: %le, %le, %le\n", X, Y, Z);
       fflush(stdout);
@@ -266,6 +289,7 @@ long insideObstruction_XYZ
       return 1;
     }
   }
+  logInside(X1, Z1, -1, 1, 0);
   return 0;
 }
 
@@ -274,7 +298,8 @@ long filterParticlesWithObstructions(double **coord, long np, double **accepted,
   long ip, itop;
   itop = np - 1;
   for (ip=0; ip<=itop; ip++) {
-    if (insideObstruction(coord[ip], GLOBAL_LOCAL_MODE_END, 0.0, 1, 1)) {
+    printf("filterParticlesWithObstructions: ip=%ld, itop=%ld\n", ip, itop);
+    if (insideObstruction(coord[ip], GLOBAL_LOCAL_MODE_END, 0.0, 0, 1)) {
       if (ip!=itop)
         swapParticles(coord[ip], coord[itop]);
       coord[itop][4] = z;
