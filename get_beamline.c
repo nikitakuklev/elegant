@@ -718,9 +718,10 @@ double compute_end_positions(LINE_LIST *lptr)
         else if (eptr->type==T_CSBEND) {
           csbend = (CSBEND*)eptr->p_elem;
           if (!edgeEffectsWarning && 
+              csbend->edge_order>1 &&
               (csbend->edge_effects[0]==1 || csbend->edge_effects[1]==1 || 
                csbend->edge_effects[0]==2 || csbend->edge_effects[1]==2)) {
-            printWarning("Edge effects settings on CSBENDs may be non-optimal", "EDGE1_EFFECTS and EDGE2_EFFECTS should be 3 or 4 for symplectic tracking");
+            printWarning("Edge effects settings on CSBENDs may be non-optimal", "EDGE1_EFFECTS and EDGE2_EFFECTS should be 3 or 4 for symplectic tracking with nonlinear effects.");
             edgeEffectsWarning = 1;
           }
           theta += ((CSBEND*)eptr->p_elem)->angle;
