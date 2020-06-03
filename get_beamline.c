@@ -691,6 +691,8 @@ double compute_end_positions(LINE_LIST *lptr)
     double z, l, theta, z_recirc;
     static ELEMENT_LIST *eptr;
     long i_elem, recircPresent;
+    static edgeEffectsWarning = 0;
+    CSBEND *csbend;
 
     /* use length data to establish z coordinates at end of each element */
     /* also check for duplicate recirculation elements and set occurence numbers to 0 */
@@ -713,8 +715,16 @@ double compute_end_positions(LINE_LIST *lptr)
             theta += ((NIBEND*)eptr->p_elem)->angle;
         else if (eptr->type==T_NISEPT)
             theta += ((NISEPT*)eptr->p_elem)->angle;
-        else if (eptr->type==T_CSBEND)
-            theta += ((CSBEND*)eptr->p_elem)->angle;
+        else if (eptr->type==T_CSBEND) {
+          csbend = (CSBEND*)eptr->p_elem;
+          if (!edgeEffectsWarning && 
+              (csbend->edge_effects[0]==1 || csbend->edge_effects[1]==1 || 
+               csbend->edge_effects[0]==2 || csbend->edge_effects[1]==2)) {
+            printWarning("Edge effects settings on CSBENDs may be non-optimal", "EDGE1_EFFECTS and EDGE2_EFFECTS should be 3 or 4 for symplectic tracking");
+            edgeEffectsWarning = 1;
+          }
+          theta += ((CSBEND*)eptr->p_elem)->angle;
+        }
         else if (eptr->type==T_EMATRIX)
             theta += ((EMATRIX*)eptr->p_elem)->angle;
         else if (eptr->type==T_FTABLE && ((FTABLE*)eptr->p_elem)->angle) {
