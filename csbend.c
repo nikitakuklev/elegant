@@ -1181,10 +1181,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
         convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
-        dipoleFringeKHwangRLindberg(Qf, Qi, rho_actual, 1., csbend->b[1]/rho0, e1,
-				    2*csbend->hgap,
-				    csbend->fint[csbend->e1Index]>=0?csbend->fint[csbend->e1Index]:csbend->fintBoth,
-				    csbend->h[csbend->e1Index]);
+        dipoleFringeKHwangRLindberg(Qf, Qi, rho_actual, 1., csbend->b[1]/rho0, e2, 2*csbend->hgap, 
+                        csbend->fint[csbend->e2Index]>=0?csbend->fint[csbend->e2Index]:csbend->fintBoth, 
+                        csbend->h[csbend->e2Index]);
         /* retrieve coordinates from arrays */
         convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
         x  = Qf[0];  
@@ -4600,13 +4599,13 @@ void dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
 
     x1 = x0;
     px1 = px0 + tan_edge/rho*x0 + tan_edge/(2*rho2*(1+dp0))*sqr(y0) 
-      - tan3_edge/(rho2*(1+dp0))*sqr(x0) - gap*k5*sin_edge/(rho*Rhe*cos3_edge)*x0 
-      + k6*sec2_edge/(2*rho*Rhe)*(sqr(y0)-sqr(x0));
+      - tan3_edge/(rho2*(1+dp0))*sqr(x0) - gap*k5*sin_edge*Rhe/(rho*cos3_edge)*x0 
+      + k6*sec2_edge*Rhe/(2*rho)*(sqr(y0)-sqr(x0));
     y1 = y0;
     py1 = py0 - tan_edge/rho*y0 + tan_edge/(rho2*(1+dp0))*x0*y0
       + gap*k2*(1+sqr(sin_edge))/(rho2*(1+dp0)*cos3_edge)*y0
       + 2*k3*(sqr(cos_edge)-2)/(3*gap*rho2*cos3_edge)*ipow(y0,3)
-      + gap*k5*sin_edge/(rho*Rhe*cos3_edge)*y0 + k6*ipow(sec_edge,3)/(rho*Rhe)*x0*y0;
+      + gap*k5*sin_edge*Rhe/(rho*cos3_edge)*y0 + k6*ipow(sec_edge,3)*Rhe/rho*x0*y0;
 
     t1 = (1 + tan2_edge/(2*rho*(1+dp0))*x1);
     x2 = x1/t1;
@@ -4629,7 +4628,7 @@ void dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
 
     t1 = sqr(gap)*k0*sec2_edge/(rho*(1+dp0));
     x5 = x4 - t1;
-    px5 = px4 - t1*tan_edge/rho + sqr(gap)*k4*sqr(sin_edge)/(2*rho*Rhe*cos3_edge);
+    px5 = px4 - t1*tan_edge/rho + sqr(gap)*k4*sqr(sin_edge)*Rhe/(2*rho*cos3_edge);
     y5 = y4;
     py5 = py4;
   } else {
@@ -4637,13 +4636,13 @@ void dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
 
     x1 = x0;
     px1 = px0 + tan_edge/rho*x0 + tan3_edge/(2*rho2*(1+dp0))*sqr(y0) 
-      + tan3_edge/(2*rho2*(1+dp0))*sqr(x0) - gap*k5*sin_edge/(rho*Rhe*cos3_edge)*x0 
-      + k6*sec2_edge/(2*rho*Rhe)*(sqr(y0)-sqr(x0));
+      + tan3_edge/(2*rho2*(1+dp0))*sqr(x0) - gap*k5*sin_edge*Rhe/(rho*cos3_edge)*x0 
+      + k6*sec2_edge*Rhe/(2*rho)*(sqr(y0)-sqr(x0));
     y1 = y0;
     py1 = py0 - tan_edge/rho*y0 + tan3_edge/(rho2*(1+dp0))*x0*y0
       + gap*k2*(1+sqr(sin_edge))/(rho2*(1+dp0)*cos3_edge)*y0
       + 2*k3*(sqr(cos_edge)-2)/(3*gap*rho2*cos3_edge)*ipow(y0,3)
-      + gap*k5*sin_edge/(rho*Rhe*cos3_edge)*y0 + k6*ipow(sec_edge,3)/(rho*Rhe)*x0*y0;
+      + gap*k5*sin_edge*Rhe/(rho*cos3_edge)*y0 + k6*ipow(sec_edge,3)*Rhe/rho*x0*y0;
 
     t1 = (1 - tan2_edge/(2*rho*(1+dp0))*x1);
     x2 = x1/t1;
@@ -4657,18 +4656,17 @@ void dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
     y3 = y2;
     py3 = py2 + t1*y2*px2;
 
-    t1 = tan2_edge/(rho*(1+dp0));
+    t1 = -tan2_edge/(rho*(1+dp0));  
     t2 = exp(t1*x3);
     x4 = x3;
     px4 = px3 - t1*y3*py3;
     y4 = y3*t2;
     py4 = py3/t2;
 
-    t1 = sqr(gap)*k0*sec2_edge/(rho*(1+dp0));
-    x5 = x4 - t1;
-    px5 = px4 - t1*tan_edge/rho + sqr(gap)*k4*sqr(sin_edge)/(2*rho*Rhe*cos3_edge);
+    x5 = x4 + sqr(gap)*k0*sec2_edge/(rho*(1+dp0));
+    px5 = px4 + sqr(gap)*k4*sqr(sin_edge)*Rhe/(2*rho*cos3_edge);
     y5 = y4;
-    py5 = py4;    
+    py5 = py4;
   }
   
   Qf[0]  = x5;
@@ -5478,7 +5476,9 @@ void csbend_update_fse_adjustment(CSBEND *csbend)
 {
   double fseUser = 0, fse = 0, stepSize = 1e-3, lowerLimit = -1, upperLimit = 1, acc;
   short disable = 0;
-  if (csbend->fseCorrection && (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2)) {
+  if (csbend->fseCorrection && 
+      (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2 ||
+       csbend->edge_effects[csbend->e1Index]==4 || csbend->edge_effects[csbend->e2Index]==4)) {
     if (!optParticle) 
       optParticle = (double**)czarray_2d(sizeof(**optParticle), 1, COORDINATES_PER_PARTICLE);
     fseUser = csbend->fse;
