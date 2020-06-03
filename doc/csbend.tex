@@ -73,19 +73,25 @@ as follows:
       \item \verb|EDGE_ORDER>=2| --- second-order matrix edge focusing with $\delta$-dependence to all orders. Use of this
         model is strongly discouraged when symplecticity matters.
     \end{itemize}              
-  \item 2: --- Edge effects using K. Hwang's symplectic method \cite{KHwang}. Note that there will be a
+  \item 2: --- Edge effects using K. Hwang's method \cite{KHwang}. Note that there will be a
   trajectory offset when using this method that is particularly evident for small bending radii, due to extension of the
   fringe field outside the body of the magnet. To suppress this, adjustment of the FSE parameter can be performed automatically 
   if \verb|FSE_CORRECTION| is set to a non-zero value. If \verb|FSE_CORRECTION=1|, the path-length is adjusted to match the nominal
   length, which is not physical; this behavior can be suppressed by setting \verb|FSE_CORRECTION=2|.
     \begin{itemize}
       \item \verb|EDGE_ORDER<2| --- include only terms linear in transverse coordinates, but $\delta$-dependence to all orders.
-        Recommended for applications where symplecticity matters. 
+        Recommended for applications where symplecticity matters. This method is symplectic. 
       \item \verb|EDGE_ORDER>=2| --- include all terms. This settings has been observed to produce emittance damping in some cases
-        (particularly with large emittance and small bending radii), so users are advised to be cautious.
+        (particularly with large emittance and small bending radii), so users are advised to be cautious. This method is non-symplectic.
     \end{itemize}              
   \item 3: --- Edge effects using symplectic method similar to \cite{KLBrown}. The value of \verb|EDGE_ORDER| is ignored.
         Recommended for applications where symplecticity matters.
+  \item 4: ---- Edge effects using symplectic method developed by R. Lindberg based on K. Hwang's method \cite{KHwang}.
+  Note that there will be a trajectory offset when using this method that is particularly evident for small bending radii, due to
+  extension of the fringe field outside the body of the magnet. To suppress this, adjustment of the FSE parameter can be performed automatically 
+  if \verb|FSE_CORRECTION| is set to a non-zero value. If \verb|FSE_CORRECTION=1|, the path-length is adjusted to match the nominal
+  length, which is not physical; this behavior can be suppressed by setting \verb|FSE_CORRECTION=2|.
+  The \verb|EDGE_ORDER| parameter is ignored.
   \item Other: --- No edge effects.
 \end{itemize}
 

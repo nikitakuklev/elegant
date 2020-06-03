@@ -35,8 +35,12 @@ double energyCount = 0, radiansTotal = 0;
 double **Fx_xy = NULL, **Fy_xy = NULL;
 
 void convolveArrays1(double *output, long n, double *a1, double *a2);
-void dipoleFringeSym(double *Qf, double *Qi,
-                     double rho, double inFringe, long higherOrder, double K1, double edge, double gap, double fint, double Rhe);
+void dipoleFringeKHwang(double *Qf, double *Qi,
+			double rho, double inFringe, long higherOrder, double K1, double edge, double gap,
+			double fint, double Rhe);
+void dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
+				 double rho, double inFringe, double K1, double edge,
+				 double gap, double fint, double Rhe);
 
 
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
@@ -1017,11 +1021,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         rho = (1+dp)*rho_actual;
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, he1, psi1*(1+dp), -1);
       } else if (csbend->edge_effects[csbend->e1Index]==2) {
-        /* K. Hwang's symplectic approach */
+        /* K. Hwang's approach */
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
         convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
-        dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[1]/rho0, e1, 2*csbend->hgap, 
+        dipoleFringeKHwang(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[1]/rho0, e1, 2*csbend->hgap, 
                         csbend->fint[csbend->e1Index]>=0?csbend->fint[csbend->e1Index]:csbend->fintBoth,
                         csbend->h[csbend->e1Index]);
         /* retrieve coordinates from arrays */
@@ -1034,6 +1038,22 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       } else if (csbend->edge_effects[csbend->e1Index]==3) {
         /* simple-minded symplectic approach */
         applySimpleDipoleEdgeKick(&xp, &yp, x, y, dp, rho_actual, e1, psi1, e1_kick_limit, csbend->expandHamiltonian);
+      } else if (csbend->edge_effects[csbend->e1Index]==4) {
+        /* K. Hwang's approach as symplectified by R. Lindberg */
+        /* load input coordinates into arrays */
+        Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
+        convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
+        dipoleFringeKHwangRLindberg(Qf, Qi, rho_actual, -1., csbend->b[1]/rho0, e1,
+				    2*csbend->hgap,
+				    csbend->fint[csbend->e1Index]>=0?csbend->fint[csbend->e1Index]:csbend->fintBoth,
+				    csbend->h[csbend->e1Index]);
+        /* retrieve coordinates from arrays */
+        convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
+        x  = Qf[0];  
+        xp = Qf[1];  
+        y  = Qf[2];  
+        yp = Qf[3];  
+        dp = Qf[5];
       }
     }
 
@@ -1144,7 +1164,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
         convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
-        dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[1]/rho0, e2, 2*csbend->hgap, 
+        dipoleFringeKHwang(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[1]/rho0, e2, 2*csbend->hgap, 
                         csbend->fint[csbend->e2Index]>=0?csbend->fint[csbend->e2Index]:csbend->fintBoth, 
                         csbend->h[csbend->e2Index]);
         /* retrieve coordinates from arrays */
@@ -1156,6 +1176,22 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         dp = Qf[5];
       } else if (csbend->edge_effects[csbend->e2Index]==3) {
         applySimpleDipoleEdgeKick(&xp, &yp, x, y, dp, rho_actual, e2, psi2, e2_kick_limit, csbend->expandHamiltonian);
+      } else if (csbend->edge_effects[csbend->e1Index]==4) {
+        /* K. Hwang's approach as symplectified by R. Lindberg */
+        /* load input coordinates into arrays */
+        Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
+        convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
+        dipoleFringeKHwangRLindberg(Qf, Qi, rho_actual, 1., csbend->b[1]/rho0, e1,
+				    2*csbend->hgap,
+				    csbend->fint[csbend->e1Index]>=0?csbend->fint[csbend->e1Index]:csbend->fintBoth,
+				    csbend->h[csbend->e1Index]);
+        /* retrieve coordinates from arrays */
+        convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
+        x  = Qf[0];  
+        xp = Qf[1];  
+        y  = Qf[2];  
+        yp = Qf[3];  
+        dp = Qf[5];
       }
     }
     
@@ -2403,7 +2439,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  Qi[4] = 0;  
 	  Qi[5] = DP;
           convertToDipoleCanonicalCoordinates(Qi, 0);
-          dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[1]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e1Index]);
+          dipoleFringeKHwang(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[1]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e1Index]);
 	  /* retrieve coordinates from arrays */
           convertFromDipoleCanonicalCoordinates(Qf, 0);
 	  X  = Qf[0];  
@@ -2984,7 +3020,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             Qi[4] = 0;  
             Qi[5] = DP;
             convertToDipoleCanonicalCoordinates(Qi, 0);
-            dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[1]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e2Index]);
+            dipoleFringeKHwang(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[1]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e2Index]);
             /* retrieve coordinates from arrays */
             convertFromDipoleCanonicalCoordinates(Qf, 0);
             X  = Qf[0];  
@@ -4402,9 +4438,9 @@ void apply_edge_effects(
   *yp = yp0 + R43*y0 + T441*yp0*x0 + T431*x0*y0 + T432*xp0*y0;
 }
 
-/* dipole fringe effects symplectic tracking, based on work of Kilean Hwang */
+/* dipole fringe effects tracking, based on work of Kilean Hwang. Not symplectic for edgeOrder>=2 */
 
-void dipoleFringeSym(double *Qf, double *Qi,
+void dipoleFringeKHwang(double *Qf, double *Qi,
                      double rho, double inFringe, long edgeOrder, double K1, double edge, double gap, double fint, double Rhe)
 {
   double dx, dpx, dy, dpy;
@@ -4516,6 +4552,131 @@ void dipoleFringeSym(double *Qf, double *Qi,
   Qf[3] = py0 + dpy;
   Qf[5] = Qi[5];
   /*  printf("x %f y %f xp %f yp %f dp0 %f\n", *x, *y, *xp, *yp, dp0); */
+}
+
+/* Symplectic higher-order dipole fringe effects tracking, based on work of Kilean Hwang as further developed by Ryan Linberg */
+
+void dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
+				 double rho, double inFringe, double K1, double edge, double gap, double fint, double Rhe)
+{
+  double tan_edge, sin_edge, sec_edge, cos_edge;
+  double cos3_edge, sec2_edge, tan2_edge, tan3_edge;
+  double x0, px0, y0, py0, dp0;
+  double x1, px1, y1, py1;
+  double x2, px2, y2, py2;
+  double x3, px3, y3, py3;
+  double x4, px4, y4, py4;
+  double x5, px5, y5, py5;
+  double k0, k3, k2;
+  double k4, k5, k6;
+  double t1, t2, rho2;
+  
+  k0 = sqr(PI)/6.;
+  k2 = fint;
+  k3 = 1.0*1./6.;
+  k4 = -1.0*sqr(PI)/3.;
+  k5 = 0.0;
+  k6 = -1.0;
+  rho2 = sqr(rho);
+  
+  x0  = Qi[0];  
+  px0 = Qi[1];  
+  y0  = Qi[2];  
+  py0 = Qi[3];  
+  dp0 = Qi[5];
+
+  sec_edge=1./cos(edge);
+  tan_edge=tan(edge);
+  sin_edge=sin(edge);
+  cos_edge=cos(edge);
+
+  sec2_edge = ipow(sec_edge, 2);
+  cos3_edge = ipow(cos_edge, 3);
+  tan2_edge = ipow(tan_edge, 2);
+  tan3_edge = ipow(tan_edge, 3);
+  
+  if (inFringe==-1) {
+    /* entrance */
+
+    x1 = x0;
+    px1 = px0 + tan_edge/rho*x0 + tan_edge/(2*rho2*(1+dp0))*sqr(y0) 
+      - tan3_edge/(rho2*(1+dp0))*sqr(x0) - gap*k5*sin_edge/(rho*Rhe*cos3_edge)*x0 
+      + k6*sec2_edge/(2*rho*Rhe)*(sqr(y0)-sqr(x0));
+    y1 = y0;
+    py1 = py0 - tan_edge/rho*y0 + tan_edge/(rho2*(1+dp0))*x0*y0
+      + gap*k2*(1+sqr(sin_edge))/(rho2*(1+dp0)*cos3_edge)*y0
+      + 2*k3*(sqr(cos_edge)-2)/(3*gap*rho2*cos3_edge)*ipow(y0,3)
+      + gap*k5*sin_edge/(rho*Rhe*cos3_edge)*y0 + k6*ipow(sec_edge,3)/(rho*Rhe)*x0*y0;
+
+    t1 = (1 + tan2_edge/(2*rho*(1+dp0))*x1);
+    x2 = x1/t1;
+    px2 = px1*sqr(t1);
+    y2 = y1;
+    py2 = py1;
+
+    t1 = sec2_edge/(rho*(1+dp0));
+    x3 = x2 + t1/2*sqr(y2);
+    px3 = px2;
+    y3 = y2;
+    py3 = py2 - t1*y2*px2;
+
+    t1 = tan2_edge/(rho*(1+dp0));
+    t2 = exp(t1*x3);
+    x4 = x3;
+    px4 = px3 - t1*y3*py3;
+    y4 = y3*t2;
+    py4 = py3/t2;
+
+    t1 = sqr(gap)*k0*sec2_edge/(rho*(1+dp0));
+    x5 = x4 - t1;
+    px5 = px4 - t1*tan_edge/rho + sqr(gap)*k4*sqr(sin_edge)/(2*rho*Rhe*cos3_edge);
+    y5 = y4;
+    py5 = py4;
+  } else {
+    /* exit */
+
+    x1 = x0;
+    px1 = px0 + tan_edge/rho*x0 + tan3_edge/(2*rho2*(1+dp0))*sqr(y0) 
+      + tan3_edge/(2*rho2*(1+dp0))*sqr(x0) - gap*k5*sin_edge/(rho*Rhe*cos3_edge)*x0 
+      + k6*sec2_edge/(2*rho*Rhe)*(sqr(y0)-sqr(x0));
+    y1 = y0;
+    py1 = py0 - tan_edge/rho*y0 + tan3_edge/(rho2*(1+dp0))*x0*y0
+      + gap*k2*(1+sqr(sin_edge))/(rho2*(1+dp0)*cos3_edge)*y0
+      + 2*k3*(sqr(cos_edge)-2)/(3*gap*rho2*cos3_edge)*ipow(y0,3)
+      + gap*k5*sin_edge/(rho*Rhe*cos3_edge)*y0 + k6*ipow(sec_edge,3)/(rho*Rhe)*x0*y0;
+
+    t1 = (1 - tan2_edge/(2*rho*(1+dp0))*x1);
+    x2 = x1/t1;
+    px2 = px1*sqr(t1);
+    y2 = y1;
+    py2 = py1;
+
+    t1 = sec2_edge/(rho*(1+dp0));
+    x3 = x2 - t1/2*sqr(y2);
+    px3 = px2;
+    y3 = y2;
+    py3 = py2 + t1*y2*px2;
+
+    t1 = tan2_edge/(rho*(1+dp0));
+    t2 = exp(t1*x3);
+    x4 = x3;
+    px4 = px3 - t1*y3*py3;
+    y4 = y3*t2;
+    py4 = py3/t2;
+
+    t1 = sqr(gap)*k0*sec2_edge/(rho*(1+dp0));
+    x5 = x4 - t1;
+    px5 = px4 - t1*tan_edge/rho + sqr(gap)*k4*sqr(sin_edge)/(2*rho*Rhe*cos3_edge);
+    y5 = y4;
+    py5 = py4;    
+  }
+  
+  Qf[0]  = x5;
+  Qf[1] =  px5;
+  Qf[2]  = y5;
+  Qf[3] =  py5;
+  Qf[5] =  dp0;
+  
 }
 
 /* this is used solely to convert coordinates inside the element for
