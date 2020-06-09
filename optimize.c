@@ -609,7 +609,7 @@ void do_set_reference_particle_output(OPTIMIZATION_DATA *optimization_data, NAME
   char s[16834];
   double *coord, beta, maxWeight;
   long i;
-  char *name[COORDINATES_PER_PARTICLE] = {"x", "xp", "y", "yp", "t", "p", "particleID"};
+  char *name[COORDINATES_PER_PARTICLE+1] = {"x", "xp", "y", "yp", "t", "p", "particleID"};
 
   /* process namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -675,9 +675,9 @@ void do_set_reference_particle_output(OPTIMIZATION_DATA *optimization_data, NAME
   }
 
   optimization_data->coordinatesToMatch = 
-    (double**)czarray_2d(sizeof(double), optimization_data->nParticlesToMatch, COORDINATES_PER_PARTICLE);
+    (double**)czarray_2d(sizeof(double), optimization_data->nParticlesToMatch, totalPropertiesPerParticle);
 
-  for (i=0; i<COORDINATES_PER_PARTICLE; i++) {
+  for (i=0; i<COORDINATES_PER_PARTICLE+1; i++) {
     long j;
     if (!(coord = SDDS_GetColumnInDoubles(&SDDSin, name[i]))) {
       sprintf(s, "Problem getting column data from %s", set_reference_particle_output_struct.match_to);
@@ -1732,7 +1732,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     control->i_step = i_step_saved;
 
     if (optimization_data->coordinatesToMatch) {
-      free_czarray_2d((void**)optimization_data->coordinatesToMatch, optimization_data->nParticlesToMatch, COORDINATES_PER_PARTICLE);
+      free_czarray_2d((void**)optimization_data->coordinatesToMatch, optimization_data->nParticlesToMatch, totalPropertiesPerParticle);
       optimization_data->coordinatesToMatch = NULL;
     }
 

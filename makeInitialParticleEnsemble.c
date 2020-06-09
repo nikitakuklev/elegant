@@ -35,9 +35,9 @@ int makeInitialParticleEnsemble(
     }
   }
 
-  *initial = (double**)czarray_2d(sizeof(***initial), n_points_total, COORDINATES_PER_PARTICLE);
-  *final   = (double**)czarray_2d(sizeof(***final  ), n_points_total, COORDINATES_PER_PARTICLE);
-  *error   = (double**)czarray_2d(sizeof(***error  ), n_points_total, COORDINATES_PER_PARTICLE);
+  *initial = (double**)czarray_2d(sizeof(***initial), n_points_total, totalPropertiesPerParticle);
+  *final   = (double**)czarray_2d(sizeof(***final  ), n_points_total, totalPropertiesPerParticle);
+  *error   = (double**)czarray_2d(sizeof(***error  ), n_points_total, totalPropertiesPerParticle);
 
   /* generate the origin vector */
   for (i=0; i<6; i++)
@@ -87,7 +87,7 @@ int makeInitialParticleEnsemble(
 	  (*initial)[i][4]==(*initial)[j][4] &&
 	  (*initial)[i][5]==(*initial)[j][5] ) {
         if (j!=(n_points_total-1)) 
-          memcpy((*initial)[j], (*initial)[n_points_total-1], COORDINATES_PER_PARTICLE*sizeof(double));
+          memcpy((*initial)[j], (*initial)[n_points_total-1], totalPropertiesPerParticle*sizeof(double));
 	j -= 1;
 	n_points_total -= 1;
 	n_duplicates += 1;
@@ -98,7 +98,7 @@ int makeInitialParticleEnsemble(
   for (i=0; i<n_points_total; i++) {
     (*initial)[i][6] = i+1;
     /* since do_tracking() doesn't use initial and final arrays, need to copy the initial coordinates */
-    memcpy((*final)[i], (*initial)[i], COORDINATES_PER_PARTICLE*sizeof(double));
+    memcpy((*final)[i], (*initial)[i], totalPropertiesPerParticle*sizeof(double));
   }
 
   /*

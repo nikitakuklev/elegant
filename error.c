@@ -140,7 +140,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
 {
     long n_items, n_added, i_start, firstIndexInGroup, errorDistCode;
     ELEMENT_LIST *context;
-    long sampleModeCode=-1, nSampleValues = 0, sampleDataIsCopy = 0;
+    long sampleModeCode=-1, nSampleValues = 0;
     double *sampleValue = NULL;
     char *sampleFile = NULL;
     double sMin = -DBL_MAX, sMax = DBL_MAX;

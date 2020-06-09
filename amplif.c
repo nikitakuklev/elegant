@@ -30,8 +30,8 @@ void compute_amplification_factors(
   ELEMENT_LIST *eptr, *emax=NULL;
   /* ELEMENT_LIST *emaxu, *emaxc; */
   long type_code, iparam=0, iplane, n_part, i, nsum=0, n_kicks;
-  double start[COORDINATES_PER_PARTICLE], p, max_pos, max_kick, max_Ac, max_Au, rms_pos, rms_kick, original_value;
-  static double **one_part = NULL;
+  double p, max_pos, max_kick, max_Ac, max_Au, rms_pos, rms_kick, original_value;
+  static double **one_part = NULL, *start = NULL;
   static TRAJECTORY *traj = NULL, *trajc = NULL, *traj0 = NULL;
   static long n_traj = 0;
   static FILE *fpout = NULL, *fpcof = NULL, *fpuof = NULL, *fpkf = NULL;
@@ -49,7 +49,10 @@ void compute_amplification_factors(
   log_entry("compute_amplification_factors");
 
   if (!one_part)
-    one_part = (double**)czarray_2d(sizeof(**one_part), 1, COORDINATES_PER_PARTICLE);
+    one_part = (double**)czarray_2d(sizeof(**one_part), 1, MAX_PROPERTIES_PER_PARTICLE);
+  if (!start)
+    start = tmalloc(MAX_PROPERTIES_PER_PARTICLE*sizeof(*start));
+  memset(start, 0, MAX_PROPERTIES_PER_PARTICLE*sizeof(*start));
 
   /* array to store uncorrected amplification function */
   Au_vs_z = tmalloc(sizeof(*Au_vs_z)*(n_traj=beamline->n_elems+1));
@@ -349,7 +352,7 @@ void compute_amplification_factors(
         traj = tmalloc(sizeof(*traj)*(beamline->n_elems+1));
       n_part = 1;
       p = sqrt(sqr(run->ideal_gamma)-1);
-      fill_double_array(*one_part, COORDINATES_PER_PARTICLE, 0.0);
+      fill_double_array(*one_part, MAX_PROPERTIES_PER_PARTICLE, 0.0);
       if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                        traj, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
         bombElegant("tracking failed for test particle (compute_amplification_factors)", NULL);

@@ -343,8 +343,10 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
   double **fiducialParticle, pCentral;
   long iProcessing = 0;
   short occurenceSeen = 0, noOccurenceSeen = 0, skip;
+  double **lostParticle = NULL;
+  long nLost=0;
 
-  fiducialParticle = (double**)czarray_2d(sizeof(**fiducialParticle), 1, COORDINATES_PER_PARTICLE);
+  fiducialParticle = (double**)czarray_2d(sizeof(**fiducialParticle), 1, totalPropertiesPerParticle);
   eptr = &(beamline->elem);
   beam0 = &Beam0;
   beam = &Beam;
@@ -429,18 +431,15 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       iProcessing ++;
 
       weight = (double*)malloc(sizeof(double)*n_simulated);
-      beam0->particle = (double**)czarray_2d(sizeof(double), n_simulated, COORDINATES_PER_PARTICLE);
-      /* beam0->original = (double**)czarray_2d(sizeof(double), n_simulated, COORDINATES_PER_PARTICLE); */
+      beam0->particle = (double**)czarray_2d(sizeof(double), n_simulated, totalPropertiesPerParticle);
+      /* beam0->original = (double**)czarray_2d(sizeof(double), n_simulated, totalPropertiesPerParticle); */
       beam0->original = NULL;
       beam0->accepted = NULL;
       beam0->n_original = beam0->n_to_track = beam0->n_particle = n_simulated;
       beam0->n_accepted = beam0->n_saved = 0;
       beam0->p0_original = beam0->p0 = tsptr->betagamma;
       beam0->bunchFrequency = 0.;
-      beam0->lostBeam.particle = NULL;
-      beam0->lostBeam.eptr = NULL;
-      beam0->lostBeam.recordEptr = 0;
-      beam0->lostBeam.nLost = beam0->lostBeam.nLostMax = 0;
+      beam0->n_lost = 0;
 
       if (verbosity>1) {
 	printf("Working arrays allocated\n");
@@ -660,18 +659,14 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 	}
       }
 #endif
-      beam->particle = (double**)czarray_2d(sizeof(double), iTotal, COORDINATES_PER_PARTICLE);
-      beam->original = (double**)czarray_2d(sizeof(double), iTotal, COORDINATES_PER_PARTICLE);
+      beam->particle = (double**)czarray_2d(sizeof(double), iTotal, totalPropertiesPerParticle);
+      beam->original = (double**)czarray_2d(sizeof(double), iTotal, totalPropertiesPerParticle);
       beam->accepted = NULL;
       beam->n_original = beam->n_to_track = beam->n_particle = iTotal;
       beam->n_accepted = beam->n_saved = 0;
       beam->p0_original = beam->p0 = tsptr->betagamma;
       beam->bunchFrequency = 0.;
-      beam->lostBeam.particle = (double**)czarray_2d(sizeof(double), iTotal, (COORDINATES_PER_PARTICLE+1));
-      beam->lostBeam.eptr = NULL;
-      beam->lostBeam.recordEptr = 0;
-      beam->lostBeam.nLostMax = iTotal;
-      beam->lostBeam.nLost = 0;
+      beam->n_lost = 0;
 
 #if USE_MPI
       if (myid!=0)
@@ -735,7 +730,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
           printf("Tracking fiducial particle\n");
           fflush(stdout);
         }
-	memset(fiducialParticle[0], 0, sizeof(**fiducialParticle)*COORDINATES_PER_PARTICLE);
+	memset(fiducialParticle[0], 0, sizeof(**fiducialParticle)*totalPropertiesPerParticle);
 	delete_phase_references();
 	reset_special_elements(beamline, RESET_INCLUDE_ALL&~RESET_INCLUDE_RANDOM);
 	pCentral = run->p_central;
@@ -769,61 +764,25 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
                              &beam->p0, NULL, NULL, NULL, NULL, run, control->i_step,
                              FIRST_BEAM_IS_FIDUCIAL+FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+(verbosity>2?0:SILENT_RUNNING+INHIBIT_FILE_OUTPUT), control->n_passes, 0, NULL,
                              NULL, NULL, NULL, eptr);
+        nLost = beam->n_lost;
+	notSinglePart = 0;
 	if (verbosity>1)
-	  report_stats(stdout, "Tracking completed: ");
+	  report_stats(stdout, "Tracking completed (1): ");
 #if USE_MPI
+	partOnMaster = 1;
+	parallelStatus = notParallel;
 #if MPI_DEBUG
 	printf("%ld particles on processor %d\n", iTotal, myid);
 	fflush(stdout);
 #endif
-	notSinglePart = 0;
-	partOnMaster = 1;
-	parallelStatus = notParallel;
-	if (USE_MPI) {
-	  MPI_Status status;
-	  long nLost, nLostTotal;
-	  long *nLostCounts = (long *)tmalloc(n_processors*sizeof(*nLostCounts));
+        gatherLostParticles(&lostParticle, &nLost, beam->particle, n_left, n_processors, myid);
+        if (verbosity>1) {
+          printf("Gathered %ld lost particles to master\n", nLost);
+          fflush(stdout);
+        }
+        if (isMaster)
+          beam->n_lost = nLost;
 
-	  /* Gather the lost particles to let the Master dump the results */
-	  if (isMaster) 
-	    nLost = 0;
-	  else
-	    nLost = beam->lostBeam.nLost;
-	  MPI_Reduce(&nLost, &nLostTotal, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
-	  MPI_Gather(&nLost, 1, MPI_LONG, nLostCounts, 1, MPI_LONG, 0, MPI_COMM_WORLD); 
-	  if (isMaster) {
-            if (verbosity>1) {
-              printf("%ld total particles were lost\n", nLostTotal);
-              for (i=1; i<n_processors; i++) 
-                printf("Processor %ld lost %ld\n", i, nLostCounts[i]);
-            }
-            beam->lostBeam.particle = (double**)czarray_2d(sizeof(double), nLostTotal, COORDINATES_PER_PARTICLE+1);
-            beam->lostBeam.eptr = NULL;
-            beam->lostBeam.recordEptr = 0;
-            beam->lostBeam.nLostMax = nLostTotal;
-            if (verbosity>2) {
-              for (i=0; i<n_processors; i++) 
-                printf("nLostCounts[%ld] = %ld\n", i, nLostCounts[i]);
-              printf("i=0, nLost = %ld\n", nLost);
-            }
-	    for (i=1; i<n_processors; i++) {
-	      MPI_Recv (&(beam->lostBeam.particle[nLost][0]), nLostCounts[i]*(COORDINATES_PER_PARTICLE+1), MPI_DOUBLE, i, 100, MPI_COMM_WORLD, &status);
-	      nLost += nLostCounts[i];
-              if (verbosity>2)
-                printf("i=%ld, nLost = %ld\n", i, nLost);
-	    }
-            if (nLost!=nLostTotal)
-              printf("Error: nLost = %ld, nLostTotal = %ld\n", nLost, nLostTotal);
-	    if (verbosity>2)
-	      fflush(stdout);
-            if (isMaster)
-              beam->lostBeam.nLost = nLost;
-	  }
-	  else {
-	    MPI_Send (&(beam->lostBeam.particle[0][0]), nLost*(COORDINATES_PER_PARTICLE+1), MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
-	  }
-          free(nLostCounts);
-	}	
         if (verbosity>1) {
           long nLeftTotal;
           if (isMaster)
@@ -839,11 +798,13 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         }
 
 #else
+        lostParticle = beam->particle + n_left;
+        nLost = beam->n_lost;
         if (verbosity>1) {
           printf("%ld of %ld particles survived tracking\n", n_left, iTotal);
           fflush(stdout);
         }
-#endif        
+#endif
 
 #if USE_MPI
 	if (isMaster)
@@ -851,11 +812,11 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         if (loss) {
           if (verbosity>2) {
 	    char s[1000];
-            sprintf(s, "dumping \"loss\" file, %ld particles of %ld", n_left, beam->n_to_track);
+            sprintf(s, "dumping \"loss\" file, %ld particles of %ld", nLost, beam->n_to_track);
 	    report_stats(stdout, s);
           }
-          dump_scattered_loss_particles(&SDDS_loss, beam->lostBeam.particle, beam->original,  
-                                        NULL, beam->lostBeam.nLost, weight, tsptr);
+          dump_scattered_loss_particles(&SDDS_loss, lostParticle, beam->original,  
+                                        NULL, nLost, weight, tsptr);
           if (occurenceSeen && !SDDS_Terminate(&SDDS_loss)) {
             SDDS_SetError("Problem terminating 'losses' file (finish_output)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -874,9 +835,19 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
           if (verbosity>2) {
 	    report_stats(stdout, "Dumping \"output\" file:");
           }
-          for (i=0; i< beam->lostBeam.nLost; i++) {
-            j = beam->lostBeam.particle[i][6]-1;
-            chfill1(lossDis, beam->lostBeam.particle[i][4], weight[j]*tsptr->total_scatter/tsptr->s_rate);
+          for (i=0; i<nLost; i++) {
+            j = lostParticle[i][6]-1;
+            /*
+            if (verbosity>10)
+              printf("s[%ld] = %e from w[%ld] = %e\n", i, lostParticle[i][4], j, weight[j]);
+            */
+#if USE_MPI
+            /* In parallel mode, the master gathers lost particles only, so no offset */
+            chfill1(lossDis, lostParticle[i][4], weight[j]*tsptr->total_scatter/tsptr->s_rate);
+#else
+            /* In serial mode, lost particles are stored in the upper part of the tracking array */
+            chfill1(lossDis, beam->particle[i+n_left][4], weight[j]*tsptr->total_scatter/tsptr->s_rate);
+#endif
           }
           chprint1(lossDis, tsptr->outFile, "Beam loss distribution in particles/s in a bin of sbin_step(m) for particles scattered between i-1 and i TSCATTER elements", "particles/s", NULL,
                    NULL, 0, 0, verbosity, noOccurenceSeen && iProcessing!=1);
@@ -893,6 +864,12 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       }
       free_beamdata(beam);
       free_beamdata(beam0);
+#if USE_MPI
+      if (isMaster) {
+        free_czarray_2d((void**)lostParticle, nLost, totalPropertiesPerParticle);
+        lostParticle = NULL;
+      }
+#endif
 
       if (verbosity>2) {
         report_stats(stdout, "Freeing other data: ");

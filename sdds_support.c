@@ -1651,8 +1651,7 @@ static int comp_IDs1(const void **coord1, const void **coord2)
   }
 #endif
 
-void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, ELEMENT_LIST **eptr, 
-			 long particles, long step)
+void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particles, long step)
 {
   long i, badPID;
 #if SDDS_MPI_IO
@@ -1708,41 +1707,21 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
     for (i=0; i<particles; i++) {
-      if (particle[i][5]>0) {
-        /* Indicates a particle lost with record of Frenet-Seret coordinates */
+      if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
+                             0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
+                             4, particle[i][4], 5, particle[i][5],
+                             6, (long)particle[i][6], 7, (long) particle[i][lossPassIndex], -1)) {
+        SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      } 
+      if (globalLossCoordOffset!=-1) {
+        /* global loss coordinates are available */
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
-                               0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
-                               4, particle[i][4], 5, particle[i][5],
-                               6, (long)particle[i][6], 7, (long) particle[i][7], -1)) {
+                               8, particle[i][globalLossCoordOffset+2], 
+                               9, particle[i][globalLossCoordOffset+0], 
+                               -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-        if (eptr && eptr[i]) {
-          double Z, X, Y;
-          convertLocalCoordinatesToGlobal(&Z, &X, &Y, GLOBAL_LOCAL_MODE_Z, particle[i], eptr[i], 
-                                          particle[i][4], 0, 0);
-          if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
-                                 8, Z, 9, X, -1)) {
-            SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-          }
-        }
-      } else {
-        /* Indicates a particle lost with no information about of Frenet-Seret coordinates */
-        /* Instead, we have the global coordinates */
-        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
-                               0, 0.0, 1, 0.0, 2, 0.0, 3, 0.0, 
-                               4, particle[i][4], 5, -particle[i][5],
-                               6, (long)(particle[i][6]), 7, (long) particle[i][7], -1)) {
-          SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-        if (eptr && eptr[i]) {
-          if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
-                                 8, particle[i][4], 9, particle[i][0], -1)) {
-            SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-          }
         }
       }
     }
@@ -2200,6 +2179,10 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
     long i, j;
     double rate, intLossRate;
 
+#ifdef DEBUG
+    printf("dump_scattered_loss_particles: particles = %ld\n", particles);
+#endif
+
     log_entry("dump_scattered_loss_particles");
     if (!particleLos)
         bombElegant("NULL coordinate pointer passed to dump_scattered_loss_particles", NULL);
@@ -2218,6 +2201,9 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
     intLossRate=0.;
     for (i=0; i<particles; i++) {
         j = (long)particleLos[i][6]-1;
+#ifdef DEBUG
+        printf("Lost particle %ld came from source %ld\n", i, j); fflush(stdout);
+#endif
         rate = weight[j]/tsptr->s_rate*tsptr->total_scatter;
         intLossRate += rate;
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
@@ -2238,10 +2224,13 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
                                BEAM_SCATTER_LOSS_PASS+0, (long) particleLos[i][7], 
                                BEAM_SCATTER_LOSS_PASS+1, weight[j],
                                BEAM_SCATTER_LOSS_PASS+2, rate, -1)) {
-            SDDS_SetError("Problem setting SDDS row values (dump_scattered_loss_particles)");
+          SDDS_SetError("Problem setting SDDS row values (dump_scattered_loss_particles)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
         }
+    }
+#ifdef DEBUG
+    printf("Done storing lost particle coordinates\n"); fflush(stdout);
+#endif
     if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", particles, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "S0", tsptr->s, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "PLocalRate", tsptr->p_rate, NULL))||
@@ -2260,6 +2249,10 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
         } 
     if (!inhibitFileSync)
       SDDS_DoFSync(SDDS_table);
+
+#ifdef DEBUG
+    printf("Returning from dump_scattered_loss_particles\n"); fflush(stdout);
+#endif
 
     log_exit("dump_scattered_loss_particles");
     

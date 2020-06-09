@@ -169,11 +169,10 @@ long do_tracking(
                  SASEFEL_OUTPUT *sasefel,
 		 SLICE_OUTPUT *sliceAnalysis,
                  double *finalCharge,
-		 double **lostParticles,  /* If beam structure not provided, this will be used. Assumed to be same length as coord array */
+		 double **lostParticles,  /* Ignored */
 		 ELEMENT_LIST *startElem
                  )
 {
-  LOST_BEAM *lostBeam, lostBeam0;
   RFMODE *rfmode; TRFMODE *trfmode;
   FRFMODE *frfmode; FTRFMODE *ftrfmode;
   WATCH *watch=NULL;
@@ -373,23 +372,6 @@ long do_tracking(
   x_max = y_max = 0;
   nToTrack = nLeft = nMaximum = nOriginal;
 
-  if (beam)
-    lostBeam = &(beam->lostBeam);
-  else {
-    lostBeam = &lostBeam0;
-    memset(lostBeam, 0, sizeof(*lostBeam));
-    lostBeam->nLostMax = nOriginal;
-    /*
-    if (lostParticles)
-    */
-      lostBeam->particle = lostParticles;
-    /* 
-    else
-      lostBeam->particle = (double**)czarray_2d(sizeof(**(lostBeam->particle)), nOriginal, COORDINATES_PER_PARTICLE+1);
-    */
-  }
-  lostBeam->nLost = 0;
-
 #if USE_MPI
   if (!partOnMaster && notSinglePart) {
     if (isMaster) nToTrack = 0; 
@@ -415,16 +397,7 @@ long do_tracking(
   eptr = &(beamline->elem);
 
 #ifdef HAVE_GPU
-  if (beam) {
-    /* GPU needs old method of loss tracking for now */
-    if (beam->lostBeam.particle==NULL || beam->lostBeam.nLostMax<nOriginal) {
-      beam->lostBeam.particle = (double**)czarray_2d(sizeof(double), nOriginal, COORDINATES_PER_PARTICLE+1);
-      beam->lostBeam.nLostMax = nOriginal;
-    }
-    gpuBaseInit(coord, nOriginal, accepted, beam->lostBeam.particle, isMaster);
-  } else {
-    gpuBaseInit(coord, nOriginal, accepted, lostBeam->particle, isMaster);
-  }
+  gpuBaseInit(coord, nOriginal, accepted, lostBeam->particle, isMaster);
 #endif
 
   flags |= beamline->fiducial_flag;
@@ -479,13 +452,13 @@ long do_tracking(
       nLeft = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nToTrack, accepted, z, *P_central, 0,
 					  0);
       if (nLeft!=nToTrack)
-	recordLostParticles(coord, nLeft, nToTrack, lostBeam, 0);
+	recordLostParticles(beam, coord, nLeft, nToTrack, 0);
       nToTrack = nLeft;
     }
     if (run->apertureData.initialized)  {
       nLeft = imposeApertureData(coord, nToTrack, accepted, 0.0, *P_central, &(run->apertureData));
       if (nLeft!=nToTrack)
-	recordLostParticles(coord, nLeft, nToTrack, lostBeam, 0);
+	recordLostParticles(beam, coord, nLeft, nToTrack, 0);
       nToTrack = nLeft;
     }
   }
@@ -906,9 +879,9 @@ long do_tracking(
               sortByPID(nToTrack);
             else {
 #endif
-              qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+              qsort(coord[0], nToTrack, totalPropertiesPerParticle*sizeof(double), comp_IDs);
               if (accepted!=NULL)
-                qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+                qsort(accepted[0], nToTrack, totalPropertiesPerParticle*sizeof(double), comp_IDs);
 #ifdef HAVE_GPU
             }
 #endif
@@ -2451,7 +2424,7 @@ long do_tracking(
         nLeft = filterParticlesWithObstructions(coord, nLeft, accepted, z, *P_central);
 	if (eptr->type!=T_SCRIPT) { /* For the SCRIPT element, the lost particle coordinate will be recorded inside the element */
 	  if (nLeft!=nToTrack)
-            recordLostParticles(coord, nLeft, nToTrack, lostBeam, i_pass);
+            recordLostParticles(beam, coord, nLeft, nToTrack, i_pass);
           }
 	}
 
@@ -2786,9 +2759,9 @@ long do_tracking(
               sortByPID(nToTrack);
             else {
 #endif
-              qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+              qsort(coord[0], nToTrack, totalPropertiesPerParticle*sizeof(double), comp_IDs);
               if (accepted!=NULL)
-                qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+                qsort(accepted[0], nToTrack, totalPropertiesPerParticle*sizeof(double), comp_IDs);
 #ifdef HAVE_GPU
             }
 #endif
@@ -3017,6 +2990,9 @@ long do_tracking(
 #endif
 
   setObstructionsMode(1);
+
+  if (beam)
+    beam->n_accepted = nToTrack;
 
   return(nToTrack);
 }
@@ -4240,77 +4216,52 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
 }
 
 void recordLostParticles(
+                         BEAM *beam,
                          double **coord,      /* particle coordinates, with lost particles swapped to the top of the array */
                          long nLeft,          /* coord+nLeft is first lost particle */
 			 long nToTrack,
-                         LOST_BEAM *lostBeam, 
                          long pass            /* pass on which loss occurred */
                          )
 {
-  long ip, j;
-  long n;
-  double **lossBuffer;
-  long nNewLost = nToTrack - nLeft; /* number of newly-lost particles */
-
-  if (!lostBeam || !coord || nNewLost==0)
-    return;
-
-#ifdef DEBUG_CRASH
-  printf("Recording %ld additional lost particles (%ld already)\n",
-          nNewLost, lostBeam->nLost);
-  fflush(stdout);
+  long i;
+  /*
+#if USE_MPI && MPI_DEBUG
+  static FILE *fp = NULL;
 #endif
-
-  if ((n=lostBeam->nLost + nNewLost)>lostBeam->nLostMax || lostBeam->particle==NULL || 
-      (lostBeam->recordEptr && lostBeam->eptr==NULL)) {
-    /* resize array */
-    if (n<nLeft)
-      /* allocate somewhat more than needed to reduce repeated allocation and copying */
-      n = n + (nLeft-n)/2;
-    if (lostBeam->particle==NULL)
-      lostBeam->particle = (double**) czarray_2d(sizeof(double), n, COORDINATES_PER_PARTICLE+1);
-    else
-      lostBeam->particle = (double**) resize_czarray_2d((void**)(lostBeam->particle), sizeof(double), n, COORDINATES_PER_PARTICLE+1);
-    if (lostBeam->eptr==NULL)
-      lostBeam->eptr = (ELEMENT_LIST**) tmalloc(sizeof(ELEMENT_LIST)*n);
-    else
-      lostBeam->eptr = (ELEMENT_LIST**) SDDS_Realloc(lostBeam->eptr, sizeof(ELEMENT_LIST)*n);
-    lostBeam->nLostMax = n;
+  */
+  if (coord)
+    for (i=nLeft; i<nToTrack; i++) 
+      coord[i][lossPassIndex] = pass;
+  if (beam)
+    beam->n_lost += (nToTrack-nLeft);
+  /*
+#if USE_MPI && MPI_DEBUG
+  if (!fp) {
+    char s[1024];
+    snprintf(s, 1024, "losses-%03d.debug", myid);
+    fp = fopen(s, "w");
+    fprintf(fp, "SDDS1\n");
+    fprintf(fp, "&column name=xLost type=double units=m &end\n");
+    fprintf(fp, "&column name=xpLost type=double &end\n");
+    fprintf(fp, "&column name=yLost type=double units=m &end\n");
+    fprintf(fp, "&column name=ypLost type=double &end\n");
+    fprintf(fp, "&column name=zLost type=double units=m &end\n");
+    fprintf(fp, "&column name=pLost type=double &end\n");
+    fprintf(fp, "&column name=LossPass type=long &end\n");
+    fprintf(fp, "&column name=particleID type=long &end\n");
+    fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
   }
-  lossBuffer = lostBeam->particle;
-
-#ifdef HAVE_GPU
-  if (getGpuBase()->particlesOnGpu) {
-    syncWithGpuLossBuffer(nToTrack, nLeft);
-    for (ip=nLeft; ip<(nLeft+nNewLost); ip++)  {
-      lossBuffer[ip][7] = (double) pass;
-      if (lostBeam->recordEptr && lostBeam->eptr)
-        lostBeam->eptr[ip] = trackingContext.element;
+  if (coord) {
+    for (i=nLeft; i<nToTrack; i++)  {
+      fprintf(fp, "%le %le %le %le %le %le %ld %ld\n",
+              coord[i][0], coord[i][1], 
+              coord[i][2], coord[i][3], 
+              coord[i][4], coord[i][5], 
+              (long)coord[i][7], (long)coord[i][6]);
     }
-    lostBeam->nLost += nNewLost;
-    return; 
   }
 #endif
-
-  n = lostBeam->nLost;
-  for (ip=0; ip<nNewLost; ip++) {  
-    /* copy the lost particle coordinates */
-    for (j=0; j<COORDINATES_PER_PARTICLE; j++) {
-      lossBuffer[ip+n][j] = coord[ip+nLeft][j];
-    }
-    /* Record the loss pass */
-    lossBuffer[ip+n][COORDINATES_PER_PARTICLE] = (double) pass;
-    /* Record the loss element */
-    if (lostBeam->recordEptr && lostBeam->eptr)
-      lostBeam->eptr[ip+n] = trackingContext.element;
-  }  
-
-  lostBeam->nLost += nNewLost;
-
-#ifdef DEBUG_CRASH
-  printf("Now have %ld lost particles\n", lostBeam->nLost);
-  fflush(stdout);
-#endif
+  */
 }
 
 void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
@@ -4559,7 +4510,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
 #if DEBUG_SCATTER
       printf("Sending %d particles to processor %d\n", nToTrackCounts[i], i);
 #endif
-      nItems = nToTrackCounts[i]*COORDINATES_PER_PARTICLE;
+      nItems = nToTrackCounts[i]*totalPropertiesPerParticle;
       MPI_Send (&coord[my_nToTrack][0], nItems, MPI_DOUBLE, i, 104, MPI_COMM_WORLD); 
       if (accepted!=NULL)
         MPI_Send (&accepted[my_nToTrack][0], nItems, MPI_DOUBLE, i, 105, MPI_COMM_WORLD); 
@@ -4572,10 +4523,10 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
 #if DEBUG_SCATTER
     printf("receiving %d particles for processor %d\n", my_nToTrack, myid);
 #endif
-    MPI_Recv (&coord[0][0], my_nToTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0,
+    MPI_Recv (&coord[0][0], my_nToTrack*totalPropertiesPerParticle, MPI_DOUBLE, 0,
               104, MPI_COMM_WORLD, &status); 
     if (accepted!=NULL)
-      MPI_Recv (&accepted[0][0], my_nToTrack*COORDINATES_PER_PARTICLE, 
+      MPI_Recv (&accepted[0][0], my_nToTrack*totalPropertiesPerParticle, 
                 MPI_DOUBLE, 0, 105, MPI_COMM_WORLD, &status);
     *nToTrack = my_nToTrack;
   }
@@ -4664,16 +4615,16 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
 
   if (isMaster) {
     if(*coord==NULL)
-      *coord = (double**)resize_czarray_2d((void**)(*coord), sizeof(double), nToTrack_total+nLost_total, COORDINATES_PER_PARTICLE);
+      *coord = (double**)resize_czarray_2d((void**)(*coord), sizeof(double), nToTrack_total+nLost_total, totalPropertiesPerParticle);
     if ((dumpAcceptance && (*accepted==NULL)) || (accepted && *accepted)) {
-      *accepted = (double**)resize_czarray_2d((void**)(*accepted), sizeof(double), nToTrack_total+nLost_total, COORDINATES_PER_PARTICLE); 
+      *accepted = (double**)resize_czarray_2d((void**)(*accepted), sizeof(double), nToTrack_total+nLost_total, totalPropertiesPerParticle); 
     }
   }
 
   if (myid==0) {
     for (i=1; i<=work_processors; i++) {
       /* the number of elements that are received from each processor (for root only) */
-      nItems = nToTrackCounts[i]*COORDINATES_PER_PARTICLE;
+      nItems = nToTrackCounts[i]*totalPropertiesPerParticle;
       /* collect information for the left particles */
       MPI_Recv (&(*coord)[my_nToTrack][0], nItems, MPI_DOUBLE, i, 100, MPI_COMM_WORLD, &status); 
 
@@ -4685,7 +4636,7 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
     *nToTrack = my_nToTrack;
   } 
   else {
-    MPI_Send (&(*coord)[0][0], my_nToTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD); 
+    MPI_Send (&(*coord)[0][0], my_nToTrack*totalPropertiesPerParticle, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD); 
   }
 
   /* collect information for the lost particles and gather the accepted array */
@@ -4700,10 +4651,10 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
       for (i=1; i<=work_processors; i++) {
         /* gather information for lost particles */
   	displs = displs+nLostCounts[i-1];
-        nItems = nLostCounts[i]*COORDINATES_PER_PARTICLE;
+        nItems = nLostCounts[i]*totalPropertiesPerParticle;
         MPI_Recv (&(*coord)[displs][0], nItems, MPI_DOUBLE, i, 102, MPI_COMM_WORLD, &status);
         if (accepted && *accepted!=NULL){
-          MPI_Recv (&(*accepted)[my_nToTrack][0], nToTrackCounts[i]*COORDINATES_PER_PARTICLE, MPI_DOUBLE, i, 101, MPI_COMM_WORLD, &status); 
+          MPI_Recv (&(*accepted)[my_nToTrack][0], nToTrackCounts[i]*totalPropertiesPerParticle, MPI_DOUBLE, i, 101, MPI_COMM_WORLD, &status); 
           MPI_Recv (&(*accepted)[displs][0], nItems, MPI_DOUBLE, i, 103, MPI_COMM_WORLD, &status);
           my_nToTrack = my_nToTrack+nToTrackCounts[i];
 	}
@@ -4715,10 +4666,10 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
     }
     else {
       /* send information for lost particles */
-      MPI_Send (&(*coord)[my_nToTrack][0], my_nLost*COORDINATES_PER_PARTICLE, MPI_DOUBLE, root, 102, MPI_COMM_WORLD);  
+      MPI_Send (&(*coord)[my_nToTrack][0], my_nLost*totalPropertiesPerParticle, MPI_DOUBLE, root, 102, MPI_COMM_WORLD);  
       if (accepted && *accepted!=NULL) {
-        MPI_Send (&(*accepted)[0][0], my_nToTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, root, 101, MPI_COMM_WORLD);  
-        MPI_Send (&(*accepted)[my_nToTrack][0], my_nLost*COORDINATES_PER_PARTICLE, MPI_DOUBLE, root, 103, MPI_COMM_WORLD); 
+        MPI_Send (&(*accepted)[0][0], my_nToTrack*totalPropertiesPerParticle, MPI_DOUBLE, root, 101, MPI_COMM_WORLD);  
+        MPI_Send (&(*accepted)[my_nToTrack][0], my_nLost*totalPropertiesPerParticle, MPI_DOUBLE, root, 103, MPI_COMM_WORLD); 
       }      
     }
     MPI_Bcast (round, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
@@ -5462,16 +5413,16 @@ void checkBeamStructure(BEAM *beam)
 
   if (beam->particle) {
     for (i=0; i<beam->n_particle; i++) {
-      if (beam->particle[i][COORDINATES_PER_PARTICLE-1]<=0) {
-	printf("Non-positive particleID %le for i=%ld in beam->particle\n", beam->particle[i][COORDINATES_PER_PARTICLE-1], i);
+      if (beam->particle[i][6]<=0) {
+	printf("Non-positive particleID %le for i=%ld in beam->particle\n", beam->particle[i][6], i);
 	bad = 1;
       }
     }
   }
   if (beam->accepted) {
     for (i=0; i<beam->n_particle; i++) {
-      if (beam->accepted[i][COORDINATES_PER_PARTICLE-1]<=0) {
-	printf("Non-positive particleID %le for i=%ld in beam->accepted\n", beam->particle[i][COORDINATES_PER_PARTICLE-1], i);
+      if (beam->accepted[i][6]<=0) {
+	printf("Non-positive particleID %le for i=%ld in beam->accepted\n", beam->particle[i][6], i);
 	bad = 1;
       }
     }

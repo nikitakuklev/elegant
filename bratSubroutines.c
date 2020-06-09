@@ -382,14 +382,10 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       part[ip][ic] = accelCoord[ic];
 #ifndef ABRAT_PROGRAM
     if (isLost) {
-      for (ic=0; ic<3; ic++) 
-        /* These are actually the global loss coordinates, a fact that we'll handle in dump_loss_coordinates().
-         */
-        part[ip][2*ic] = lossCoordinates[ic];
-      part[ip][1] = part[ip][3] = 0;
-      /* We set the momentum to a negative value as a kludgey flag to indicate that we only have global loss
-         coordinate data */
-      part[ip][5] = -pCentral*(1+global_delta);
+      if (globalLossCoordOffset!=-1)
+        for (ic=0; ic<3; ic++) 
+          part[ip][globalLossCoordOffset+ic] = lossCoordinates[ic];
+      part[ip][5] = pCentral*(1+global_delta);
       swapParticles(part[ip], part[itop]);
       if (accepted) 
         swapParticles(accepted[ip], accepted[itop]);
@@ -1462,8 +1458,10 @@ void BRAT_B_field(double *F, double *Qg)
   if (!isLost && 
       (z>=zNomEntry && z<=zNomExit) && 
       insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, lossCoordinates)) {
-    printf("Loss coordinates: X = %le, Y = %le, Z = %le\n",
-	   lossCoordinates[0], lossCoordinates[1], lossCoordinates[2]);
+    /*
+      printf("Loss coordinates: X = %le, Y = %le, Z = %le\n",
+      lossCoordinates[0], lossCoordinates[1], lossCoordinates[2]);
+    */
     fflush(stdout);
     isLost = 1;
   }

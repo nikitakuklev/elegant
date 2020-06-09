@@ -724,15 +724,15 @@ void trackWithIonEffects
       
 	if (np>max_np) {
 	  if (part)
-	    free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
-	  part = (double**)czarray_2d(sizeof(double), np, COORDINATES_PER_PARTICLE);
+	    free_czarray_2d((void**)part, max_np, totalPropertiesPerParticle);
+	  part = (double**)czarray_2d(sizeof(double), np, totalPropertiesPerParticle);
 	  time = (double*)trealloc(time, sizeof(*time)*np);
 	  max_np = np;
 	}
 	if (np>0) {
 	  for (ip=0; ip<np; ip++) {
 	    time[ip] = time0[ipBunch[iBunch][ip]];
-	    memcpy(part[ip], part0[ipBunch[iBunch][ip]], sizeof(double)*COORDINATES_PER_PARTICLE);
+	    memcpy(part[ip], part0[ipBunch[iBunch][ip]], sizeof(double)*totalPropertiesPerParticle);
 	  }
 	}
       }

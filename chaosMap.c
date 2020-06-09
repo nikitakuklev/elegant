@@ -190,7 +190,7 @@ long doChaosMap(
 
   /* Perform fiducialization by tracking one turn */
   if (!one_part)
-    one_part = (double**)czarray_2d(sizeof(**one_part), 1, COORDINATES_PER_PARTICLE);
+    one_part = (double**)czarray_2d(sizeof(**one_part), 1, totalPropertiesPerParticle);
   n_part = 1;
   if (referenceCoord) {
     long i;
@@ -222,7 +222,7 @@ long doChaosMap(
   ip = 0;
   /* turns = control->n_passes; */
 
-  trackingBuffer = (double**)czarray_2d(sizeof(**trackingBuffer), 3, COORDINATES_PER_PARTICLE);
+  trackingBuffer = (double**)czarray_2d(sizeof(**trackingBuffer), 3, totalPropertiesPerParticle);
   
   for (idelta=0; idelta<ndelta; idelta++) {
     delta = delta_min + idelta*ddelta;

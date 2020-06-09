@@ -321,14 +321,14 @@ void do_transport_analysis(
 	  printf("Pulling %ld particles from processor %ld\n", nToTrackCounts[i], i);
 	  fflush(stdout);
 	}
-	nItems = nToTrackCounts[i]*COORDINATES_PER_PARTICLE;
+	nItems = nToTrackCounts[i]*totalPropertiesPerParticle;
 	MPI_Recv(&finalCoord[my_nTrack][0], nItems, MPI_DOUBLE, i, 100, MPI_COMM_WORLD, &status); 
 	my_nTrack += nToTrackCounts[i];
       }
     } else {
       /* Send data to master */
       if (my_nTrack)
-        MPI_Send (&finalCoord[my_offset][0], my_nTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+        MPI_Send (&finalCoord[my_offset][0], my_nTrack*totalPropertiesPerParticle, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
     }
     free(nToTrackCounts);
 #endif
@@ -562,14 +562,14 @@ void do_transport_analysis(
 #endif
       free_matrices(M);
       free(M);
-      free_czarray_2d((void**)finalCoordCopy, n_track, COORDINATES_PER_PARTICLE);
+      free_czarray_2d((void**)finalCoordCopy, n_track, totalPropertiesPerParticle);
 #if USE_MPI
     }
 #endif
     
-    free_czarray_2d((void**)initialCoord, n_track, COORDINATES_PER_PARTICLE);
-    free_czarray_2d((void**)finalCoord, n_track, COORDINATES_PER_PARTICLE);
-    free_czarray_2d((void**)coordError, n_track, COORDINATES_PER_PARTICLE);
+    free_czarray_2d((void**)initialCoord, n_track, totalPropertiesPerParticle);
+    free_czarray_2d((void**)finalCoord, n_track, totalPropertiesPerParticle);
+    free_czarray_2d((void**)coordError, n_track, totalPropertiesPerParticle);
     free(data);
     free(offset);
     free(orbit_p);
@@ -646,7 +646,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   notSinglePart = 0;
 #endif
    		 
-  coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, COORDINATES_PER_PARTICLE);
+  coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, totalPropertiesPerParticle);
 
   if (stepSize) {
     for (i=0; i<6; i++)
@@ -657,7 +657,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     stepSize[i] *= trackingMatrixStepFactor;
   
   n_track = 4*6+1;
-  for (j=0; j<COORDINATES_PER_PARTICLE; j++)
+  for (j=0; j<totalPropertiesPerParticle; j++)
     for (i=0; i<n_track; i++)
       coord[i][j] = startingCoord ? startingCoord[j] : 0;
 
@@ -785,7 +785,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     printf("Preparing MPI_Bcast coordinates from serial tracking\n");
     fflush(stdout);
 #endif
-    MPI_Bcast(&(coord[0][0]), n_track*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&(coord[0][0]), n_track*totalPropertiesPerParticle, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #if MPI_DEBUG
     printf("Finished MPI_Bcast coordinates from serial tracking\n");
     fflush(stdout);
@@ -859,7 +859,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     }
   }
 
-  free_czarray_2d((void**)coord, 1+4*6, COORDINATES_PER_PARTICLE);
+  free_czarray_2d((void**)coord, 1+4*6, totalPropertiesPerParticle);
 
   /*
   if (strlen(eptr->name)<900)
@@ -1280,7 +1280,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
             printf("Pulling %ld particles from processor %ld\n", nToTrackCounts[i], i);
             fflush(stdout);
           }
-          nItems = nToTrackCounts[i]*COORDINATES_PER_PARTICLE;
+          nItems = nToTrackCounts[i]*totalPropertiesPerParticle;
           MPI_Recv(&finalCoord[my_nTrack][0], nItems, MPI_DOUBLE, i, 100, MPI_COMM_WORLD, &status); 
           my_nTrack += nToTrackCounts[i];
         }
@@ -1293,7 +1293,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	    fflush(fpdeb);
 	  }
 #endif
-          MPI_Send (&finalCoord[my_offset][0], my_nTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+          MPI_Send (&finalCoord[my_offset][0], my_nTrack*totalPropertiesPerParticle, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
 	}
       }
       free(nToTrackCounts);
@@ -1425,9 +1425,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     }
   }
 
-  free_czarray_2d((void**)initialCoord, n_track, COORDINATES_PER_PARTICLE);
-  free_czarray_2d((void**)finalCoord, n_track, COORDINATES_PER_PARTICLE);
-  free_czarray_2d((void**)coordError, n_track, COORDINATES_PER_PARTICLE);
+  free_czarray_2d((void**)initialCoord, n_track, totalPropertiesPerParticle);
+  free_czarray_2d((void**)finalCoord, n_track, totalPropertiesPerParticle);
+  free_czarray_2d((void**)coordError, n_track, totalPropertiesPerParticle);
 
 #if USE_MPI
 #ifdef DEBUG
@@ -1916,7 +1916,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   double dP[3], dgamma;
   VMATRIX *matrix;
 
-  coord = (double**)czarray_2d(sizeof(**coord), 1+6*2, COORDINATES_PER_PARTICLE);
+  coord = (double**)czarray_2d(sizeof(**coord), 1+6*2, totalPropertiesPerParticle);
 
   Cs0 = startingCoord ? startingCoord[4]: 0;
   n_track = 2*6+1;
@@ -2032,16 +2032,16 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   D[sigmaIndex3[5][5]] = sigmaDelta2;
   
   C[4] += Cs0;
-  free_czarray_2d((void**)coord, 1+2*6, COORDINATES_PER_PARTICLE);
+  free_czarray_2d((void**)coord, 1+2*6, totalPropertiesPerParticle);
 
 }
 
 void copyParticles(double ***coordCopy, double **coord, long np)
 {
   long i;
-  *coordCopy = (double**)zarray_2d(sizeof(***coordCopy), np, COORDINATES_PER_PARTICLE);
+  *coordCopy = (double**)zarray_2d(sizeof(***coordCopy), np, totalPropertiesPerParticle);
   for (i=0; i<np; i++)
-    memcpy((*coordCopy)[i], coord[i], sizeof(double)*COORDINATES_PER_PARTICLE);
+    memcpy((*coordCopy)[i], coord[i], sizeof(double)*totalPropertiesPerParticle);
 }
 
 void performChromaticAnalysisFromMap(VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chromDeriv)

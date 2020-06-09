@@ -556,7 +556,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       S->a[0][0] = S->a[2][2] = cos(angle);
       S->a[2][0] = -(S->a[0][2] = -sin(angle));
     } else if (brat) {
-      double t1, dX0, dZ0;
+      double t1;
       if ((angle>0 && (brat->xVertex-brat->xEntry)<0) || (angle<0 && (brat->xVertex-brat->xEntry)>0))
 	bombElegantVA("Error: ANGLE and XVERTEX-XENTRY are inconsistent in sign for BRAT element %s\n", elem->name);
       t1 = atan2(brat->xVertex - brat->xEntry, brat->zVertex-brat->zEntry);

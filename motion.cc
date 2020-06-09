@@ -1538,7 +1538,7 @@ static char *known_mode[N_KNOWN_MODES] = {
     } ;
 #if USE_MPI
 /* We need a separate array to hold the coordinates for the fiducial particle in the parallel version */
-double best_particle[COORDINATES_PER_PARTICLE];
+double best_particle[MAX_PROPERTIES_PER_PARTICLE];
 #endif
 
 double *select_fiducial(double **part, long n_part, char *var_mode_in)
@@ -1626,19 +1626,6 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
       if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0) 
         bombElegant((char*)"error: computation of median failed (select_fiducial)", NULL);
 #else      
-      /*
-      if (notSinglePart) {
-	if ((i_best = find_median_of_row_p(best_particle, part, i_var, n_part, n_part_total))<0)
-	  bombElegant((char*)"error: computation of median failed (select_fiducial)", NULL);
-
-	log_exit((char*)"select_fiducial");
-	return(best_particle);
-      }
-      else {
-	if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0)
-	  bombElegant((char*)"error: computation of median failed (select_fiducial)", NULL);
-      }
-      */
       printf((char*)"The median fiducial mode is not available in Pelegant.\n");
       MPI_Barrier (MPI_COMM_WORLD);
       MPI_Abort(MPI_COMM_WORLD, 2);
@@ -1664,8 +1651,8 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
 	/* find the global best value and its location, i.e., on which processor */
 	MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MINLOC, MPI_COMM_WORLD);
 	if (in.rank==out.rank)
-	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
-	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
+	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*totalPropertiesPerParticle);
+	MPI_Bcast(best_particle, totalPropertiesPerParticle, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
 	log_exit((char*)"select_fiducial");
 	return(best_particle);
       }
@@ -1691,8 +1678,8 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
 	/* find the global best value and its location, i.e., on which processor */
 	MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
 	if (in.rank==out.rank)
-	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
-	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
+	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*totalPropertiesPerParticle);
+	MPI_Bcast(best_particle, totalPropertiesPerParticle, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
 	log_exit((char*)"select_fiducial");
 	return(best_particle);
       }
@@ -1731,8 +1718,8 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
 	/* find the global best value and its location, i.e., on which processor */
 	MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MINLOC, MPI_COMM_WORLD);
 	if (in.rank==out.rank)
-	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
-	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
+	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*totalPropertiesPerParticle);
+	MPI_Bcast(best_particle, totalPropertiesPerParticle, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
 	log_exit((char*)"select_fiducial");
 	return(best_particle);
       }
@@ -1744,8 +1731,8 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
 #else
       if (notSinglePart) {
        	if (myid==1)
-	  memcpy(best_particle, part[0], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
-	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, 1, MPI_COMM_WORLD);
+	  memcpy(best_particle, part[0], sizeof(*best_particle)*totalPropertiesPerParticle);
+	MPI_Bcast(best_particle, totalPropertiesPerParticle, MPI_DOUBLE, 1, MPI_COMM_WORLD);
 	log_exit((char*)"select_fiducial");
 	return(best_particle);
       } else

@@ -23,8 +23,6 @@ static SDDS_DATASET SDDSout;
 static long fireOnPass = 1;
 static FILE *fp_log = NULL;
 
-void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, long n_processors, int myid);
-
 static long nElements;
 static ELEMENT_LIST **elementArray = NULL;
 static long iElementName, iElementOccurence, iElementType, ideltaOrig, idkOrig, ikOrig, isOrig,
@@ -85,7 +83,7 @@ double computeScatteringDelta(long idelta, double s, double *dk)
       *dk = (fabs(1/kinv1-1/kinv)+fabs(1/kinv-1/kinv2))/2;
     }
   }
-
+  
   return -1/kinv;
 }
 
@@ -120,6 +118,22 @@ static void deltaOffsetFunction(double **coord, long np, long pass, long i_elem,
   long idelta, particleID, ie, ip;
   long sharedData[2];
   long nKicksMade = 0;
+  double ddelta;
+#if MPI_DEBUG
+  static FILE *fpdeb = NULL;
+  if (!fpdeb) {
+    char s[1024];
+    snprintf(s, 1024, "iscat-%03d.debug", myid);
+    fpdeb = fopen(s, "w");
+    fprintf(fpdeb, "SDDS1\n");
+    fprintf(fpdeb, "&column name=ElementName type=string &end\n");
+    fprintf(fpdeb, "&column name=ElementOccurence type=long &end\n");
+    fprintf(fpdeb, "&column name=particleID type=long &end\n");
+    fprintf(fpdeb, "&column name=idelta type=long &end\n");
+    fprintf(fpdeb, "&column name=delta type=double &end\n");
+    fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+#endif
   if (i_elem==0) {
 #if MPI_DEBUG
     printf("pass %ld, elem %ld call to deltaOffsetFunction\n", pass, i_elem);
@@ -142,25 +156,35 @@ static void deltaOffsetFunction(double **coord, long np, long pass, long i_elem,
     }
     for (ip=nKicksMade=0; ip<np; ip++) {
 #if MPI_DEBUG
+      /*
       printf("checking particle %ld of %ld, particleID=%ld\n", ip, np, (long)coord[ip][6]);
       fflush(stdout);
+      */
 #endif
       if ((particleID = coord[ip][6])<0) {
 #if MPI_DEBUG
+        /*
         printf("buffer particle, skipping\n");
         fflush(stdout);
+        */
 #endif
         continue;
       }
       if (particleID/n_k!=ie) {
 #if MPI_DEBUG
+        /*
         printf("not my problem, skipping\n");
         fflush(stdout);
+        */
 #endif
         continue;
       }
       idelta = particleID%n_k;
-      coord[ip][5] += computeScatteringDelta(idelta, eptr->end_pos, NULL);
+      coord[ip][5] += (ddelta = computeScatteringDelta(idelta, eptr->end_pos, NULL));
+#if MPI_DEBUG
+      fprintf(fpdeb, "%s %ld %ld %ld %le\n",
+        eptr->name, eptr->occurence, particleID, idelta, ddelta);
+#endif
       nKicksMade++;
     }
 #if MPI_DEBUG
@@ -366,21 +390,14 @@ long runInelasticScattering(
            nTotal, nWorkingProcessors, n_k, nElements, nEachProcessor);
     fflush(stdout);
   }
-  
-  if (myid!=0) {
+ 
+  if (myid!=0)
     /* allocate and initialize array for tracking */
-    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor, COORDINATES_PER_PARTICLE);
-    lostParticles = (double**)czarray_2d(sizeof(**lostParticles), nEachProcessor, COORDINATES_PER_PARTICLE+1);	 
-  } else {
-    coord = (double**)czarray_2d(sizeof(**coord), 1, COORDINATES_PER_PARTICLE);
-    lostParticles = (double**)czarray_2d(sizeof(**lostParticles), nEachProcessor*nWorkingProcessors, COORDINATES_PER_PARTICLE);
-  }
+    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor, totalPropertiesPerParticle);
+  else 
+    /* Used to track the fiducial particle */
+    coord = (double**)czarray_2d(sizeof(**coord), 1, totalPropertiesPerParticle);
 
-  if (control->n_passes==1)
-    fireOnPass = 0;
-  else
-    fireOnPass = 1;
-  
   setTrackingOmniWedgeFunction(NULL);
   if (startingCoord)
     memcpy(coord[0], startingCoord, sizeof(double)*6);
@@ -426,7 +443,7 @@ long runInelasticScattering(
   if (myid!=0) {
     nLeft = nEachProcessor;
     for (ip=0; ip<nLeft; ip++) 
-      lostParticles[ip][6] = -2;
+      coord[ip][6] = -2;
     for (ip=0; ip<nLeft; ip++) {
       if (startingCoord)
         memcpy(coord[ip], startingCoord, sizeof(**coord)*6);
@@ -448,19 +465,17 @@ long runInelasticScattering(
       fflush(stdout);
     }
     nLost = nLeft;
-    fireOnPass = 0;
+    if (control->n_passes==1)
+      fireOnPass = 0;
+    else
+      fireOnPass = 1;
     nLeft = do_tracking(NULL, coord, nLeft, NULL, beamline, &pCentral, 
                         NULL, NULL, NULL, NULL, run, control->i_step, 
                         FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING+INHIBIT_FILE_OUTPUT, 
-                        control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
+                        control->n_passes, 0, NULL, NULL, NULL, NULL, NULL);
     nLost -= nLeft;
     printf("Done tracking nLeft = %ld, nLost = %ld\n", nLeft, nLost);
     fflush(stdout);
-    if (verbosity>9) {
-      for (ip=0; ip<nLost; ip++)
-        printf("ip = %ld, particleID = %ld\n", ip, (long)lostParticles[ip][6]);
-      fflush(stdout);
-    }
     setTrackingOmniWedgeFunction(NULL);
   }
 
@@ -522,8 +537,8 @@ long runInelasticScattering(
     notSinglePart = nsp;
   }
 
-  nLeft = 0;
-  gatherLostParticles(&lostParticles, &nLost, nLeft, n_processors, myid);
+  gatherLostParticles(&lostParticles, &nLost, coord, nLeft, n_processors, myid);
+
   if (myid==0 || mpiDebug) {
     printf("Lost-particle gather done, nLost = %ld\n", nLost); 
     fflush(stdout);
@@ -549,7 +564,7 @@ long runInelasticScattering(
         if (lostParticles[ip][6]==-2) {
           long j;
           printf("Problem with lost-particle accounting\n");
-          for (j=0; j<COORDINATES_PER_PARTICLE+1; j++)
+          for (j=0; j<totalPropertiesPerParticle+1; j++)
             printf("coord[%ld] = %le\n", j, lostParticles[ip][j]);
           bombElegant("problem with lost particle accounting!", NULL);
         }
@@ -558,29 +573,34 @@ long runInelasticScattering(
       }
       
       /* Figure out (iside, idelta, ie) */
-      particleID = lostParticles[ip][6];
-      ie = particleID/n_k;
-      idelta = particleID%n_k;
-      delta = computeScatteringDelta(idelta, elementArray[ie]->end_pos, &dk);
-      if (idelta==(n_k-1))
-        badDeltaMin ++;
-      if (idelta==0)
-        nDeltaMax ++;
-      if (!SDDS_SetRowValues(&SDDSsa, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow++,
-                             iElementName, elementArray[ie]->name,
-                             iElementType, entity_name[elementArray[ie]->type],
-                             iElementOccurence, elementArray[ie]->occurence, 
-                             isOrig, elementArray[ie]->end_pos,
-                             ideltaOrig, delta,
-			     ikOrig, n_k-1-idelta,
-                             idkOrig, dk,
-                             ixLost, lostParticles[ip][0],
-                             iyLost, lostParticles[ip][2],
-                             ideltaLost, lostParticles[ip][5],
-                             isLost, lostParticles[ip][4], 
-                             -1)) {
-        SDDS_SetError("Problem setting row values in SDDS table (doSlopeApertureSearch)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      if ((particleID = lostParticles[ip][6])>=0) {
+        ie = particleID/n_k;
+        idelta = particleID%n_k;
+        delta = computeScatteringDelta(idelta, elementArray[ie]->end_pos, &dk);
+        if (idelta==(n_k-1)) {
+          printf("Problem with minimum delta limit: particle lost at this value\n");
+          printf("particleID = %ld, ie = %ld, idelta = %ld, delta = %le\n",
+                 particleID, ie, idelta, delta);
+          badDeltaMin ++;
+        }
+        if (idelta==0)
+          nDeltaMax ++;
+        if (!SDDS_SetRowValues(&SDDSsa, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow++,
+                               iElementName, elementArray[ie]->name,
+                               iElementType, entity_name[elementArray[ie]->type],
+                               iElementOccurence, elementArray[ie]->occurence, 
+                               isOrig, elementArray[ie]->end_pos,
+                               ideltaOrig, delta,
+                               ikOrig, n_k-1-idelta,
+                               idkOrig, dk,
+                               ixLost, lostParticles[ip][0],
+                               iyLost, lostParticles[ip][2],
+                               ideltaLost, lostParticles[ip][5],
+                               isLost, lostParticles[ip][4], 
+                               -1)) {
+          SDDS_SetError("Problem setting row values in SDDS table (doSlopeApertureSearch)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
       }
     }
     if (verbosity>5) {
@@ -593,8 +613,8 @@ long runInelasticScattering(
     }
     if (!inhibitFileSync)
       SDDS_DoFSync(&SDDSsa);
-    free_czarray_2d((void**)coord, 1, COORDINATES_PER_PARTICLE);
-    free_czarray_2d((void**)lostParticles, nEachProcessor*nWorkingProcessors, COORDINATES_PER_PARTICLE+1);	 
+    free_czarray_2d((void**)coord, 1, totalPropertiesPerParticle);
+    free_czarray_2d((void**)lostParticles, nLost, totalPropertiesPerParticle);	 
     if (badDeltaMin) {
       printf("*** Warning: in %ld cases, a particle that was on the inner ring (delta = k_min) was lost.\n",
              badDeltaMin);
@@ -604,11 +624,11 @@ long runInelasticScattering(
 	  printf("*** You should reduce k_min and re-rerun.\n");
     }
     if (nDeltaMax!=nElements)
-      printf("*** Warning: %ld particles on the outer delta ring were not lost.\n", nElements-nDeltaMax);
+      printf("*** Warning: %ld particles (of %ld expected) on the outer delta ring were not lost.\n", 
+             nElements-nDeltaMax, nElements);
   }
   else {
-    free_czarray_2d((void**)coord, nEachProcessor, COORDINATES_PER_PARTICLE);
-    free_czarray_2d((void**)lostParticles, nEachProcessor, COORDINATES_PER_PARTICLE+1);	 
+    free_czarray_2d((void**)coord, nEachProcessor, totalPropertiesPerParticle);
   }
 
   if (verbosity>3 && (myid==0 || mpiDebug)) {

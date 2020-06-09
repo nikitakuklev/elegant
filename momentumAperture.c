@@ -30,9 +30,6 @@ static long ideltaCutover;
 #include "fftpackC.h"
 long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long turns, double delta);
 long multiparticleLocalMomentumAcceptance(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
-#if USE_MPI
-void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, long n_processors, int myid);
-#endif
 
 static void momentumOffsetFunction(double **coord, long np, long pass, double *pCentral)
 {
@@ -60,77 +57,8 @@ static void momentumOffsetFunction(double **coord, long np, long pass, double *p
   }
 }
 
-#ifdef DEBUG
-FILE *fpd = NULL;
-#endif
 static long nElements;
 static ELEMENT_LIST **elementArray = NULL;
-#if USE_MPI
-static double deltaStep;
-static long nDelta;
-
-static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral)
-{
-  long id, ie, ip, particleID;
-  MALIGN mal;
-#ifdef DEBUG
-#if USE_MPI
-  if (i_elem==0)
-    fprintf(fpd, "processor %d has %ld particles on pass %ld\n",
-            myid, np, pass);
-#endif
-#endif
-  if (pass==fireOnPass) {
-    for (ie=0; ie<nElements; ie++) {
-      if (eptr==elementArray[ie])
-        break;
-    }
-    if (ie==nElements) return;
-    elementArray[ie] = eptr;
-    mal.dxp = mal.dyp = mal.dz = mal.dt = mal.de = 0;    
-    mal.dx = x_initial;
-    mal.dy = y_initial;
-    mal.startPID = mal.endPID = -1;
-    for (ip=0; ip<np; ip++) {
-      if ((particleID = coord[ip][6])<0) {
-#ifdef DEBUG
-        fprintf(fpd, "particleID = %ld, excluded\n", particleID);
-#endif
-        continue;
-      }
-      id = particleID%nDelta;
-      if ((particleID-id)/nDelta!=ie) {
-#ifdef DEBUG
-        fprintf(fpd, "ie = %ld, computed ie is %ld, excluded\n", ie, (particleID-id)/nDelta);
-#endif
-        continue;
-      }
-      if (id>nDelta) 
-        bombElegant("invalid id value (>nDelta)", NULL);
-      if (id<ideltaCutover) {
-        mal.dp = delta_negative_limit + id*deltaStep;
-      } else {
-        mal.dp = delta_positive_start + (id-ideltaCutover)*deltaStep;
-      }
-      offset_beam(coord+ip, 1, &mal, *pCentral);
-#ifdef DEBUG
-#if USE_MPI
-      if (fpd)
-        fprintf(fpd, "Imparted error %le to particle %ld (ie=%ld, pId=%ld) on processor %d\n", mal.dp, ip, ie, (long)coord[ip][6], myid);
-#endif
-#endif
-    }
-#ifdef DEBUG
-#if USE_MPI
-    if (fpd) {
-      fprintf(fpd, "Momentum kick done on processor %d\n", myid);
-      fflush(fpd);
-    }
-#endif
-#endif
-  }
-}
-#endif
 
 void setupMomentumApertureSearch(
                                  NAMELIST_TEXT *nltext,
@@ -330,7 +258,6 @@ long doMomentumApertureSearch(
   double deltaInterval, pCentral, deltaStart;
   ELEMENT_LIST *elem, *elem0;
   long side;
-  double **lostParticles;	
   short **loserFound, *direction=NULL, **survivorFound;
   int32_t **lostOnPass, *ElementOccurence;
   double deltaLimit1[2], deltaLimit, **deltaWhenLost, delta;
@@ -344,35 +271,12 @@ long doMomentumApertureSearch(
   long processElements, skipElements, deltaSign, split, slot;
   char s[1000];
   unsigned long fiducial_flag_save;
+#if defined(DEBUG)
+  static FILE *fpdeb = NULL;
+#endif
 #if USE_MPI
   long jobCounter;
-#if defined(DEBUG)
-  FILE *fpdMpi = NULL;
-  sprintf(s, "%s-debug-%02d", output, myid);
-  if (!(fpdMpi = fopen(s, "w")))
-    fpdMpi = NULL;
-  fprintf(fpdMpi, "ID = %d\n", myid);
-  fflush(fpdMpi);
-#endif
   notSinglePart = 0;
-#else
-#if defined(DEBUG)
-  FILE *fpdeb = NULL;
-
-  sprintf(s, "%s-Debug", output);
-  fprintf(stderr, "Debug file %s\n", s);
-  
-  if (!(fpdeb = fopen(s, "w")))
-    bombElegant("unable to open debug file for momentum aperture scan", NULL);
-  fprintf(fpdeb, "SDDS1\n");
-  fprintf(fpdeb, "&parameter name=ElementName type=string &end\n");
-  fprintf(fpdeb, "&parameter name=Side type=string &end\n");
-  fprintf(fpdeb, "&column name=delta type=double &end\n");
-  fprintf(fpdeb, "&column name=Lost type=short &end\n");
-  fprintf(fpdeb, "&column name=Loss Pass type=short &end\n");
-  fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
-  fflush(fpdeb);
-#endif
 #endif
 
   /* determine how many elements will be tracked */
@@ -443,7 +347,7 @@ long doMomentumApertureSearch(
   fflush(stdout);
   
   /* allocate arrays for tracking */
-  coord = (double**)czarray_2d(sizeof(**coord), 1, COORDINATES_PER_PARTICLE);
+  coord = (double**)czarray_2d(sizeof(**coord), 1, totalPropertiesPerParticle);
 
   /* allocate arrays for storing data for negative and positive momentum limits for each element */
   lostOnPass = (int32_t**)czarray_2d(sizeof(**lostOnPass), (output_mode?1:2), (output_mode?2:1)*nElem);
@@ -473,9 +377,6 @@ long doMomentumApertureSearch(
     fireOnPass = 1;
   turnByTurnCoord = (double**)czarray_2d(sizeof(double), 5, control->n_passes);
   
-  /* need to do this because do_tracking() in principle may realloc this pointer */
-  lostParticles = (double**)czarray_2d(sizeof(double), 1, COORDINATES_PER_PARTICLE+1);	 
- 
   elem = elem0;
   /* iElem = 0; */
   processElements = process_elements;
@@ -502,7 +403,7 @@ long doMomentumApertureSearch(
     reset_special_elements(beamline, RESET_INCLUDE_ALL&~RESET_INCLUDE_RANDOM);
     code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                        NULL, NULL, NULL, NULL, run, control->i_step, 
-                       FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, lostParticles, NULL);
+                       FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, NULL, NULL);
     if (!code) {
       printf("Fiducial particle lost. Don't know what to do.\n");
       fflush(stdout);
@@ -627,7 +528,7 @@ long doMomentumApertureSearch(
           code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                              NULL, NULL, NULL, NULL, run, control->i_step, 
                              (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+(verbosity>4?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT,
-	                     control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
+	                     control->n_passes, 0, NULL, NULL, NULL, NULL, NULL);
           if (!code || !determineTunesFromTrackingData(nominalTune, turnByTurnCoord, turnsStored, 0.0)) {
             printf("Fiducial particle tune is undefined.\n");
 	    fflush(stdout);
@@ -643,18 +544,6 @@ long doMomentumApertureSearch(
         for (split=0; split<=splits; split++) {
           delta = deltaStart;
           
-#if defined(DEBUG)
-#if !USE_MPI
-          fprintf(fpdeb, "%s\n%s\n",
-                  elem->name, side==0?"negative":"positive");
-          fflush(fpdeb);
-#else
-          fprintf(fpdMpi, "%s\n%s\n",
-                  elem->name, side==0?"negative":"positive");
-          fflush(fpdMpi);
-#endif
-#endif
-
           while (fabs(delta) <= fabs(deltaLimit)) {
             setTrackingWedgeFunction(momentumOffsetFunction, 
                                      elem->succ?elem->succ:elem0); 
@@ -671,7 +560,6 @@ long doMomentumApertureSearch(
                       pCentral);
               fflush(stdout);
             }
-            lostParticles[0][7] = -1;
             if (!fiducialize) {
               delete_phase_references();
               reset_special_elements(beamline, RESET_INCLUDE_ALL&~RESET_INCLUDE_RANDOM);
@@ -679,7 +567,7 @@ long doMomentumApertureSearch(
             code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                                NULL, NULL, NULL, NULL, run, control->i_step, 
                                (fiducialize?FIDUCIAL_BEAM_SEEN:0)+FIRST_BEAM_IS_FIDUCIAL+(verbosity>4?0:SILENT_RUNNING)+(allow_watch_file_output?0:INHIBIT_FILE_OUTPUT), 
-			       control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
+			       control->n_passes, 0, NULL, NULL, NULL, NULL, NULL);
             if (code && turnsStored>2) {
               if (!determineTunesFromTrackingData(tune, turnByTurnCoord, turnsStored, delta)) {
                 if (forbid_resonance_crossing) {
@@ -716,7 +604,7 @@ long doMomentumApertureSearch(
                     printf("   coord[%ld] = %e\n", i, coord[0][i]);
                 fflush(stdout);
               }
-              lostOnPass[slot][outputRow] = lostParticles[0][7];
+              lostOnPass[slot][outputRow] = coord[0][lossPassIndex];
               xLost[slot][outputRow] = coord[0][0];
               yLost[slot][outputRow] = coord[0][2];
               sLost[slot][outputRow] = coord[0][4];
@@ -769,15 +657,6 @@ long doMomentumApertureSearch(
           if ((deltaStart<0 && deltaSign==1) || (deltaStart>0 && deltaSign==-1))
             deltaStart = 0;
         } /* split loop */
-#if defined(DEBUG)
-#if !USE_MPI
-        fprintf(fpdeb, "\n");
-        fflush(fpdeb);
-#else
-        fprintf(fpdMpi, "\n");
-        fflush(fpdMpi);
-#endif
-#endif
         if (verbosity>0) {
           printf("Energy aperture for %s #%ld at s=%em is %e\n", elem->name, elem->occurence, elem->end_pos,
                   deltaSurvived[slot][outputRow]);
@@ -793,10 +672,6 @@ long doMomentumApertureSearch(
   outputRow++;
 
 #if USE_MPI
-#if defined(DEBUG)
-  fprintf(fpdMpi, "Waiting on barrier after main loop.\n");
-  fflush(fpdMpi);
-#endif
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
@@ -870,7 +745,7 @@ long doMomentumApertureSearch(
     SDDS_DoFSync(&SDDSma);
       
 
-  free_czarray_2d((void**)coord, 1, COORDINATES_PER_PARTICLE);
+  free_czarray_2d((void**)coord, 1, totalPropertiesPerParticle);
   free_czarray_2d((void**)lostOnPass, (output_mode?1:2), (output_mode?2:1)*nElem);
   free_czarray_2d((void**)loserFound, (output_mode?1:2), (output_mode?2:1)*nElem);
   free_czarray_2d((void**)survivorFound, (output_mode?1:2), (output_mode?2:1)*nElem);
@@ -898,6 +773,47 @@ long doMomentumApertureSearch(
   return 1;
 }
 
+
+#if USE_MPI
+static double deltaStep;
+static long nDelta;
+
+static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral)
+{
+  long id, ie, ip, particleID;
+  MALIGN mal;
+  if (pass==fireOnPass) {
+    for (ie=0; ie<nElements; ie++) {
+      if (eptr==elementArray[ie])
+        break;
+    }
+    if (ie==nElements) return;
+    elementArray[ie] = eptr;
+    mal.dxp = mal.dyp = mal.dz = mal.dt = mal.de = 0;    
+    mal.dx = x_initial;
+    mal.dy = y_initial;
+    mal.startPID = mal.endPID = -1;
+    for (ip=0; ip<np; ip++) {
+      if ((particleID = coord[ip][6])<0) {
+        continue;
+      }
+      id = particleID%nDelta;
+      if ((particleID-id)/nDelta!=ie) {
+        continue;
+      }
+      if (id>nDelta) 
+        bombElegant("invalid id value (>nDelta)", NULL);
+      if (id<ideltaCutover) {
+        mal.dp = delta_negative_limit + id*deltaStep;
+      } else {
+        mal.dp = delta_positive_start + (id-ideltaCutover)*deltaStep;
+      }
+      offset_beam(coord+ip, 1, &mal, *pCentral);
+    }
+  }
+}
+#endif
+
 long multiparticleLocalMomentumAcceptance(
                               RUN *run,
                               VARY *control,
@@ -917,17 +833,6 @@ long multiparticleLocalMomentumAcceptance(
   long n_working_processors = n_processors - 1;
   double **lostParticles;
 
-#ifdef DEBUG
-  double round = 0.5;
-  long id;
-  ELEMENT_LIST *elem0;
-  char s[1000];
-  char logFile[100];
-  FILE *fpd;
-  sprintf(logFile, "mmap-%03d.log", myid);
-  fpd = fopen(logFile, "w");
-  fprintf(fpd, "Started LMA algorithm for processor %d\n", myid);
-#endif
   if (myid==0) {
     printf("Started multi-particle  LMA algorithm\n");
     fflush(stdout);
@@ -947,11 +852,6 @@ long multiparticleLocalMomentumAcceptance(
     nEachProcessor = nTotal/n_working_processors;
   }
   
-#ifdef DEBUG
-  fprintf(fpd, "nTotal = %ld, n_working_processors = %ld, nDelta = %ld, deltaStep = %le, nElements = %ld, nEachProcessor = %ld\n",
-          nTotal, n_working_processors, nDelta, deltaStep, nElements, nEachProcessor);
-  fflush(fpd);
-#endif
   if (myid==0) {
     printf("nTotal = %ld, n_working_processors = %ld, nDelta = %ld, deltaStep = %le, nElements = %ld, nEachProcessor = %ld\n",
             nTotal, n_working_processors, nDelta, deltaStep, nElements, nEachProcessor);
@@ -959,19 +859,13 @@ long multiparticleLocalMomentumAcceptance(
   }
   
   /* allocate and initialize array for tracking */
-  if (myid==0) {
-    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor*n_working_processors, COORDINATES_PER_PARTICLE);
-    lostParticles = NULL;
-  } else {
-    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor, COORDINATES_PER_PARTICLE);
-    lostParticles = (double**)czarray_2d(sizeof(double), nEachProcessor, COORDINATES_PER_PARTICLE+1);	 
-  }
+  lostParticles = NULL;
+  if (myid==0) 
+    /* Master will need to retrieve all the particle data eventually */
+    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor*n_working_processors, totalPropertiesPerParticle);
+  else
+    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor, totalPropertiesPerParticle);
   
-#ifdef DEBUG
-  fprintf(fpd, "Arrays allocated\n");
-  fflush(fpd);
-#endif
-
   if (control->n_passes==1)
     fireOnPass = 0;
   else
@@ -1003,17 +897,13 @@ long multiparticleLocalMomentumAcceptance(
     fflush(stdout);
   }
   
-#ifdef DEBUG
-  fprintf(fpd, "Fiducialized\n"); fflush(fpd);
-  fflush(fpd);
-#endif
   MPI_Barrier(MPI_COMM_WORLD);
-  printf("Fiducalization completed\n");
+  printf("Fiducalization completed (2).\n");
   fflush(stdout);
 
   if (myid!=0) {
     for (ip=0; ip<nEachProcessor; ip++) 
-      lostParticles[ip][6] = -2;
+      coord[ip][6] = -2;
     for (ip=0; ip<nEachProcessor; ip++) {
       if (startingCoord)
         memcpy(coord[ip], startingCoord, sizeof(**coord)*6);
@@ -1028,32 +918,28 @@ long multiparticleLocalMomentumAcceptance(
       }
     }
     setTrackingOmniWedgeFunction(momentumOffsetFunctionOmni); 
-#ifdef DEBUG
-    fprintf(fpd, "Tracking\n");
-    fflush(fpd);
-#endif
     printf("Tracking\n");
     fflush(stdout);
     nLeft = do_tracking(NULL, coord, nEachProcessor, NULL, beamline, &pCentral, 
                         NULL, NULL, NULL, NULL, run, control->i_step, 
                         FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING+INHIBIT_FILE_OUTPUT, 
-                        control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
+                        control->n_passes, 0, NULL, NULL, NULL, NULL, NULL);
     nLost = nEachProcessor - nLeft;
-#ifdef DEBUG
-    fprintf(fpd, "Done tracking nLeft = %ld, nLost = %ld\n", nLeft, nLost);
-    fflush(fpd);
-#endif
+    setTrackingOmniWedgeFunction(NULL);
+#if MPI_DEBUG
     printf("Done tracking nLeft = %ld, nLost = %ld\n", nLeft, nLost);
     fflush(stdout);
-    setTrackingOmniWedgeFunction(NULL);
+#endif
   } else
     nLeft = 0;
+
+  printf("Waiting for tracking to complete\n");
+  fflush(stdout);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
   /* gather lost particle data to master */
-  nLeft = 0;
-  gatherLostParticles(&lostParticles, &nLost, nLeft, n_processors, myid);
+  gatherLostParticles(&lostParticles, &nLost, coord, nLeft, n_processors, myid);
   printf("Lost-particle gather done\n"); fflush(stdout);
 
   if (myid==0) {
@@ -1067,17 +953,18 @@ long multiparticleLocalMomentumAcceptance(
     
     /* allocate arrays for storing data for negative and positive momentum limits for each element */
     deltaLost = (double**)czarray_2d(sizeof(**deltaLost), 2, nElem);
-    for (ie=0; ie<nElem; ie++) {
-      deltaLost[0][ie] = -DBL_MAX;
-      deltaLost[1][ie] = DBL_MAX;
-    }
     deltaSurvived = (double**)czarray_2d(sizeof(**deltaSurvived), 2, nElem);
     sStart = (double*)tmalloc(sizeof(*sStart)*nElem);
     ElementName = (char**)tmalloc(sizeof(*ElementName)*nElem);
     ElementType = (char**)tmalloc(sizeof(*ElementType)*nElem);
     ElementOccurence = (int32_t*)tmalloc(sizeof(*ElementOccurence)*nElem);
     loserFound = (short**)czarray_2d(sizeof(**loserFound), 2, nElem);
-    
+    for (ie=0; ie<nElem; ie++) {
+      deltaLost[0][ie] = -DBL_MAX; /* will store negative-side limit */
+      deltaLost[1][ie] = DBL_MAX;  /* will store positive-side limit */
+      loserFound[0][ie] = loserFound[1][ie] = 0;
+    }
+
     for (ip=0; ip<nLost; ip++) {
       if (lostParticles[ip][6]<0) {
         if (lostParticles[ip][6]==-2) {
@@ -1140,7 +1027,7 @@ long multiparticleLocalMomentumAcceptance(
     free_czarray_2d((void**)deltaSurvived, 2, nElem);
     /* free_czarray_2d((void**)coord, nEachProcessor*n_working_processors, 7); */
   } else {
-    free_czarray_2d((void**)coord, nEachProcessor, COORDINATES_PER_PARTICLE);
+    free_czarray_2d((void**)coord, nEachProcessor, totalPropertiesPerParticle);
   }
   
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1154,31 +1041,6 @@ long multiparticleLocalMomentumAcceptance(
 long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long turns, double delta)
 {
   double amplitude[4], frequency[4], phase[4], dummy;
-
-#if defined(DEBUG)
-  long i;
-  static FILE *fpd = NULL;
-  if (!fpd) {
-    fpd = fopen("tbt.sdds", "w");
-    fprintf(fpd, "SDDS1\n&column name=Pass type=long &end\n");
-    fprintf(fpd, "&column name=x type=double units=m &end\n");
-    fprintf(fpd, "&column name=xp type=double &end\n");
-    fprintf(fpd, "&column name=y type=double units=m &end\n");
-    fprintf(fpd, "&column name=yp type=double &end\n");
-    fprintf(fpd, "&column name=delta type=double &end\n");
-    fprintf(fpd, "&parameter name=delta0 type=double &end\n");
-    fprintf(fpd, "&data mode=ascii &end\n");
-  }
-  fprintf(fpd, "%ld\n", turns);
-  for (i=0; i<turns; i++) {
-    fprintf(fpd, "%ld %e %e %e %e %e\n", i,
-            turnByTurnCoord[0][i],
-            turnByTurnCoord[1][i],
-            turnByTurnCoord[2][i],
-            turnByTurnCoord[3][i],
-            turnByTurnCoord[4][i]);
-  }
-#endif
 
   if (PerformNAFF(&frequency[0], &amplitude[0], &phase[0], 
 		  &dummy, 0.0, 1.0, turnByTurnCoord[0], turns, 
@@ -1218,43 +1080,49 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 }
 
 #if USE_MPI
-void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, long n_processors, int myid) 
+void gatherLostParticles(double ***lostParticle, long *nLost, double **coord, long nSurvived, long n_processors, int myid) 
+  /* gather lost particle data to the non-tracking master
+   * For the master, we'll allocate a 2-D particle array and return it in *lostParticle. The size of the
+   * array is (*nLost, totalPropertiesPerParticle).
+   * For workers, coord is the 2-D particle tracking buffer, which has the lost particles 
+   * sorted to the end, i.e,. from coord[nSurvived] on.
+   */
 {
   long work_processors = n_processors-1;
   int root = 0, i, nItems, displs;
-  int my_nLost, *nLostCounts, nLost_total; 
- 
-  MPI_Status status;
-  nLostCounts = malloc(sizeof(int) * n_processors);
-
-  if (myid==0) {
-    my_nLost = 0;
-  }
-  else {
-    my_nLost = *nLost;
-  }
+  long my_nLost, *nLostCounts, nLost_total; 
   
-  MPI_Gather(&my_nLost, 1, MPI_INT, nLostCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Reduce(&my_nLost, &nLost_total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Status status;
+  nLostCounts = malloc(sizeof(long) * n_processors);
 
+  if (myid==0)
+    my_nLost = 0;
+  else
+    my_nLost = *nLost;
+  
+  MPI_Gather(&my_nLost, 1, MPI_LONG, nLostCounts, 1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Reduce(&my_nLost, &nLost_total, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
   if (myid==0) {
     /* set up the displacement array and the number of elements that are received from each processor */ 
     nLostCounts[0] = 0;
     displs = 0;
-    *lostParticles = (double**)resize_czarray_2d((void**)(*lostParticles), sizeof(double), nLost_total, COORDINATES_PER_PARTICLE+1);
+    *lostParticle = (double**)czarray_2d(sizeof(double), nLost_total, totalPropertiesPerParticle);
     for (i=1; i<=work_processors; i++) {
       /* gather information for lost particles */
       displs = displs+nLostCounts[i-1];
-      nItems = nLostCounts[i]*(COORDINATES_PER_PARTICLE+1);
-      MPI_Recv (&(*lostParticles)[displs][0], nItems, MPI_DOUBLE, i, 102, MPI_COMM_WORLD, &status);
-    } 
+      nItems = nLostCounts[i]*totalPropertiesPerParticle;
+      if (nItems) {
+        MPI_Recv (&(*lostParticle)[displs][0], nItems, MPI_DOUBLE, i, 102, MPI_COMM_WORLD, &status);
+      }
+    }
   } else {
     /* send information for lost particles */
-    MPI_Send (&(*lostParticles)[nSurvived][0], my_nLost*(COORDINATES_PER_PARTICLE+1), MPI_DOUBLE, root, 102, MPI_COMM_WORLD);  
+    if (my_nLost) 
+      MPI_Send (&coord[nSurvived][0], my_nLost*totalPropertiesPerParticle, MPI_DOUBLE, root, 102, MPI_COMM_WORLD);  
   }
 
-  if (myid==0) {
+  if (myid==0)
     *nLost = nLost_total;
-  }
+  free(nLostCounts);
 }
 #endif

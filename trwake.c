@@ -82,8 +82,8 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
 #endif
         if (np>max_np) {
           if (part)
-            free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
-          part = (double**)czarray_2d(sizeof(double), np, COORDINATES_PER_PARTICLE);
+            free_czarray_2d((void**)part, max_np, totalPropertiesPerParticle);
+          part = (double**)czarray_2d(sizeof(double), np, totalPropertiesPerParticle);
           time = (double*)tmalloc(sizeof(*time)*np);
           pbin = trealloc(pbin, sizeof(*pbin)*np);
           pz = trealloc(pz, sizeof(*pz)*np);
@@ -93,7 +93,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
           time[ip] = time0[ipBucket[iBucket][ip]];
           tmean += time[ip];
           pz[ip] = 0;
-          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*COORDINATES_PER_PARTICLE);
+          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*totalPropertiesPerParticle);
         }
         if (np>0)
           tmean /= np;
@@ -249,7 +249,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
 #endif
           
           for (ip=0; ip<np; ip++)
-            memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*COORDINATES_PER_PARTICLE);
+            memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*totalPropertiesPerParticle);
           
 #ifdef DEBUG
           printf("Done with bucket %ld\n", iBucket);
@@ -267,7 +267,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
 #endif
 
   if (part && part!=part0)
-    free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
+    free_czarray_2d((void**)part, max_np, totalPropertiesPerParticle);
   if (time && time!=time0) 
     free(time);
   if (pbin)

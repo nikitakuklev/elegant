@@ -216,14 +216,14 @@ void track_through_trfmode(
         if ((np = npBucket[iBucket])==0)
           continue;
         if (part)
-          free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
-        part = (double**)czarray_2d(sizeof(double), np, COORDINATES_PER_PARTICLE);
+          free_czarray_2d((void**)part, max_np, totalPropertiesPerParticle);
+        part = (double**)czarray_2d(sizeof(double), np, totalPropertiesPerParticle);
         time = (double*)trealloc(time, sizeof(*time)*np);
         pbin = (long*)trealloc(pbin, sizeof(*pbin)*np);
         max_np = np;
         for (ip=0; ip<np; ip++) {
           time[ip] = time0[ipBucket[iBucket][ip]];
-          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*COORDINATES_PER_PARTICLE);
+          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*totalPropertiesPerParticle);
         }
       }
       
@@ -480,7 +480,7 @@ void track_through_trfmode(
       
       if (nBuckets!=1) {
         for (ip=0; ip<np; ip++)
-          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*COORDINATES_PER_PARTICLE);
+          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*totalPropertiesPerParticle);
       }
       
 
@@ -524,7 +524,7 @@ void track_through_trfmode(
   free(Vybin);
   free(Vzbin);
   if (part && part!=part0)
-    free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
+    free_czarray_2d((void**)part, max_np, totalPropertiesPerParticle);
   if (time && time!=time0)
     free(time);
   if (pbin)

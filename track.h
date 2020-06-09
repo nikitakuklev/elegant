@@ -75,11 +75,29 @@ extern "C" {
 extern double particleMass, particleCharge, particleMassMV, particleRadius, particleRelSign;
 extern long particleIsElectron;
 
-/* Coordinates are x, x', y, y', s, delta, particleID */
-#define COORDINATES_PER_PARTICLE 7
+  /* coordinates are (x, xp, y, yp, s, delta) */
+#define COORDINATES_PER_PARTICLE 6
+  /* input/output coordinates are (x, xp, y, yp, s, delta, particle ID) */
+#define IO_COORDINATES_PER_PARTICLE 7
+  /* Basic properties are particle ID, pass of loss, bunch number, weight. They are always present. 
+   * If pass of loss is negative, particle is active */
+#define BASIC_PROPERTIES_PER_PARTICLE 4
+#define particleIDIndex COORDINATES_PER_PARTICLE
+#define lossPassIndex (COORDINATES_PER_PARTICLE+1)
+  /* These aren't actually used yet. */
+#define bunchIndex (COORDINATES_PER_PARTICLE+2)
+#define weightIndex (COORDINATES_PER_PARTICLE+3)
+  /* These values will be determined when program is initialized */
+  /* Global loss properties are X, Y, Z of loss. Memory for these won't be allocated unless requested. */
+#define GLOBAL_LOSS_PROPERTIES_PER_PARTICLE 3
+  /* This can be used to safely over-size arrays when we don't care about saving space */
+#define MAX_PROPERTIES_PER_PARTICLE (COORDINATES_PER_PARTICLE+BASIC_PROPERTIES_PER_PARTICLE+GLOBAL_LOSS_PROPERTIES_PER_PARTICLE)
+  /* These will be computed based on run-time needs */
+extern int totalPropertiesPerParticle, globalLossCoordOffset;
+extern size_t sizeOfParticle;
 
 /* number of sigmas for gaussian random numbers in radiation emission simulation in CSBEND, KQUAD, etc. */
-extern double srGaussianLimit;
+  extern double srGaussianLimit;
 
 /* various user-controlled global flags and settings (global_settings namelist) */
 extern long inhibitFileSync;
@@ -677,14 +695,6 @@ typedef struct {
     long statistic;
     } OPTIMIZATION_DATA;
 
-typedef struct {
-  double **particle;      /* coordinates of lost particles, with pass on which a particle is lost */	
-  ELEMENT_LIST **eptr;    /* pointer to element in which loss occurs */
-  short recordEptr;       /* whether to record element at which loss occurs---needed only in order to get global coordinates */
-  long nLost;             /* number of particles in the array */
-  long nLostMax;          /* size of the buffer */
-} LOST_BEAM;
-
 /* structure to store particle coordinates */
 typedef struct {
     double **original;      /* original particle data */
@@ -693,6 +703,7 @@ typedef struct {
     double p0_original;     /* initial central momentum */
     double **particle;      /* current/final coordinates */
     long n_to_track;        /* initial number of particles being tracked. */
+    long n_lost; 
     int32_t id_slots_per_bunch;     /* if non-zero, the bunch # is (int)((particleID-1)/id_slots_per_bunch) */
 #if SDDS_MPI_IO
   long n_to_track_total;    /* The total number of particles being tracked on all the processors */
@@ -700,9 +711,8 @@ typedef struct {
 #endif
     long n_particle;        /* size of particle and accepted arrays */
     double p0;              /* current/final central momentum */
-    double **accepted;      /* coordinates of accepted particles, with loss info on lost particles */
+    double **accepted;      /* coordinates of accepted particles */
     long n_accepted;        /* final number of particles being tracked. */
-    LOST_BEAM lostBeam;
     double bunchFrequency;
     } BEAM;
 void free_beamdata(BEAM *beam);
@@ -3717,7 +3727,7 @@ extern long do_tracking(BEAM *beam, double **coord, long n_original, long *effor
                         unsigned long flags, long n_passes, long passOffset, SASEFEL_OUTPUT *sasefel,
 			SLICE_OUTPUT *sliceAnalysis,
                         double *finalCharge, double **lostParticles, ELEMENT_LIST *startElem);
-extern void recordLostParticles(double **coord, long nLeft, long nLostNew, LOST_BEAM *lostBeam, long pass);
+extern void recordLostParticles(BEAM *beam, double **coord, long nLeft, long nLostNew, long pass);
 extern void resetElementTiming();
 extern void reportElementTiming();
 
@@ -4456,8 +4466,7 @@ extern void dump_watch_parameters(WATCH *watch, long step, long pass, long n_pas
 extern void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles,
                            long original_particles,  double Po);
 extern void do_watch_FFT(double **data, long n_data, long slot, long window_code);
-extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, ELEMENT_LIST **eptr,
-				long particles, long step);
+extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particles, long step);
 extern void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long bunch,
                           double p_central);
 extern void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po,
@@ -4592,6 +4601,9 @@ void swapParticles(double *p1, double *p2);
 void setupMomentumApertureSearch(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 void finishMomentumApertureSearch();
 long doMomentumApertureSearch(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
+#if USE_MPI
+void gatherLostParticles(double ***lostParticles, long *nLost, double **coord, long nSurvived, long n_processors, int myid);
+#endif
 
 /* prototypes for drand_oag.c */
 double random_1_elegant(long iseed);
@@ -4600,7 +4612,6 @@ double random_1_elegant(long iseed);
 /* prototypes for media_oag.c */
 long approximate_percentiles_p(double *position, double *percent, long positions, double *x, long n, 
 			       long bins);
-long find_median_of_row_p(double *best_particle, double **x, long index, long n, long n_total);
 #endif
 
 #define RESTART_RN_BEAMLINE 0x0001

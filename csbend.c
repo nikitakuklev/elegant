@@ -672,8 +672,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         csbend->refKicks = 0;
       }
       
-      part0 = (double**)czarray_2d(sizeof(double), 1, COORDINATES_PER_PARTICLE);
-      memset(part0[0], 0, sizeof(**part0)*COORDINATES_PER_PARTICLE);
+      part0 = (double**)czarray_2d(sizeof(double), 1, totalPropertiesPerParticle);
+      memset(part0[0], 0, sizeof(**part0)*totalPropertiesPerParticle);
       memcpy(&csbend0, csbend, sizeof(*csbend));
       csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 
         csbend0.fseDipole = csbend0.fseQuadrupole = csbend0.xKick = csbend0.yKick = 0;
@@ -692,7 +692,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       csbend->refKicks = csbend->n_kicks;
       csbend->refLength = csbend->length;
       csbend->refAngle = csbend->angle;
-      free_czarray_2d((void**)part0, 1, COORDINATES_PER_PARTICLE);
+      free_czarray_2d((void**)part0, 1, totalPropertiesPerParticle);
 
       refTrajectoryData = csbend->refTrajectoryChange;
       refTrajectoryPoints = csbend->refKicks;
@@ -5457,8 +5457,8 @@ static double **optParticle = NULL;
 double csbend_fse_adjustment_penalty(double *value, long *invalid) 
 {
   if (!optParticle) 
-    optParticle = (double**)czarray_2d(sizeof(**optParticle), 1, COORDINATES_PER_PARTICLE);
-  memset(optParticle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**optParticle));
+    optParticle = (double**)czarray_2d(sizeof(**optParticle), 1, totalPropertiesPerParticle);
+  memset(optParticle[0], 0, totalPropertiesPerParticle*sizeof(**optParticle));
 
   csbendWorking.fseCorrectionValue = *value;
   optimizationEvaluations ++;
@@ -5480,7 +5480,7 @@ void csbend_update_fse_adjustment(CSBEND *csbend)
       (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2 ||
        csbend->edge_effects[csbend->e1Index]==4 || csbend->edge_effects[csbend->e2Index]==4)) {
     if (!optParticle) 
-      optParticle = (double**)czarray_2d(sizeof(**optParticle), 1, COORDINATES_PER_PARTICLE);
+      optParticle = (double**)czarray_2d(sizeof(**optParticle), 1, totalPropertiesPerParticle);
     fseUser = csbend->fse;
     csbend->fse = 0;
     memcpy(&csbendWorking, csbend, sizeof(csbendWorking));

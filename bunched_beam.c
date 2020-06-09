@@ -225,7 +225,7 @@ void setup_bunched_beam(
   if (!one_random_bunch)
     save_initial_coordinates = save_original;
   if (isSlave || !notSinglePart) {
-    beam->particle = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, COORDINATES_PER_PARTICLE);
+    beam->particle = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, totalPropertiesPerParticle);
   }	
 #if SDDS_MPI_IO
   else {	
@@ -236,7 +236,7 @@ void setup_bunched_beam(
     if (!save_initial_coordinates)
       beam->original = beam->particle;
     else
-      beam->original = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, COORDINATES_PER_PARTICLE);
+      beam->original = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, totalPropertiesPerParticle);
   }
 #if SDDS_MPI_IO
   else
@@ -244,7 +244,7 @@ void setup_bunched_beam(
 #endif
   if(isSlave) {
     if (run->acceptance) 
-      beam->accepted = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, COORDINATES_PER_PARTICLE);
+      beam->accepted = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, totalPropertiesPerParticle);
     else
       beam->accepted = NULL;
   }
@@ -256,10 +256,7 @@ void setup_bunched_beam(
   beam->n_accepted = beam->n_saved = 0;
   firstIsFiducial = first_is_fiducial;
   beamCounter = 0;
-  beam->lostBeam.particle = NULL;	
-  beam->lostBeam.nLost = beam->lostBeam.nLostMax = 0;
-  beam->lostBeam.eptr = NULL;
-  beam->lostBeam.recordEptr = run->lossesIncludeGlobalCoordinates;
+  beam->n_lost = 0;
 
   if (one_random_bunch) {
     /* make a seed for reinitializing the beam RN generator */
@@ -346,15 +343,14 @@ long new_bunched_beam(
 #if USE_MPI
       lessPartAllowed = 1;  /* All the processors will do the same thing from now */
       if (isMaster) { /* For parallel I/O version, memory will be allocated for one particle on master */
-	beam->particle=(double**)czarray_2d(sizeof(double),1,COORDINATES_PER_PARTICLE);
+	beam->particle=(double**)czarray_2d(sizeof(double),1,totalPropertiesPerParticle);
 	if (!save_initial_coordinates)
 	  beam->original = beam->particle;
 	else
-	  beam->original=(double**)czarray_2d(sizeof(double),1,COORDINATES_PER_PARTICLE);
+	  beam->original=(double**)czarray_2d(sizeof(double),1,totalPropertiesPerParticle);
 	if (run->acceptance)
-	  beam->accepted=(double**)czarray_2d(sizeof(double),1,COORDINATES_PER_PARTICLE);
-        beam->lostBeam.particle = NULL;	
-        beam->lostBeam.nLost = beam->lostBeam.nLostMax = 0;
+	  beam->accepted=(double**)czarray_2d(sizeof(double),1,totalPropertiesPerParticle);
+        beam->n_lost = 0;
       }	
 #endif
     }
@@ -370,15 +366,14 @@ long new_bunched_beam(
 	  beam->particle = beam->original = beam->accepted = NULL;
 	  beam->n_original = beam->n_to_track = beam->n_particle = 0;
 	} else {
-	  beam->particle=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,COORDINATES_PER_PARTICLE);
+	  beam->particle=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,totalPropertiesPerParticle);
 	  if (!save_initial_coordinates)
 	    beam->original = beam->particle;
 	  else if (!bunchGenerated)
-	    beam->original=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,COORDINATES_PER_PARTICLE);
+	    beam->original=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,totalPropertiesPerParticle);
 	  if (run->acceptance)
-	    beam->accepted=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,COORDINATES_PER_PARTICLE);
-          beam->lostBeam.particle = NULL;	
-          beam->lostBeam.nLost = beam->lostBeam.nLostMax = 0;
+	    beam->accepted=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,totalPropertiesPerParticle);
+          beam->n_lost = 0;
 	}
       }
 #endif
@@ -562,7 +557,7 @@ long new_bunched_beam(
                 (control->i_step-1)*(beta*c_mks)/control->bunch_frequency:0;
     for (i_particle=0; i_particle<beam->n_to_track; i_particle++) {
       if (beam->particle!=beam->original) {
-          for (i_coord=0; i_coord<COORDINATES_PER_PARTICLE; i_coord++) 
+          for (i_coord=0; i_coord<totalPropertiesPerParticle; i_coord++) 
             beam->particle[i_particle][i_coord] = beam->original[i_particle][i_coord];
 #if USE_MPI
           beam->original[i_particle][6] += beam->n_to_track_total;
@@ -802,28 +797,21 @@ void do_track_beam_output(RUN *run, VARY *control,
 	  if (isMaster) 
             n_lost = 0;
           else
-            n_lost = beam->lostBeam.nLost;
+            n_lost = beam->n_lost;
 	  MPI_Reduce (&n_lost, &total_lost, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	} else 
-	  total_lost = beam->lostBeam.nLost;
+	  total_lost = beam->n_lost;
 	printf("n_lost = %ld\n", total_lost);
       }
 #else
-      printf("n_lost = %ld\n", beam->lostBeam.nLost);
+      printf("n_lost = %ld\n", beam->n_lost);
 #endif
       fflush(stdout);
     }
 
-    dump_lost_particles(&output->SDDS_losses, beam->lostBeam.particle, NULL, 
-                        beam->lostBeam.recordEptr ? beam->lostBeam.eptr : NULL, 
-			beam->lostBeam.nLost, control->i_step);
-    if (beam->lostBeam.particle && beam->lostBeam.nLostMax)
-      free_czarray_2d((void**)beam->lostBeam.particle, beam->lostBeam.nLostMax, COORDINATES_PER_PARTICLE);
-    if (beam->lostBeam.recordEptr && beam->lostBeam.eptr)
-      free(beam->lostBeam.eptr);
-    beam->lostBeam.particle = NULL;
-    beam->lostBeam.eptr = NULL;
-    beam->lostBeam.nLost =  beam->lostBeam.nLostMax = 0;
+    dump_lost_particles(&output->SDDS_losses, beam->particle+beam->n_to_track-beam->n_lost, 
+			beam->n_lost, control->i_step);
+    beam->n_lost = 0;
     if (!(flags&SILENT_RUNNING)) {
       printf("done.\n");
       fflush(stdout);

@@ -198,6 +198,11 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
 	printf("Point X=%le, Z=%le is inside\n", X, Z);
 	logInside(X, Z, part[6], 0, 1);
       */
+        if (globalLossCoordOffset!=-1) {
+          part[globalLossCoordOffset+0] = X;
+          part[globalLossCoordOffset+1] = Y;
+          part[globalLossCoordOffset+2] = Z;
+        }
 	return 1;
       }
     }
@@ -223,7 +228,7 @@ long insideObstruction_xyz
                 */
  )
 {
-  double part[7] ={0,0,0,0,0,0,0};
+  double part[MAX_PROPERTIES_PER_PARTICLE];
   double sin_tilt, cos_tilt;
 
   if (!obstructionDataSets.initialized || !obstructionsInForce) return 0;
@@ -235,10 +240,9 @@ long insideObstruction_xyz
     sin_tilt = 0;
     cos_tilt = 1;
   }
+  memset(&part[0], 0, sizeof(double)*MAX_PROPERTIES_PER_PARTICLE);
   part[0] =  x*cos_tilt - y*sin_tilt;
   part[2] =  x*sin_tilt + y*cos_tilt;
-  part[4] = 0;
-  part[6] = 0;
   return insideObstruction(part, mode, dz, segment, nSegments);
 }
 
@@ -317,8 +321,8 @@ long insideObstruction_XYZ
 	  lossCoordinates[1] = Y1;
 	  lossCoordinates[2] = Z1;
 	}
-	logInside(X1, Z1, -1, 1, 1);
 	/*
+          logInside(X1, Z1, -1, 1, 1);
 	  printf("Lost on obstruction: %le, %le, %le\n", X, Y, Z);
 	  fflush(stdout);
 	*/
@@ -326,7 +330,9 @@ long insideObstruction_XYZ
       }
     }
   }
+  /*
   logInside(X1, Z1, -1, 1, 0);
+  */
   return 0;
 }
 

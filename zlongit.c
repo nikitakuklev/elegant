@@ -171,8 +171,8 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
           fflush(stdout);
 #endif
           if (part)
-            free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
-          part = (double**)czarray_2d(sizeof(double), np, COORDINATES_PER_PARTICLE);
+            free_czarray_2d((void**)part, max_np, totalPropertiesPerParticle);
+          part = (double**)czarray_2d(sizeof(double), np, totalPropertiesPerParticle);
           time = (double*)trealloc(time, sizeof(*time)*np);
           pbin = trealloc(pbin, sizeof(*pbin)*np);
           max_np = np;
@@ -184,7 +184,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #endif
           for (ip=0; ip<np; ip++) {
             time[ip] = time0[ipBucket[iBucket][ip]];
-            memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*COORDINATES_PER_PARTICLE);
+            memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*totalPropertiesPerParticle);
           }
         }
       }
@@ -491,7 +491,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         fflush(stdout);
 #endif
         for (ip=0; ip<np; ip++)
-          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*COORDINATES_PER_PARTICLE);
+          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*totalPropertiesPerParticle);
 
       }
 #if USE_MPI
@@ -536,7 +536,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   if (Ifreq)
     free(Ifreq);
   if (part && part!=part0 && max_np>0)
-    free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
+    free_czarray_2d((void**)part, max_np, totalPropertiesPerParticle);
   if (time && time!=time0) 
     free(time);
   if (pbin)

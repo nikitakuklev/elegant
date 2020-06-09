@@ -525,7 +525,7 @@ long doTuneFootprint(
 
   /* Perform fiducialization by tracking one turn */
   if (!one_part)
-    one_part = (double**)czarray_2d(sizeof(**one_part), 1, COORDINATES_PER_PARTICLE);
+    one_part = (double**)czarray_2d(sizeof(**one_part), 1, MAX_PROPERTIES_PER_PARTICLE);
   n_part = 1;
   if (referenceCoord) {
     long i;

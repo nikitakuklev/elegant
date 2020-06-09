@@ -172,11 +172,11 @@ long track_through_ccbend(
         ccbend->referenceData[3] = ccbend->K2;
         ccbend->referenceData[4] = ccbend->yaw;
 
-        particle0 = (double**)czarray_2d(sizeof(**particle0), 1, COORDINATES_PER_PARTICLE);
-        memset(particle0[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
+        particle0 = (double**)czarray_2d(sizeof(**particle0), 1, totalPropertiesPerParticle);
+        memset(particle0[0], 0, totalPropertiesPerParticle*sizeof(**particle));
         track_through_ccbend(particle0, 1, eptr, ccbend, Po, NULL, 0.0, NULL, NULL, NULL, NULL, -1, 0);
         ccbend->lengthCorrection = ccbend->length - particle0[0][4];
-        free_czarray_2d((void**)particle0, 1, COORDINATES_PER_PARTICLE);
+        free_czarray_2d((void**)particle0, 1, totalPropertiesPerParticle);
         ccbend->optimized = 1;
 	if (ccbend->verbose) {
 	  printf("CCBEND %s#%ld optimized: FSE=%le, dx=%le, accuracy=%le\n",
@@ -1111,8 +1111,8 @@ double ccbend_trajectory_error(double *value, long *invalid)
     return DBL_MAX;
   }
   if (!particle) 
-    particle = (double**)czarray_2d(sizeof(**particle), 1, COORDINATES_PER_PARTICLE);
-  memset(particle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
+    particle = (double**)czarray_2d(sizeof(**particle), 1, totalPropertiesPerParticle);
+  memset(particle[0], 0, totalPropertiesPerParticle*sizeof(**particle));
   ccbendCopy.dxOffset = value[1];
   if (ccbendCopy.compensateKn)
     ccbendCopy.KnDelta = -ccbendCopy.fseOffset;
@@ -1153,7 +1153,7 @@ VMATRIX *determinePartialCcbendLinearMatrix(CCBEND *ccbend, double *startingCoor
   notSinglePart = 0;
 #endif
    		 
-  coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, COORDINATES_PER_PARTICLE);
+  coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, totalPropertiesPerParticle);
 
   n_track = 4*6+1;
   for (j=0; j<6; j++)
@@ -1242,7 +1242,7 @@ VMATRIX *determinePartialCcbendLinearMatrix(CCBEND *ccbend, double *startingCoor
     }
   }
 
-  free_czarray_2d((void**)coord, 1+4*6, COORDINATES_PER_PARTICLE);
+  free_czarray_2d((void**)coord, 1+4*6, totalPropertiesPerParticle);
 
 #if USE_MPI
   notSinglePart = notSinglePart_saved;

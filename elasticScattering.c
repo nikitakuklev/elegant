@@ -23,8 +23,6 @@ static SDDS_DATASET SDDSout;
 static long fireOnPass = 1;
 static FILE *fp_log = NULL;
 
-void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, long n_processors, int myid);
-
 static double betax0, betay0;
 static long nElements;
 static ELEMENT_LIST **elementArray = NULL;
@@ -343,14 +341,12 @@ long runElasticScattering(
     fflush(stdout);
   }
   
-  if (myid!=0) {
+  if (myid!=0)
     /* allocate and initialize array for tracking */
-    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor, COORDINATES_PER_PARTICLE);
-    lostParticles = (double**)czarray_2d(sizeof(**lostParticles), nEachProcessor, COORDINATES_PER_PARTICLE+1);	 
-  } else {
-    coord = (double**)czarray_2d(sizeof(**coord), 1, COORDINATES_PER_PARTICLE);
-    lostParticles = (double**)czarray_2d(sizeof(**lostParticles), nEachProcessor*nWorkingProcessors, COORDINATES_PER_PARTICLE);
-  }
+    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor, totalPropertiesPerParticle);
+  else
+    /* Used to track the fiducial particle */
+    coord = (double**)czarray_2d(sizeof(**coord), 1, totalPropertiesPerParticle);
 
   if (control->n_passes==1)
     fireOnPass = 0;
@@ -402,7 +398,7 @@ long runElasticScattering(
   if (myid!=0) {
     nLeft = nEachProcessor;
     for (ip=0; ip<nLeft; ip++) 
-      lostParticles[ip][6] = -2;
+      coord[ip][6] = -2;
     for (ip=0; ip<nLeft; ip++) {
       if (startingCoord)
         memcpy(coord[ip], startingCoord, sizeof(**coord)*6);
@@ -428,7 +424,7 @@ long runElasticScattering(
     nLeft = do_tracking(NULL, coord, nLeft, NULL, beamline, &pCentral, 
                         NULL, NULL, NULL, NULL, run, control->i_step, 
                         FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING+INHIBIT_FILE_OUTPUT, 
-                        control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
+                        control->n_passes, 0, NULL, NULL, NULL, NULL, NULL);
     nLost -= nLeft;
     printf("Done tracking nLeft = %ld, nLost = %ld\n", nLeft, nLost);
     fflush(stdout);
@@ -498,8 +494,7 @@ long runElasticScattering(
     notSinglePart = nsp;
   }
 
-  nLeft = 0;
-  gatherLostParticles(&lostParticles, &nLost, nLeft, n_processors, myid);
+  gatherLostParticles(&lostParticles, &nLost, coord, nLeft, n_processors, myid);
   if (myid==0 || mpiDebug) {
     printf("Lost-particle gather done, nLost = %ld\n", nLost); 
     fflush(stdout);
@@ -524,7 +519,7 @@ long runElasticScattering(
         if (lostParticles[ip][6]==-2) {
           long j;
           printf("Problem with lost-particle accounting\n");
-          for (j=0; j<COORDINATES_PER_PARTICLE+1; j++)
+          for (j=0; j<totalPropertiesPerParticle+1; j++)
             printf("coord[%ld] = %le\n", j, lostParticles[ip][j]);
           bombElegant("problem with lost particle accounting!", NULL);
         }
@@ -584,8 +579,8 @@ long runElasticScattering(
     }
     if (!inhibitFileSync)
       SDDS_DoFSync(&SDDSsa);
-    free_czarray_2d((void**)coord, 1, COORDINATES_PER_PARTICLE);
-    free_czarray_2d((void**)lostParticles, nEachProcessor*nWorkingProcessors, COORDINATES_PER_PARTICLE+1);	 
+    free_czarray_2d((void**)coord, 1, totalPropertiesPerParticle);
+    free_czarray_2d((void**)lostParticles, nLost, totalPropertiesPerParticle);	 
     if (badThetaMin) {
       printf("*** Warning: in %ld cases, a particle that was on the inner ring (theta = theta_min) was lost.\n",
              badThetaMin);
@@ -597,8 +592,7 @@ long runElasticScattering(
     }
   }
   else {
-    free_czarray_2d((void**)coord, nEachProcessor, COORDINATES_PER_PARTICLE);
-    free_czarray_2d((void**)lostParticles, nEachProcessor, COORDINATES_PER_PARTICLE+1);	 
+    free_czarray_2d((void**)coord, nEachProcessor, totalPropertiesPerParticle);
   }
 
   if (verbosity>3 && (myid==0 || mpiDebug)) {

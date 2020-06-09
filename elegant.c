@@ -84,18 +84,18 @@ void showUsageOrGreeting (unsigned long mode)
 #if USE_MPI
  #if HAVE_GPU
   char *USAGE="usage: mpirun -np <number of processes> gpu-Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is gpu-Pelegant 2020.3Beta1 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is gpu-Pelegant 2020.3Beta2 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #else
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is elegant 2020.3Beta1, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 2020.3Beta2, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #endif
 #else
  #if HAVE_GPU
   char *USAGE="usage: gpu-elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is gpu-elegant 2020.3Beta1 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is gpu-elegant 2020.3Beta2 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is elegant 2020.3Beta1, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 2020.3Beta2, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #endif
 #endif
   time_t timeNow;
@@ -363,7 +363,7 @@ char **argv;
   long last_default_order = 0, new_beam_flags, twiss_computed = 0;
   /* long correctionDone, moments_computed = 0, links_present; */
   long linear_chromatic_tracking_setup_done = 0, ionEffectsSeen = 0;
-  double *starting_coord, finalCharge;
+  double *starting_coord = NULL, finalCharge;
   long namelists_read = 0, failed, firstPass, namelistErrorCode=0;
   long lastCommandCode = 0;
   unsigned long pipeFlags = 0;
@@ -653,8 +653,6 @@ char **argv;
   
   run_setuped = run_controled = error_controled = correction_setuped = ionEffectsSeen = 0;
   
-  starting_coord = tmalloc(sizeof(*starting_coord)*COORDINATES_PER_PARTICLE);
-  
   beam_type = -1;
   if (configurationFile) {
     inputFileArray[0] = configurationFile;
@@ -762,7 +760,17 @@ char **argv;
       run_conditions.showElementTiming = show_element_timing;
       run_conditions.monitorMemoryUsage = monitor_memory_usage;
       run_conditions.backtrack = back_tracking; 
-      run_conditions.lossesIncludeGlobalCoordinates = losses_include_global_coordinates;
+      if (run_conditions.lossesIncludeGlobalCoordinates = losses_include_global_coordinates) {
+        globalLossCoordOffset = COORDINATES_PER_PARTICLE + BASIC_PROPERTIES_PER_PARTICLE;
+        totalPropertiesPerParticle = COORDINATES_PER_PARTICLE + BASIC_PROPERTIES_PER_PARTICLE + GLOBAL_LOSS_PROPERTIES_PER_PARTICLE;
+      } else {
+        globalLossCoordOffset = -1;
+        totalPropertiesPerParticle = COORDINATES_PER_PARTICLE + BASIC_PROPERTIES_PER_PARTICLE;
+      }
+      sizeOfParticle = totalPropertiesPerParticle*sizeof(double);
+      if (starting_coord)
+        free(starting_coord);
+      starting_coord = tmalloc(sizeOfParticle);
       if ((run_conditions.final_pass = final_pass))
         run_conditions.wrap_around = 1;
       run_conditions.tracking_updates = tracking_updates;
@@ -2446,23 +2454,16 @@ char *translateUnitsToTex(char *source)
 void free_beamdata(BEAM *beam)
 {
   if (beam->particle)
-    free_czarray_2d((void**)beam->particle, beam->n_particle, COORDINATES_PER_PARTICLE);
+    free_czarray_2d((void**)beam->particle, beam->n_particle, totalPropertiesPerParticle);
   if (beam->accepted)
-    free_czarray_2d((void**)beam->accepted, beam->n_particle, COORDINATES_PER_PARTICLE);
+    free_czarray_2d((void**)beam->accepted, beam->n_particle, totalPropertiesPerParticle);
   if (beam->original && beam->original!=beam->particle)
-    free_czarray_2d((void**)beam->original, beam->n_original, COORDINATES_PER_PARTICLE);
-  if (beam->lostBeam.particle)
-    free_czarray_2d((void**)beam->lostBeam.particle, beam->lostBeam.nLostMax, COORDINATES_PER_PARTICLE+1);
-  if (beam->lostBeam.recordEptr && beam->lostBeam.eptr)
-    free(beam->lostBeam.eptr);
+    free_czarray_2d((void**)beam->original, beam->n_original, totalPropertiesPerParticle);
 
   beam->particle = beam->accepted = beam->original = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
   beam->p0_original = beam->p0 =0.;
-  beam->lostBeam.particle = NULL;
-  beam->lostBeam.eptr = NULL;
-  beam->lostBeam.recordEptr = 0;
-  beam->lostBeam.nLost = beam->lostBeam.nLostMax = 0;
+  beam->n_lost = 0;
 }  
 
 long getTableFromSearchPath(TABLE *tab, char *file, long sampleInterval, long flags)
@@ -2509,12 +2510,12 @@ void getRunSetupContext (RUN *context)
 
 void swapParticles(double *p1, double *p2)
 {
-  double buffer[COORDINATES_PER_PARTICLE];
+  double buffer[MAX_PROPERTIES_PER_PARTICLE];
   if (p1==p2)
     return;
-  memcpy(buffer,     p1, sizeof(double)*COORDINATES_PER_PARTICLE);
-  memcpy(p1    ,     p2, sizeof(double)*COORDINATES_PER_PARTICLE);
-  memcpy(p2    , buffer, sizeof(double)*COORDINATES_PER_PARTICLE);
+  memcpy(buffer,     p1, sizeOfParticle);
+  memcpy(p1    ,     p2, sizeOfParticle);
+  memcpy(p2    , buffer, sizeOfParticle);
 }
 
 void createSemaphoreFile(char *filename)
@@ -3044,7 +3045,7 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
   /* Prevent do_tracking() from recognizing these flags. Instead, we'll control behavior directly */
   /* beamline->fiducial_flag = 0; */
   
-  coord = (double**)czarray_2d(sizeof(**coord), 1, COORDINATES_PER_PARTICLE);
+  coord = (double**)czarray_2d(sizeof(**coord), 1, totalPropertiesPerParticle);
   if (startCoord)
     memcpy(coord[0], startCoord, sizeof(double)*6);
   else
