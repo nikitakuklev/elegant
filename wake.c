@@ -72,7 +72,7 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
       rampFactor = (i_pass+1.0)/wakeData->rampPasses;
     Po = *PoInput;
 
-    determine_bucket_assignments(part0, np0, (charge && wakeData->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+    index_bunch_assignments(part0, np0, (charge && wakeData->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
     
 #ifdef DEBUG
     if (nBuckets>1) {
@@ -287,7 +287,7 @@ else if (isSlave) {
   if (pbin)
     free(pbin);
   if (isSlave || !notSinglePart)
-    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+    free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
   if (Itime)
     free(Itime);
   if (Vtime)

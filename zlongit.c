@@ -124,7 +124,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #endif
 
   if (isSlave || !notSinglePart) {
-    determine_bucket_assignments(part0, np0, (charge && zlongit->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+    index_bunch_assignments(part0, np0, (charge && zlongit->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 #if USE_MPI
     if (mpiAbort)
       return;
@@ -154,10 +154,10 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
           np = 0;
         if (np && (!ibParticle || !ipBucket || !time0)) {
 #if USE_MPI
-          mpiAbort = MPI_ABORT_BUCKET_ASSIGNMENT_ERROR;
+          mpiAbort = MPI_ABORT_BUNCH_ASSIGNMENT_ERROR;
           return;
 #else
-          printf("Problem in determine_bucket_assignments. Seek professional help.\n");
+          printf("Problem in index_bunch_assignments. Seek professional help.\n");
           exitElegant(1);
 #endif
         }
@@ -543,7 +543,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
     free(pbin);
 
   if (isSlave || !notSinglePart)
-      free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+      free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 
 #if USE_MPI
   MPI_Barrier(workers);

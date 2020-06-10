@@ -389,7 +389,10 @@ long new_sdds_beam(
           beam->particle[i_store][3] = (pr*sin_theta + pphi*cos_theta)/pz;
           beam->particle[i_store][4] = path;
           beam->particle[i_store][5] = delta;
-          beam->particle[i_store][6] = particleID++;
+          beam->particle[i_store][particleIDIndex] = particleID++;
+          beam->particle[i_store][lossPassIndex] = -1;
+          beam->particle[i_store][bunchIndex] = -1;
+          beam->particle[i_store][weightIndex] = 1;
         }
       }
       beam->n_to_track = i_store;
@@ -453,7 +456,10 @@ long new_sdds_beam(
         beam->particle[i_store][4] = (t_offset+beam->original[i][IEC_T])*c_mks*p/gamma;
         /* convert energy to dp/p */
         beam->particle[i_store][5] = (p-p_central)/p_central;
-        beam->particle[i_store][6] = beam->original[i][6];
+        beam->particle[i_store][particleIDIndex] = beam->original[i][particleIDIndex];
+        beam->particle[i_store][lossPassIndex] = -1;
+        beam->particle[i_store][bunchIndex] = -1;
+        beam->particle[i_store][weightIndex] = 1;
       }
       beam->n_to_track = i_store;
 #ifndef VAX_VMS
@@ -490,9 +496,15 @@ long new_sdds_beam(
       n_duplicates += 1;
       if (beam->particle!=beam->original) {
         beam->particle = (double**)resize_czarray_2d((void**)beam->particle, sizeof(double), n_duplicates*n0, totalPropertiesPerParticle);
+        beam->n_particle = n_duplicates*n0;
       } else {
         beam->particle = (double**)czarray_2d(sizeof(double), n_duplicates*n0, totalPropertiesPerParticle);
         memcpy(beam->particle[0], beam->original[0], sizeof(double)*n0*totalPropertiesPerParticle);
+        beam->n_particle = n_duplicates*n0;
+      }
+      if (run->acceptance)  {
+        beam->accepted = (double**)czarray_2d
+          (sizeof(double), beam->n_particle, totalPropertiesPerParticle);
       }
 #if USE_MPI
       printf("Arrays resized\n");
@@ -507,7 +519,10 @@ long new_sdds_beam(
           for (k=0; k<6; k++) {
             beam->particle[j][k] = beam->original[i][k] + idup*duplicate_stagger[k];
           }
-          beam->particle[j][6] = beam->original[i][6] + idup*n0Total;
+          beam->particle[j][particleIDIndex] = beam->original[i][particleIDIndex] + idup*n0Total;
+          beam->particle[j][lossPassIndex] = -1;
+          beam->particle[j][bunchIndex] = -1;
+          beam->particle[j][weightIndex] = 1;
           j++;
         }
 #ifdef MPI_DEBUG
@@ -517,7 +532,8 @@ long new_sdds_beam(
 #ifdef MPI_DEBUG
       printf("Done with all duplicates\n");
 #endif
-      beam->n_to_track = n0*n_duplicates;
+      beam->n_to_track = beam->n_particle;
+      printf("%ld particles in beam after duplication\n", beam->n_particle);
     }
 #if SDDS_MPI_IO
     }
@@ -711,7 +727,47 @@ long new_sdds_beam(
     setFiducializationBunch(fiducialization_bunch, beam->id_slots_per_bunch);
   else
     setFiducializationBunch(-1, -1);
-    
+
+  if (beam->id_slots_per_bunch) {
+    htab *hashTable;
+    char buffer[10];
+#if DEBUG
+    char *ptr;
+    long maxID = -LONG_MAX, minID = LONG_MAX;
+    long maxBunch = -LONG_MAX, minBunch = LONG_MAX;
+    printf("Assigning bunch IDs to particles (%ld PIDs per slot)\n", beam->id_slots_per_bunch);
+    fflush(stdout);
+#endif
+    hashTable = hcreate(12);
+    for (i=0; i<beam->n_particle; i++) {
+      beam->particle[i][bunchIndex] = (beam->particle[i][particleIDIndex]-1)/beam->id_slots_per_bunch;
+#if DEBUG
+      if (beam->particle[i][particleIDIndex]>maxID)
+        maxID = beam->particle[i][particleIDIndex];
+      if (beam->particle[i][particleIDIndex]<minID)
+        minID = beam->particle[i][particleIDIndex];
+      if (beam->particle[i][bunchIndex]>maxBunch)
+        maxBunch = beam->particle[i][bunchIndex];
+      if (beam->particle[i][bunchIndex]<minBunch)
+        minBunch = beam->particle[i][bunchIndex];
+#endif
+      sprintf(buffer, "%ld", (long)beam->particle[i][bunchIndex]);
+      hadd(hashTable, buffer, strlen(buffer), NULL);
+    }
+    printf("%d bunches present\n", (long)hcount(hashTable));
+#if DEBUG
+    printf("id:[%ld, %ld], b:[%ld, %ld]\n", (long)hcount(hashTable), minID, maxID,
+           minBunch, maxBunch);
+    hfirst(hashTable);
+    while (ptr=(char*)hkey(hashTable)) {
+      printf("%s\n", ptr);
+      if (!hnext(hashTable))
+        break;
+    }
+#endif
+    hdestroy(hashTable);
+  }
+
   log_exit("new_sdds_beam");
   return(beam->n_to_track);
 }
@@ -954,12 +1010,12 @@ long get_sdds_particles(double ***particle,
 		SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 	      }
 	      for (i=np; i<np_new; i++)
-		data[i][6] = index[i-np];
+		data[i][particleIDIndex] = index[i-np];
 	      free(index);
 	    }
 	    else if (input_type_code!=SPIFFE_BEAM)	
 	      for (i=np; i<np_new; i++)
-		data[i][6] = particleID++;
+		data[i][particleIDIndex] = particleID++;
 #if SDDS_MPI_IO
 	  }  /* End of active */
       } /* End of isSlave */
@@ -1020,7 +1076,7 @@ long get_sdds_particles(double ***particle,
   log_exit("get_sdds_particles");
 
   return(np);
-}            
+}
 
 void adjust_arrival_time_data(double **coord, long np, double Po, long center_t, long flip_t)
 {

@@ -126,8 +126,12 @@ long generate_bunch(
         set_beam_centroids(particle, 0, n_particles, x_plane->cent_posi, x_plane->cent_slope);
         set_beam_centroids(particle, 2, n_particles, y_plane->cent_posi, y_plane->cent_slope);
         set_beam_centroids(particle, 4, n_particles, longit->cent_s, longit->cent_dp);
-	for (i_particle=0; i_particle<n_particles; i_particle++) 
+	for (i_particle=0; i_particle<n_particles; i_particle++) {
 	  particle[i_particle][6] = particleID++;
+          particle[i_particle][lossPassIndex] = -1;
+          particle[i_particle][bunchIndex] = -1;
+          particle[i_particle][weightIndex] = 1;
+        }
       }
 #if SDDS_MPI_IO
       /* prepare for the next bunch */
@@ -497,6 +501,9 @@ long generate_bunch(
       first_particle_address[i_particle][2] += delta_p*(y_plane->eta-twissBeam.eta[2]) + y_plane->cent_posi;
       first_particle_address[i_particle][3] += delta_p*(y_plane->etap-twissBeam.eta[3]) + y_plane->cent_slope;
       first_particle_address[i_particle][6] = particleID++;
+      first_particle_address[i_particle][lossPassIndex] = -1;
+      first_particle_address[i_particle][bunchIndex] = -1;
+      first_particle_address[i_particle][weightIndex] = 1;
       if (longit->chirp) {
         delta_p = longit->chirp*first_particle_address[i_particle][4];
         first_particle_address[i_particle][5] += delta_p;
@@ -519,6 +526,9 @@ long generate_bunch(
       particle[i_particle][2] += delta_p*(y_plane->eta-twissBeam.eta[2]) + y_plane->cent_posi;
       particle[i_particle][3] += delta_p*(y_plane->etap-twissBeam.eta[3]) + y_plane->cent_slope;
       particle[i_particle][6] = particleID++;
+      particle[i_particle][lossPassIndex] = -1;
+      particle[i_particle][bunchIndex] = -1;
+      particle[i_particle][weightIndex] = 1;
       if (longit->chirp) {
         delta_p = longit->chirp*particle[i_particle][4];
         particle[i_particle][5] += delta_p;

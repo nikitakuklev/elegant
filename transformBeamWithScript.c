@@ -413,7 +413,12 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
       part[j][6] = j+1;
     printf("Changing particle ID for new particles to make them sequential\n");
   }
-  
+
+  /* update bunch assignments using PID */
+  if (beam && beam->id_slots_per_bunch>0)
+    for (j=0; j<npNew; j++) 
+      part[j][bunchIndex] = (part[j][6]-1)/beam->id_slots_per_bunch;
+
   /* Figure out the charge */
   if (charge && npNew) {
     double totalCharge, oldMacroParticleCharge;
@@ -796,6 +801,12 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
     fflush(stdout);
   }
 
+  /* update bunch assignments using PID */
+  if (beam && beam->id_slots_per_bunch>0)
+    for (j=0; j<npNew; j++) 
+      part[j][bunchIndex] = (part[j][6]-1)/beam->id_slots_per_bunch;
+
+  /* update charge */
   if ((!notSinglePart && isMaster) || notSinglePart) {
     if (charge) {
       double totalCharge, oldMacroParticleCharge;

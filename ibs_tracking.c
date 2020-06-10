@@ -108,7 +108,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
     printf("bunchedBeamMode=%ld, charge = %c, ID slots per bunch: %ld\n", IBS->bunchedBeamMode, 
            charge?'Y':'N', (charge && IBS->bunchedBeamMode)?charge->idSlotsPerBunch:0);
 #endif
-    determine_bucket_assignments(part0, np0, (charge && IBS->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+    index_bunch_assignments(part0, np0, (charge && IBS->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
 #ifdef DEBUG
     printf("%ld buckets\n", nBuckets);
@@ -546,7 +546,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   if (time && time!=time0) 
     free(time);
   if (isSlave || !notSinglePart)
-    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+    free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
   
   if (IBS->verbose) {
 #if USE_MPI

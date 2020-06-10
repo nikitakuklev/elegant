@@ -669,7 +669,7 @@ void trackWithIonEffects
 
   if (isSlave || !notSinglePart) {
     /* Determine which bunch each particle is in */
-    determine_bucket_assignments(part0, np0, charge?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBunch, &npBunch, &nBunches, -1);
+    index_bunch_assignments(part0, np0, charge?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBunch, &npBunch, &nBunches, -1);
 #if USE_MPI
     if (mpiAbort)
       return;
@@ -714,10 +714,10 @@ void trackWithIonEffects
           np = 0;
         if (np && (!ibParticle || !ipBunch || !time0)) {
 #if USE_MPI
-          mpiAbort = MPI_ABORT_BUCKET_ASSIGNMENT_ERROR;
+          mpiAbort = MPI_ABORT_BUNCH_ASSIGNMENT_ERROR;
           return;
 #else
-          printf("Problem in determine_bucket_assignments. Seek professional help.\n");
+          printf("Problem in index_bunch_assignments. Seek professional help.\n");
           exitElegant(1);
 #endif
         }
@@ -818,7 +818,7 @@ void trackWithIonEffects
   if (time && time!=time0)
     free(time);
   if (isSlave || !notSinglePart)
-    free_bucket_assignment_memory(time0, ibParticle, ipBunch, npBunch, nBunches);
+    free_bunch_index_memory(time0, ibParticle, ipBunch, npBunch, nBunches);
   if (speciesCentroid)
     free_zarray_2d((void**)speciesCentroid, ionProperties.nSpecies, 2);
   if (speciesSigma)

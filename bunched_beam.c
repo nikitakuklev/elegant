@@ -569,6 +569,9 @@ long new_bunched_beam(
         beta  = p/gamma;
         beam->particle[i_particle][5] = (p-p_central)/p_central;
         beam->particle[i_particle][4] += s_offset;
+        beam->particle[i_particle][lossPassIndex] = -1;
+        beam->particle[i_particle][bunchIndex] = -1;
+        beam->particle[i_particle][weightIndex] = 1;
         }
 
     bunchGenerated = 1;
@@ -798,7 +801,7 @@ void do_track_beam_output(RUN *run, VARY *control,
             n_lost = 0;
           else
             n_lost = beam->n_lost;
-	  MPI_Reduce (&n_lost, &total_lost, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	  MPI_Allreduce (&n_lost, &total_lost, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 	} else 
 	  total_lost = beam->n_lost;
 	printf("n_lost = %ld\n", total_lost);

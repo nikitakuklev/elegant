@@ -55,7 +55,7 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
     initializeTransverseFeedbackPickup(tfbp);
 
   if (isSlave || !notSinglePart) 
-    determine_bucket_assignments(part0, np0, tfbp->bunchedBeamMode?idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+    index_bunch_assignments(part0, np0, tfbp->bunchedBeamMode?idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
 #if USE_MPI
   MPI_Barrier(MPI_COMM_WORLD);
@@ -70,7 +70,7 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
 
   if (tfbp->updateInterval>1 && pass%tfbp->updateInterval!=0) {
     if (isSlave || !notSinglePart) 
-      free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+      free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
     return;
   }
   
@@ -177,7 +177,7 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
   }
   
   if (isSlave || !notSinglePart) 
-    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+    free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 }
 
 
@@ -264,7 +264,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     return;
 
   if (isSlave || !notSinglePart) 
-    determine_bucket_assignments(part0, np0, tfbd->bunchedBeamMode?idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+    index_bunch_assignments(part0, np0, tfbd->bunchedBeamMode?idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
 #if USE_MPI
   MPI_Barrier(MPI_COMM_WORLD);
@@ -300,7 +300,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     bombElegantVA((char*)"TFBDRIVER and TFBPICKUP with ID=%s have UPDATE_INTERVAL product of %d", tfbd->ID, updateInterval);
   if (pass%updateInterval!=0) {
     if (isSlave || !notSinglePart) 
-      free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+      free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
     return;
   }
   
@@ -577,7 +577,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
 
   if (isSlave || !notSinglePart) 
-    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+    free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 
 #if defined(DEBUG) || MPI_DEBUG
   printf("TFBDRIVER: end of routine\n");

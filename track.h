@@ -84,8 +84,8 @@ extern long particleIsElectron;
 #define BASIC_PROPERTIES_PER_PARTICLE 4
 #define particleIDIndex COORDINATES_PER_PARTICLE
 #define lossPassIndex (COORDINATES_PER_PARTICLE+1)
-  /* These aren't actually used yet. */
 #define bunchIndex (COORDINATES_PER_PARTICLE+2)
+  /* Not used yet, except to assign place-holder values. */
 #define weightIndex (COORDINATES_PER_PARTICLE+3)
   /* These values will be determined when program is initialized */
   /* Global loss properties are X, Y, Z of loss. Memory for these won't be allocated unless requested. */
@@ -148,7 +148,7 @@ extern long enableOutput;
 #define MPI_ABORT_BUNCH_TOO_LONG_ZLONGIT 1
 #define MPI_ABORT_BUNCH_TOO_LONG_ZTRANSVERSE 2
 #define MPI_ABORT_BUNCH_TOO_LONG_RFMODE 3
-#define MPI_ABORT_BUCKET_ASSIGNMENT_ERROR 4
+#define MPI_ABORT_BUNCH_ASSIGNMENT_ERROR 4
 #define MPI_ABORT_POINTER_ISSUE 5
 #define MPI_ABORT_BAD_PARTICLE_ID 6
 #define MPI_ABORT_RF_FIDUCIALIZATION_ERROR 7
@@ -3750,7 +3750,7 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
 void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass, double *pCentral),
                               ELEMENT_LIST *eptr);
 void setTrackingOmniWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral));
-void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *nLost, double ***accepted, long n_processors, int myid, double *round);
+void gatherParticles(double ***coord, long *nToTrack, long *nLost, double ***accepted, long n_processors, int myid, double *round);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
                              long np, char *mainRootname, long iPass, long driftOrder, double z, long forceSerial,
 			     long occurence, long backtrack);
@@ -4354,9 +4354,9 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
                           RUN *run, long i_pass, CHARGE *charge);
 void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *Po,
 			  RUN *run, long i_pass, CHARGE *charge);
-void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, long *nBuckets,
+void index_bunch_assignments(double **part, long np, long idSlotsPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, long *nBuckets,
                                   long lastNBuckets);
-void free_bucket_assignment_memory(double *time0, long *ibParticle, long **ipBucket, long *npBucket, long nBuckets);
+void free_bunch_index_memory(double *time0, long *ibParticle, long **ipBucket, long *npBucket, long nBuckets);
 
 void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge, 
                 double lengthScale, double dgammaOverGamma);

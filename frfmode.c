@@ -94,7 +94,7 @@ void track_through_frfmode(
     printf("FRFMODE: Determining bucket assignments\n");
     fflush(stdout);
 #endif
-    determine_bucket_assignments(part0, np0, rfmode->bunchedBeamMode?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+    index_bunch_assignments(part0, np0, rfmode->bunchedBeamMode?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 #if USE_MPI
     if (mpiAbort)
       return;
@@ -431,7 +431,7 @@ void track_through_frfmode(
   if (pbin)
     free(pbin);
   if (isSlave || !notSinglePart)
-    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+    free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 #ifdef DEBUG
     printf("FRFMODE: Returning\n");
     fflush(stdout);

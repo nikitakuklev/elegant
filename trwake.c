@@ -64,7 +64,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
     rampFactor = (i_pass+1.0)/wakeData->rampPasses;
 
   if (isSlave || !notSinglePart) {
-    determine_bucket_assignments(part0, np0, (charge && wakeData->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+    index_bunch_assignments(part0, np0, (charge && wakeData->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
     for (iBucket=0; iBucket<nBuckets; iBucket++) {
       if (nBuckets==1) {
@@ -273,7 +273,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
   if (pbin)
     free(pbin);
   if (isSlave || !notSinglePart)
-    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+    free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
   if (Vtime)
     free(Vtime);
   if (pz)

@@ -221,7 +221,7 @@ void track_through_rfmode(
 #ifdef DEBUG
       printf("RFMODE: Determining bucket assignments\n");
 #endif
-      determine_bucket_assignments(part0, np0, (charge && rfmode->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+      index_bunch_assignments(part0, np0, (charge && rfmode->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 #if USE_MPI
       if (mpiAbort)
         return;
@@ -1108,7 +1108,7 @@ void track_through_rfmode(
     if (pbin)
       free(pbin);
     if (isSlave || !notSinglePart)
-      free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+      free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
   }
 
 void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_passes, 

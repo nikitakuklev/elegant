@@ -82,8 +82,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
                       double my_rate, double nParPerElements, double round,
                       int lostSinceSeqMod,int *distributed, 
                       long *reAllocate, double *P_central);
-void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, 
-                     long *nLost, double ***accepted, long n_processors, 
+void gatherParticles(double ***coord, long *nToTrack, long *nLost, double ***accepted, long n_processors, 
                      int myid, double *round);
 /* Avoid unnecessary communications by checking if an operation will be executed in advance*/
 int usefulOperation (ELEMENT_LIST *eptr, unsigned long flags, long i_pass);
@@ -929,7 +928,7 @@ long do_tracking(
                 char buffer[16384];
                 snprintf(buffer, 16384, "%s (%s) is a serial element. It is not recommended for simulations with a large number of particles because of possible memory issues.", eptr->name, entity_name[eptr->type]);
                 printWarning(buffer, NULL);
-		gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, 
+		gatherParticles(&coord, &nToTrack, &nLost, &accepted, 
 				n_processors, myid, &round);
 		if (isMaster)
 		  nMaximum = nToTrack;
@@ -959,7 +958,7 @@ long do_tracking(
 	      active = 1;
 	  }
 	  if ((balanceStatus==badBalance) && (parallelStatus==trueParallel)) {
-	    gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
+	    gatherParticles(&coord, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
 	    nMaximum = nToTrack;
 	    nLeft = nToTrack;
 	  } 
@@ -1515,7 +1514,7 @@ long do_tracking(
                         snprintf(buffer, 16384, "%s (%s FFT) is a serial element. It is not recommended for simulations with a large number of particles because of possible memory issues.", eptr->name, entity_name[eptr->type]);
                         printWarning(buffer, NULL);
 		      }
-                      gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
+                      gatherParticles(&coord, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
 		      if (isMaster)
 #endif
                         dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
@@ -2779,7 +2778,7 @@ long do_tracking(
    if (notSinglePart)
       /* change back to sequential mode before leaving the do_tracking function */
       if (parallelStatus==trueParallel && notSinglePart) {
-	gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
+	gatherParticles(&coord, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
       	MPI_Bcast(&nToTrack, 1, MPI_LONG, 0, MPI_COMM_WORLD); 
 	parallelStatus = notParallel ;
 	partOnMaster = 1;
@@ -4224,17 +4223,16 @@ void recordLostParticles(
                          )
 {
   long i;
-  /*
+
 #if USE_MPI && MPI_DEBUG
   static FILE *fp = NULL;
 #endif
-  */
+
   if (coord)
     for (i=nLeft; i<nToTrack; i++) 
       coord[i][lossPassIndex] = pass;
   if (beam)
     beam->n_lost += (nToTrack-nLeft);
-  /*
 #if USE_MPI && MPI_DEBUG
   if (!fp) {
     char s[1024];
@@ -4261,7 +4259,7 @@ void recordLostParticles(
     }
   }
 #endif
-  */
+
 }
 
 void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
@@ -4579,7 +4577,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
   free(rateCounts);
 }
 
-void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *nLost, double ***accepted, long n_processors, int myid, double *round)
+void gatherParticles(double ***coord, long *nToTrack, long *nLost, double ***accepted, long n_processors, int myid, double *round)
 {
   long work_processors = n_processors-1;
   int root = 0, i, nItems, displs ;
@@ -4612,6 +4610,11 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
   MPI_Gather(&my_nLost, 1, MPI_INT, nLostCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Reduce (&my_nToTrack, &nToTrack_total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce (&my_nLost, &nLost_total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+#if MPI_DEBUG
+  printf("gatherPaticles: nToTrack_total = %d, nLost_total = %d\n",
+         nToTrack_total, nLost_total);
+#endif
 
   if (isMaster) {
     if(*coord==NULL)

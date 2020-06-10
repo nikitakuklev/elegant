@@ -1654,6 +1654,9 @@ static int comp_IDs1(const void **coord1, const void **coord2)
 void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particles, long step)
 {
   long i, badPID;
+#if USE_MPI && MPI_DEBUG
+  printf("dump_lost_particles: running\n"); fflush(stdout);
+#endif
 #if SDDS_MPI_IO
     /* Open file here for parallel IO */
     if (!SDDS_table->layout.layout_written) { /* Check if the file has been opened already */
@@ -1669,6 +1672,10 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
       if (!particle && particles)
         bombElegant("NULL coordinate pointer passed to dump_lost_particles", NULL);
     }
+
+#if USE_MPI && MPI_DEBUG
+  printf("dump_lost_particles: pointers ok\n"); fflush(stdout);
+#endif
 
 #ifdef SORT   /* Sort for comparing the serial and parallel versions. Disabled for parallel I/O version */
     if (SORT && particles) { 
@@ -1693,6 +1700,10 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
 	  badPID++;
 	}
     }
+#if USE_MPI && MPI_DEBUG
+    printf("dump_lost_particles: badPID=%ld\n", badPID); fflush(stdout);
+#endif
+
     if (badPID) {
 #if USE_MPI
       printf("%ld particles with bad PID on processor %d\n", badPID, myid);
@@ -1725,6 +1736,9 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
         }
       }
     }
+#if USE_MPI && MPI_DEBUG
+    printf("dump_lost_particles: set row values for %ld particles\n", particles); fflush(stdout);
+#endif
     if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Step", step, NULL)) {
         SDDS_SetError("Problem setting SDDS parameters (dump_lost_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1742,6 +1756,9 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
       SDDS_DoFSync(SDDS_table);
 
     log_exit("dump_lost_particles");
+#if USE_MPI && MPI_DEBUG
+    printf("dump_lost_particles: returning\n"); fflush(stdout);
+#endif
     
 }
 
