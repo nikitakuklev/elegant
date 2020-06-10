@@ -595,7 +595,7 @@ long runInelasticScattering(
                                idkOrig, dk,
                                ixLost, lostParticles[ip][0],
                                iyLost, lostParticles[ip][2],
-                               ideltaLost, lostParticles[ip][5],
+                               ideltaLost, (lostParticles[ip][5]-pCentral)/pCentral,
                                isLost, lostParticles[ip][4], 
                                -1)) {
           SDDS_SetError("Problem setting row values in SDDS table (doSlopeApertureSearch)");
