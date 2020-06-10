@@ -1857,6 +1857,11 @@ void reset_special_elements(LINE_LIST *beamline, unsigned long flags)
               ((TMCF_MODE*)eptr->p_elem)->fiducial_part = NULL;
             }
             break;
+          case T_RFTMEZ0:
+            if (includeRF) {
+              ((RFTMEZ0*)eptr->p_elem)->fiducial_part = NULL;
+            }
+            break;
           case T_CEPL:
             ((CE_PLATES*)eptr->p_elem)->fiducial_part = NULL;
             break;
