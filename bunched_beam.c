@@ -565,10 +565,9 @@ long new_bunched_beam(
           beam->original[i_particle][6] += beam->n_to_track;
 #endif
         }
-        beam->particle[i_particle][5] = (p-p_central)/p_central;
-        /* TODO: I think s_offset should be recomputed here! */
         gamma = sqrt(sqr(p=Po*(1+beam->particle[i_particle][5]))+1);
         beta  = p/gamma;
+        beam->particle[i_particle][5] = (p-p_central)/p_central;
         beam->particle[i_particle][4] += s_offset;
         beam->particle[i_particle][lossPassIndex] = -1;
         beam->particle[i_particle][bunchIndex] = -1;
@@ -813,8 +812,9 @@ void do_track_beam_output(RUN *run, VARY *control,
       fflush(stdout);
     }
 
-    dump_lost_particles(&output->SDDS_losses, beam->lost, beam->n_lost, control->i_step);
-
+    dump_lost_particles(&output->SDDS_losses, beam->particle+beam->n_to_track-beam->n_lost, 
+			beam->n_lost, control->i_step);
+    beam->n_lost = 0;
     if (!(flags&SILENT_RUNNING)) {
       printf("done.\n");
       fflush(stdout);
