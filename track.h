@@ -703,16 +703,17 @@ typedef struct {
     double p0_original;     /* initial central momentum */
     double **particle;      /* current/final coordinates */
     long n_to_track;        /* initial number of particles being tracked. */
-    long n_lost; 
     int32_t id_slots_per_bunch;     /* if non-zero, the bunch # is (int)((particleID-1)/id_slots_per_bunch) */
 #if SDDS_MPI_IO
-  long n_to_track_total;    /* The total number of particles being tracked on all the processors */
-  long n_original_total;    /* The total number of particles read from data file */
+   long n_to_track_total;    /* The total number of particles being tracked on all the processors */
+   long n_original_total;    /* The total number of particles read from data file */
 #endif
     long n_particle;        /* size of particle and accepted arrays */
     double p0;              /* current/final central momentum */
     double **accepted;      /* coordinates of accepted particles */
     long n_accepted;        /* final number of particles being tracked. */
+    double **lost;             /* lost-particle data */
+    long n_lost, n_lost_max; /* number of lost particles, number of slots in lost array */
     double bunchFrequency;
     } BEAM;
 void free_beamdata(BEAM *beam);

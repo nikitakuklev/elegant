@@ -2459,11 +2459,12 @@ void free_beamdata(BEAM *beam)
     free_czarray_2d((void**)beam->accepted, beam->n_particle, totalPropertiesPerParticle);
   if (beam->original && beam->original!=beam->particle)
     free_czarray_2d((void**)beam->original, beam->n_original, totalPropertiesPerParticle);
-
-  beam->particle = beam->accepted = beam->original = NULL;
+  if (beam->lost)
+    free_czarray_2d((void**)beam->lost, beam->n_lost_max, totalPropertiesPerParticle);
+  beam->particle = beam->accepted = beam->original = beam->lost = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
   beam->p0_original = beam->p0 =0.;
-  beam->n_lost = 0;
+  beam->n_lost = beam->n_lost_max = 0;
 }  
 
 long getTableFromSearchPath(TABLE *tab, char *file, long sampleInterval, long flags)

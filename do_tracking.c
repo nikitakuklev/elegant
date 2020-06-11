@@ -317,6 +317,7 @@ long do_tracking(
   if (beam) {
     coord = beam->particle;
     nOriginal = beam->n_to_track;  /* used only for computing macroparticle charge */
+    beam->n_lost = 0;
   }
 
 #if SDDS_MPI_IO
@@ -4222,7 +4223,7 @@ void recordLostParticles(
                          long pass            /* pass on which loss occurred */
                          )
 {
-  long i;
+  long i, newLost;
 
 #if USE_MPI && MPI_DEBUG
   static FILE *fp = NULL;
@@ -4231,8 +4232,19 @@ void recordLostParticles(
   if (coord)
     for (i=nLeft; i<nToTrack; i++) 
       coord[i][lossPassIndex] = pass;
-  if (beam)
-    beam->n_lost += (nToTrack-nLeft);
+  if (beam) {
+    newLost = nToTrack - nLeft;
+    if ((beam->n_lost+newLost)>beam->n_lost_max) {
+      beam->n_lost_max = beam->n_lost + newLost + 100;
+      if (!beam->lost)
+        beam->lost = (double**)czarray_2d(sizeof(**(beam->lost)), beam->n_lost_max, totalPropertiesPerParticle);
+      else 
+        beam->lost = (double**)resize_czarray_2d((void**)beam->lost, sizeof(**(beam->lost)), beam->n_lost_max, totalPropertiesPerParticle);
+    }
+    for (i=0; i<newLost; i++) 
+      memcpy(beam->lost[beam->n_lost+i], coord[i+nLeft], sizeof(**coord)*totalPropertiesPerParticle);
+    beam->n_lost += newLost;
+  }
 #if USE_MPI && MPI_DEBUG
   if (!fp) {
     char s[1024];
