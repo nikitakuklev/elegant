@@ -362,7 +362,7 @@ char **argv;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
   long last_default_order = 0, new_beam_flags, twiss_computed = 0;
   /* long correctionDone, moments_computed = 0, links_present; */
-  long linear_chromatic_tracking_setup_done = 0, ionEffectsSeen = 0;
+  long linear_chromatic_tracking_setup_done = 0, ionEffectsSeen = 0, beamSeen = 0;
   double *starting_coord = NULL, finalCharge;
   long namelists_read = 0, failed, firstPass, namelistErrorCode=0;
   long lastCommandCode = 0;
@@ -698,7 +698,7 @@ char **argv;
       reset_alter_specifications();
       clearSliceAnalysis();
       finish_load_parameters();
-      run_setuped = run_controled = error_controled = correction_setuped = ionEffectsSeen = 0;
+      run_setuped = run_controled = error_controled = correction_setuped = ionEffectsSeen = beamSeen = 0;
       
       run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
         fl_do_tune_correction = do_floor_coordinates = 0;
@@ -953,6 +953,8 @@ char **argv;
     case SET_BUNCHED_BEAM:
       if (!run_setuped || !run_controled)
         bombElegant("run_setup and run_control must precede bunched_beam namelist", NULL);
+      if (beam_type!=-1)
+        bombElegant("only one beam definition is allowed per run sequence", NULL);
       setup_bunched_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, &optimize.variables,
                          &output_data, beamline, beamline->n_elems,
                          correct.mode!=-1 && 
@@ -966,6 +968,8 @@ char **argv;
 #endif      
       if (!run_setuped || !run_controled)
         bombElegant("run_setup and run_control must precede sdds_beam namelist", NULL);
+      if (beam_type!=-1)
+        bombElegant("only one beam definition is allowed per run sequence", NULL);
       setup_sdds_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, 
                       &optimize.variables, &output_data, beamline, beamline->n_elems,
                       correct.mode!=-1 && 
