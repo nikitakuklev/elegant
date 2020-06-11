@@ -953,6 +953,8 @@ char **argv;
     case SET_BUNCHED_BEAM:
       if (!run_setuped || !run_controled)
         bombElegant("run_setup and run_control must precede bunched_beam namelist", NULL);
+      if (beam_type!=-1)
+        bombElegant("a beam definition was already given for this run sequence", NULL);
       setup_bunched_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, &optimize.variables,
                          &output_data, beamline, beamline->n_elems,
                          correct.mode!=-1 && 
@@ -966,6 +968,8 @@ char **argv;
 #endif      
       if (!run_setuped || !run_controled)
         bombElegant("run_setup and run_control must precede sdds_beam namelist", NULL);
+      if (beam_type!=-1)
+        bombElegant("a beam definition was already given for this run sequence", NULL);
       setup_sdds_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, 
                       &optimize.variables, &output_data, beamline, beamline->n_elems,
                       correct.mode!=-1 && 
