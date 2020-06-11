@@ -7,13 +7,13 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage "usage: spiffe2elegant -input <filename> -output <filename> \[-drift <m>\]\nConverts spiffe output to elegant format.\nNote that elegant will read spiffe files directly."
+set usage "usage: spiffe2elegant -input <filename> -output <filename> -particlesPerRing <number>(1)\n."
 
 set input ""
 set output ""
-set drift 0.0
+set particlesPerRing 1
 set args $argv
-if {[APSStrictParseArguments {input output drift}] || ![string length $input] || ![string length $output]} {
+if {[APSStrictParseArguments {input output particlesPerRing}] || ![string length $input] || ![string length $output]} {
     return -code error "$usage"
 }
 
@@ -24,17 +24,28 @@ if [file exists $output] {
     return -code error "exists: $output"
 }
 
-set dir [pwd]
-cd $OAGGlobal(OAGAppConfigDataDirectory)/elegant/
-if [catch {exec elegant spiffe2elegant.ele -macro=input=$dir/$input,output=$dir/$output,drift=$drift} result] {
-    return -code error "spiffe2elegant: $result"
+set seed [clock seconds]
+set list1 ""
+for {set ir 0} {$ir<$particlesPerRing} {incr ir} {
+    set seed [expr $seed+2]
+    exec sddscombine $input -merge -pipe=out \
+        | sddsprocess -pipe=in $output.$ir "-rpnexpression=$seed srnd" \
+        "-define=parameter,driftDistance,$drift,units=m" \
+        "-define=parameter,twoPi,2 pi *" \
+        "-define=col,theta,twoPi rnd *" \
+        "-define=col,cosine,theta cos" \
+        "-define=col,sine,theta sin" \
+        "-define=col,x,r cosine *,units=m" \
+        "-define=col,y,r sine *,units=m" \
+        "-define=col,xp,pr cosine * pz /" \
+        "-define=col,yp,pr sine * pz /" \
+        "-define=col,p,pz sqr pr sqr + sqrt" 
+   lappend list1 $output.$ir
 }
-cd $dir
 
-set tmpFile [APSTmpDir]/[APSTmpString]
-APSAddToTempFileList $tmpFile
-exec sddscombine $input $tmpFile -merge
-exec sddsxref $output $tmpFile -pipe=out -nowarning -take=* \
-    | sddsprocess -pipe=in $output.1 "-define=parameter,driftDistance,$drift,units=m"
-file delete $output
-file rename $output.1 $output
+if [llength $list1]!=1 {
+    eval exec sddscombine $list1 $output
+    eval file delete $list1
+} else {
+    eval file rename $output.0 $output
+}
