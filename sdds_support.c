@@ -1685,10 +1685,19 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
 	qsort(particle[0], particles, (COORDINATES_PER_PARTICLE+1)*sizeof(double), comp_IDs); 
       }
 #endif
+#if USE_MPI && MPI_DEBUG
+    printf("checking PIDs on %ld particles\n", particles); fflush(stdout);
+#endif
     for (i=badPID=0; i<particles; i++) {
+#if USE_MPI && MPI_DEBUG
+      printf("checking PID on particle %ld of %ld\n", i, particles); fflush(stdout);
+#endif
         if (!particle[i]) {
             printf("error: coordinate slot %ld is NULL (dump_lost_particles)\n", i);
             fflush(stdout);
+#if USE_MPI && MPI_DEBUG
+            printf("bad particle pointer for particle %ld\n", i); 
+#endif
             abort();
             }
 	if (particle[i][6]<=0) {
@@ -1696,14 +1705,10 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
 	  if (!badPID) 
 	    dup2(fd, fileno(stdout));
 #endif
-	  printf("particle %ld has bad PID: %ld\n", (long)particle[i][6], badPID);
+	  printf("particle %ld has bad PID: %ld\n", i, (long)particle[i][6]);
 	  badPID++;
 	}
     }
-#if USE_MPI && MPI_DEBUG
-    printf("dump_lost_particles: badPID=%ld\n", badPID); fflush(stdout);
-#endif
-
     if (badPID) {
 #if USE_MPI
       printf("%ld particles with bad PID on processor %d\n", badPID, myid);
@@ -1712,12 +1717,18 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
 #endif
       fflush(stdout);
     }
+#if USE_MPI && MPI_DEBUG
+    printf("PIDs checked.\n"); fflush(stdout);
+#endif
     
     if (!SDDS_StartTable(SDDS_table, particles)) {
         SDDS_SetError("Problem starting SDDS table (dump_lost_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
     for (i=0; i<particles; i++) {
+#if USE_MPI && MPI_DEBUG
+      printf("Setting row values for particle %ld\n", i); fflush(stdout);
+#endif
       if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                              0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
                              4, particle[i][4], 5, particle[i][5],

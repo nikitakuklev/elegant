@@ -1331,6 +1331,7 @@ long do_tracking(
 		drift_beam(coord, nToTrack, ((ECOL*)eptr->p_elem)->length, run->default_order);
 	      else
 		nLeft = elliptical_collimator(coord, (ECOL*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
+              printf("After ECOL: nLeft = %ld, nToTrack = %ld\n", nLeft, nToTrack);
 	      break;
 	    case T_APCONTOUR:
 	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
@@ -4228,11 +4229,21 @@ void recordLostParticles(
   static FILE *fp = NULL;
 #endif
 
+  printf("Recording lost particles, nLeft=%ld, nToTrack=%ld, beam->n_lost=%ld\n",
+         nLeft, nToTrack, beam?beam->n_lost:-1); fflush(stdout);
+
   if (coord)
     for (i=nLeft; i<nToTrack; i++) 
       coord[i][lossPassIndex] = pass;
-  if (beam)
-    beam->n_lost += (nToTrack-nLeft);
+  if (beam) {
+    long newLost;
+    newLost =(nToTrack-nLeft);
+    beam->n_lost += newLost;
+    printf("New lost = %ld, total lost = %ld\n",
+           newLost, beam->n_lost);
+    for (i=nLeft; i<nToTrack; i++) 
+      beam->particle[i][lossPassIndex] = pass;
+  }
 #if USE_MPI && MPI_DEBUG
   if (!fp) {
     char s[1024];
@@ -4247,16 +4258,17 @@ void recordLostParticles(
     fprintf(fp, "&column name=pLost type=double &end\n");
     fprintf(fp, "&column name=LossPass type=long &end\n");
     fprintf(fp, "&column name=particleID type=long &end\n");
-    fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+    fprintf(fp, "&parameter name=Pass type=long &end\n");
+    fprintf(fp, "&data mode=ascii &end\n");
   }
   if (coord) {
-    for (i=nLeft; i<nToTrack; i++)  {
+    fprintf(fp, "%ld\n%ld\n", pass, beam->n_lost);
+    for (i=nLeft; i<beam->n_particle; i++)
       fprintf(fp, "%le %le %le %le %le %le %ld %ld\n",
               coord[i][0], coord[i][1], 
               coord[i][2], coord[i][3], 
               coord[i][4], coord[i][5], 
               (long)coord[i][7], (long)coord[i][6]);
-    }
   }
 #endif
 

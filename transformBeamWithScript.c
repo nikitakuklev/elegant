@@ -225,6 +225,8 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
   double *pID = NULL;
   short failSoftly = 0;
   TRACKING_CONTEXT trackingContext;
+  double **lostParticle;
+  long nLost, nLost2;
 
   if (np==0)
     return 0;
@@ -250,6 +252,19 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
 
   if (!SDDS_Terminate(&SDDSout))
     SDDS_Bomb("problem terminating script input file");
+
+  /* copy the lost particles to a separate buffer so we can easily put them back */
+  if (beam && beam->n_lost) {
+    long il;
+    lostParticle = (double**)czarray_2d(sizeof(double), beam->n_lost, totalPropertiesPerParticle);
+    for (il=0; il<beam->n_lost; il++)
+      memcpy(lostParticle[il], beam->particle[np+il], totalPropertiesPerParticle*sizeof(double));
+    nLost = beam->n_lost;
+  } else {
+    lostParticle = NULL;
+    nLost = 0;
+  }
+  nLost2 = 0;
 
 #if defined(CONDOR_COMPILE)
   _condor_ckpt_disable();
@@ -333,7 +348,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
     if (script->determineLossesFromParticleID) {
-      long found, itop, lost;
+      long found, itop;
       double *pID2;
       pID2 = tmalloc(sizeof(double)*npNew);
       memcpy(pID2, pID, sizeof(double)*npNew);
@@ -350,7 +365,6 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
       /* Figure out which particles if any were lost by matching particleID from the input and output */
       /* Otherwise, we just load the particleID data with no loss accounting. */
       itop = np - 1;
-      lost = 0;
       for (j=0; j<=itop; j++) {
         found = 0;
         for (k=0; k<npNew; k++) {
@@ -364,23 +378,40 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
           swapParticles(part[itop], part[j]);
           part[itop][4] = z;
           part[itop][5] = pCentral*(1 + part[itop][5]);
-          lost++;
+          nLost2++;
           itop--;
           j--;
         }
       }
       if (script->verbosity>1)
-        printf("%ld particles of %ld lost based on particleID matching\n", lost, np);
-      if (beam && lost)
-        recordLostParticles(beam, part, itop+1, itop+1+lost, iPass);
+        printf("%ld particles of %ld lost based on particleID matching\n", nLost2, np);
+      if (beam && nLost2) {
+        long il;
+        if (lostParticle) {
+          lostParticle = (double**)resize_czarray_2d((void**)lostParticle, sizeof(double),
+                                                     nLost2+nLost, totalPropertiesPerParticle);
+          for (il=0; il<nLost2; il++) {
+            memcpy(lostParticle[nLost+il], part[itop+1+il], totalPropertiesPerParticle*sizeof(double));
+            lostParticle[nLost+il][lossPassIndex] = iPass;
+          }
+        } else {
+          lostParticle = (double**)czarray_2d(sizeof(double), nLost2, totalPropertiesPerParticle);
+          for (il=0; il<nLost2; il++) {
+            memcpy(lostParticle[il], part[itop+1+il], totalPropertiesPerParticle*sizeof(double));
+            lostParticle[il][lossPassIndex] = iPass;
+          }
+        }
+      }
     }
   }
 
-  if (npNew>np) {
+  /* TODO: should this be np+nLost ? */
+  if ((npNew+nLost+nLost2)>np) {
     printf("Resizing the array in transformBeamWithScript_s\n");
     fflush(stdout);
     /* Resize the input array, preserving the data */
-    part = (double**)resize_czarray_2d((void**)part, sizeof(double), npNew, totalPropertiesPerParticle);
+    part = (double**)resize_czarray_2d((void**)part, sizeof(double), 
+                                       npNew+nLost+nLost2, totalPropertiesPerParticle);
     if (beam) {
       beam->particle = part;
       beam->n_particle = npNew;
@@ -400,6 +431,17 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
       data = NULL;
     }
   }
+
+  /* fill in lost particle data */
+  if (beam && lostParticle && (nLost || nLost2)) {
+    long il;
+    for (il=0; il<(nLost+nLost2); il++)
+      memcpy(part[npNew+il], lostParticle[il], sizeof(double)*totalPropertiesPerParticle);
+    beam->n_lost = nLost + nLost2;
+    free_czarray_2d((void**)lostParticle, nLost+nLost2, totalPropertiesPerParticle);
+    lostParticle = NULL;
+  } 
+
   /* copy or create particle ID */
   if (pID) {
     /* The new particle IDs replace the pre-existing ones */
@@ -509,6 +551,8 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
   long i, j, npNew, npTotal, npNewTotal, nameLength;
   double *pID = NULL;
   TRACKING_CONTEXT trackingContext;
+  double **lostParticle;
+  long nLost;
 
   getTrackingContext(&trackingContext);
 
@@ -586,6 +630,18 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
   if (script->verbosity>2) {
     printf("Done writing data to script input file %s\n",  input);
     fflush(stdout);
+  }
+
+  /* copy the lost particles to a separate buffer so we can easily put them back */
+  if (beam && beam->n_lost) {
+    long il;
+    lostParticle = (double**)czarray_2d(sizeof(double), beam->n_lost, totalPropertiesPerParticle);
+    for (il=0; il<beam->n_lost; il++)
+      memcpy(lostParticle[il], beam->particle[np+il], totalPropertiesPerParticle*sizeof(double));
+    nLost = beam->n_lost;
+  } else {
+    lostParticle = NULL;
+    nLost = 0;
   }
 
   /* run the script */
@@ -717,10 +773,11 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
 #endif
   }
 
-  if (!isMaster && notSinglePart && npNew>np) {
+  if (!isMaster && notSinglePart && (npNew+nLost)>np) {
     /* Resize the input array, preserving the data */
-    part = (double**)resize_czarray_2d((void**)part, sizeof(double), npNew, totalPropertiesPerParticle);
+    part = (double**)resize_czarray_2d((void**)part, sizeof(double), npNew+nLost, totalPropertiesPerParticle);
     if (beam) {
+      /* TODO: should free beam->particle first ! */
       beam->particle = part;
       beam->n_particle = npNew;
     }
@@ -755,6 +812,16 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
     printf("Arrays resized\n");
     fflush(stdout);
   }
+
+  /* put lost particle data back at the top of the array */
+  if (beam && lostParticle && nLost) {
+    long il;
+    for (il=0; il<nLost; il++)
+      memcpy(part[npNew+il], lostParticle[il], sizeof(double)*totalPropertiesPerParticle);
+    beam->n_lost = nLost;
+    free_czarray_2d((void**)lostParticle, nLost, totalPropertiesPerParticle);
+    lostParticle = NULL;
+  } 
 
   /* copy or create particle ID */
   if (script->useParticleID) {
