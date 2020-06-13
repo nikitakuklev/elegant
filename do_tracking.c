@@ -1918,7 +1918,7 @@ long do_tracking(
 	      break;
             case T_BRAT:
               nLeft = trackBRAT(coord, nToTrack, (BRAT*)eptr->p_elem, *P_central, accepted);
-	      printf("%ld particles left after BRAT %s\n", nLeft, eptr->name);
+	      /* printf("%ld particles left after BRAT %s\n", nLeft, eptr->name); */
               break;
 	    case T_KPOLY:
 	      nLeft = polynomial_kicks(coord, nToTrack, (KPOLY*)eptr->p_elem, 0.0,
