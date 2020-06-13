@@ -754,7 +754,7 @@ long new_sdds_beam(
       sprintf(buffer, "%ld", (long)beam->particle[i][bunchIndex]);
       hadd(hashTable, buffer, strlen(buffer), NULL);
     }
-    printf("%d bunches present\n", (long)hcount(hashTable));
+    printf("%d bunches present\n", (int)hcount(hashTable));
 #if DEBUG
     printf("id:[%ld, %ld], b:[%ld, %ld]\n", (long)hcount(hashTable), minID, maxID,
            minBunch, maxBunch);
