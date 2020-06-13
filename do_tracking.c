@@ -1331,7 +1331,7 @@ long do_tracking(
 		drift_beam(coord, nToTrack, ((ECOL*)eptr->p_elem)->length, run->default_order);
 	      else
 		nLeft = elliptical_collimator(coord, (ECOL*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
-              printf("After ECOL: nLeft = %ld, nToTrack = %ld\n", nLeft, nToTrack);
+              /* printf("After ECOL: nLeft = %ld, nToTrack = %ld\n", nLeft, nToTrack); */
 	      break;
 	    case T_APCONTOUR:
 	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
