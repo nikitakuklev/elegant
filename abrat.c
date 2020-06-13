@@ -888,15 +888,6 @@ int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inpu
   return (0);
 }
 
-void bombElegant(const char *error, const char *usage)
-{
-  if (error)
-    fprintf(stderr, "error: %s\n", error);
-  if (usage)
-    fprintf(stderr, "usage: %s\n", usage);
-  exit(1);
-}
-
 int make_fieldmap_file(char *filename, char *data_file, double Zi, double Zf, long nZ, double Xi, double Xf, long nX)
 {
   char s[200];
@@ -1035,6 +1026,4 @@ int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inpu
   return (0);
 }
 
-void exitElegant(long status) 
-{
-}
+

@@ -630,7 +630,7 @@ elegantto_SRCS = ignoreElements.c elegantto.c sdds_strength_output.c convert_to_
 
 sddssasefel_SRCS = sddssasefel.c sasefelmx.c bombElegant.c
 
-abrat_SRCS = abrat.c track_data.c warnings.c context.c 
+abrat_SRCS = abrat.c track_data.c warnings.c context.c  bombElegant.c
 
 trimda_SRCS = trimda.c trimApertureSearchResult.c
 
