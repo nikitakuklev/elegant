@@ -691,7 +691,7 @@ double compute_end_positions(LINE_LIST *lptr)
     double z, l, theta, z_recirc;
     static ELEMENT_LIST *eptr;
     long i_elem, recircPresent;
-    static edgeEffectsWarning = 0;
+    static int edgeEffectsWarning = 0;
     CSBEND *csbend;
 
     /* use length data to establish z coordinates at end of each element */
