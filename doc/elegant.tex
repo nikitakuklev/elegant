@@ -70,7 +70,8 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
 \item The \verb|CSBEND| element now supports a new symplectic nonlinear edge model, developed by R. Lindberg (APS).
 \item The \verb|BRAT| and \verb|BMXYZ| elements, which propagate particles through 3D field maps for
   bending and non-bending elements, respectively, now offer higher-order 2D interpolation as an alternative to the
-  detail multi-linear interpolation.
+  detail multi-linear interpolation. The also support storing the field data in single-precision arrays to reduce memory
+  requirements.
 \item The \verb|BRAT| and \verb|BMXYZ| elements now supports testing of particle locations against the global-coordinate obstruction
   contours specified by the \verb|obstruction_data| command.
 \item The \verb|BRAT| element now supports floor coordinate transformations.

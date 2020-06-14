@@ -3274,6 +3274,7 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
     {"DRIFT_MATRIX", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.driftMatrix), NULL, 0.0, 0, "If non-zero, instead of tracking to determine the matrix, just assume a drift-space matrix."},
     {"XY_INTERPOLATION_ORDER", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.xyInterpolationOrder), NULL, 0.0, 1, "Order of interpolation in x and y."},
     {"XY_GRID_EXCESS", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.xyGridExcess), NULL, 0.0, 0, "Number of rows or columns to add in each dimension to the minimum."},
+    {"SINGLE_PRECISION", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.singlePrecision), NULL, 0.0, 0, "If nonzero, store field data in single precision to reduce memory requirements."},
     {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output inside element. Use for debugging only in serial version."},
 };  
 
@@ -3300,6 +3301,7 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"XY_GRID_EXCESS", "", IS_SHORT, 0, (long)((char *)&brat_example.xyGridExcess), NULL, 0.0, 0, "Number of rows or columns to add in each dimension to the minimum."},
     {"XY_EXTRAPOLATE", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.xyExtrapolate), NULL, 0.0, 0, "If nonzero, will extrapolate the field map in (x,y) if particle is outside. Otherwise, field is assumed to be zero."},
     {"USE_SBEN_MATRIX", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.useSbenMatrix), NULL, 0.0, 0, "If nonzero, instead of using tracking to determine the matrix, will just use a sector-bend matrix."},
+    {"SINGLE_PRECISION", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.singlePrecision), NULL, 0.0, 0, "If nonzero, store field data in single precision to reduce memory requirements."},
 };  
 
 

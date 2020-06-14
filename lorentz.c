@@ -1991,7 +1991,6 @@ void bmapxyz_coord_transform(double *q, double *coord, void *field, long which_e
 void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
 {
   SDDS_DATASET SDDSin;
-  double *x=NULL, *y=NULL, *z=NULL, *Fx=NULL, *Fy=NULL, *Fz=NULL;
   long nx, ny, imap;
   BMAPXYZ_DATA *data;
 
@@ -2017,124 +2016,247 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   cp_str(&(storedBmapxyzData[imap].filename), bmapxyz->filename);
 
   printf("Reading BMXYZ field data from file %s\n", bmapxyz->filename);
-  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxyz->filename) ||
-      SDDS_ReadPage(&SDDSin)<=0 ||
-      !(x=SDDS_GetColumnInDoubles(&SDDSin, "x")) || !(y=SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
-      !(z=SDDS_GetColumnInDoubles(&SDDSin, "z")) ) {
-    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-  }
-  printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
-  if (!check_sdds_column(&SDDSin, "x", "m") ||
-      !check_sdds_column(&SDDSin, "y", "m") ||
-      !check_sdds_column(&SDDSin, "z", "m")) {
-    fprintf(stderr, "BMAPXYZ input file must have x, y, and z in m (meters)\n");
-    exitElegant(1);
-  }
-  data->BGiven = 0;
-  if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Fx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "Fy")) ||
-      !(Fz=SDDS_GetColumnInDoubles(&SDDSin, "Fz"))) {
-    if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Bx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "By")) ||
-        !(Fz=SDDS_GetColumnInDoubles(&SDDSin, "Bz"))) {
-      fprintf(stderr, "BMAPXYZ input file must have (Fx, Fy, Fz) (dimensionless) or (Bx, By, Bz) (in T)\n");
+  if (!bmapxyz->singlePrecision) {
+    double *x=NULL, *y=NULL, *z=NULL, *Fx=NULL, *Fy=NULL, *Fz=NULL;
+    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxyz->filename) ||
+	SDDS_ReadPage(&SDDSin)<=0 ||
+	!(x=SDDS_GetColumnInDoubles(&SDDSin, "x")) || !(y=SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
+	!(z=SDDS_GetColumnInDoubles(&SDDSin, "z")) ) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
+    if (!check_sdds_column(&SDDSin, "x", "m") ||
+	!check_sdds_column(&SDDSin, "y", "m") ||
+	!check_sdds_column(&SDDSin, "z", "m")) {
+      fprintf(stderr, "BMAPXYZ input file must have x, y, and z in m (meters)\n");
       exitElegant(1);
     }
-    data->BGiven = 1;
-    if (!check_sdds_column(&SDDSin, "Bx", "T") ||
-        !check_sdds_column(&SDDSin, "By", "T") ||
-        !check_sdds_column(&SDDSin, "Bz", "T")) {
-      fprintf(stderr, "BMAPXYZ input file must have Bx, By, and Bz in T (Tesla)\n");
-      exitElegant(1);
-    }
-  } else {
-    if (!check_sdds_column(&SDDSin, "Fx", "") ||
-        !check_sdds_column(&SDDSin, "Fy", "") ||
-        !check_sdds_column(&SDDSin, "Fz", "")) {
-      fprintf(stderr, "BMAPXYZ input file must have Fx, Fy, and Fz with no units\n");
-      exitElegant(1);
-    }
-  }
-  
-  if (!(data->points=SDDS_CountRowsOfInterest(&SDDSin)) || data->points<2) {
-    printf("file %s for BMAPXYZ element has insufficient data\n", bmapxyz->filename);
-    fflush(stdout);
-    exitElegant(1);
-  }
-  SDDS_Terminate(&SDDSin);
-  
-  /* It is assumed that the data is ordered so that x changes fastest.
-   * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
-   * The points are assumed to be equipspaced.
-   */
-  nx = 1;
-  data->xmin = x[0];
-  while (nx<data->points) {
-    if (x[nx-1]>x[nx])
-      break;
-    nx ++;
-  }
-  if (nx==data->points) {
-    printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (x)\n",
-            bmapxyz->filename);
-    printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
-    exitElegant(1);
-  }  
-  data->xmax = x[nx-1];
-  data->dx = (data->xmax-data->xmin)/(nx-1);
-
-  ny = 1;
-  data->ymin = y[0];
-  while (ny<(data->points/nx)) {
-    if (y[(ny-1)*nx]>y[ny*nx])
-      break;
-    ny++;
-  }
-  if (ny==data->points/nx) {
-    printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (y)\n",
-            bmapxyz->filename);
-    printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
-    exitElegant(1);
-  }
-  data->ymax = y[(ny-1)*nx];
-  data->dy = (data->ymax-data->ymin)/(ny-1);
-
-  if ((data->nx=nx)<=1 || (data->ny=ny)<=1 || (data->nz = data->points/(nx*ny))<=1 || 
-      (data->nx*data->ny*data->nz!=data->points)) {
-    printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data\n",
-            bmapxyz->filename);
-    printf("nx = %ld, ny=%ld, nz=%ld, points=%ld\n", data->nx, data->ny, data->nz, data->points);
-    exitElegant(1);
-  }
-  data->zmin = z[0];
-  data->zmax = z[data->points-1];
-  data->dz = (data->zmax-data->zmin)/(data->nz-1);
-  printf("BMAPXYZ element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
-          bmapxyz->filename, 
-          data->nx, data->ny, data->nz,
-          data->dx, data->dy, data->dz,
-          data->xmin, data->xmax,
-          data->ymin, data->ymax,
-          data->zmin, data->zmax
-          );
-  if (data->zmin<0) {
-    if (bmapxyz->injectAtZero) {
-      printf("**************** WARNING ****************\n");
-      printf("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero. Be aware that particles will start inside the element!\n");
-      printf("The insertion length (L) and any difference from the field length is ignored.\n");
-      fflush(stdout);
+    data->BGiven = 0;
+    if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Fx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "Fy")) ||
+	!(Fz=SDDS_GetColumnInDoubles(&SDDSin, "Fz"))) {
+      if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Bx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "By")) ||
+	  !(Fz=SDDS_GetColumnInDoubles(&SDDSin, "Bz"))) {
+	fprintf(stderr, "BMAPXYZ input file must have (Fx, Fy, Fz) (dimensionless) or (Bx, By, Bz) (in T)\n");
+	exitElegant(1);
+      }
+      data->BGiven = 1;
+      if (!check_sdds_column(&SDDSin, "Bx", "T") ||
+	  !check_sdds_column(&SDDSin, "By", "T") ||
+	  !check_sdds_column(&SDDSin, "Bz", "T")) {
+	fprintf(stderr, "BMAPXYZ input file must have Bx, By, and Bz in T (Tesla)\n");
+	exitElegant(1);
+      }
     } else {
-      data->zmax = data->zmax - data->zmin;
-      data->zmin = 0;
+      if (!check_sdds_column(&SDDSin, "Fx", "") ||
+	  !check_sdds_column(&SDDSin, "Fy", "") ||
+	  !check_sdds_column(&SDDSin, "Fz", "")) {
+	fprintf(stderr, "BMAPXYZ input file must have Fx, Fy, and Fz with no units\n");
+	exitElegant(1);
+      }
     }
+    
+    if (!(data->points=SDDS_CountRowsOfInterest(&SDDSin)) || data->points<2) {
+      printf("file %s for BMAPXYZ element has insufficient data\n", bmapxyz->filename);
+      fflush(stdout);
+      exitElegant(1);
+    }
+    SDDS_Terminate(&SDDSin);
+    
+    /* It is assumed that the data is ordered so that x changes fastest.
+     * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
+     * The points are assumed to be equipspaced.
+     */
+    nx = 1;
+    data->xmin = x[0];
+    while (nx<data->points) {
+      if (x[nx-1]>x[nx])
+	break;
+      nx ++;
+    }
+    if (nx==data->points) {
+      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (x)\n",
+	     bmapxyz->filename);
+      printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exitElegant(1);
+    }  
+    data->xmax = x[nx-1];
+    data->dx = (data->xmax-data->xmin)/(nx-1);
+    
+    ny = 1;
+    data->ymin = y[0];
+    while (ny<(data->points/nx)) {
+      if (y[(ny-1)*nx]>y[ny*nx])
+	break;
+      ny++;
+    }
+    if (ny==data->points/nx) {
+      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (y)\n",
+	     bmapxyz->filename);
+      printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exitElegant(1);
+    }
+    data->ymax = y[(ny-1)*nx];
+    data->dy = (data->ymax-data->ymin)/(ny-1);
+    
+    if ((data->nx=nx)<=1 || (data->ny=ny)<=1 || (data->nz = data->points/(nx*ny))<=1 || 
+	(data->nx*data->ny*data->nz!=data->points)) {
+      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data\n",
+	     bmapxyz->filename);
+      printf("nx = %ld, ny=%ld, nz=%ld, points=%ld\n", data->nx, data->ny, data->nz, data->points);
+      exitElegant(1);
+    }
+    data->zmin = z[0];
+    data->zmax = z[data->points-1];
+    data->dz = (data->zmax-data->zmin)/(data->nz-1);
+    printf("BMAPXYZ element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
+	   bmapxyz->filename, 
+	   data->nx, data->ny, data->nz,
+	   data->dx, data->dy, data->dz,
+	   data->xmin, data->xmax,
+	   data->ymin, data->ymax,
+	   data->zmin, data->zmax
+	   );
+    if (data->zmin<0) {
+      if (bmapxyz->injectAtZero) {
+	printf("**************** WARNING ****************\n");
+	printf("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero. Be aware that particles will start inside the element!\n");
+	printf("The insertion length (L) and any difference from the field length is ignored.\n");
+	fflush(stdout);
+      } else {
+	data->zmax = data->zmax - data->zmin;
+	data->zmin = 0;
+      }
+    }
+    free(x);
+    free(y);
+    free(z);
+    data->Fx1 = data->Fy1 = data->Fz1 = NULL;
+    data->Fx = Fx;
+    data->Fy = Fy;
+    data->Fz = Fz;
+  } else {
+    /* single precision */
+    float *x=NULL, *y=NULL, *z=NULL, *Fx=NULL, *Fy=NULL, *Fz=NULL;
+    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxyz->filename) ||
+	SDDS_ReadPage(&SDDSin)<=0 ||
+	!(x=SDDS_GetColumnInFloats(&SDDSin, "x")) || !(y=SDDS_GetColumnInFloats(&SDDSin, "y")) ||
+	!(z=SDDS_GetColumnInFloats(&SDDSin, "z")) ) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
+    if (!check_sdds_column(&SDDSin, "x", "m") ||
+	!check_sdds_column(&SDDSin, "y", "m") ||
+	!check_sdds_column(&SDDSin, "z", "m")) {
+      fprintf(stderr, "BMAPXYZ input file must have x, y, and z in m (meters)\n");
+      exitElegant(1);
+    }
+    data->BGiven = 0;
+    if (!(Fx=SDDS_GetColumnInFloats(&SDDSin, "Fx")) || !(Fy=SDDS_GetColumnInFloats(&SDDSin, "Fy")) ||
+	!(Fz=SDDS_GetColumnInFloats(&SDDSin, "Fz"))) {
+      if (!(Fx=SDDS_GetColumnInFloats(&SDDSin, "Bx")) || !(Fy=SDDS_GetColumnInFloats(&SDDSin, "By")) ||
+	  !(Fz=SDDS_GetColumnInFloats(&SDDSin, "Bz"))) {
+	fprintf(stderr, "BMAPXYZ input file must have (Fx, Fy, Fz) (dimensionless) or (Bx, By, Bz) (in T)\n");
+	exitElegant(1);
+      }
+      data->BGiven = 1;
+      if (!check_sdds_column(&SDDSin, "Bx", "T") ||
+	  !check_sdds_column(&SDDSin, "By", "T") ||
+	  !check_sdds_column(&SDDSin, "Bz", "T")) {
+	fprintf(stderr, "BMAPXYZ input file must have Bx, By, and Bz in T (Tesla)\n");
+	exitElegant(1);
+      }
+    } else {
+      if (!check_sdds_column(&SDDSin, "Fx", "") ||
+	  !check_sdds_column(&SDDSin, "Fy", "") ||
+	  !check_sdds_column(&SDDSin, "Fz", "")) {
+	fprintf(stderr, "BMAPXYZ input file must have Fx, Fy, and Fz with no units\n");
+	exitElegant(1);
+      }
+    }
+    
+    if (!(data->points=SDDS_CountRowsOfInterest(&SDDSin)) || data->points<2) {
+      printf("file %s for BMAPXYZ element has insufficient data\n", bmapxyz->filename);
+      fflush(stdout);
+      exitElegant(1);
+    }
+    SDDS_Terminate(&SDDSin);
+    
+    /* It is assumed that the data is ordered so that x changes fastest.
+     * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
+     * The points are assumed to be equipspaced.
+     */
+    nx = 1;
+    data->xmin = x[0];
+    while (nx<data->points) {
+      if (x[nx-1]>x[nx])
+	break;
+      nx ++;
+    }
+    if (nx==data->points) {
+      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (x)\n",
+	     bmapxyz->filename);
+      printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exitElegant(1);
+    }  
+    data->xmax = x[nx-1];
+    data->dx = (data->xmax-data->xmin)/(nx-1);
+    
+    ny = 1;
+    data->ymin = y[0];
+    while (ny<(data->points/nx)) {
+      if (y[(ny-1)*nx]>y[ny*nx])
+	break;
+      ny++;
+    }
+    if (ny==data->points/nx) {
+      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (y)\n",
+	     bmapxyz->filename);
+      printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exitElegant(1);
+    }
+    data->ymax = y[(ny-1)*nx];
+    data->dy = (data->ymax-data->ymin)/(ny-1);
+    
+    if ((data->nx=nx)<=1 || (data->ny=ny)<=1 || (data->nz = data->points/(nx*ny))<=1 || 
+	(data->nx*data->ny*data->nz!=data->points)) {
+      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data\n",
+	     bmapxyz->filename);
+      printf("nx = %ld, ny=%ld, nz=%ld, points=%ld\n", data->nx, data->ny, data->nz, data->points);
+      exitElegant(1);
+    }
+    data->zmin = z[0];
+    data->zmax = z[data->points-1];
+    data->dz = (data->zmax-data->zmin)/(data->nz-1);
+    printf("BMAPXYZ element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
+	   bmapxyz->filename, 
+	   data->nx, data->ny, data->nz,
+	   data->dx, data->dy, data->dz,
+	   data->xmin, data->xmax,
+	   data->ymin, data->ymax,
+	   data->zmin, data->zmax
+	   );
+    if (data->zmin<0) {
+      if (bmapxyz->injectAtZero) {
+	printf("**************** WARNING ****************\n");
+	printf("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero. Be aware that particles will start inside the element!\n");
+	printf("The insertion length (L) and any difference from the field length is ignored.\n");
+	fflush(stdout);
+      } else {
+	data->zmax = data->zmax - data->zmin;
+	data->zmin = 0;
+      }
+    }
+    free(x);
+    free(y);
+    free(z);
+    data->Fx = data->Fy = data->Fz = NULL;
+    data->Fx1 = Fx;
+    data->Fy1 = Fy;
+    data->Fz1 = Fz;
   }
-  free(x);
-  free(y);
-  free(z);
-  data->Fx = Fx;
-  data->Fy = Fy;
-  data->Fz = Fz;
 
   if (bmapxyz->fieldLength>0) {
-    if (fabs(bmapxyz->fieldLength-(data->zmax-data->zmin))/bmapxyz->fieldLength>1e-12) {
+    if (fabs(bmapxyz->fieldLength-(data->zmax-data->zmin))/bmapxyz->fieldLength>1e-7) {
       fprintf(stderr, "Error: Mismatch of LFIELD (%21.15e) and data from file %s (range %21.15le)\n", 
               bmapxyz->fieldLength, bmapxyz->filename, data->zmax-data->zmin);
       exit(1);
@@ -2155,60 +2277,100 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
     fflush(stdout);
     for (ix=1; ix<data->nx-1; ix++) {
       for (iy=1; iy<data->ny-1; iy++) {
-        for (iz=1; iz<data->nz-1; iz++) {
-          B = sqrt(sqr(data->Fx[ix + iy*data->nx + iz*data->nx*data->ny]) +
-                   sqr(data->Fy[ix + iy*data->nx + iz*data->nx*data->ny]) +
-                   sqr(data->Fz[ix + iy*data->nx + iz*data->nx*data->ny]) );
-          if (B>maxB)
-            maxB = B;
-          /* compute divergence */
-          divB = fabs(
-                      (data->Fx[ix+1 + iy*data->nx + iz*data->nx*data->ny] -
-                       data->Fx[ix-1 + iy*data->nx + iz*data->nx*data->ny])/(2*data->dx) 
-                      + 
-                      (data->Fy[ix + (iy+1)*data->nx + iz*data->nx*data->ny] -
-                       data->Fy[ix + (iy-1)*data->nx + iz*data->nx*data->ny])/(2*data->dy)
-                      + 
-                      (data->Fz[ix + iy*data->nx + (iz+1)*data->nx*data->ny] -
-                       data->Fz[ix + iy*data->nx + (iz-1)*data->nx*data->ny])/(2*data->dz)
-                      );
-          if (divB>maxDivB)
-            maxDivB = divB;
-          /* compute curl */
-          curlB[0] = 
-            (data->Fz[ix + (iy+1)*data->nx + iz*data->nx*data->ny] -
-             data->Fz[ix + (iy-1)*data->nx + iz*data->nx*data->ny])/(2*data->dy)
-            -
-            (data->Fy[ix + iy*data->nx + (iz+1)*data->nx*data->ny] -
-             data->Fy[ix + iy*data->nx + (iz-1)*data->nx*data->ny])/(2*data->dz);
-          curlB[1] = 
-            (data->Fx[ix + iy*data->nx + (iz+1)*data->nx*data->ny] -
-             data->Fx[ix + iy*data->nx + (iz-1)*data->nx*data->ny])/(2*data->dz)
-            -
-            (data->Fz[ix+1 + iy*data->nx + iz*data->nx*data->ny] -
-             data->Fz[ix-1 + iy*data->nx + iz*data->nx*data->ny])/(2*data->dx);
-          curlB[2] = 
-            (data->Fy[ix+1 + iy*data->nx + iz*data->nx*data->ny] -
-             data->Fy[ix-1 + iy*data->nx + iz*data->nx*data->ny])/(2*data->dx)
-            -
-            (data->Fx[ix + (iy+1)*data->nx + iz*data->nx*data->ny] -
-             data->Fx[ix + (iy-1)*data->nx + iz*data->nx*data->ny])/(2*data->dy);
-          magCurlB = sqrt(sqr(curlB[0])+sqr(curlB[1])+sqr(curlB[2]));
-          if (magCurlB>maxCurlB)
-            maxCurlB = magCurlB;
-        }
+	for (iz=1; iz<data->nz-1; iz++) {
+	  if (!bmapxyz->singlePrecision) 
+	    B = sqrt(sqr(data->Fx[ix + iy*data->nx + iz*data->nx*data->ny]) +
+		     sqr(data->Fy[ix + iy*data->nx + iz*data->nx*data->ny]) +
+		     sqr(data->Fz[ix + iy*data->nx + iz*data->nx*data->ny]) );
+	  else
+	    B = sqrt(sqr(data->Fx1[ix + iy*data->nx + iz*data->nx*data->ny]) +
+		     sqr(data->Fy1[ix + iy*data->nx + iz*data->nx*data->ny]) +
+		     sqr(data->Fz1[ix + iy*data->nx + iz*data->nx*data->ny]) );
+	  if (B>maxB)
+	      maxB = B;
+	  /* compute divergence */
+	  if (!bmapxyz->singlePrecision)
+	    divB = fabs(
+			(data->Fx[ix+1 + iy*data->nx + iz*data->nx*data->ny] -
+			 data->Fx[ix-1 + iy*data->nx + iz*data->nx*data->ny])/(2*data->dx) 
+			+ 
+			(data->Fy[ix + (iy+1)*data->nx + iz*data->nx*data->ny] -
+			 data->Fy[ix + (iy-1)*data->nx + iz*data->nx*data->ny])/(2*data->dy)
+			+ 
+			(data->Fz[ix + iy*data->nx + (iz+1)*data->nx*data->ny] -
+			 data->Fz[ix + iy*data->nx + (iz-1)*data->nx*data->ny])/(2*data->dz)
+			);
+	  else 
+	    divB = fabs(
+			(data->Fx1[ix+1 + iy*data->nx + iz*data->nx*data->ny] -
+			 data->Fx1[ix-1 + iy*data->nx + iz*data->nx*data->ny])/(2*data->dx) 
+			+ 
+			(data->Fy1[ix + (iy+1)*data->nx + iz*data->nx*data->ny] -
+			 data->Fy1[ix + (iy-1)*data->nx + iz*data->nx*data->ny])/(2*data->dy)
+			+ 
+			(data->Fz1[ix + iy*data->nx + (iz+1)*data->nx*data->ny] -
+			 data->Fz1[ix + iy*data->nx + (iz-1)*data->nx*data->ny])/(2*data->dz)
+			);
+	  if (divB>maxDivB)
+	    maxDivB = divB;
+
+	  /* compute curl */
+	  if (!bmapxyz->singlePrecision) {
+	    curlB[0] = 
+	      (data->Fz[ix + (iy+1)*data->nx + iz*data->nx*data->ny] -
+	       data->Fz[ix + (iy-1)*data->nx + iz*data->nx*data->ny])/(2*data->dy)
+	      -
+	      (data->Fy[ix + iy*data->nx + (iz+1)*data->nx*data->ny] -
+	       data->Fy[ix + iy*data->nx + (iz-1)*data->nx*data->ny])/(2*data->dz);
+	    curlB[1] = 
+	      (data->Fx[ix + iy*data->nx + (iz+1)*data->nx*data->ny] -
+	       data->Fx[ix + iy*data->nx + (iz-1)*data->nx*data->ny])/(2*data->dz)
+	      -
+	      (data->Fz[ix+1 + iy*data->nx + iz*data->nx*data->ny] -
+	       data->Fz[ix-1 + iy*data->nx + iz*data->nx*data->ny])/(2*data->dx);
+	    curlB[2] = 
+	      (data->Fy[ix+1 + iy*data->nx + iz*data->nx*data->ny] -
+	       data->Fy[ix-1 + iy*data->nx + iz*data->nx*data->ny])/(2*data->dx)
+	      -
+	      (data->Fx[ix + (iy+1)*data->nx + iz*data->nx*data->ny] -
+	       data->Fx[ix + (iy-1)*data->nx + iz*data->nx*data->ny])/(2*data->dy);
+	  } else {
+	    curlB[0] = 
+	      (data->Fz1[ix + (iy+1)*data->nx + iz*data->nx*data->ny] -
+	       data->Fz1[ix + (iy-1)*data->nx + iz*data->nx*data->ny])/(2*data->dy)
+	      -
+	      (data->Fy1[ix + iy*data->nx + (iz+1)*data->nx*data->ny] -
+	       data->Fy1[ix + iy*data->nx + (iz-1)*data->nx*data->ny])/(2*data->dz);
+	    curlB[1] = 
+	      (data->Fx1[ix + iy*data->nx + (iz+1)*data->nx*data->ny] -
+	       data->Fx1[ix + iy*data->nx + (iz-1)*data->nx*data->ny])/(2*data->dz)
+	      -
+	      (data->Fz1[ix+1 + iy*data->nx + iz*data->nx*data->ny] -
+	       data->Fz1[ix-1 + iy*data->nx + iz*data->nx*data->ny])/(2*data->dx);
+	    curlB[2] = 
+	      (data->Fy1[ix+1 + iy*data->nx + iz*data->nx*data->ny] -
+	       data->Fy1[ix-1 + iy*data->nx + iz*data->nx*data->ny])/(2*data->dx)
+	      -
+	      (data->Fx1[ix + (iy+1)*data->nx + iz*data->nx*data->ny] -
+	       data->Fx1[ix + (iy-1)*data->nx + iz*data->nx*data->ny])/(2*data->dy);
+	  }
+
+	  magCurlB = sqrt(sqr(curlB[0])+sqr(curlB[1])+sqr(curlB[2]));
+	  if (magCurlB>maxCurlB)
+	    maxCurlB = magCurlB;
+	}
       }
-    }
-    maxDxyz = data->dz;
-    if (data->dy>maxDxyz)
-      maxDxyz = data->dy;
-    if (data->dz>maxDxyz)
       maxDxyz = data->dz;
-    printf("Maximum |div B|: %le T/m\n", maxDivB);
-    printf("Maximum |div B|/max|B|*max(dx,dy,dz): %le\n", maxDivB/maxB*maxDxyz);
-    printf("Maximum |curl B|: %le T/m\n", maxCurlB);
-    printf("Maximum |curl B|/max|B|*max(dx,dy,dz): %le\n", maxCurlB/maxB*maxDxyz);
-    fflush(stdout);
+      if (data->dy>maxDxyz)
+	maxDxyz = data->dy;
+      if (data->dz>maxDxyz)
+	maxDxyz = data->dz;
+      printf("Maximum |div B|: %le T/m\n", maxDivB);
+      printf("Maximum |div B|/max|B|*max(dx,dy,dz): %le\n", maxDivB/maxB*maxDxyz);
+      printf("Maximum |curl B|: %le T/m\n", maxCurlB);
+      printf("Maximum |curl B|/max|B|*max(dx,dy,dz): %le\n", maxCurlB/maxB*maxDxyz);
+      fflush(stdout);
+    }
   }
 
   printf("Field setup completed for data from file %s\n", bmapxyz->filename);
@@ -2227,7 +2389,7 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
   long ix, iy, iz, iq;
   double fx, fy, fz;  
   double Finterp1[2][2], Finterp2[2];
-  double *Fq[3], Freturn[3];
+  double Freturn[3];
 
   ix = (x-bmapxyz->data->xmin)/bmapxyz->data->dx;
   iy = (y-bmapxyz->data->ymin)/bmapxyz->data->dy;
@@ -2240,29 +2402,50 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
     fx = (x-(ix*bmapxyz->data->dx+bmapxyz->data->xmin))/bmapxyz->data->dx;
     fy = (y-(iy*bmapxyz->data->dy+bmapxyz->data->ymin))/bmapxyz->data->dy;
     fz = (z-(iz*bmapxyz->data->dz+bmapxyz->data->zmin))/bmapxyz->data->dz;
-    Fq[0] = bmapxyz->data->Fz;
-    Fq[1] = bmapxyz->data->Fx;
-    Fq[2] = bmapxyz->data->Fy;
 
     if (bmapxyz->xyInterpolationOrder>1) {
       double FOutput1[3], FOutput2[3];
       long offset;
       offset = iz*bmapxyz->data->nx*bmapxyz->data->ny;
-      interpolate2dFieldMapHigherOrder(&FOutput1[0], 
-                                       x, y, bmapxyz->data->dx, bmapxyz->data->dy,
-                                       bmapxyz->data->xmin, bmapxyz->data->ymin,
-                                       bmapxyz->data->xmax, bmapxyz->data->ymax,
-                                       bmapxyz->data->nx, bmapxyz->data->ny, 
-				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, 
-				       bmapxyz->xyInterpolationOrder, bmapxyz->xyGridExcess);
+      if (!bmapxyz->singlePrecision)
+	interpolate2dFieldMapHigherOrder2(&FOutput1[0], 
+					  x, y, bmapxyz->data->dx, bmapxyz->data->dy,
+					  bmapxyz->data->xmin, bmapxyz->data->ymin,
+					  bmapxyz->data->xmax, bmapxyz->data->ymax,
+					  bmapxyz->data->nx, bmapxyz->data->ny, 
+					  bmapxyz->data->Fz, bmapxyz->data->Fx, bmapxyz->data->Fy, 
+					  offset, bmapxyz->singlePrecision,
+					  bmapxyz->xyInterpolationOrder, bmapxyz->xyGridExcess);
+      else
+	interpolate2dFieldMapHigherOrder2(&FOutput1[0], 
+					  x, y, bmapxyz->data->dx, bmapxyz->data->dy,
+					  bmapxyz->data->xmin, bmapxyz->data->ymin,
+					  bmapxyz->data->xmax, bmapxyz->data->ymax,
+					  bmapxyz->data->nx, bmapxyz->data->ny, 
+					  bmapxyz->data->Fz1, bmapxyz->data->Fx1, bmapxyz->data->Fy1, 
+					  offset, bmapxyz->singlePrecision,
+					  bmapxyz->xyInterpolationOrder, bmapxyz->xyGridExcess);
+
       offset = (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny;
-      interpolate2dFieldMapHigherOrder(&FOutput2[0], 
-                                       x, y, bmapxyz->data->dx, bmapxyz->data->dy,
-                                       bmapxyz->data->xmin, bmapxyz->data->ymin,
-                                       bmapxyz->data->xmax, bmapxyz->data->ymax,
-                                       bmapxyz->data->nx, bmapxyz->data->ny, 
-				       Fq[0]+offset, Fq[1]+offset, Fq[2]+offset, 
-				       bmapxyz->xyInterpolationOrder, bmapxyz->xyGridExcess);
+      if (!bmapxyz->singlePrecision)
+	interpolate2dFieldMapHigherOrder2(&FOutput2[0], 
+					  x, y, bmapxyz->data->dx, bmapxyz->data->dy,
+					  bmapxyz->data->xmin, bmapxyz->data->ymin,
+					  bmapxyz->data->xmax, bmapxyz->data->ymax,
+					  bmapxyz->data->nx, bmapxyz->data->ny, 
+					  bmapxyz->data->Fz, bmapxyz->data->Fx, bmapxyz->data->Fy, 
+					  offset, bmapxyz->singlePrecision,
+					  bmapxyz->xyInterpolationOrder, bmapxyz->xyGridExcess);
+      else
+	interpolate2dFieldMapHigherOrder2(&FOutput2[0], 
+					  x, y, bmapxyz->data->dx, bmapxyz->data->dy,
+					  bmapxyz->data->xmin, bmapxyz->data->ymin,
+					  bmapxyz->data->xmax, bmapxyz->data->ymax,
+					  bmapxyz->data->nx, bmapxyz->data->ny, 
+					  bmapxyz->data->Fz1, bmapxyz->data->Fx1, bmapxyz->data->Fy1, 
+					  offset, bmapxyz->singlePrecision,
+					  bmapxyz->xyInterpolationOrder, bmapxyz->xyGridExcess);
+
       *F0 = bmapxyz->strength*((1-fz)*FOutput1[0] + fz*FOutput2[0]);
       *F1 = bmapxyz->strength*((1-fz)*FOutput1[1] + fz*FOutput2[1]);
       *F2 = bmapxyz->strength*((1-fz)*FOutput1[2] + fz*FOutput2[2]);
@@ -2270,18 +2453,40 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
       for (iq=0; iq<3; iq++) {
 	/* interpolate vs z to get four points in a x-y grid */
 	/* (ix, iy) */
-	Finterp1[0][0] = (1-fz)*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
-	  fz*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
-	/* (ix+1, iy) */        
-	Finterp1[1][0] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
-	  fz*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
-	/* (ix, iy+1) */
-	Finterp1[0][1] = (1-fz)*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
-	  fz*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
-	/* (ix+1, iy+1) */
-	Finterp1[1][1] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
-	  fz*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
-	
+	if (!bmapxyz->singlePrecision) {
+	  double *Fq[3];
+	  Fq[0] = bmapxyz->data->Fz;
+	  Fq[1] = bmapxyz->data->Fx;
+	  Fq[2] = bmapxyz->data->Fy;
+	  Finterp1[0][0] = (1-fz)*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	    fz*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	  /* (ix+1, iy) */        
+	  Finterp1[1][0] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	    fz*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	  /* (ix, iy+1) */
+	  Finterp1[0][1] = (1-fz)*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	    fz*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	  /* (ix+1, iy+1) */
+	  Finterp1[1][1] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	    fz*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	} else {
+	  float *Fq[3];
+	  Fq[0] = bmapxyz->data->Fz1;
+	  Fq[1] = bmapxyz->data->Fx1;
+	  Fq[2] = bmapxyz->data->Fy1;
+	  Finterp1[0][0] = (1-fz)*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	    fz*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	  /* (ix+1, iy) */        
+	  Finterp1[1][0] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	    fz*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	  /* (ix, iy+1) */
+	  Finterp1[0][1] = (1-fz)*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	    fz*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	  /* (ix+1, iy+1) */
+	  Finterp1[1][1] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+	    fz*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
+	}
+
 	/* interpolate vs y to get two points spaced by dx */
 	/* ix */
 	Finterp2[0] = (1-fy)*Finterp1[0][0] + fy*Finterp1[0][1];

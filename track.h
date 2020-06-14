@@ -1092,8 +1092,8 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 15
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
-#define N_BMAPXYZ_PARAMS 17
-#define N_BRAT_PARAMS 21
+#define N_BMAPXYZ_PARAMS 18
+#define N_BRAT_PARAMS 22
 #define N_BGGEXP_PARAMS 25
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
@@ -2977,7 +2977,10 @@ typedef struct {
 extern PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS];
 
 typedef struct {
-  double *Fx, *Fy, *Fz; /* these are copies of pointers, potentially shared with other instances */
+  short singlePrecision; 
+  /* these are copies of pointers, potentially shared with other instances */
+  double *Fx, *Fy, *Fz;    /* use if !singlePrecision */ 
+  float *Fx1, *Fy1, *Fz1;  /* use if singlePrecision */
   double xmin, xmax, dx;
   double ymin, ymax, dy;
   double zmin, zmax, dz;
@@ -2989,7 +2992,7 @@ typedef struct {
   double dxError, dyError, dzError, tilt;
   double fieldLength, strength, accuracy;
   char *method, *filename;
-  short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridExcess;
+  short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridExcess, singlePrecision;
   char *particleOutputFile;
   /* internal variables */
   BMAPXYZ_DATA *data; 
@@ -3008,7 +3011,7 @@ typedef struct {
   double dxMap, dzMap;
   double yawMap;
   double fieldFactor;
-  short useFTABLE, xyInterpolationOrder, xyGridExcess, xyExtrapolate, useSbenMatrix;
+  short useFTABLE, xyInterpolationOrder, xyGridExcess, xyExtrapolate, useSbenMatrix, singlePrecision;
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;
@@ -4701,6 +4704,13 @@ extern int interpolate2dFieldMapHigherOrder(double *Foutput, double x, double y,
                                             double xmax, double ymax,
                                             long nx, long ny,
                                             double *F0, double *F1, double *F2, short order, short gridExcess);
+extern int interpolate2dFieldMapHigherOrder2(double *Foutput, double x, double y,
+					     double dx, double dy,
+					     double xmin, double ymin,
+					     double xmax, double ymax,
+					     long nx, long ny,
+					     void *F0, void *F1, void *F2, long offset, 
+					     short singlePrecision, short order, short gridExcess);
 extern void printWarning(char *text,  char *detail);
 extern void printWarningForTracking(char *text, char *detail);
 extern void printWarningWithContext(char *context1, char  *context2, char *text,  char *detail);
