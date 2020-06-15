@@ -17,7 +17,7 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
 void index_bunch_assignments(double **part, long np, long idSlotsPerBunch, double P0, 
                              /* return data: */
                              double **time,     /* (*time)[ip] is the arrival time of ip-th particle */
-                             long **ibParticle, /* (*ibParticle)[ib] is the bunch assignment for ip-th particle */
+                             long **ibParticle, /* (*ibParticle)[ip] is the bunch assignment for ip-th particle */
                              long ***ipBunch,  /* (*ipBunch)[ib][i] is the ip value of the i-th particle in the ib-th bunch */
                              long **npBunch,   /* (*npBunch)[ib] is the number of particles in the ib-th bunch */
                              long *nBunches,    /* *nBunches is the number of bunches */
