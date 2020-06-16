@@ -3286,6 +3286,7 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"ACCURACY", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
     {"METHOD", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&brat_example.method), NULL, 0.0, 0, "Ignored. Method defaults to Bulirsch-Stoer."},
     {"FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&brat_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z, Bx, By, Bz)"},
+    {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&brat_example.particleOutput), NULL, 0.0, 0, "Filename template for particle output. Can be very resource intensive!"},
     {"XVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.xVertex), NULL, 0.0, 0, "x coordinate of vertex point"},
     {"ZVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.zVertex), NULL, 0.0, 0, "z coordinate of vertex point"},
     {"XENTRY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.xEntry), NULL, 0.0, 0, "x coordinate of nominal entry point"},

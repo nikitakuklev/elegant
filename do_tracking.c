@@ -1035,6 +1035,7 @@ long do_tracking(
       trackingContext.zEnd = z;
       trackingContext.step = step;
       trackingContext.elementType = eptr->type;
+      trackingContext.flags = flags;
 
       log_exit("do_tracking.2.2.1");
       if (eptr->p_elem || eptr->matrix) {
@@ -1046,9 +1047,9 @@ long do_tracking(
               MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	  }
 #endif
-          printf("Starting %s#%ld at s=%le m (%le), pass %ld, %ld particles, memory %ld kB\n", 
+          printf("Starting %s#%ld at s=%le to %le m, pass %ld, %ld particles, memory %ld kB\n", 
                  eptr->name, eptr->occurence, 
-                 eptr->end_pos, last_z, i_pass, 
+                 last_z, eptr->end_pos, i_pass, 
 #if USE_MPI
                   myid==0 ? (beam?beam->n_to_track_total:-1) : nToTrack,
 #else

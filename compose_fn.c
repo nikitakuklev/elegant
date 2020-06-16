@@ -81,3 +81,22 @@ char *compose_filename_occurence(char *template, char *root_name, long occurence
   return ptr;
 }
   
+#if USE_MPI
+char *compose_filename_per_processor(char *template, char *root_name)
+{
+    char *ptr;
+    char buffer[10];
+
+    if (str_in(template, "%s")) {
+      ptr = tmalloc(sizeof(char)*(strlen(template)+strlen(root_name)+11));
+      sprintf(ptr, template, root_name);
+      snprintf(buffer, 10, "%05d", myid);
+      strcat(ptr, buffer);
+      return(ptr);
+    } else {
+      ptr = tmalloc(sizeof(char)*(strlen(template)+11));
+      sprintf(ptr, "%s%05d", template, myid);
+      return ptr;
+    }
+}
+#endif

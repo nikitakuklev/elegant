@@ -184,6 +184,7 @@ typedef struct {
   short initialized;
   long periods, superperiodicity;
   double center[2]; /* Z, X */
+  double yLimit[2]; /* low, high limits */
   OBSTRUCTION_DATASET *data;
   long nDataSets;
 } OBSTRUCTION_DATASETS;
@@ -798,6 +799,7 @@ typedef struct {
   SLICE_OUTPUT *sliceAnalysis;
   double zStart, zEnd;
   char rootname[CONTEXT_BUFSIZE+1];
+  unsigned long flags;
 #if USE_MPI
   int myid;
 #endif
@@ -1093,7 +1095,7 @@ extern char *entity_text[N_TYPES];
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
 #define N_BMAPXYZ_PARAMS 18
-#define N_BRAT_PARAMS 22
+#define N_BRAT_PARAMS 23
 #define N_BGGEXP_PARAMS 25
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
@@ -3004,7 +3006,7 @@ typedef struct {
 extern PARAMETER brat_param[N_BRAT_PARAMS];
 typedef struct {
   double length, angle, fse, accuracy;
-  char *method, *filename;
+  char *method, *filename, *particleOutput;
   double xVertex, zVertex;
   double xEntry, zEntry;
   double xExit, zExit;
@@ -3012,9 +3014,11 @@ typedef struct {
   double yawMap;
   double fieldFactor;
   short useFTABLE, xyInterpolationOrder, xyGridExcess, xyExtrapolate, useSbenMatrix, singlePrecision;
+  short limitX, limitY;
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;
+  SDDS_DATASET *SDDSparticleOutput;
 } BRAT;
 
 /* magnetic field generalized gradient expansion */
@@ -3937,7 +3941,10 @@ void finishChaosMap();
 extern void getRunControlContext(VARY *context);
 extern void getRunSetupContext (RUN *context);
 extern char *compose_filename(char *templateString, char *root_name);
-char *compose_filename_occurence(char *templateString, char *root_name, long occurence);
+extern char *compose_filename_occurence(char *templateString, char *root_name, long occurence);
+#if USE_MPI
+extern char *compose_filename_per_processor(char *templateString, char *root_name);
+#endif
 extern double find_beam_p_central(char *input);
 void center_beam_on_coords(double **particle, long n_part, double *coord, long center_momentum_also);
 void offset_beam_by_coords(double **part, long np, double *coord, long offset_dp);
