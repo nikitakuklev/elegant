@@ -604,7 +604,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       itop--;
       ip--;
     }
-    if (isSlave && brat->SDDSparticleOutput) {
+    if (isSlave && brat->SDDSparticleOutput && (!brat->particleOutputLostOnly || isLost)) {
       SDDS_DATASET *SDDS_table;
       SDDS_table = brat->SDDSparticleOutput;
       if (!SDDS_StartTable(SDDS_table, n_stored)) {

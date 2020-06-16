@@ -3286,7 +3286,6 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"ACCURACY", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
     {"METHOD", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&brat_example.method), NULL, 0.0, 0, "Ignored. Method defaults to Bulirsch-Stoer."},
     {"FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&brat_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z, Bx, By, Bz)"},
-    {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&brat_example.particleOutput), NULL, 0.0, 0, "Filename template for particle output. Can be very resource intensive!"},
     {"XVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.xVertex), NULL, 0.0, 0, "x coordinate of vertex point"},
     {"ZVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.zVertex), NULL, 0.0, 0, "z coordinate of vertex point"},
     {"XENTRY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.xEntry), NULL, 0.0, 0, "x coordinate of nominal entry point"},
@@ -3302,7 +3301,9 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"XY_GRID_EXCESS", "", IS_SHORT, 0, (long)((char *)&brat_example.xyGridExcess), NULL, 0.0, 0, "Number of rows or columns to add in each dimension to the minimum."},
     {"XY_EXTRAPOLATE", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.xyExtrapolate), NULL, 0.0, 0, "If nonzero, will extrapolate the field map in (x,y) if particle is outside. Otherwise, field is assumed to be zero."},
     {"USE_SBEN_MATRIX", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.useSbenMatrix), NULL, 0.0, 0, "If nonzero, instead of using tracking to determine the matrix, will just use a sector-bend matrix."},
-    {"SINGLE_PRECISION", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.singlePrecision), NULL, 0.0, 0, "If nonzero, store field data in single precision to reduce memory requirements."},
+    {"SINGLE_PRECISION", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.singlePrecision), NULL, 0.0, 0, "If nonzero, store field data in single precision to reduce memory requirements. Incompatible with FTABLE mode."},
+    {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char*)&brat_example.particleOutput), NULL, 0.0, 0, "Filename template for particle output. Can be very resource intensive!"},
+    {"PARTICLE_OUTPUT_LOST_ONLY", NULL, IS_SHORT, 0, (long)((char*)&brat_example.particleOutputLostOnly), NULL, 0.0, 0, "If non-zero, particle output includes only lost particles."},
 };  
 
 
