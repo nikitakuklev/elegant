@@ -3304,6 +3304,8 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"SINGLE_PRECISION", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.singlePrecision), NULL, 0.0, 0, "If nonzero, store field data in single precision to reduce memory requirements. Incompatible with FTABLE mode."},
     {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char*)&brat_example.particleOutput), NULL, 0.0, 0, "Filename template for particle output. Can be very resource intensive!"},
     {"PARTICLE_OUTPUT_LOST_ONLY", NULL, IS_SHORT, 0, (long)((char*)&brat_example.particleOutputLostOnly), NULL, 0.0, 0, "If non-zero, particle output includes only lost particles."},
+    {"PARTICLE_OUTPUT_SELECTION_INTERVAL", NULL, IS_LONG, 0, (long)((char*)&brat_example.particleOutputSelectionInterval), NULL, 0.0, 1, "Interval between particles selected for output."},
+    {"PARTICLE_OUTPUT_SAMPLE_INTERVAL", NULL, IS_LONG, 0, (long)((char*)&brat_example.particleOutputSampleInterval), NULL, 0.0, 1, "Interval in integration steps for particle output."},
 };  
 
 

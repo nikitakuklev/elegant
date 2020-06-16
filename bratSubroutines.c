@@ -585,7 +585,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   itop = np-1;
   for (ip=0; ip<=itop; ip++) {
     double accelCoord[6], q[10];
-    long i;
+    long i, j;
     for (ic=0; ic<6; ic++)
       accelCoord[ic] = part[ip][ic];
     n_stored = 0;
@@ -604,7 +604,9 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       itop--;
       ip--;
     }
-    if (isSlave && brat->SDDSparticleOutput && (!brat->particleOutputLostOnly || isLost)) {
+    if (isSlave && brat->SDDSparticleOutput && (!brat->particleOutputLostOnly || isLost)
+	&& (brat->particleOutputSelectionInterval<=0 || 
+	    ((long)part[itop+1][particleIDIndex])%brat->particleOutputSelectionInterval==0)) {
       SDDS_DATASET *SDDS_table;
       SDDS_table = brat->SDDSparticleOutput;
       if (!SDDS_StartTable(SDDS_table, n_stored)) {
@@ -612,12 +614,14 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
       if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "particleID", 
-			      (long)part[ip][particleIDIndex], NULL)) {
+			      (long)part[itop+1][particleIDIndex], NULL)) {
 	SDDS_SetError("Problem setting data in SDDS table (BRAT)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
-      for (i=0; i<n_stored; i++) {
-	if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
+      if (brat->particleOutputSampleInterval<1)
+	brat->particleOutputSampleInterval = 1;
+      for (i=j=0; i<n_stored; i+=brat->particleOutputSampleInterval, j++) {
+	if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j,
 			       0, (float) X_stored[i], 1, (float) Y_stored[i], 2, (float) Z_stored[i],
 			       3, (float)FX_stored[i], 4, (float)FY_stored[i], 5, (float)FZ_stored[i], -1)) {
 	  SDDS_SetError("Problem setting data in SDDS table (BRAT)");

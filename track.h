@@ -3017,6 +3017,7 @@ typedef struct {
   short limitX, limitY;
   char *particleOutput;
   short particleOutputLostOnly;
+  long particleOutputSelectionInterval, particleOutputSampleInterval;
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;
