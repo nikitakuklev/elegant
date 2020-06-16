@@ -3,7 +3,7 @@
 #include "math.h"
 #include "stdio.h"
 
-OBSTRUCTION_DATASETS obstructionDataSets = {0, 0, 0, {0.0, 0.0}, NULL, 0};
+OBSTRUCTION_DATASETS obstructionDataSets = {0, 0, 0, {0.0, 0.0}, {-10.0, 10.0}, NULL, 0};
 
 static long obstructionsInForce = 1;
 void setObstructionsMode(long state) 
@@ -26,6 +26,8 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   if (echoNamelists) print_namelist(stdout, &obstruction_data);
 
   resetObstructionData(&obstructionDataSets);
+  obstructionDataSets.yLimit[0] = yLimit[0];
+  obstructionDataSets.yLimit[1] = yLimit[1];
 
   if (disable)
     return;
@@ -135,7 +137,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   static FILE *fpObs = NULL;
   static ELEMENT_LIST *lastEptr = NULL;
   */
-  long ic, iperiod;
+  long ic, iperiod, lost;
   double Z, X, Y;
 
   /*
@@ -186,31 +188,33 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   fprintf(fpObs, "%le %le %ld\n", Z, X, (long)part[6]); 
   */
 
-  for (iperiod=0; iperiod<obstructionDataSets.periods; iperiod++) {
-    for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
-      if (pointIsInsideContour(Z, X, 
-			       obstructionDataSets.data[ic].Z, 
-			       obstructionDataSets.data[ic].X, 
-			       obstructionDataSets.data[ic].points,
-			       obstructionDataSets.center,
-			       (iperiod*PIx2)/obstructionDataSets.superperiodicity)) {
-      /*
-	printf("Point X=%le, Z=%le is inside\n", X, Z);
-	logInside(X, Z, part[6], 0, 1);
-      */
-        if (globalLossCoordOffset!=-1) {
-          part[globalLossCoordOffset+0] = X;
-          part[globalLossCoordOffset+1] = Y;
-          part[globalLossCoordOffset+2] = Z;
-        }
-	return 1;
+  if (obstructionDataSets.yLimit[0]<obstructionDataSets.yLimit[1] && 
+      (Y<obstructionDataSets.yLimit[0] || Y>obstructionDataSets.yLimit[1]))
+    lost = 1;
+  else {
+    lost = 0;
+    for (iperiod=0; iperiod<obstructionDataSets.periods && !lost; iperiod++) {
+      for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
+	if (pointIsInsideContour(Z, X, 
+				 obstructionDataSets.data[ic].Z, 
+				 obstructionDataSets.data[ic].X, 
+				 obstructionDataSets.data[ic].points,
+				 obstructionDataSets.center,
+				 (iperiod*PIx2)/obstructionDataSets.superperiodicity)) {
+	  lost = 1;
+	  break;
+	}
       }
     }
   }
-  /*
-  logInside(X, Z, part[6], 0, 0);
-  printf("Point X=%le, Z=%le is outside\n", X, Z);
-  */
+  if (lost) {
+    if (globalLossCoordOffset!=-1) {
+      part[globalLossCoordOffset+0] = X;
+      part[globalLossCoordOffset+1] = Y;
+      part[globalLossCoordOffset+2] = Z;
+    }
+    return 1;
+  }
   return 0;
 }
 
@@ -265,7 +269,7 @@ long insideObstruction_XYZ
   TRACKING_CONTEXT context;
   double C, S;
   double X1, Y1, Z1;
-  long ic, iperiod;
+  long ic, iperiod, lost;
 
   /*
   static FILE *fp = NULL;
@@ -292,7 +296,7 @@ long insideObstruction_XYZ
   getTrackingContext(&context);
   if (context.element->pred)
     thetai -= context.element->pred->floorAngle[0];
-
+  
   C = cos(thetai);
   S = sin(thetai);
   X1 =  C*X - S*Z;
@@ -303,36 +307,38 @@ long insideObstruction_XYZ
     Y1 += context.element->pred->floorCoord[1];
     Z1 += context.element->pred->floorCoord[2];
   }
-
-  /*
-  fprintf(fp, "%21.15e %21.15e %21.15e\n", Z1, X1, thetai);
+    
+    /*
+      fprintf(fp, "%21.15e %21.15e %21.15e\n", Z1, X1, thetai);
   */
 
-  for (iperiod=0; iperiod<obstructionDataSets.periods; iperiod++) {
-    for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
-      if (pointIsInsideContour(Z1, X1, 
-			       obstructionDataSets.data[ic].Z, 
-			       obstructionDataSets.data[ic].X, 
-			       obstructionDataSets.data[ic].points,
-			       obstructionDataSets.center, 
-			       (iperiod*PIx2)/obstructionDataSets.superperiodicity)) {
-	if (lossCoordinates) {
-	  lossCoordinates[0] = X1;
-	  lossCoordinates[1] = Y1;
-	  lossCoordinates[2] = Z1;
+  if (obstructionDataSets.yLimit[0]<obstructionDataSets.yLimit[1] && 
+      (Y<obstructionDataSets.yLimit[0] || Y>obstructionDataSets.yLimit[1]))
+    lost = 1;
+  else {
+    lost = 0;
+    for (iperiod=0; iperiod<obstructionDataSets.periods && !lost; iperiod++) {
+      for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
+	if (pointIsInsideContour(Z1, X1, 
+				 obstructionDataSets.data[ic].Z, 
+				 obstructionDataSets.data[ic].X, 
+				 obstructionDataSets.data[ic].points,
+				 obstructionDataSets.center, 
+				 (iperiod*PIx2)/obstructionDataSets.superperiodicity)) {
+	  lost = 1;
+	  break;
 	}
-	/*
-          logInside(X1, Z1, -1, 1, 1);
-	  printf("Lost on obstruction: %le, %le, %le\n", X, Y, Z);
-	  fflush(stdout);
-	*/
-	return 1;
       }
     }
   }
-  /*
-  logInside(X1, Z1, -1, 1, 0);
-  */
+  if (lost) {
+    if (lossCoordinates) {
+      lossCoordinates[0] = X1;
+      lossCoordinates[1] = Y1;
+      lossCoordinates[2] = Z1;
+    }
+    return 1;
+  }
   return 0;
 }
 
@@ -367,6 +373,8 @@ void resetObstructionData(OBSTRUCTION_DATASETS *obsData)
     free(obsData->data);
     obsData->data = NULL;
     obsData->initialized = 0;
+    obsData->yLimit[0] = -10;
+    obsData->yLimit[1] = 10;
   }
 }
 
