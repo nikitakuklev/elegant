@@ -1559,6 +1559,7 @@ C  Declarations of scalars:
 	REAL*8		ALPHAI,ALPHA2I
 	REAL*8		SUM0,SUM1,SUM3
 
+        REAL*8          SLARRAY(1)
 C  Labeled constants:
 	REAL*8		ZERO,ONE,TWO,FOUR,HALF,EPS
 	PARAMETER	(ZERO=0.0D0,ONE=1.0D0,TWO=2.0D0)
@@ -1627,7 +1628,8 @@ C  -----------------------------------------------------------------------------
 		ALPHA2I = R*I-K3
 		ALPHAI  = SQRT(ALPHA2I)
 C  Brilliance
-		CALL BRIGHTNESS_ARRAY(METHOD,I,R,ALPHAI,ALPHA2I,SL)
+		SLARRAY(1) = SL
+		CALL BRIGHTNESS_ARRAY(METHOD,I,R,ALPHAI,ALPHA2I,SLARRAY)
 
 C  Integrate
 		SUM0 = ZERO
