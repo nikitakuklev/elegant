@@ -97,8 +97,8 @@ void SDDS_SlicePointSetup(SLICE_POINT *slicePoint, char *command_file, char *lat
   }
 }
 
-double tmp_safe_sqrt;
-#define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?(double)0.0:sqrt(tmp_safe_sqrt))
+//static double tmp_safe_sqrt;
+//#define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?(double)0.0:sqrt(tmp_safe_sqrt))
 
 void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_passes, 
                          double **particle, long particles, double Po, 

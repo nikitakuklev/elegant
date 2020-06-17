@@ -160,7 +160,7 @@ void doMpiAbort(int code, char *format, ...);
 extern short mpiAbort;
 
 #ifndef __cplusplus
-long remaining_sequence_No, orig_sequence_No; /* For Pelegant regression test */
+extern long remaining_sequence_No, orig_sequence_No; /* For Pelegant regression test */
 #endif
 
 

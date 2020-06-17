@@ -292,6 +292,8 @@ long runInSinglePartMode = 0; /* This flag will be set as true under some specia
 double factor = 1.0;    /* In serial version, the memory will be allocted for all the particles */ 
 long do_find_aperture = 0;
 
+long remaining_sequence_No, orig_sequence_No; /* For Pelegant regression test */
+
 #if USE_MPI
 int n_processors = 1;
 int myid;
