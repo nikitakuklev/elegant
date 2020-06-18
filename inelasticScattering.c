@@ -27,7 +27,7 @@ static long nElements;
 static ELEMENT_LIST **elementArray = NULL;
 static long iElementName, iElementOccurence, iElementType, ideltaOrig, idkOrig, ikOrig, isOrig,
   ixLost, iyLost, ideltaLost, isLost;
-MPI_Win lastPassWin;
+static MPI_Win lastPassWin;
 static long lastPassWorker=-1;
 
 long nMomAp = 0;

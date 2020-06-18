@@ -28,7 +28,7 @@ static long nElements;
 static ELEMENT_LIST **elementArray = NULL;
 static long iElementName, iElementOccurence, iElementType, ixpOrig, iypOrig, isOrig,
   ixLost, iyLost, ideltaLost, isLost, ithetaOrig, iphiOrig;
-MPI_Win lastPassWin;
+static MPI_Win lastPassWin;
 static long lastPassWorker=-1;
 
 void computeScatteringAngles(long itheta, long iphi, double *xpReturn, double *ypReturn, double *thetaReturn, double *phiReturn,
