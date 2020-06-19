@@ -721,6 +721,10 @@ void summarize_optimization_setup(OPTIMIZATION_DATA *optimization_data)
         fprintf(optimization_data->fp_log, "\nOptimization to be performed using method '%s' in mode '%s' with tolerance %e.\n", 
             optimize_method[optimization_data->method], optimize_mode[optimization_data->mode], optimization_data->tolerance);
 #if USE_MPI
+#if MPI_DEBUG
+	fprintf(optimization_data->fp_log, "Mode settings for optimization: parallelTrackingBasedMatrices = %ld, partOnMaster=%d, parallelStatus=%d, lessPartAllowed=%ld, isSlave=%ld, isMaster=%ld, notSinglePart=%ld, runInSinglePartMode=%ld, trajectoryTracking=%ld\n", 
+		parallelTrackingBasedMatrices, partOnMaster,  parallelStatus,  lessPartAllowed,  isSlave,  isMaster,  notSinglePart,  runInSinglePartMode,  trajectoryTracking);
+#endif
 	if (runInSinglePartMode) /* For genetic optimization */
 	  fprintf(optimization_data->fp_log, "    As many as %ld generations will be performed on each of %ld passes.\n",
              optimization_data->n_iterations, optimization_data->n_passes);
@@ -2000,10 +2004,21 @@ double optimization_function(double *value, long *invalid)
   printf("optimization_function: Computing matrices\n");
   fflush(stdout);
 #endif
+#if USE_MPI && MPI_DEBUG
+  printf("Mode before compute_changed_matrices: parallelTrackingBasedMatrices = %ld, partOnMaster=%d, parallelStatus=%d, lessPartAllowed=%ld, isSlave=%ld, isMaster=%ld, notSinglePart=%ld, runInSinglePartMode=%ld, trajectoryTracking=%ld\n", 
+	  parallelTrackingBasedMatrices, partOnMaster,  parallelStatus,  lessPartAllowed,  isSlave,  isMaster,  notSinglePart,  runInSinglePartMode,  trajectoryTracking);
+  fflush(stdout);
+#endif
+
   if (beamline->links && beamline->links->n_links)
     rebaseline_element_links(beamline->links, run, beamline);
   i = compute_changed_matrices(beamline, run) +
       assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK+LINK_ELEMENT_DEFINITION);
+#if USE_MPI && MPI_DEBUG
+  printf("Mode after compute_changed_matrices: parallelTrackingBasedMatrices = %ld, partOnMaster=%d, parallelStatus=%d, lessPartAllowed=%ld, isSlave=%ld, isMaster=%ld, notSinglePart=%ld, runInSinglePartMode=%ld, trajectoryTracking=%ld\n", 
+		parallelTrackingBasedMatrices, partOnMaster,  parallelStatus,  lessPartAllowed,  isSlave,  isMaster,  notSinglePart,  runInSinglePartMode,  trajectoryTracking);
+  fflush(stdout);
+#endif
 #if DEBUG
   printf("optimization_function: Computed %ld matrices\n", i);
   fflush(stdout);
