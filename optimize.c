@@ -2415,9 +2415,9 @@ double optimization_function(double *value, long *invalid)
       MPI_Allreduce(&beam->n_lost, &nLostTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       printf("nLostTotal = %ld\n", nLostTotal);
       fflush(stdout);
-      rpn_store(nLostMemory, NULL, nLostTotal);
+      rpn_store(nLostTotal, NULL, nLostMemory);
 #else
-      rpn_store(nLostMemory, NULL, beam->n_lost);
+      rpn_store(beam->n_lost, NULL, nLostMemory);
 #endif
     }
 
