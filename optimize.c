@@ -1896,12 +1896,16 @@ double optimization_function(double *value, long *invalid)
   double startingOrbitCoord[6] = {0,0,0,0,0,0};
   long rpnError = 0;
   TUNE_FOOTPRINTS tuneFP;
+  static long nLostMemory = -1;
 #if USE_MPI
   long beamNoToTrack;
+  long nLostTotal;
 #endif
-  
+
   log_entry("optimization_function");
-  
+
+  if (nLostMemory==-1)
+    nLostMemory = rpn_create_mem("nLost", 0);
 #if DEBUG
   printf("optimization_function: In optimization function\n");
   printf("Beamline flags: %lx\n", beamline->flags);
@@ -2405,6 +2409,15 @@ double optimization_function(double *value, long *invalid)
 		 &charge);
 #if DEBUG
       printMessageAndTime(stdout, "Done tracking beam\n");
+#endif
+      /* Store number of lost particles in memory for use in optimization expressions */
+#if USE_MPI
+      MPI_Allreduce(&beam->n_lost, &nLostTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      printf("nLostTotal = %ld\n", nLostTotal);
+      fflush(stdout);
+      rpn_store(nLostMemory, NULL, nLostTotal);
+#else
+      rpn_store(nLostMemory, NULL, beam->n_lost);
 #endif
     }
 

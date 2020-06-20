@@ -317,6 +317,7 @@ long do_tracking(
   if (beam) {
     coord = beam->particle;
     nOriginal = beam->n_to_track;  /* used only for computing macroparticle charge */
+    beam->n_lost = 0;
   }
 
 #if SDDS_MPI_IO
