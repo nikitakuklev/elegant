@@ -4230,9 +4230,10 @@ void recordLostParticles(
 #if USE_MPI && MPI_DEBUG
   static FILE *fp = NULL;
 #endif
-
+  /*
   printf("Recording lost particles, nLeft=%ld, nToTrack=%ld, beam->n_lost=%ld\n",
          nLeft, nToTrack, beam?beam->n_lost:-1); fflush(stdout);
+  */
 
   if (coord)
     for (i=nLeft; i<nToTrack; i++) 
