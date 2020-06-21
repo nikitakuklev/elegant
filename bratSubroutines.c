@@ -178,7 +178,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       printf("Reading BRAT field data from %s\n", brat->filename);
       fflush(stdout);
 
-      if (!SDDS_InitializeInput(&SDDS_table, brat->filename) || !SDDS_ReadPage(&SDDS_table)) {
+      if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, brat->filename) || !SDDS_ReadPage(&SDDS_table)) {
         SDDS_SetError("Unable to read BRAT data file");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -333,7 +333,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       printf("Reading BRAT field data from %s\n", brat->filename);
       fflush(stdout);
 
-      if (!SDDS_InitializeInput(&SDDS_table, brat->filename) || !SDDS_ReadPage(&SDDS_table)) {
+      if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, brat->filename) || !SDDS_ReadPage(&SDDS_table)) {
         SDDS_SetError("Unable to read BRAT data file");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -1171,7 +1171,7 @@ double BRAT_setup_arc_field_data(char *input, char *sName, char *fieldName, doub
   long iData, increasing;
   double BRef, BMin, BMax, sMin, sMax;
   
-  if (!SDDS_InitializeInput(&SDDS_table, input) || !SDDS_ReadPage(&SDDS_table)) {
+  if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, input) || !SDDS_ReadPage(&SDDS_table)) {
     SDDS_SetError("Unable to read data file");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -1263,7 +1263,7 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
   printf("Reading BRAT field data from %s\n", input);
   fflush(stdout);
 
-  if (!SDDS_InitializeInput(&SDDS_table, input) || !SDDS_ReadPage(&SDDS_table)) {
+  if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, input) || !SDDS_ReadPage(&SDDS_table)) {
     SDDS_SetError("Unable to read data file");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }

@@ -2004,11 +2004,13 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
     return;
   }
 
+  /*
   if (!fexists(bmapxyz->filename)) {
     printf("file %s not found for BMAPXYZ element\n", bmapxyz->filename);
     fflush(stdout);
     exitElegant(1);
   }
+  */
 
   storedBmapxyzData = SDDS_Realloc(storedBmapxyzData, sizeof(*storedBmapxyzData)*(nStoredBmapxyzData+1));
   bmapxyz->data = data = storedBmapxyzData[imap].data = (BMAPXYZ_DATA*)tmalloc(sizeof(*data));
