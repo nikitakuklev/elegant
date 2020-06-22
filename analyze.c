@@ -899,6 +899,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   static long nStoredMatrices = 0, iStoredMatrices = -1;
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
+  static bool announcedNTracked = false;
   long my_nTrack, my_offset;
 
   setTrackingContext(eptr->name, eptr->occurence, eptr->type, run->rootname, eptr);
@@ -1026,6 +1027,10 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 
   n_track = makeInitialParticleEnsemble(&initialCoord, startingCoord, &finalCoord, &coordError, nPoints1, stepSize);
   n_left = n_track;
+  if (!announcedNTracked) {
+    printf("Tracking %ld particles in total for matrix determination\n", n_track);
+    announcedNTracked = true;
+  }
 #if USE_MPI
 #ifdef DEBUG
   if (fpdeb) {
