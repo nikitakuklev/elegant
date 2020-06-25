@@ -267,10 +267,10 @@ char* getUnits (char *name)
 int printXrlFloat (float value, char *notes)
 {
   // printf( "xrltool option: verbose = %d\n", verbose);
-  if(verbose <= 0)         { printf( "%f\n", value);
-  } else if(verbose == 1)  { printf( "%s = %f\n", strVar[0], value);
-  } else if(verbose == 2)  { printf( "%s = %f (%s)\n", strVar[0], value, getUnits(strVar[0]) );
-  } else if(verbose >  2)  { printf( "%s:\n%s = %f (%s)\n", notes, strVar[0], value, getUnits(strVar[0]) );
+  if(verbose <= 0)         { printf( "%0.12f\n", value);
+  } else if(verbose == 1)  { printf( "%s = %0.12f\n", strVar[0], value);
+  } else if(verbose == 2)  { printf( "%s = %0.12f (%s)\n", strVar[0], value, getUnits(strVar[0]) );
+  } else if(verbose >  2)  { printf( "%s:\n%s = %0.12f (%s)\n", notes, strVar[0], value, getUnits(strVar[0]) );
   }
   exit (0);
 }
