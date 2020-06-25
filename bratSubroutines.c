@@ -585,11 +585,12 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   itop = np-1;
   for (ip=0; ip<=itop; ip++) {
     double accelCoord[6], q[10];
-    long i, j;
+    long i, j, iOut;
     for (ic=0; ic<6; ic++)
       accelCoord[ic] = part[ip][ic];
     n_stored = 0;
     BRAT_lorentz_integration(accelCoord, q, brat->SDDSparticleOutput?1:0, NULL);
+    iOut = ip;
     for (ic=0; ic<6; ic++)
       part[ip][ic] = accelCoord[ic];
 #ifndef ABRAT_PROGRAM
@@ -601,12 +602,13 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       swapParticles(part[ip], part[itop]);
       if (accepted) 
         swapParticles(accepted[ip], accepted[itop]);
+      iOut = itop;
       itop--;
       ip--;
     }
     if (isSlave && brat->SDDSparticleOutput && (!brat->particleOutputLostOnly || isLost)
-	&& (brat->particleOutputSelectionInterval<=0 || 
-	    ((long)part[itop+1][particleIDIndex])%brat->particleOutputSelectionInterval==0)) {
+	&& (brat->particleOutputSelectionInterval<=1 || 
+	    ((long)part[iOut][particleIDIndex])%brat->particleOutputSelectionInterval==0)) {
       SDDS_DATASET *SDDS_table;
       SDDS_table = brat->SDDSparticleOutput;
       if (!SDDS_StartTable(SDDS_table, n_stored)) {
@@ -614,7 +616,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
       if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "particleID", 
-			      (long)part[itop+1][particleIDIndex], NULL)) {
+			      (long)part[iOut][particleIDIndex], NULL)) {
 	SDDS_SetError("Problem setting data in SDDS table (BRAT)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
