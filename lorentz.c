@@ -1,4 +1,3 @@
-
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -282,7 +281,14 @@ long lorentz(
 
 #ifdef DEBUG
     if (!fp_field) {
-        fp_field = fopen_e("fields.sdds", "w", 0);
+#if USE_MPI
+      char buffer[100];
+      snprintf(buffer, 100, "fields%03d.sdds", myid);
+      /* fp_field = fopen_e(buffer, "w", 0); */
+#else
+      fp_field = fopen_e("fields.sdds", "w", 0);
+#endif
+      if (fp_field) {
         fprintf(fp_field, "SDDS1\n&column name=q0 type=double units=m &end\n");
         fprintf(fp_field, "&column name=q1 type=double units=m &end\n");
         fprintf(fp_field, "&column name=q2 type=double units=m &end\n");
@@ -293,10 +299,15 @@ long lorentz(
         fprintf(fp_field, "&column name=F2 type=double  &end\n");
         fprintf(fp_field, "&data mode=ascii no_row_counts=1 &end\n");
         }
+    }
     field_output_on = 0;
 #endif
 
     lorentz_setup(field, field_type, part, n_part, P_central);
+#ifdef DEBUG
+    printf("lorentz_setup finished\n");
+    fflush(stdout);
+#endif
 
     if (field_type==T_BMAPXYZ) {
       BMAPXYZ *bmxyz;
@@ -306,12 +317,20 @@ long lorentz(
     }
     
 #ifdef DEBUG
-    field_output_on = 1;
+    field_output_on = fp_field? 1 : 0;
 #endif
     i_top = n_part-1;
     for (i_part=0; i_part<=i_top; i_part++) {
         coord = part[i_part];
+#ifdef DEBUG
+      printf("Tracking particle %ld of %ld, coord=%x\n", i_part, n_part, coord);
+      fflush(stdout);
+#endif
         if (!do_lorentz_integration(coord, field)) {
+#ifdef DEBUG
+          printf("Tracking lost\n");
+          fflush(stdout);
+#endif
           if (i_part!=i_top) {
             swapParticles(part[i_part], part[i_top]);
             if (accepted)
@@ -321,6 +340,13 @@ long lorentz(
           i_top--;
           i_part--;
         }
+#ifdef DEBUG
+        else {
+          printf("Tracking survived\n");
+          fflush(stdout);
+    }
+#endif
+
         if (field_type==T_BMAPXYZ) {
           BMAPXYZ *bmxyz;
           bmxyz = (BMAPXYZ*)field;
@@ -343,6 +369,10 @@ long lorentz(
 
     log_exit("lorentz");
     return(i_top+1);
+#ifdef DEBUG
+    printf("Exiting lorentz()\n");
+    fflush(stdout);
+#endif
     }
 
 long do_lorentz_integration(double *coord, void *field) 
@@ -1490,7 +1520,7 @@ void nisept_deriv_function(double *qp, double *q, double s)
     wp[2] = w[0]*F1 - w[1]*F0;
 
 #ifdef DEBUG
-    if (field_output_on) {
+    if (fp_field && field_output_on) {
       fprintf(fp_field, "%21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", q[0], q[1], q[2], 0.0, s, F0, F1, F2);
       fflush(fp_field);
     }
@@ -1575,8 +1605,10 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
       F2 = bmapxy->strength*rpn(bmapxy->FyRpn);
     }
 #ifdef DEBUG
-    fprintf(fp_field, "%21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", q[0], q[1], q[2], 0.0, s, F0, F1, F2);
-    fflush(fp_field);
+    if (fp_field && field_output_on) {
+      fprintf(fp_field, "%21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", q[0], q[1], q[2], 0.0, s, F0, F1, F2);
+      fflush(fp_field);
+    }
 #endif
 }
 
@@ -1943,8 +1975,10 @@ void bmapxyz_deriv_function(double *qp, double *q, double s)
 #endif
 
 #ifdef DEBUG
+  if (fp_field && field_output_on) {
     fprintf(fp_field, "%21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", q[0], q[1], q[2], 0.0, s, F0, F1, F2);
     fflush(fp_field);
+  }
 #endif
 }
 
