@@ -2362,17 +2362,17 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
 	    maxCurlB = magCurlB;
 	}
       }
-      maxDxyz = data->dz;
-      if (data->dy>maxDxyz)
-	maxDxyz = data->dy;
-      if (data->dz>maxDxyz)
-	maxDxyz = data->dz;
-      printf("Maximum |div B|: %le T/m\n", maxDivB);
-      printf("Maximum |div B|/max|B|*max(dx,dy,dz): %le\n", maxDivB/maxB*maxDxyz);
-      printf("Maximum |curl B|: %le T/m\n", maxCurlB);
-      printf("Maximum |curl B|/max|B|*max(dx,dy,dz): %le\n", maxCurlB/maxB*maxDxyz);
-      fflush(stdout);
     }
+    maxDxyz = data->dz;
+    if (data->dy>maxDxyz)
+      maxDxyz = data->dy;
+    if (data->dz>maxDxyz)
+      maxDxyz = data->dz;
+    printf("Maximum |div B|: %le T/m\n", maxDivB);
+    printf("Maximum |div B|/max|B|*max(dx,dy,dz): %le\n", maxDivB/maxB*maxDxyz);
+    printf("Maximum |curl B|: %le T/m\n", maxCurlB);
+    printf("Maximum |curl B|/max|B|*max(dx,dy,dz): %le\n", maxCurlB/maxB*maxDxyz);
+    fflush(stdout);
   }
 
   printf("Field setup completed for data from file %s\n", bmapxyz->filename);
