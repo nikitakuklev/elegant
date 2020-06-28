@@ -118,7 +118,7 @@ static double lossCoordinates[3]; /* X, Y, Z */
 #define OPTIMIZE_DZ        0x0020
 #define OPTIMIZE_YAW       0x0040
 
-static long quiet=1;
+static long quiet=0;
 static long useFTABLE = 0;
 static double Po;
 
@@ -283,7 +283,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
         SWAP_DOUBLE(Bmin, Bmax);
       
       if (!quiet) 
-        printf("3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\nBy:[%e, %e]\n",
+        printf("3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%21.15e, dy=%21.15e, dz=%21.15e\nx:[%21.15e, %21.15e], y:[%21.15e, %21.15e], z:[%21.15e, %21.15e]\nBy:[%21.15e, %21.15e]\n",
                 nx, ny, nz, dx, dy, dz,
                 xi, xf, yi, yf, zi, zf,
                 Bmin, Bmax
@@ -438,7 +438,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
         SWAP_DOUBLE(Bmin, Bmax);
       
       if (!quiet) 
-        printf("3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\nBy:[%e, %e]\n",
+        printf("3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%21.15e, dy=%21.15e, dz=%21.15e\nx:[%21.15e, %21.15e], y:[%21.15e, %21.15e], z:[%21.15e, %21.15e]\nBy:[%21.15e, %21.15e]\n",
                 nx, ny, nz, dx, dy, dz,
                 xi, xf, yi, yf, zi, zf,
                 Bmin, Bmax
