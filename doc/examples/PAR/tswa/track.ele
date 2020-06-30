@@ -1,0 +1,20 @@
+&run_setup
+    lattice = "par.lte",
+    p_central = "{rpnl 450 .511 /}",
+    use_beamline="par",
+    default_order = 2,
+&end
+
+&tune_shift_with_amplitude
+        use_concatenation=0
+        lines_only = 0
+        verbose = 1
+        order = 5
+        tune_output = %s.tune
+        grid_size = 5
+&end
+        
+&twiss_output filename = "%s.twi", statistics=1, radiation_integrals=1,
+        concat_order = 3, output_at_each_step = 0
+&end
+
