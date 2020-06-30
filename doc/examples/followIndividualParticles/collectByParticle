@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ $# -ne 1 ] ; then
+    echo "usage: collectByParticle <rootname>"
+    echo "looks for WATCH output files with names matching <rootname>-???"
+    echo "makes new file <rootname>.traj"
+    exit 1
+fi
+
+sddscombine $1-??? -pipe=out \
+    | sddsprocess -pipe -define=col,s0,s,units=m \
+    | sddscombine -pipe -merge \
+    | sddssort -pipe -column=particleID -column=s0 \
+    | sddsbreak -pipe -change=particleID \
+    | sddsprocess -pipe=in $1.traj -process=particleID,first,%s0 \
+		  "-print=param,Label1,particle %.0f,particleID0"
+
+sddsplot -column=s0,x $1.traj -split=page -graph=sym,vary=subtype,fill,connect=subtype -legend=param=Label1
+

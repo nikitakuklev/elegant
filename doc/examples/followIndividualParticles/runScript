@@ -1,0 +1,6 @@
+#!/bin/bash
+
+elegant run.ele
+
+collectByParticle run.w1
+
