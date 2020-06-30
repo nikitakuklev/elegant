@@ -1968,7 +1968,7 @@ double optimization_function(double *value, long *invalid)
     set_element_flags(beamline, covariables->element, NULL, covariables->varied_type, covariables->varied_param, 
                       covariables->n_covariables, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
   }
-#if !USE_MPI || MPI_DEBUG /* The information here is from a processor locally, we print the result across all the processors after an iteration */
+
   if (optimization_data->verbose && optimization_data->fp_log) {
     fprintf(optimization_data->fp_log, "new variable values for evaluation %ld of pass %ld:\n", n_evaluations_made, n_passes_made+1);
     fflush(optimization_data->fp_log);
@@ -1982,7 +1982,7 @@ double optimization_function(double *value, long *invalid)
     }
     fflush(optimization_data->fp_log);
   }
-#endif
+
   if ((iRec=checkForOptimRecord(value, variables->n_variables, &recordUsedAgain))>=0) {
 #if USE_MPI
     if (!runInSinglePartMode) { /* For parallel genetic optimization, all the individuals for the first iteration are same */
