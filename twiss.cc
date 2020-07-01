@@ -3319,6 +3319,8 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run)
 	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"nuy", NULL, SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"nuxError", NULL, SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"nuyError", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSTswaTunes, (char*)"nuxRmsResidual", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSTswaTunes, (char*)"nuyRmsResidual", NULL, SDDS_DOUBLE) ||
 	!SDDS_WriteLayout(&SDDSTswaTunes)) {
       printf((char*)"Unable set up file %s\n", 
 	      tune_shift_with_amplitude_struct.tune_output);
@@ -3493,6 +3495,14 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   }
 
   if (tune_shift_with_amplitude_struct.tune_output) {
+    if (!SDDS_SetParameters(&SDDSTswaTunes, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                 "nuxRmsResidual", -1.0, 
+                                 "nuyRmsResidual", -1.0, 
+                                 NULL)) {
+	  printf((char*)"Problem filling SDDS page for TSWA tune output\n");
+	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	  exitElegant(1);
+    }
     for (ix=j=0; ix<gridSize; ix++) {
       for (iy=0; iy<gridSize; iy++) {
         if ((tune_shift_with_amplitude_struct.sparse_grid &&
@@ -3698,6 +3708,14 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     }
 
     if (tune_shift_with_amplitude_struct.tune_output) {
+      if (!SDDS_SetParameters(&SDDSTswaTunes, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                   "nuxRmsResidual", sqrt(nuxChiSqr*(points-terms)/(1.0*points)),
+                                   "nuyRmsResidual", sqrt(nuyChiSqr*(points-terms)/(1.0*points)),
+                                   NULL)) {
+        printf((char*)"Problem filling SDDS page for TSWA tune output\n");
+        SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+        exitElegant(1);
+      }
       for (ix=j=0; ix<gridSize; ix++) {
         for (iy=0; iy<gridSize; iy++) {
           if ((tune_shift_with_amplitude_struct.sparse_grid &&
@@ -3722,7 +3740,15 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         exitElegant(1);
       }
     }
-  }  else {
+    free(order[0]);
+    free(order[1]);
+    free(nux);
+    free(nuy);
+    free(nuxDiff);
+    free(nuyDiff);
+    free(nuxCoef);
+    free(nuyCoef);
+  } else {
     if (tune_shift_with_amplitude_struct.tune_output) {
       if (!SDDS_WritePage(&SDDSTswaTunes)) {
         printf((char*)"Problem writing SDDS page for TSWA tune output\n");
