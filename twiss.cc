@@ -3317,6 +3317,8 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run)
 	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"Ay", (char*)"m", SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"nux", NULL, SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"nuy", NULL, SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"nuxError", NULL, SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"nuyError", NULL, SDDS_DOUBLE) ||
 	!SDDS_WriteLayout(&SDDSTswaTunes)) {
       printf((char*)"Unable set up file %s\n", 
 	      tune_shift_with_amplitude_struct.tune_output);
@@ -3347,20 +3349,18 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
                                    TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline, 
                                    RUN *run, double *startingCoord, long nPeriods)
 {
-#define TSWA_TRACKING_EXTRA_PTS 15
-#define TSWA_TRACKING_PTS (N_TSWA+TSWA_TRACKING_EXTRA_PTS)
   double tune1[2];
-  double Ax[TSWA_TRACKING_PTS], Ay[TSWA_TRACKING_PTS];
-  double x0[TSWA_TRACKING_PTS], y0[TSWA_TRACKING_PTS];
-  double xTune[TSWA_TRACKING_PTS][TSWA_TRACKING_PTS], yTune[TSWA_TRACKING_PTS][TSWA_TRACKING_PTS];
-  short lost[TSWA_TRACKING_PTS][TSWA_TRACKING_PTS];
+  double *Ax, *Ay;
+  double *x0, *y0;
+  double **xTune, **yTune;
+  short **lost;
   double tuneLowerLimit[2], tuneUpperLimit[2];
   double result, maxResult;
   double x, y;
   long ix, iy, tries, gridSize, nLost=0;
   double upperLimit[2], lowerLimit[2];
-  MATRIX *AxAy, *Coef, *Nu, *AxAyTr, *Mf, *MfInv, *AxAyTrNu;
-  long i, j, m, n, ix1, iy1, nTSWA, order;
+  /*  MATRIX *AxAy, *Coef, *Nu, *AxAyTr, *Mf, *MfInv, *AxAyTrNu; */
+  long j, m, ix1, iy1;
 
   tune1[0] = tune1[1] = -1; /* suppress a compiler warning */
   
@@ -3372,12 +3372,16 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     return;
   }
 
-  if ((gridSize=tune_shift_with_amplitude_struct.grid_size)>TSWA_TRACKING_PTS) {
-    gridSize = tune_shift_with_amplitude_struct.grid_size = TSWA_TRACKING_PTS;
-    printf((char*)"Error: grid_size for TSWA is limited to %ld\n", gridSize);
-    exitElegant(1);
-  }
-  
+  gridSize = tune_shift_with_amplitude_struct.grid_size;
+
+  Ax = (double*)tmalloc(sizeof(*Ax)*gridSize);
+  Ay = (double*)tmalloc(sizeof(*Ax)*gridSize);
+  x0 = (double*)tmalloc(sizeof(*x0)*gridSize);
+  y0 = (double*)tmalloc(sizeof(*y0)*gridSize);
+  xTune = (double**)czarray_2d(sizeof(**xTune), gridSize, gridSize);
+  yTune = (double**)czarray_2d(sizeof(**yTune), gridSize, gridSize);
+  lost = (short**)czarray_2d(sizeof(**lost), gridSize, gridSize);
+
   if (tune_shift_with_amplitude_struct.tune_output &&
       !SDDS_StartPage(&SDDSTswaTunes, gridSize*gridSize)) {
     printf((char*)"Problem starting SDDS page for TSWA tune output\n");
@@ -3488,15 +3492,6 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     break;
   }
 
-  if (nLost)
-    for (ix=0; ix<N_TSWA; ix++)
-      for (iy=0; iy<N_TSWA; iy++)
-        dnux_dA[ix][iy] = dnuy_dA[ix][iy] = sqrt(DBL_MAX);
-  else
-    for (ix=0; ix<N_TSWA; ix++)
-      for (iy=0; iy<N_TSWA; iy++)
-	dnux_dA[ix][iy] = dnuy_dA[ix][iy] = 0;
-
   if (tune_shift_with_amplitude_struct.tune_output) {
     for (ix=j=0; ix<gridSize; ix++) {
       for (iy=0; iy<gridSize; iy++) {
@@ -3510,6 +3505,8 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 			       (char*)"nux", xTune[ix][iy],
 			       (char*)"y", y0[iy], (char*)"Ay", Ay[iy],
 			       (char*)"nuy", yTune[ix][iy],
+                               (char*)"nuxError", 0.0,
+                               (char*)"nuyError", 0.0,
 			       NULL)) {
 	  printf((char*)"Problem filling SDDS page for TSWA tune output\n");
 	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
@@ -3518,12 +3515,16 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         j++;
       }
     }
-    if (!SDDS_WritePage(&SDDSTswaTunes)) {
-      printf((char*)"Problem writing SDDS page for TSWA tune output\n");
-      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      exitElegant(1);
-    }
   }
+
+  if (nLost)
+    for (ix=0; ix<N_TSWA; ix++)
+      for (iy=0; iy<N_TSWA; iy++)
+        dnux_dA[ix][iy] = dnuy_dA[ix][iy] = sqrt(DBL_MAX);
+  else
+    for (ix=0; ix<N_TSWA; ix++)
+      for (iy=0; iy<N_TSWA; iy++)
+	dnux_dA[ix][iy] = dnuy_dA[ix][iy] = 0;
 
   xTuneExtrema[0] = -(xTuneExtrema[1] = -DBL_MAX);
   yTuneExtrema[0] = -(yTuneExtrema[1] = -DBL_MAX);
@@ -3549,7 +3550,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     }
   }
   if (nLost && !tune_shift_with_amplitude_struct.exclude_lost_particles) {
-    printf((char*)"%ld particles in tune tracking: setting spreads to 1\n", nLost);
+    printf((char*)"%ld lost particles in tune tracking: setting spreads to 1\n", nLost);
     xTuneExtrema[0] = yTuneExtrema[0] = 0;
     xTuneExtrema[1] = yTuneExtrema[1] = 1.0;
   }
@@ -3564,181 +3565,173 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   }
 
   if (!nLost && !tune_shift_with_amplitude_struct.spread_only) {
-    m = gridSize*gridSize;
-    order = tune_shift_with_amplitude_struct.order<=1?1:2;
+    long terms, iterm, points, maxOrder;
+    int32_t *order[2];
+    double *Axy[2], *nux, *nuy, *nuxDiff, *nuyDiff, *nuxCoef, *nuyCoef, nuxChiSqr, nuyChiSqr, nuxCondition, nuyCondition;
+
+    if (tune_shift_with_amplitude_struct.order<1)
+      tune_shift_with_amplitude_struct.order = 1;
+    maxOrder = tune_shift_with_amplitude_struct.order;
     if (tune_shift_with_amplitude_struct.lines_only) {
       /* Perform 1-D fits vs Ax and Ay. 
        * No cross terms get included. 
        */
-      double *tuneData, *coefData;
-      tuneData = (double*)tmalloc(sizeof(*tuneData)*gridSize);
-      coefData = (double*)tmalloc(sizeof(*coefData)*3);
-
-      /* x tune vs x amplitude */
-      for (ix=iy=0; ix<gridSize; ix++)
-        tuneData[ix] = xTune[ix][iy];
-      lsfn(Ax, tuneData, NULL, gridSize, order, coefData, NULL, NULL, NULL);
-      for (ix=0; ix<(order+1); ix++) {
-        dnux_dA[ix][0] = coefData[ix]*factorial(ix);
+      terms = 2*maxOrder + 1;
+      order[0] = (int32_t *)tmalloc(sizeof(*order[0])*terms);
+      order[1] = (int32_t *)tmalloc(sizeof(*order[0])*terms);
+      for (ix=iterm=0; ix<=maxOrder; ix++, iterm++) {
+        order[0][iterm] = ix;
+        order[1][iterm] = 0;
       }
-        
-      /* x tune vs y amplitude */
-      for (ix=iy=0; iy<gridSize; iy++)
-        tuneData[iy] = xTune[ix][iy];
-      lsfn(Ay, tuneData, NULL, gridSize, order, coefData, NULL, NULL, NULL);
-      for (iy=0; iy<(order+1); iy++)
-        dnux_dA[0][iy] = coefData[iy]*factorial(iy);
-
-      /* y tune vs x amplitude */
-      for (ix=iy=0; ix<gridSize; ix++) 
-        tuneData[ix] = yTune[ix][iy];
-      lsfn(Ax, tuneData, NULL, gridSize, order, coefData, NULL, NULL, NULL);
-      for (ix=0; ix<(order+1); ix++)
-        dnuy_dA[ix][0] = coefData[ix]*factorial(ix);
-            
-      /* y tune vs y amplitude */
-      for (ix=iy=0; iy<gridSize; iy++)
-        tuneData[iy] = yTune[ix][iy];
-      lsfn(Ay, tuneData, NULL, gridSize, order, coefData, NULL, NULL, NULL);
-      for (iy=0; iy<(order+1); iy++) 
-        dnuy_dA[0][iy] = coefData[iy]*factorial(iy);
-
-      if (tune_shift_with_amplitude_struct.verbose) {
-        printf((char*)"dnux/(dAx^i):  ");
-        for (ix=0; ix<(order+1); ix++)
-          printf((char*)"%10.3g ", dnux_dA[ix][0]);
-        fputc('\n', stdout);
-        printf((char*)"dnux/(dAy^i):  ");
-        for (iy=0; iy<(order+1); iy++)
-          printf((char*)"%10.3g ", dnux_dA[0][iy]);
-        fputc('\n', stdout);
-        printf((char*)"dnuy/(dAx^i):  ");
-        for (ix=0; ix<(order+1); ix++)
-          printf((char*)"%10.3g ", dnuy_dA[ix][0]);
-        fputc('\n', stdout);
-        printf((char*)"dnuy/(dAy^i):  ");
-        for (iy=0; iy<(order+1); iy++)
-          printf((char*)"%10.3g ", dnuy_dA[0][iy]);
-        fputc('\n', stdout);
+      for (iy=1; iy<=maxOrder; iy++, iterm++) {
+        if (iterm>=terms)
+          bombElegant("term counting issues in TSWA computation", NULL);
+        order[0][iterm] = 0;
+        order[1][iterm] = iy;
       }
-      free(tuneData);
-      free(coefData);
+      points = 2*gridSize-1;
+      nux = (double*)tmalloc(sizeof(*nux)*points);
+      nuy = (double*)tmalloc(sizeof(*nuy)*points);
+      Axy[0] = (double*)tmalloc(sizeof(*Axy[0])*points);
+      Axy[1] = (double*)tmalloc(sizeof(*Axy[1])*points);
+      for (ix=iterm=0; ix<gridSize; ix++, iterm++) {
+        if (iterm>=points)
+          bombElegant("point counting issues in TSWA computation", NULL);
+        nux[iterm] = xTune[ix][0];
+        nuy[iterm] = yTune[ix][0];
+        Axy[0][iterm] = Ax[ix];
+        Axy[1][iterm] = Ay[0];
+      }
+      for (iy=1; iy<gridSize; iy++, iterm++) {
+        if (iterm>=points)
+          bombElegant("point counting issues in TSWA computation", NULL);
+        nux[iterm] = xTune[0][iy];
+        nuy[iterm] = yTune[0][iy];
+        Axy[0][iterm] = Ax[0];
+        Axy[1][iterm] = Ay[iy];
+      }
     } else {
-      /* Perform 2d fits vs Ax and Ay. 
-       * May have trouble getting dnux/Ay=dnuy/dAx 
+      /* Perform 2-D fits vs Ax and Ay. 
        */
-      if (order==1) {
-        /* the expansion is
-           nu = Ax^0 (TS00 + Ay*TS01) +
-           Ax^1 (TS10 ) 
-           where TSij = 1/(i!j!) dnu/(dAx^i dAy^j)
-           */
-        nTSWA = 2;
-        n = 4;
+      terms = (maxOrder+1)*(maxOrder+2)/2;
+      order[0] = (int32_t *)tmalloc(sizeof(*order[0])*terms);
+      order[1] = (int32_t *)tmalloc(sizeof(*order[1])*terms);
+      for (ix=iterm=0; ix<=maxOrder; ix++) {
+        for (iy=0; (ix+iy)<=maxOrder; iy++, iterm++) {
+          order[0][iterm] = ix;
+          order[1][iterm] = iy;
+        }
       }
-      else {
-        /* the expansion is
-           nu = Ax^0 (TS00 + Ay*TS01 + Ay^2*TS02) +
-           Ax^1 (TS10 + Ay*TS11 ) +
-           Ax^2 (TS20 )
-           where TSij = 1/(i!j!) dnu/(dAx^i dAy^j)
-           */
-        nTSWA = N_TSWA;
-        n = (N_TSWA*N_TSWA + N_TSWA)/2;
-      }
-      /* Nu = AxAy*Coef 
-       * Nu is (m-1)x1, AxAy is (m-1)xn, Coef is nx1 */
-      m --;  /* won't use [0][0] from tune arrays due to NAFF issues */
-      m_alloc(&AxAy, m, n);
-      m_alloc(&Coef, n, 1);
-      m_alloc(&Nu, m, 1);
-      m_alloc(&AxAyTr, n, m);
-      m_alloc(&Mf, n, n);
-      m_alloc(&MfInv, n, n);
-      m_alloc(&AxAyTrNu, n, 1);
-      for (ix=i=0; ix<gridSize; ix++) {
-        for (iy=0; iy<gridSize; iy++) {
-          if ((tune_shift_with_amplitude_struct.sparse_grid &&
-               !(ix==0 || iy==0 || ix==iy)) ||
-              (tune_shift_with_amplitude_struct.lines_only &&
-               !(ix==0 || iy==0)))
-            continue;
-          if (ix==0 && iy==0)
-            continue;
-          for (ix1=j=0; ix1<nTSWA; ix1++) {
-            for (iy1=0; (ix1+iy1)<=order; iy1++, j++) {
-              if (j>=n)
-                bombElegant((char*)"indexing problem for TSWA calculation", NULL);
-              AxAy->a[i][j] = ipow(Ax[ix], ix1)*ipow(Ay[iy], iy1);
-            }
+      if (tune_shift_with_amplitude_struct.sparse_grid) {
+        points = 3*gridSize-2;
+        nux = (double*)tmalloc(sizeof(*nux)*points);
+        nuy = (double*)tmalloc(sizeof(*nuy)*points);
+        Axy[0] = (double*)tmalloc(sizeof(*Axy[0])*points);
+        Axy[1] = (double*)tmalloc(sizeof(*Axy[1])*points);
+        for (ix=iterm=0; ix<gridSize; ix++) {
+          for (iy=0; iy<gridSize; iy++) {
+            if (!(ix==0 || iy==0 || ix==iy))
+              continue;
+            if (iterm>=points)
+              bombElegant("point counting issues in TSWA computation", NULL);
+            nux[iterm] = xTune[ix][iy];
+            nuy[iterm] = yTune[ix][iy];
+            Axy[0][iterm] = Ax[ix];
+            Axy[1][iterm] = Ay[iy];
+            iterm++;
           }
-          i++;
         }
-      }
-      m_trans(AxAyTr, AxAy);
-      m_mult(Mf, AxAyTr, AxAy);
-      m_invert(MfInv, Mf);
-      for (ix=i=0; ix<gridSize; ix++)
-        for (iy=0; iy<gridSize; iy++) {
-          if ((tune_shift_with_amplitude_struct.sparse_grid &&
-               !(ix==0 || iy==0 || ix==iy)) ||
-              (tune_shift_with_amplitude_struct.lines_only &&
-               !(ix==0 || iy==0)))
-            continue;
-          if (ix==0 && iy==0)
-            continue;
-          Nu->a[i][0] = xTune[ix][iy];
-          i++;
-        }
-      m_mult(AxAyTrNu, AxAyTr, Nu);
-      m_mult(Coef, MfInv, AxAyTrNu);
-      for (ix=i=0; ix<nTSWA; ix++) 
-        for (iy=0; (ix+iy)<=order; iy++, i++)
-          dnux_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
-      if (tune_shift_with_amplitude_struct.verbose) {
-        printf((char*)"dnux/(dAx^i dAy^j):\n");
-        for (ix=0; ix<nTSWA; ix++) {
-          for (iy=0; iy<nTSWA; iy++) {
-            printf((char*)"%10.3g%c", dnux_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
+        if (iterm!=points)
+          bombElegant("point counting error in TSWA computation", NULL);
+      } else {
+        points = gridSize*gridSize;
+        nux = (double*)tmalloc(sizeof(*nux)*points);
+        nuy = (double*)tmalloc(sizeof(*nuy)*points);
+        Axy[0] = (double*)tmalloc(sizeof(*Axy[0])*points);
+        Axy[1] = (double*)tmalloc(sizeof(*Axy[1])*points);
+        for (ix=iterm=0; ix<gridSize; ix++) {
+          for (iy=0; iy<gridSize; iy++, iterm++) {
+            if (iterm>=points)
+              bombElegant("point counting issues in TSWA computation", NULL);
+            nux[iterm] = xTune[ix][iy];
+            nuy[iterm] = yTune[ix][iy];
+            Axy[0][iterm] = Ax[ix];
+            Axy[1][iterm] = Ay[iy];
           }
         }
       }
-      
-      for (ix=i=0; ix<gridSize; ix++)
-        for (iy=0; iy<gridSize; iy++) {
-          if ((tune_shift_with_amplitude_struct.sparse_grid &&
-               !(ix==0 || iy==0 || ix==iy)) ||
-              (tune_shift_with_amplitude_struct.lines_only &&
-               !(ix==0 || iy==0)))
-            continue;
-          if (ix==0 && iy==0)
-            continue;
-          Nu->a[i][0] = yTune[ix][iy];
-          i++;
-        }
-      m_mult(AxAyTrNu, AxAyTr, Nu);
-      m_mult(Coef, MfInv, AxAyTrNu);
-      for (ix=i=0; ix<nTSWA; ix++) 
-        for (iy=0; (ix+iy)<=order; iy++, i++)
-          dnuy_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
-      if (tune_shift_with_amplitude_struct.verbose) {
-        printf((char*)"dnuy/(dAx^i dAy^j):\n");
-        for (ix=0; ix<nTSWA; ix++) {
-          for (iy=0; iy<nTSWA; iy++) {
-            printf((char*)"%10.3g%c", dnuy_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
-          }
-        }
-      }
-      
-      m_free(&AxAy);
-      m_free(&Coef);
-      m_free(&Nu);
-      m_free(&AxAyTr);
-      m_free(&Mf);
-      m_free(&MfInv);
-      m_free(&AxAyTrNu);
     }
-  }  
+    nuxDiff = (double*)tmalloc(sizeof(*nuxDiff)*points);
+    nuyDiff = (double*)tmalloc(sizeof(*nuyDiff)*points);
+    nuxCoef = (double*)tmalloc(sizeof(*nuxCoef)*terms);
+    nuyCoef = (double*)tmalloc(sizeof(*nuyCoef)*terms);
+    printf("Fitting for TSWA with %ld terms and %ld points:\n", terms, points);
+    lsf2dPolyUnweighted(Axy, nux, points, order, terms, nuxCoef, &nuxChiSqr, &nuxCondition, nuxDiff);
+    lsf2dPolyUnweighted(Axy, nuy, points, order, terms, nuyCoef, &nuyChiSqr, &nuyCondition, nuyDiff);
+    printf("TSWA fit residuals: nux = %le, nuy = %le\n", sqrt(nuxChiSqr*(points-terms)/(1.0*points)), 
+           sqrt(nuyChiSqr*(points-terms)/(1.0*points)));
+
+    for (iterm=0; iterm<terms; iterm++) {
+      ix = order[0][iterm];
+      iy = order[1][iterm];
+      if (ix<0 || iy<0)
+        bombElegantVA("order invalid (%ld, %ld) after fitting for TSWA", ix, iy);
+      if (ix>=N_TSWA || iy>=N_TSWA)
+        continue;
+      dnux_dA[ix][iy] = nuxCoef[iterm]*factorial(ix)*factorial(iy);
+      dnuy_dA[ix][iy] = nuyCoef[iterm]*factorial(ix)*factorial(iy);
+    }
+    
+    if (tune_shift_with_amplitude_struct.verbose) {
+      printf((char*)"dnux/(dAx^i dAy^j):\n");
+      for (ix=0; ix<=maxOrder && ix<N_TSWA; ix++) {
+        for (iy=0; (ix+iy)<=maxOrder && (ix+iy)<N_TSWA; iy++)
+          printf((char*)"%10.3e ", dnux_dA[ix][iy]);
+        printf("\n");
+      }
+      printf((char*)"dnuy/(dAx^i dAy^j):\n");
+      for (ix=0; ix<=maxOrder && ix<N_TSWA; ix++) {
+        for (iy=0; (ix+iy)<=maxOrder && (ix+iy)<N_TSWA; iy++)
+          printf((char*)"%10.3e ", dnuy_dA[ix][iy]);
+        printf("\n");
+      }
+    }
+
+    if (tune_shift_with_amplitude_struct.tune_output) {
+      for (ix=j=0; ix<gridSize; ix++) {
+        for (iy=0; iy<gridSize; iy++) {
+          if ((tune_shift_with_amplitude_struct.sparse_grid &&
+               !(ix==0 || iy==0 || ix==iy)) ||
+              (tune_shift_with_amplitude_struct.lines_only &&
+               !(ix==0 || iy==0)))
+            continue;
+          if (!SDDS_SetRowValues(&SDDSTswaTunes, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, j,
+                                 (char*)"nuxError", nuxDiff[j], 
+                                 (char*)"nuyError", nuyDiff[j],
+                                 NULL)) {
+            printf((char*)"Problem filling SDDS page for TSWA tune output\n");
+            SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+            exitElegant(1);
+          }
+          j++;
+        }
+      }
+      if (!SDDS_WritePage(&SDDSTswaTunes)) {
+        printf((char*)"Problem writing SDDS page for TSWA tune output\n");
+        SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+        exitElegant(1);
+      }
+    }
+  }  else {
+    if (tune_shift_with_amplitude_struct.tune_output) {
+      if (!SDDS_WritePage(&SDDSTswaTunes)) {
+        printf((char*)"Problem writing SDDS page for TSWA tune output\n");
+        SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+        exitElegant(1);
+      }
+    }
+  }
+
 }
 
 long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,
@@ -5410,3 +5403,4 @@ void findChamberShapes(ELEMENT_LIST *elem)
     elem = elem->succ;
   }
 }
+

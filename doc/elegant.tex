@@ -84,7 +84,10 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
 \begin{itemize}
 \item The \verb|twiss_output| command can now compute lattice functions for a half periodic cell, i.e., a 
   cell with mirror symmetry, by setting \verb|matched=-1|. This was inspired by a forum question from \verb|mcarla|.
-\item The \verb|obstruction_data|  command now supports periodic replication of the obstructions for rings.
+\item The \verb|obstruction_data|  command now supports periodic replication of the obstructions for rings, as well
+  as a global cap on the minimum and maximum vertical coordinates.
+\item The \verb|tune_shift_with_amplitude| command now uses an improved 2D polynomial fitting routine in all the
+  tracking-based modes.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -5744,7 +5747,6 @@ integers and $p$ is $x$ or $y$.  $A_q = (1 + \alpha_q) q^2/\beta_q$, with $q=x$ 
     double y1 = 3e-4;
     long grid_size = 6;
     long lines_only = 0;
-    long sparse_grid = 0;
     long spread_only = 0;
     double nux_roi_width = 0.02;
     double nuy_roi_width = 0.02;
@@ -5777,9 +5779,9 @@ integers and $p$ is $x$ or $y$.  $A_q = (1 + \alpha_q) q^2/\beta_q$, with $q=x$ 
   case, no $A_x^i*A_y^j$ terms are computed (except for $i=0$ or $j=0$).  However, in addition
   to being faster, the results may be more reliable, e.g., $\partial \nu_x/\partial A_y = 
   \partial \nu_y/\partial A_x$ may be more closely satisfied.
-\item \verb|sparse_grid| --- If nonzero, then instead of a full set of \verb|grid_size|$^2$
-        particles, a sparse grid of particles is tracked.  Will save time at some expense
-        in accuracy.
+\item \verb|sparse_grid| --- Deprecated. If nonzero, then instead of a full set of \verb|grid_size|$^2$
+        particles, a sparse grid of particles is tracked.  Will save time at the expense of
+        inaccurate higher-order terms. Not recommended.
 \item \verb|spread_only| --- Compute the tune spread only and don't bother with the
         tune shift coefficients.  These tune spreads can be optimized and appear in the
         twiss output file under the names \verb|nuxTswaLower|, \verb|nuxTswaUpper|, and

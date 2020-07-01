@@ -3904,6 +3904,9 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
                               double *endingCoord, double *lowerLimit, double *upperLimit,
 			      long allowLosses, long nPeriods, unsigned long flags);
 double adjustTuneHalfPlane(double frequency, double phase0, double phase1);
+int lsf2dPolyUnweighted(double *x[2], double *y, long points, int32_t *order[2],
+                        long nOrders, double *coef, double *chi, double *condition, 
+                        double *diff);
 
 /* chrom.c */
 void computeChromaticities(double *chromx, double *chromy, 

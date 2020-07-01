@@ -1,4 +1,4 @@
-/* memory.c, rewriten from meschach (H. Shang) 
+/* Memory.c, rewriten from meschach (H. Shang) 
  *
  * These versions assume that matrices are stored in column-major order, to be compatible with 
  * LAPACK SVD routines.  This may introduce confusion in accessing the elements of a matrix.
@@ -914,3 +914,66 @@ VEC *vec_cross(VEC *a, VEC *b, VEC *out)
 }
 
 
+int lsf2dPolyUnweighted
+(
+ /* input */
+ double *x[2],   /* independent variable values */
+ double *y,      /* dependent variable values */
+ long points,    /* number of points */
+ int32_t *order[2], /* pairs of orders for terms */
+ long nOrders,   /* number of pairs of orders for terms */
+ /* output  */
+ /* main */
+ double *coef,   /* polynomial coefficients */
+ double *chi,    /* reduced chi squared */
+ double *condition, /* condition number from SVD matrix inversion */
+ double *diff    /* array of differences between fit and y values */
+ )
+{
+  MAT *X, *A, *Y, *K, *Xc;
+  double *weight;
+  long i, j;
+  
+  X = matrix_get(points, nOrders);
+  Y = matrix_get(points, 1);
+  weight = tmalloc(sizeof(*weight)*points);
+
+  for (i=0; i<points; i++) {
+    weight[i] = 1;
+    Mij(Y, i, 0) = y[i];
+    for (j=0; j<nOrders; j++) 
+      Mij(X, i, j) = ipow(x[0][i], order[0][j])*ipow(x[1][i], order[1][j]);
+  }
+
+  /* Equation is Y=X*K 
+   * A = Inv(X)
+   * K = A*Y 
+   */
+  Xc = matrix_copy(X);
+  A = matrix_invert(X, NULL, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, condition);
+  K = matrix_mult(A, Y);
+    
+  for (i=0; i<nOrders; i++) 
+    coef[i] = Mij(K, i, 0);
+
+  /* evaluate the polynomial at the fit points */
+  matrix_free(Y);
+  Y = matrix_mult(Xc, K);
+  *chi = 0;
+  for (i=0; i<points; i++) {
+    diff[i] = y[i] - Mij(Y, i, 0);
+    *chi += sqr(diff[i])*weight[i];
+  }
+  if (nOrders<points)
+    *chi /= (points-nOrders);
+  else
+    *chi = -1;
+
+  matrix_free(X);
+  matrix_free(Xc);
+  matrix_free(Y);
+  matrix_free(A);
+  matrix_free(K);
+
+  return 1;
+}
