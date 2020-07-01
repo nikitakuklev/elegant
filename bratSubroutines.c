@@ -52,6 +52,7 @@ static double fieldFactor = 1;
 static long zDuplicate = 0;
 static double rhoMax = 0;
 static double fieldSign = 1;
+static double deltaByInside = 0;
 static double BMaxOnTrajectory = -DBL_MAX;
 static double BSignOnTrajectory = 0;
 static char *interpolationParameterUnits = NULL;
@@ -577,6 +578,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 
   rigidity = pCentral*particleMass*c_mks/particleCharge*particleRelSign;
   rhoMax = fabs(rigidity/brat3dData[brat->dataIndex].Bmax);
+  deltaByInside = brat->deltaByInside;
   
   integ_tol = brat->accuracy;
   zero_tol = integ_tol*10;
@@ -1701,6 +1703,8 @@ void BRAT_B_field(double *F, double *Qg)
 #ifdef DEBUG
     fprintf(stderr, "s=%e, B=%e\n", s, F[2]);
 #endif
+    if (Q[0]>=zNomEntry && Q[0]<=zNomExit && deltaByInside) 
+      F[2] += deltaByInside;
     for (j=0; j<3; j++)
       F[j] *= fieldSign*(1+fse);
     return ;
@@ -1804,6 +1808,8 @@ void BRAT_B_field(double *F, double *Qg)
       F[0] = derivSign*y*(dBnormdz[0][iz] + fz*(dBnormdz[0][iz+1]-dBnormdz[0][iz]));
       F[1] = y*(dBnormdx[0][iz] + fz*(dBnormdx[0][iz+1]-dBnormdx[0][iz]));
     }
+    if (z>=zNomEntry && z<=zNomExit && deltaByInside) 
+      F[2] += deltaByInside;
     for (j=0; j<3; j++)
       F[j] *= fieldSign*(1+fse);
     return;
@@ -1859,6 +1865,8 @@ void BRAT_B_field(double *F, double *Qg)
     f[1] = y*(val_z1 + fz*(val_z2-val_z1));
     F[0] =  f[0];
     F[1] =  f[1];
+    if (z>=zNomEntry && z<=zNomExit && deltaByInside) 
+      F[2] += deltaByInside;
   } else {
     long iq;
     double Finterp1[2][2], Finterp2[2];
@@ -1940,6 +1948,8 @@ void BRAT_B_field(double *F, double *Qg)
     F[0] = Freturn[0];
     F[1] = Freturn[1];
     F[2] = Freturn[2];
+    if (z>=zNomEntry && z<=zNomExit && deltaByInside) 
+      F[2] += deltaByInside;
   } 
   
   for (j=0; j<3; j++)
