@@ -2412,10 +2412,15 @@ double optimization_function(double *value, long *invalid)
 #endif
       /* Store number of lost particles in memory for use in optimization expressions */
 #if USE_MPI
-      MPI_Allreduce(&beam->n_lost, &nLostTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-      printf("nLostTotal = %ld\n", nLostTotal);
-      fflush(stdout);
-      rpn_store(nLostTotal, NULL, nLostMemory);
+      if (optimization_data->method!=OPTIM_METHOD_HYBSIMPLEX && optimization_data->method!=OPTIM_METHOD_SWARM &&
+          optimization_data->method!=OPTIM_METHOD_GENETIC) {
+        MPI_Allreduce(&beam->n_lost, &nLostTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+        /*
+          printf("nLostTotal = %ld\n", nLostTotal);
+          fflush(stdout);
+        */
+      } else 
+        rpn_store(beam->n_lost, NULL, nLostMemory);
 #else
       rpn_store(beam->n_lost, NULL, nLostMemory);
 #endif
