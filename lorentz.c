@@ -77,6 +77,7 @@ typedef struct {
   char *filename;
   BMAPXYZ_DATA *data;
   double fieldLength;
+  short singlePrecision;
 } STORED_BMAPXYZ_DATA;
 static STORED_BMAPXYZ_DATA *storedBmapxyzData = NULL;
 static long nStoredBmapxyzData = 0;
@@ -2035,6 +2036,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   if (imap<nStoredBmapxyzData) {
     bmapxyz->data = storedBmapxyzData[imap].data;
     bmapxyz->fieldLength = storedBmapxyzData[imap].fieldLength;
+    bmapxyz->singlePrecision  = storedBmapxyzData[imap].singlePrecision;
     return;
   }
 
@@ -2302,6 +2304,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
     printf("Set LFIELD for %s to %21.15e\n", bmapxyz->filename, bmapxyz->fieldLength);
   }
   storedBmapxyzData[imap].fieldLength = bmapxyz->fieldLength;
+  storedBmapxyzData[imap].singlePrecision = bmapxyz->singlePrecision;
 
   if (bmapxyz->checkFields) {
     /* compute the maximum values of |div B| and |curl B| */
@@ -2494,7 +2497,7 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
 	  Fq[0] = bmapxyz->data->Fz;
 	  Fq[1] = bmapxyz->data->Fx;
 	  Fq[2] = bmapxyz->data->Fy;
-	  Finterp1[0][0] = (1-fz)*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
+          Finterp1[0][0] = (1-fz)*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
 	    fz*(*(Fq[iq]+(ix+0)+iy*bmapxyz->data->nx + (iz+1)*bmapxyz->data->nx*bmapxyz->data->ny));
 	  /* (ix+1, iy) */        
 	  Finterp1[1][0] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->data->nx + iz*bmapxyz->data->nx*bmapxyz->data->ny)) +
