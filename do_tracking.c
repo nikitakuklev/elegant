@@ -264,7 +264,9 @@ long do_tracking(
   trajectoryTracking = (flags&TEST_PARTICLES);
   if (flags&TEST_PARTICLES)
     setObstructionsMode(0);
-
+  else
+    setObstructionsMode(1);
+    
 #if MPI_DEBUG && USE_MPI
   printf("do_tracking called with nOriginal=%ld, beam=%x\n", nOriginal, beam);
   fflush(stdout);
@@ -4014,20 +4016,21 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
 
   if (!scat->initialized) {
     SDDS_DATASET SDDSin;
-    static char *planeName[3] = {"xp", "yp", "dp"};
-    static short planeIndex[3] = {1, 3, 5};
+    static char *planeName[5] = {"x", "xp", "y", "yp", "dp"};
+    static short planeIndex[5] = {0, 1, 2, 3, 5};
     scat->initialized = 1;
     scat->indepData = scat->cdfData = NULL;
     scat->groupIndex = -1;
-    if ((i=match_string(scat->plane, planeName, 3, MATCH_WHOLE_STRING))<0) {
-      fprintf(stderr, "Error for %s: plane is not valid.  Give xp, yp, or dp\n",
+    if ((i=match_string(scat->plane, planeName, 5, MATCH_WHOLE_STRING))<0) {
+      fprintf(stderr, "Error for %s: plane is not valid.  Give x, xp, y, yp, or dp\n",
               context.elementName);
       exitElegant(1);
     }
     scat->iPlane = planeIndex[i];
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, scat->fileName) ||
         SDDS_ReadPage(&SDDSin)!=1) {
-      fprintf(stderr, "Error for %s: file is not valid.\n", context.elementName);
+      fprintf(stderr, "Error for %s: file %s is not valid.\n", context.elementName, scat->fileName);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
     if ((scat->nData=SDDS_RowCount(&SDDSin))<2) {
@@ -4217,13 +4220,16 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
   */
 }
 
-void recordLostParticles(
-                         BEAM *beam,
-                         double **coord,      /* particle coordinates, with lost particles swapped to the top of the array */
-                         long nLeft,          /* coord+nLeft is first lost particle */
-			 long nToTrack,
-                         long pass            /* pass on which loss occurred */
-                         )
+#define MPI_DEBUG 1
+
+void recordLostParticles
+  (
+   BEAM *beam,
+   double **coord,      /* particle coordinates, with lost particles swapped to the top of the array */
+   long nLeft,          /* coord+nLeft is first lost particle */
+   long nToTrack,
+   long pass            /* pass on which loss occurred */
+   )
 {
   long i;
 
@@ -4250,7 +4256,7 @@ void recordLostParticles(
 #if USE_MPI && MPI_DEBUG
   if (!fp) {
     char s[1024];
-    snprintf(s, 1024, "losses-%03d.debug", myid);
+    snprintf(s, 1024, "losses-%04d.debug", myid);
     fp = fopen(s, "w");
     fprintf(fp, "SDDS1\n");
     fprintf(fp, "&column name=xLost type=double units=m &end\n");
@@ -4259,6 +4265,8 @@ void recordLostParticles(
     fprintf(fp, "&column name=ypLost type=double &end\n");
     fprintf(fp, "&column name=zLost type=double units=m &end\n");
     fprintf(fp, "&column name=pLost type=double &end\n");
+    fprintf(fp, "&column name=XLost type=double units=m &end\n");
+    fprintf(fp, "&column name=ZLost type=double units=m &end\n");
     fprintf(fp, "&column name=LossPass type=long &end\n");
     fprintf(fp, "&column name=particleID type=long &end\n");
     fprintf(fp, "&parameter name=Pass type=long &end\n");
@@ -4267,15 +4275,17 @@ void recordLostParticles(
   if (coord) {
     fprintf(fp, "%ld\n%ld\n", pass, beam->n_lost);
     for (i=nLeft; i<beam->n_particle; i++)
-      fprintf(fp, "%le %le %le %le %le %le %ld %ld\n",
+      fprintf(fp, "%le %le %le %le %le %le %le %le %ld %ld\n",
               coord[i][0], coord[i][1], 
               coord[i][2], coord[i][3], 
               coord[i][4], coord[i][5], 
+	      coord[i][globalLossCoordOffset], coord[i][globalLossCoordOffset+2], 
               (long)coord[i][7], (long)coord[i][6]);
   }
 #endif
 
 }
+#undef MPI_DEBUG
 
 void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
 {

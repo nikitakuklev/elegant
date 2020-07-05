@@ -98,32 +98,28 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   return;
 }
 
-void logInside(double X, double Z, long particleID, short where, short state)
+#define DEBUG 1
+void logInside(double X, double Z, long particleID, short where)
 {
 #ifdef DEBUG
   static FILE *fpInside = NULL;
   TRACKING_CONTEXT context;
-#if USE_MPI
-  if (myid==1) {
-#endif
-    if (!fpInside) {
-      fpInside = fopen("insideObstruction.sdds", "w");
-      fprintf(fpInside, "SDDS1\n&column name=Z type=double units=m &end\n");
-      fprintf(fpInside, "&column name=X type=double units=m &end\n");
-      fprintf(fpInside, "&column name=particleID type=long &end\n");
-      fprintf(fpInside, "&column name=call type=short &end\n");
-      fprintf(fpInside, "&column name=state type=short &end\n");
-      fprintf(fpInside, "&column name=ElementName type=string &end\n");
-      fprintf(fpInside, "&column name=ElementType type=string &end\n");
-      fprintf(fpInside, "&data mode=ascii no_row_counts=1 &end\n");
-    }
-    getTrackingContext(&context);
-    fprintf(fpInside, "%le %le %ld %hd %hd %s %s\n", Z, X, particleID, where, state,
-	    context.element->name, entity_name[context.element->type]);
-    fflush(fpInside);
-#if USE_MPI
+  if (!fpInside) {
+    char buffer[1024];
+    snprintf(buffer, 1024, "insideObstruction-%04d.sdds", myid);
+    fpInside = fopen(buffer, "w");
+    fprintf(fpInside, "SDDS1\n&column name=Z type=double units=m &end\n");
+    fprintf(fpInside, "&column name=X type=double units=m &end\n");
+    fprintf(fpInside, "&column name=particleID type=long &end\n");
+    fprintf(fpInside, "&column name=call type=short &end\n");
+    fprintf(fpInside, "&column name=ElementName type=string &end\n");
+    fprintf(fpInside, "&column name=ElementType type=string &end\n");
+    fprintf(fpInside, "&data mode=ascii no_row_counts=1 &end\n");
   }
-#endif
+  getTrackingContext(&context);
+  fprintf(fpInside, "%le %le %ld %hd %s %s\n", Z, X, particleID, where, 
+	  context.element->name, entity_name[context.element->type]);
+  fflush(fpInside);
 #endif
 }
 
@@ -208,6 +204,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
     }
   }
   if (lost) {
+    logInside(X, Z, (long)part[particleIDIndex], 1);
     if (globalLossCoordOffset!=-1) {
       part[globalLossCoordOffset+0] = X;
       part[globalLossCoordOffset+1] = Y;
