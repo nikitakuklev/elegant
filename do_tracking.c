@@ -4220,8 +4220,6 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
   */
 }
 
-#define MPI_DEBUG 1
-
 void recordLostParticles
   (
    BEAM *beam,
@@ -4252,40 +4250,38 @@ void recordLostParticles
            newLost, beam->n_lost);
     for (i=nLeft; i<nToTrack; i++) 
       beam->particle[i][lossPassIndex] = pass;
-  }
 #if USE_MPI && MPI_DEBUG
-  if (!fp) {
-    char s[1024];
-    snprintf(s, 1024, "losses-%04d.debug", myid);
-    fp = fopen(s, "w");
-    fprintf(fp, "SDDS1\n");
-    fprintf(fp, "&column name=xLost type=double units=m &end\n");
-    fprintf(fp, "&column name=xpLost type=double &end\n");
-    fprintf(fp, "&column name=yLost type=double units=m &end\n");
-    fprintf(fp, "&column name=ypLost type=double &end\n");
-    fprintf(fp, "&column name=zLost type=double units=m &end\n");
-    fprintf(fp, "&column name=pLost type=double &end\n");
-    fprintf(fp, "&column name=XLost type=double units=m &end\n");
-    fprintf(fp, "&column name=ZLost type=double units=m &end\n");
-    fprintf(fp, "&column name=LossPass type=long &end\n");
-    fprintf(fp, "&column name=particleID type=long &end\n");
-    fprintf(fp, "&parameter name=Pass type=long &end\n");
-    fprintf(fp, "&data mode=ascii &end\n");
-  }
-  if (coord) {
-    fprintf(fp, "%ld\n%ld\n", pass, beam->n_lost);
-    for (i=nLeft; i<beam->n_particle; i++)
+    if (!fp) {
+      char s[1024];
+      snprintf(s, 1024, "losses-%04d.debug", myid);
+      fp = fopen(s, "w");
+      fprintf(fp, "SDDS1\n");
+      fprintf(fp, "&column name=xLost type=double units=m &end\n");
+      fprintf(fp, "&column name=xpLost type=double &end\n");
+      fprintf(fp, "&column name=yLost type=double units=m &end\n");
+      fprintf(fp, "&column name=ypLost type=double &end\n");
+      fprintf(fp, "&column name=zLost type=double units=m &end\n");
+      fprintf(fp, "&column name=pLost type=double &end\n");
+      fprintf(fp, "&column name=XLost type=double units=m &end\n");
+      fprintf(fp, "&column name=ZLost type=double units=m &end\n");
+      fprintf(fp, "&column name=LossPass type=long &end\n");
+      fprintf(fp, "&column name=particleID type=long &end\n");
+      fprintf(fp, "&parameter name=Pass type=long &end\n");
+      fprintf(fp, "&parameter name=ElementName type=string &end\n");
+      fprintf(fp, "&data mode=ascii &end\n");
+    }
+    fprintf(fp, "%ld\n%s\n%ld\n", pass, trackingContext.elementName, newLost);
+    for (i=nLeft; i<nToTrack; i++)
       fprintf(fp, "%le %le %le %le %le %le %le %le %ld %ld\n",
-              coord[i][0], coord[i][1], 
-              coord[i][2], coord[i][3], 
-              coord[i][4], coord[i][5], 
-	      coord[i][globalLossCoordOffset], coord[i][globalLossCoordOffset+2], 
-              (long)coord[i][7], (long)coord[i][6]);
-  }
+              beam->particle[i][0], beam->particle[i][1], 
+              beam->particle[i][2], beam->particle[i][3], 
+              beam->particle[i][4], beam->particle[i][5], 
+	      beam->particle[i][globalLossCoordOffset], beam->particle[i][globalLossCoordOffset+2], 
+              (long)beam->particle[i][lossPassIndex], (long)beam->particle[i][6]);
 #endif
+  }
 
 }
-#undef MPI_DEBUG
 
 void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
 {

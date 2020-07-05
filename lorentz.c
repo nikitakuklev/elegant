@@ -124,7 +124,7 @@ static double fexit_intercept;
 static double rexit_intercept;
 
 static double central_length, tolerance;
-static long lastParticleID;
+static long particleID, lastParticleID;
 
 /* prototypes and other information for NIBEND element */
 void nibend_coord_transform(double *q, double *coord, void *field, long which_end);
@@ -242,7 +242,7 @@ static long n_particles_done = 0;
 static double length_mult_sum = 0;
 static long n_invalid_particles = 0;
 
-static double lostParticleCoordinate[9] = {0,0,0,0,0,0,0,0};
+static double lostParticleCoordinate[12] = {0,0,0,0,0,0,0,0,0,0,0};
 static long isLost = 0;
 
 void lorentz_report(void)
@@ -323,6 +323,7 @@ long lorentz(
     i_top = n_part-1;
     for (i_part=0; i_part<=i_top; i_part++) {
         coord = part[i_part];
+	particleID = part[i_part][particleIDIndex];
 #ifdef DEBUG
       printf("Tracking particle %ld of %ld, coord=%x\n", i_part, n_part, coord);
       fflush(stdout);
@@ -486,6 +487,8 @@ long do_lorentz_integration(double *coord, void *field)
 
     if (isLost)
       coord[4] = lostParticleCoordinate[8]; /* need z, not s */
+    if (globalLossCoordOffset>0) 
+      memcpy(coord+globalLossCoordOffset, lostParticleCoordinate+9, 3*sizeof(double));
 
 #ifdef DEBUG
     printf("length from integration routine: %le\n", s_start);
@@ -1887,7 +1890,8 @@ void bmapxyz_deriv_function(double *qp, double *q, double s)
       double zOffset, dzHardEdge;
       zOffset = (bmapxyz->fieldLength-bmapxyz->length)/2;
       if ((dzHardEdge = z - zOffset)>=0 && dzHardEdge<=bmapxyz->length) {
-        if (insideObstruction_xyz(x, y, bmapxyz->tilt, GLOBAL_LOCAL_MODE_DZ, dzHardEdge, 0, 0)) {
+        if (insideObstruction_xyz(x, y, particleID, lostParticleCoordinate+9,
+				  bmapxyz->tilt, GLOBAL_LOCAL_MODE_DZ, dzHardEdge, 0, 0)) {
           /*static FILE *fp; */
           TRACKING_CONTEXT tcontext;
           getTrackingContext(&tcontext);

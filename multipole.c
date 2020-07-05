@@ -1226,7 +1226,9 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       *dzLoss += drift*(i_kick?2:1);
     }
     if ((apData && !checkMultAperture(x+dx, y+dy, apData)) || 
-        insideObstruction_xyz(x, y, refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_kicks)) {
+        insideObstruction_xyz(x, y, coord[particleIDIndex], 
+			      globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
+			      refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_kicks)) {
       coord[0] = x;
       coord[2] = y;
       return 0;
@@ -1310,7 +1312,9 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     *dzLoss += drift;
   }
   if ((apData && !checkMultAperture(x+dx, y+dy, apData)) || 
-      insideObstruction_xyz(x, y, refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_kicks)) {
+      insideObstruction_xyz(x, y, coord[particleIDIndex], 
+			    globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
+			    refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_kicks)) {
     coord[0] = x;
     coord[2] = y;
     return 0;
@@ -1437,7 +1441,9 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   *dzLoss = 0;
   for (i_kick=0; i_kick<n_parts; i_kick++) {
     if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
-      insideObstruction_xyz(x, y, refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
+	insideObstruction_xyz(x, y, coord[particleIDIndex], 
+			      globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
+			      refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
       coord[0] = x;
       coord[2] = y;
       return 0;
@@ -1536,7 +1542,9 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   }
   
   if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
-      insideObstruction_xyz(x, y, refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
+      insideObstruction_xyz(x, y, coord[particleIDIndex],
+			    globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
+			    refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
     coord[0] = x;
     coord[2] = y;
     return 0;

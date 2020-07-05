@@ -98,7 +98,6 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   return;
 }
 
-#define DEBUG 1
 void logInside(double X, double Z, long particleID, short where)
 {
 #ifdef DEBUG
@@ -190,7 +189,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
 
   if (obstructionDataSets.yLimit[0]<obstructionDataSets.yLimit[1] && 
       (Y<obstructionDataSets.yLimit[0] || Y>obstructionDataSets.yLimit[1]))
-    lost = 1;
+    lost = 2;
   else {
     lost = 0;
     for (iperiod=0; iperiod<obstructionDataSets.periods && !lost; iperiod++) {
@@ -208,7 +207,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
     }
   }
   if (lost) {
-    logInside(X, Z, (long)part[particleIDIndex], 1);
+    logInside(X, Z, (long)part[particleIDIndex], lost);
     if (globalLossCoordOffset!=-1) {
       part[globalLossCoordOffset+0] = X;
       part[globalLossCoordOffset+1] = Y;
@@ -223,6 +222,8 @@ long insideObstruction_xyz
 (
  double x, /* local x coordinate */
  double y, /* local y coordinate */
+ long particleID, /* for diagnostic purposes */
+ double *XYZLost, /* for return if wanted */
  double xyTilt, /* tilt of element */
  short mode,
  double dz,
@@ -248,7 +249,13 @@ long insideObstruction_xyz
   memset(&part[0], 0, sizeof(double)*MAX_PROPERTIES_PER_PARTICLE);
   part[0] =  x*cos_tilt - y*sin_tilt;
   part[2] =  x*sin_tilt + y*cos_tilt;
-  return insideObstruction(part, mode, dz, segment, nSegments);
+  part[particleIDIndex] = particleID;
+  if (insideObstruction(part, mode, dz, segment, nSegments)) {
+    if (XYZLost && globalLossCoordOffset>0)
+      memcpy(XYZLost, part+globalLossCoordOffset, sizeof(double)*3);
+    return 1;
+  } 
+  return 0;
 }
 
 long insideObstruction_XYZ
@@ -314,7 +321,7 @@ long insideObstruction_XYZ
   */
 
   if (obstructionDataSets.yLimit[0]<obstructionDataSets.yLimit[1] && 
-      (Y<obstructionDataSets.yLimit[0] || Y>obstructionDataSets.yLimit[1]))
+      (Y1<obstructionDataSets.yLimit[0] || Y1>obstructionDataSets.yLimit[1]))
     lost = 1;
   else {
     lost = 0;
