@@ -1890,7 +1890,7 @@ void bmapxyz_deriv_function(double *qp, double *q, double s)
       double zOffset, dzHardEdge;
       zOffset = (bmapxyz->fieldLength-bmapxyz->length)/2;
       if ((dzHardEdge = z - zOffset)>=0 && dzHardEdge<=bmapxyz->length) {
-        if (insideObstruction_xyz(x, y, particleID, lostParticleCoordinate+9,
+        if (insideObstruction_xyz(x, y, lastParticleID, lostParticleCoordinate+9,
 				  bmapxyz->tilt, GLOBAL_LOCAL_MODE_DZ, dzHardEdge, 0, 0)) {
           /*static FILE *fp; */
           TRACKING_CONTEXT tcontext;
