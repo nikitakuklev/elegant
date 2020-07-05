@@ -124,7 +124,7 @@ static double fexit_intercept;
 static double rexit_intercept;
 
 static double central_length, tolerance;
-static long particleID, lastParticleID;
+static long lastParticleID;
 
 /* prototypes and other information for NIBEND element */
 void nibend_coord_transform(double *q, double *coord, void *field, long which_end);
@@ -323,7 +323,7 @@ long lorentz(
     i_top = n_part-1;
     for (i_part=0; i_part<=i_top; i_part++) {
         coord = part[i_part];
-	particleID = part[i_part][particleIDIndex];
+	lastParticleID = part[i_part][particleIDIndex];
 #ifdef DEBUG
       printf("Tracking particle %ld of %ld, coord=%x\n", i_part, n_part, coord);
       fflush(stdout);
@@ -2010,7 +2010,6 @@ void bmapxyz_coord_transform(double *q, double *coord, void *field, long which_e
     q[2] = coord[2];
     q[6] = coord[4];
     q[7] = coord[5];
-    lastParticleID = coord[6];
   } else {
     /* transform q into coord at exit refence plane */
     coord[0] = q[1];
