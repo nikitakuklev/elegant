@@ -106,7 +106,11 @@ void logInside(double X, double Z, long particleID, short where)
   TRACKING_CONTEXT context;
   if (!fpInside) {
     char buffer[1024];
+#if USE_MPI
     snprintf(buffer, 1024, "insideObstruction-%04d.sdds", myid);
+#else
+    snprintf(buffer, 1024, "insideObstruction.sdds");
+#endif
     fpInside = fopen(buffer, "w");
     fprintf(fpInside, "SDDS1\n&column name=Z type=double units=m &end\n");
     fprintf(fpInside, "&column name=X type=double units=m &end\n");
