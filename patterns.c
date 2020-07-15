@@ -1,3 +1,4 @@
+#include "mdb.h"
 #include "track.h"
 
 char **addPatterns(long *patterns, char *input0) 
