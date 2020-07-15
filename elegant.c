@@ -821,7 +821,7 @@ char **argv;
       /* parse the lattice file and create the beamline */
       run_conditions.lattice = compose_filename(saved_lattice, rootname);
       if (element_divisions>1)
-        addDivisionSpec("*", NULL, NULL, element_divisions, 0.0);
+        addDivisionSpec("*", NULL, NULL, NULL, element_divisions, 0.0);
 #ifdef USE_MPE /* use the MPE library */
       if (USE_MPE) {
         int event1a, event1b;

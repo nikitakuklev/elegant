@@ -68,8 +68,6 @@ static char *load_mode[LOAD_MODES] = {
     } ;
 
 long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamline);
-char **addPatterns(long *patterns, char *input0);
-int matchesPatternList(char **pattern, long patterns, char *input);
 
 static long missingElementWarningsLeft = 100, missingParameterWarningsLeft = 100, printingEnabled = 1;
 
@@ -962,33 +960,6 @@ void finishLatticeParametersFile()
   dumpingLatticeParameters = 0;
 }
 
-char **addPatterns(long *patterns, char *input0) 
-{
-  char *input, *ptr, **pattern;
-  *patterns = 0;
-  if (input0==NULL)
-    return NULL;
-  cp_str(&input, input0);
-  pattern = NULL;
-  while ((ptr=get_token(input))) {
-    pattern = SDDS_Realloc(pattern, sizeof(*pattern)*(*patterns+1));
-    cp_str(&(pattern[*patterns]), ptr);
-    *patterns += 1;
-  }
-  free(input);
-  return pattern;
-}
-
-int matchesPatternList(char **pattern, long patterns, char *input) 
-{
-  long i;
-  for (i=0; i<patterns; i++) {
-    if (wild_match(input, pattern[i])) {
-      return 1;
-    }
-  }
-  return 0;
-}
 
 static long dumpingRfcData = 0;
 static SDDS_DATASET SDDS_rfcData;

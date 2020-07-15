@@ -14,7 +14,9 @@
 #define DEBUG 0
 
 typedef struct {
-  char *name, *type, *exclude;
+  char *name, *type;
+  char **excludeNamePattern, **excludeTypePattern;
+  long nExcludeNamePatterns, nExcludeTypePatterns;
   long divisions;
   double maximumLength;
 } DIVIDE_SPEC;
@@ -22,7 +24,8 @@ typedef struct {
 static DIVIDE_SPEC *divisionSpec = NULL;
 static long divisionSpecs = 0;
 
-void addDivisionSpec(char *name, char *type, char *exclude,
+void addDivisionSpec(char *name, char *type, 
+		     char *excludeNamePattern, char *excludeTypePattern,
 		     long divisions,
 		     double maximum_length)
 {
@@ -32,29 +35,52 @@ void addDivisionSpec(char *name, char *type, char *exclude,
     bombElegant("memory allocation failure", NULL);
   divisionSpec[divisionSpecs].name = NULL;
   divisionSpec[divisionSpecs].type = NULL;
-  divisionSpec[divisionSpecs].exclude = NULL;
   divisionSpec[divisionSpecs].divisions = divisions;
   divisionSpec[divisionSpecs].maximumLength = maximum_length;
   if ((name &&
        !SDDS_CopyString(&divisionSpec[divisionSpecs].name, name)) ||
       (type &&
-       !SDDS_CopyString(&divisionSpec[divisionSpecs].type, type)) ||
-      (exclude &&
-       !SDDS_CopyString(&divisionSpec[divisionSpecs].exclude, exclude)))
+       !SDDS_CopyString(&divisionSpec[divisionSpecs].type, type)))
     bombElegant("memory allocation failure", NULL);
-  
+
+  divisionSpec[divisionSpecs].excludeNamePattern = NULL;
+  divisionSpec[divisionSpecs].nExcludeNamePatterns = 0;
+  if (excludeNamePattern) {
+    divisionSpec[divisionSpecs].excludeNamePattern = addPatterns(&divisionSpec[divisionSpecs].nExcludeNamePatterns, 
+								 excludeNamePattern);
+  }
+
+  divisionSpec[divisionSpecs].excludeTypePattern = NULL;
+  divisionSpec[divisionSpecs].nExcludeTypePatterns = 0;
+  if (excludeTypePattern) {
+    long i;
+    divisionSpec[divisionSpecs].excludeTypePattern = addPatterns(&divisionSpec[divisionSpecs].nExcludeTypePatterns, 
+								 excludeTypePattern);
+    for (i=0; i<divisionSpec[divisionSpecs].nExcludeTypePatterns; i++)
+      str_toupper(divisionSpec[divisionSpecs].excludeTypePattern[i]);
+  }
+
   divisionSpecs++;
 }
 
 void clearDivisionSpecs() 
 {
+  long i;
   while (divisionSpecs--) {
     if (divisionSpec[divisionSpecs].name)
       free(divisionSpec[divisionSpecs].name);
     if (divisionSpec[divisionSpecs].type)
       free(divisionSpec[divisionSpecs].type);
-    if (divisionSpec[divisionSpecs].exclude)
-      free(divisionSpec[divisionSpecs].exclude);
+    if (divisionSpec[divisionSpecs].excludeNamePattern) {
+      for (i=0; i<divisionSpec[divisionSpecs].nExcludeNamePatterns; i++)
+	free(divisionSpec[divisionSpecs].excludeNamePattern[i]);
+      free(divisionSpec[divisionSpecs].excludeNamePattern);
+    }
+    if (divisionSpec[divisionSpecs].excludeTypePattern) {
+      for (i=0; i<divisionSpec[divisionSpecs].nExcludeTypePatterns; i++)
+	free(divisionSpec[divisionSpecs].excludeTypePattern[i]);
+      free(divisionSpec[divisionSpecs].excludeTypePattern);
+    }
   }
   free(divisionSpec);
   divisionSpec = NULL;
@@ -62,9 +88,10 @@ void clearDivisionSpecs()
 
 long elementDivisions(char *name, char *type, double length)
 {
-  long i, div;
+  long i, j, div;
   for (i=0; i<divisionSpecs; i++) {
-    if (divisionSpec[i].exclude && wild_match(name, divisionSpec[i].exclude))
+    if (matchesPatternList(divisionSpec[i].excludeNamePattern, divisionSpec[i].nExcludeNamePatterns, name) ||
+	matchesPatternList(divisionSpec[i].excludeTypePattern, divisionSpec[i].nExcludeTypePatterns, type))
       continue;
     if (divisionSpec[i].name && !wild_match(name, divisionSpec[i].name))
       continue;
@@ -124,10 +151,10 @@ void setupDivideElements(NAMELIST_TEXT *nltext, RUN *run,
       bombElegant("type pattern does not match any known type", NULL);
   }
   if (exclude) {
-    str_toupper(exclude);
-    if (has_wildcards(exclude) && strchr(exclude, '-'))
-      exclude = expand_ranges(exclude);
+    if (exclude_name_pattern)
+      bombElegant("give exclude or exclude_name_pattern, not both", NULL);
+    exclude_name_pattern = exclude;
   }
-  addDivisionSpec(name, type, exclude, divisions, maximum_length);
+  addDivisionSpec(name, type, exclude_name_pattern, exclude_type_pattern, divisions, maximum_length);
 }
 

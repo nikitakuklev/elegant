@@ -4435,6 +4435,8 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST *eptr, 
 
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 long do_load_parameters(LINE_LIST *beamline, long change_definitions);
+char **addPatterns(long *patterns, char *input0);
+int matchesPatternList(char **pattern, long patterns, char *input);
 #define NO_LOAD_PARAMETERS 0
 #define PARAMETERS_LOADED 1
 #define PARAMETERS_ENDED 2
@@ -4545,7 +4547,7 @@ VMATRIX *lightMirrorMatrix(LMIRROR *lm);
 
 void setupDivideElements(NAMELIST_TEXT *nltext, RUN *run, 
 			 LINE_LIST *beamline);
-void addDivisionSpec(char *name, char *type, char *exclude,
+void addDivisionSpec(char *name, char *type, char *excludeNamePattern, char *excludeTypePattern,
 		     long divisions,
 		     double maximum_length);
 long elementDivisions(char *name, char *type, double length);
