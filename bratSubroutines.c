@@ -587,7 +587,10 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   itop = np-1;
   for (ip=0; ip<=itop; ip++) {
     double accelCoord[6], q[10];
-    long i, j, iOut;
+#ifndef ABRAT_PROGRAM
+    long i, j;
+#endif
+    long iOut;
     for (ic=0; ic<6; ic++)
       accelCoord[ic] = part[ip][ic];
     n_stored = 0;
