@@ -88,7 +88,7 @@ void clearDivisionSpecs()
 
 long elementDivisions(char *name, char *type, double length)
 {
-  long i, j, div;
+  long i, div;
   for (i=0; i<divisionSpecs; i++) {
     if (matchesPatternList(divisionSpec[i].excludeNamePattern, divisionSpec[i].nExcludeNamePatterns, name) ||
 	matchesPatternList(divisionSpec[i].excludeTypePattern, divisionSpec[i].nExcludeTypePatterns, type))
