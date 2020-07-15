@@ -1736,7 +1736,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
         SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       } 
-      if (globalLossCoordOffset!=-1) {
+      if (globalLossCoordOffset>0) {
         /* global loss coordinates are available */
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                                8, particle[i][globalLossCoordOffset+2], 
