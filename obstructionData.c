@@ -208,7 +208,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   }
   if (lost) {
     logInside(X, Z, (long)part[particleIDIndex], lost);
-    if (globalLossCoordOffset!=-1) {
+    if (globalLossCoordOffset>0) {
       part[globalLossCoordOffset+0] = X;
       part[globalLossCoordOffset+1] = Y;
       part[globalLossCoordOffset+2] = Z;

@@ -4276,7 +4276,8 @@ void recordLostParticles
               beam->particle[i][0], beam->particle[i][1], 
               beam->particle[i][2], beam->particle[i][3], 
               beam->particle[i][4], beam->particle[i][5], 
-	      beam->particle[i][globalLossCoordOffset], beam->particle[i][globalLossCoordOffset+2], 
+              globalLossCoordOffset>0 ? beam->particle[i][globalLossCoordOffset] : -999,
+              globalLossCoordOffset>0 ? beam->particle[i][globalLossCoordOffset+2] : -999,
               (long)beam->particle[i][lossPassIndex], (long)beam->particle[i][6]);
 #endif
   }
