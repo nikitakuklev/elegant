@@ -1050,6 +1050,10 @@ long BRAT_lorentz_integration(
     accelCoord[0] = (q[0]-zNomExit)/sin(phi);
     accelCoord[2] = q[2];
     accelCoord[4] += s_start+ds;
+  } else {
+    /* some accelerator coordinates are undefined */
+    accelCoord[0] = accelCoord[1] = 999; /* my modest homage to fortran */
+    accelCoord[4] += s_start;
   }
 
   if (BMaxReturn)
