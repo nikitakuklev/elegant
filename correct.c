@@ -749,6 +749,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
 {
   double value, coef;
   long param_offset=0, param_number;
+  short try_matrix = 0;
 
   if ((param_number=confirm_parameter(item, type))<0 || (param_offset=find_parameter_offset(item, type))<0)
     bombElegant("invalid parameter or element type (compute_kick_coefficient)", NULL);
@@ -776,15 +777,21 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
   case T_CSBEND:
     if (plane==0 && param_offset==find_parameter_offset("XKICK", type))
       coef = 1.0;
-    if (plane!=0 && param_offset==find_parameter_offset("YKICK", type))
+    else if (plane!=0 && param_offset==find_parameter_offset("YKICK", type))
       coef = 1.0;
+    else
+      try_matrix = 1;
     break;
   default:
+    try_matrix = 1;
+    break;
+  }
+  if (try_matrix) {
     if (entity_description[elem->type].flags&HAS_MATRIX) {
       VMATRIX *M1, *M2, *M0;
       M0 = elem->matrix;
       elem->matrix = NULL;
-
+      
       value = *((double*)(elem->p_elem+param_offset));
       *((double*)(elem->p_elem+param_offset)) += corr_tweek;
       M1 = compute_matrix(elem, run, NULL);
@@ -792,28 +799,25 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
       
       *((double*)(elem->p_elem+param_offset)) -= 2*corr_tweek;
       M2 = compute_matrix(elem, run, NULL);
-
+      
       if (plane==0) 
         coef = (M1->C[1]-M2->C[1])/(2*corr_tweek);
       else
         coef = (M1->C[3]-M2->C[3])/(2*corr_tweek);
 #ifdef DEBUG
       printf("computed kick coefficient for %s.%s: %g rad/%s\n",
-	      name, item, coef, entity_description[type].parameter[param_number].unit);
+             name, item, coef, entity_description[type].parameter[param_number].unit);
 #endif
-
       free_matrices(M1); tfree(M1); M1 = NULL;
       free_matrices(M2); tfree(M2); M2 = NULL;
       *((double*)(elem->p_elem+param_offset)) = value;
       elem->matrix = M0;
-    }
-    else {
+    } else {
       printf("error: element %s does not have a matrix--can't be used for steering.\n",
-              elem->name);
+             elem->name);
       fflush(stdout);
       exitElegant(1);
     }
-    break;
   }
 
   return coef;
