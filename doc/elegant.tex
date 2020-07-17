@@ -58,6 +58,8 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
   output files when invoking backtracking mode from \verb|run_setup|.
 \item The \verb|ion_effects| command had a bug in the automatic bin size selection code that could result in pathological changes in the
   bin size over several bunches. This was found and fixed by J. Calvey (APS).
+\item When saving a lattice with \verb|output_seq=1|, \verb|RFCA| and other elements with the \verb|PHASE_REFERENCE| parameter
+  would have this parameter set to very large values. This bug was reported by Z. Duan (IHEP).
 \end{itemize}
 
 \subsection{New and Modified Elements}
