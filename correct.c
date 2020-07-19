@@ -49,9 +49,9 @@ char *correction_method[N_CORRECTION_METHODS] = {
 
 long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, 
                           RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, ELEMENT_LIST **newly_pegged);
-void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
+long one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
             LINE_LIST *beamline, double *starting_coord, BEAM *beam, long method);
-void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
+long thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
             LINE_LIST *beamline, double *starting_coord, BEAM *beam, long verbose);
 long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, 
                   long n_iterations, double accuracy,
@@ -826,7 +826,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
 long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coord, 
                    BEAM *beam, long sim_step, unsigned long flags)
 {
-  long i, i_cycle, x_failed, y_failed, n_iter_taken=0, n_x_iter_taken, n_y_iter_taken, bombed=0, final_traj;
+  long i, i_cycle, x_failed, y_failed, n_x_iter_taken, n_y_iter_taken, bombed=0, final_traj;
   double *closed_orbit, rms_before, rms_after, *Cdp;
   ELEMENT_LIST *newly_pegged;
 #if USE_MPI
@@ -922,20 +922,21 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 	newly_pegged = NULL;
         switch (correct->method) {
         case GLOBAL_CORRECTION:
-          if (!global_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
-                                    run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), &newly_pegged))
+          if ((n_x_iter_taken
+               =global_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
+                                     run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), &newly_pegged))<0)
             return 0;
           break;
         case ONE_TO_ONE_CORRECTION:
         case ONE_TO_BEST_CORRECTION:
         case ONE_TO_NEXT_CORRECTION:
-          one_to_one_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
-                                   run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL),
-                                   correct->method);
+          n_x_iter_taken=one_to_one_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
+                                                  run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL),
+                                                  correct->method);
           break;
         case THREAD_CORRECTION:
-          thread_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
-                               run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), correct->verbose);
+          n_x_iter_taken=thread_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
+                                              run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), correct->verbose);
           break;
         default:
           bombElegant("Invalid x trajectory correction mode---this should never happen!", NULL);
@@ -945,7 +946,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 	  printf("One or more correctors newly pegged\n");
 	}
 	if (correct->CMx != correct->CMFx)
-	  copy_steering_results(correct->CMFx, correct->CMx, n_iter_taken);
+	  copy_steering_results(correct->CMFx, correct->CMx, n_x_iter_taken);
         correct->CMFx->n_cycles_done = i_cycle+1;
         if (correct->n_iterations<1)
           break;
@@ -969,7 +970,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         if (!(flags&NO_OUTPUT_CORRECTION)) {
           dump_cormon_stats(correct->verbose, 0, correct->CMFx->kick, 
                             correct->CMFx->ncor, correct->CMFx->posi, correct->CMFx->nmon, NULL, 
-                            correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
+                            n_x_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
                             sim_step, !(flags&FINAL_CORRECTION));
           /*
           if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || x_failed))
@@ -991,20 +992,22 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 	newly_pegged = NULL;
         switch (correct->method) {
         case GLOBAL_CORRECTION:
-          if (!global_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
-                                    run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), &newly_pegged))
+          if ((n_y_iter_taken
+               =global_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+                                     run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), &newly_pegged))<0)
             return 0;
           break;
         case ONE_TO_ONE_CORRECTION:
         case ONE_TO_BEST_CORRECTION:
         case ONE_TO_NEXT_CORRECTION:
-          one_to_one_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
-                                   run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL),
-                                   correct->method);
+          n_y_iter_taken = one_to_one_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+                                                    run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL),
+                                                    correct->method);
           break;
         case THREAD_CORRECTION:
-          thread_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
-                               run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), correct->verbose);
+          n_y_iter_taken = thread_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+                                                run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), 
+                                                correct->verbose);
           break;
         default:
           bombElegant("Invalid y trajectory correction mode---this should never happen!", NULL);
@@ -1014,7 +1017,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 	  printf("One or more correctors newly pegged\n");
 	}
 	if (correct->CMy != correct->CMFy)
-	  copy_steering_results(correct->CMFy, correct->CMy, n_iter_taken);
+	  copy_steering_results(correct->CMFy, correct->CMy, n_y_iter_taken);
         correct->CMFy->n_cycles_done = i_cycle+1;
         rms_before = rms_value(correct->CMFy->posi[0], correct->CMFy->nmon);
         rms_after  = rms_value(correct->CMFy->posi[correct->n_iterations], correct->CMFy->nmon);
@@ -1036,10 +1039,10 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         if (!(flags&NO_OUTPUT_CORRECTION)) {
           dump_cormon_stats(correct->verbose, 2, correct->CMFy->kick, 
                             correct->CMFy->ncor, correct->CMFy->posi, correct->CMFy->nmon, NULL, 
-                            correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
+                            n_y_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
                             sim_step, !(flags&FINAL_CORRECTION));
           /*
-          if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || y_failed))
+            if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || y_failed))
             dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
           */
         }    
@@ -1062,8 +1065,8 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
       dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
       dump_bpm_data(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
-      dump_corrector_data(correct->CMFx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
-      dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
+      dump_corrector_data(correct->CMFx, &correct->SLx, n_x_iter_taken, "horizontal", sim_step);
+      dump_corrector_data(correct->CMFy, &correct->SLy, n_y_iter_taken, "vertical", sim_step);
     }
     if (starting_coord)
       for (i=0; i<6; i++)
@@ -1133,7 +1136,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         if (correct->n_iterations<1)
           break;
         rms_before = rms_value(correct->CMFx->posi[0], correct->CMFx->nmon);
-        rms_after  = rms_value(correct->CMFx->posi[n_iter_taken], correct->CMFx->nmon);
+        rms_after  = rms_value(correct->CMFx->posi[n_x_iter_taken], correct->CMFx->nmon);
 #if defined(IEEE_MATH)
         if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
           x_failed = 1;
@@ -1194,7 +1197,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 	  copy_steering_results(correct->CMFy, correct->CMy, n_y_iter_taken);
         correct->CMFy->n_cycles_done = i_cycle+1;
         rms_before = rms_value(correct->CMFy->posi[0], correct->CMFy->nmon);
-        rms_after  = rms_value(correct->CMFy->posi[n_iter_taken], correct->CMFy->nmon);
+        rms_after  = rms_value(correct->CMFy->posi[n_y_iter_taken], correct->CMFy->nmon);
 #if defined(IEEE_MATH)
         if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
           y_failed = 1;
@@ -1699,10 +1702,10 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 
   matrix_free(Qo);
 
-  return(1);
+  return iteration;
 }
 
-void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run,
+long one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run,
                               LINE_LIST *beamline, double *starting_coord, BEAM *beam, long method)
 {
   ELEMENT_LIST *corr, *eptr;
@@ -1897,9 +1900,10 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
     free_czarray_2d((void**)particle, beam->n_to_track, totalPropertiesPerParticle);
   particle = NULL;
   log_exit("one_to_one_trajcor_plane");
+  return iteration;
 }
 
-void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run,
+long thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run,
                           LINE_LIST *beamline, double *starting_coord, BEAM *beam, long verbose)
 {
   ELEMENT_LIST *corr;
@@ -2121,6 +2125,7 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   else
     free_czarray_2d((void**)particle, beam->n_to_track, totalPropertiesPerParticle);
   particle = NULL;
+  return iteration;
 }
 
 
