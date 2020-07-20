@@ -91,6 +91,7 @@ void do_response_matrix_output(char *filename, char *type, RUN *run, char *beaml
                                STEERING_LIST *SL, long plane);
 void copy_steering_results(CORMON_DATA *CM, CORMON_DATA *CMA, long slot);
 int remove_pegged_corrector(CORMON_DATA *CMA, CORMON_DATA *CM, STEERING_LIST *SL, ELEMENT_LIST *newly_pegged);
+long preemptivelyFindPeggedCorrectors(CORMON_DATA *CM, STEERING_LIST *SL);
 void copy_CM_structure(CORMON_DATA *CMA, CORMON_DATA *CM);
 void clean_up_CM(CORMON_DATA *CM, short full);
 
@@ -826,7 +827,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
 long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coord, 
                    BEAM *beam, long sim_step, unsigned long flags)
 {
-  long i, i_cycle, x_failed, y_failed, n_x_iter_taken, n_y_iter_taken, bombed=0, final_traj;
+  long i, i_cycle, x_failed, y_failed, n_x_iter_taken=0, n_y_iter_taken=0, bombed=0, final_traj;
   double *closed_orbit, rms_before, rms_after, *Cdp;
   ELEMENT_LIST *newly_pegged;
 #if USE_MPI
@@ -909,149 +910,165 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     if (usePerturbedMatrix) {
       if (!(correct->CMx->nmon==0 || correct->CMx->ncor==0) && correct->xplane)
         compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 
+                                 (correct->method==THREAD_CORRECTION ? COMPUTE_RESPONSE_FINDONLY : 0) |
                                  (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
                                  (flags&NO_OUTPUT_CORRECTION? COMPUTE_RESPONSE_SILENT : 0));
       if (!(correct->CMy->nmon==0 || correct->CMy->ncor==0) && correct->yplane)
         compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline,
+                                 (correct->method==THREAD_CORRECTION ? COMPUTE_RESPONSE_FINDONLY : 0) |
                                  (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
                                  (flags&NO_OUTPUT_CORRECTION ? COMPUTE_RESPONSE_SILENT : 0));
     }
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
       if (!x_failed && correct->CMx->ncor && correct->CMx->nmon && correct->xplane) {
-	newly_pegged = NULL;
-        switch (correct->method) {
-        case GLOBAL_CORRECTION:
-          if ((n_x_iter_taken
-               =global_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
-                                     run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), &newly_pegged))<0)
-            return 0;
-          break;
-        case ONE_TO_ONE_CORRECTION:
-        case ONE_TO_BEST_CORRECTION:
-        case ONE_TO_NEXT_CORRECTION:
-          n_x_iter_taken=one_to_one_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
-                                                  run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL),
-                                                  correct->method);
-          break;
-        case THREAD_CORRECTION:
-          n_x_iter_taken=thread_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
-                                              run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), correct->verbose);
-          break;
-        default:
-          bombElegant("Invalid x trajectory correction mode---this should never happen!", NULL);
-          break;
-        }
-	if (newly_pegged) {
-	  printf("One or more correctors newly pegged\n");
-	}
-	if (correct->CMx != correct->CMFx)
-	  copy_steering_results(correct->CMFx, correct->CMx, n_x_iter_taken);
-        correct->CMFx->n_cycles_done = i_cycle+1;
-        if (correct->n_iterations<1)
-          break;
-        rms_before = rms_value(correct->CMFx->posi[0], correct->CMFx->nmon);
-        rms_after  = rms_value(correct->CMFx->posi[correct->n_iterations], correct->CMFx->nmon);
-#if defined(IEEE_MATH)
-        if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
-          x_failed = 1;
-          if (correct->verbose)
-            fputs("horizontal trajectory diverged--setting correctors to zero\n", stdout);
-          zero_hcorrectors(&(beamline->elem), run, correct);
-        }
-        else
-#endif
-          if (rms_before<=(rms_after+correct->CMFx->corr_accuracy) && i_cycle>correct->minimum_cycles &&
-              correct->method!=THREAD_CORRECTION) {
-            x_failed = 1;
-            if (correct->verbose  && !correct->forceAlternation)
-              fputs("trajectory not improved--discontinuing horizontal correction\n", stdout);
-          }
-        if (!(flags&NO_OUTPUT_CORRECTION)) {
-          dump_cormon_stats(correct->verbose, 0, correct->CMFx->kick, 
-                            correct->CMFx->ncor, correct->CMFx->posi, correct->CMFx->nmon, NULL, 
-                            n_x_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
-                            sim_step, !(flags&FINAL_CORRECTION));
-          /*
-          if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || x_failed))
-            dump_corrector_data(correct->CMFx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
-          */
-        }
-	if (newly_pegged && correct->CMx->remove_pegged && correct->CMx->n_cycles_done!=correct->n_xy_cycles) {
-	  /* Compute new matrices for next iteratoin */
-	  fputs("Recomputing inverse response matrix for x plane to remove pegged corrector(s)\n", stdout);
-	  remove_pegged_corrector(correct->CMAx, correct->CMFx, &correct->SLx, newly_pegged);
+        if (preemptivelyFindPeggedCorrectors(correct->CMx, &correct->SLx)) {
+	  remove_pegged_corrector(correct->CMAx, correct->CMFx, &correct->SLx, NULL);
 	  correct->CMx = correct->CMAx;
-	}
-      }
-      if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 
-          && ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon)))
-        dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
-      if (!y_failed && correct->CMy->ncor && correct->CMy->nmon && correct->yplane) {                    
-        final_traj = 2;
-	newly_pegged = NULL;
-        switch (correct->method) {
-        case GLOBAL_CORRECTION:
-          if ((n_y_iter_taken
-               =global_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
-                                     run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), &newly_pegged))<0)
-            return 0;
-          break;
-        case ONE_TO_ONE_CORRECTION:
-        case ONE_TO_BEST_CORRECTION:
-        case ONE_TO_NEXT_CORRECTION:
-          n_y_iter_taken = one_to_one_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+        }
+        if (correct->CMx && (correct->method==THREAD_CORRECTION || correct->CMx->C) && correct->CMx->ncor) {
+          newly_pegged = NULL;
+          switch (correct->method) {
+          case GLOBAL_CORRECTION:
+            if ((n_x_iter_taken
+                 =global_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
+                                       run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), &newly_pegged))<0)
+              return 0;
+            break;
+          case ONE_TO_ONE_CORRECTION:
+          case ONE_TO_BEST_CORRECTION:
+          case ONE_TO_NEXT_CORRECTION:
+            n_x_iter_taken=one_to_one_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
                                                     run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL),
                                                     correct->method);
-          break;
-        case THREAD_CORRECTION:
-          n_y_iter_taken = thread_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
-                                                run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), 
-                                                correct->verbose);
-          break;
-        default:
-          bombElegant("Invalid y trajectory correction mode---this should never happen!", NULL);
-          break;
-        }
-	if (newly_pegged) {
-	  printf("One or more correctors newly pegged\n");
-	}
-	if (correct->CMy != correct->CMFy)
-	  copy_steering_results(correct->CMFy, correct->CMy, n_y_iter_taken);
-        correct->CMFy->n_cycles_done = i_cycle+1;
-        rms_before = rms_value(correct->CMFy->posi[0], correct->CMFy->nmon);
-        rms_after  = rms_value(correct->CMFy->posi[correct->n_iterations], correct->CMFy->nmon);
-#if defined(IEEE_MATH)
-        if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
-          y_failed = 1;
-          if (correct->verbose)
-            fputs("vertical trajectory diverged--setting correctors to zero\n", stdout);
-          zero_vcorrectors(&(beamline->elem), run, correct);
-        }
-        else
-#endif
-          if (rms_before<=(rms_after+correct->CMFy->corr_accuracy) && i_cycle>correct->minimum_cycles &&
-              correct->method!=THREAD_CORRECTION) {
-            y_failed = 1;
-            if (correct->verbose && !correct->forceAlternation)
-              fputs("trajectory not improved--discontinuing vertical correction\n", stdout);
+            break;
+          case THREAD_CORRECTION:
+            n_x_iter_taken=thread_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
+                                                run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), correct->verbose);
+            break;
+          default:
+            bombElegant("Invalid x trajectory correction mode---this should never happen!", NULL);
+            break;
           }
-        if (!(flags&NO_OUTPUT_CORRECTION)) {
-          dump_cormon_stats(correct->verbose, 2, correct->CMFy->kick, 
-                            correct->CMFy->ncor, correct->CMFy->posi, correct->CMFy->nmon, NULL, 
-                            n_y_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
-                            sim_step, !(flags&FINAL_CORRECTION));
-          /*
-            if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || y_failed))
-            dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
-          */
-        }    
-	if (newly_pegged && correct->CMy->remove_pegged && correct->CMy->n_cycles_done!=correct->n_xy_cycles) {
-	  /* Compute new matrices for next iteration */
-	  fputs("Recomputing inverse response matrix for x plane to remove pegged corrector(s)\n", stdout);
-	  remove_pegged_corrector(correct->CMAy, correct->CMFy, &correct->SLy, newly_pegged);
+          if (newly_pegged) {
+            printf("One or more correctors newly pegged\n");
+          }
+          if (correct->CMx != correct->CMFx)
+            copy_steering_results(correct->CMFx, correct->CMx, n_x_iter_taken);
+          correct->CMFx->n_cycles_done = i_cycle+1;
+          if (correct->n_iterations<1)
+            break;
+          rms_before = rms_value(correct->CMFx->posi[0], correct->CMFx->nmon);
+          rms_after  = rms_value(correct->CMFx->posi[correct->n_iterations], correct->CMFx->nmon);
+#if defined(IEEE_MATH)
+          if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
+            x_failed = 1;
+            if (correct->verbose)
+              fputs("horizontal trajectory diverged--setting correctors to zero\n", stdout);
+            zero_hcorrectors(&(beamline->elem), run, correct);
+          }
+          else
+#endif
+            if (rms_before<=(rms_after+correct->CMFx->corr_accuracy) && i_cycle>correct->minimum_cycles &&
+                correct->method!=THREAD_CORRECTION) {
+              x_failed = 1;
+              if (correct->verbose  && !correct->forceAlternation)
+                fputs("trajectory not improved--discontinuing horizontal correction\n", stdout);
+            }
+          if (!(flags&NO_OUTPUT_CORRECTION)) {
+            dump_cormon_stats(correct->verbose, 0, correct->CMFx->kick, 
+                              correct->CMFx->ncor, correct->CMFx->posi, correct->CMFx->nmon, NULL, 
+                              n_x_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
+                              sim_step, !(flags&FINAL_CORRECTION));
+            /*
+              if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || x_failed))
+              dump_corrector_data(correct->CMFx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
+            */
+          }
+          if (newly_pegged && correct->CMx->remove_pegged && correct->CMx->n_cycles_done!=correct->n_xy_cycles) {
+            /* Compute new matrices for next iteratoin */
+            fputs("Recomputing inverse response matrix for x plane to remove pegged corrector(s)\n", stdout);
+            remove_pegged_corrector(correct->CMAx, correct->CMFx, &correct->SLx, newly_pegged);
+            correct->CMx = correct->CMAx;
+          }
+          if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 
+              && ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon)))
+            dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step); 
+        } else
+          x_failed = 1;
+      }
+      if (!y_failed && correct->CMy->ncor && correct->CMy->nmon && correct->yplane) {                    
+        final_traj = 2;
+        if (preemptivelyFindPeggedCorrectors(correct->CMy, &correct->SLy)) {
+	  remove_pegged_corrector(correct->CMAy, correct->CMFy, &correct->SLy, NULL);
 	  correct->CMy = correct->CMAy;
-	}
+        }          
+        if (correct->CMy && (correct->method==THREAD_CORRECTION || correct->CMy->C) && correct->CMy->ncor) {
+          newly_pegged = NULL;
+          switch (correct->method) {
+          case GLOBAL_CORRECTION:
+            if ((n_y_iter_taken
+                 =global_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+                                       run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), &newly_pegged))<0)
+              return 0;
+            break;
+          case ONE_TO_ONE_CORRECTION:
+          case ONE_TO_BEST_CORRECTION:
+          case ONE_TO_NEXT_CORRECTION:
+            n_y_iter_taken = one_to_one_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+                                                      run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL),
+                                                      correct->method);
+            break;
+          case THREAD_CORRECTION:
+            n_y_iter_taken = thread_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+                                                  run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), 
+                                                  correct->verbose);
+            break;
+          default:
+            bombElegant("Invalid y trajectory correction mode---this should never happen!", NULL);
+            break;
+          }
+          if (newly_pegged) {
+            printf("One or more correctors newly pegged\n");
+          }
+          if (correct->CMy != correct->CMFy)
+            copy_steering_results(correct->CMFy, correct->CMy, n_y_iter_taken);
+          correct->CMFy->n_cycles_done = i_cycle+1;
+          rms_before = rms_value(correct->CMFy->posi[0], correct->CMFy->nmon);
+          rms_after  = rms_value(correct->CMFy->posi[correct->n_iterations], correct->CMFy->nmon);
+#if defined(IEEE_MATH)
+          if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
+            y_failed = 1;
+            if (correct->verbose)
+              fputs("vertical trajectory diverged--setting correctors to zero\n", stdout);
+            zero_vcorrectors(&(beamline->elem), run, correct);
+          }
+          else
+#endif
+            if (rms_before<=(rms_after+correct->CMFy->corr_accuracy) && i_cycle>correct->minimum_cycles &&
+                correct->method!=THREAD_CORRECTION) {
+              y_failed = 1;
+              if (correct->verbose && !correct->forceAlternation)
+                fputs("trajectory not improved--discontinuing vertical correction\n", stdout);
+            }
+          if (!(flags&NO_OUTPUT_CORRECTION)) {
+            dump_cormon_stats(correct->verbose, 2, correct->CMFy->kick, 
+                              correct->CMFy->ncor, correct->CMFy->posi, correct->CMFy->nmon, NULL, 
+                              n_y_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
+                              sim_step, !(flags&FINAL_CORRECTION));
+            /*
+              if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || y_failed))
+              dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
+            */
+          }    
+          if (newly_pegged && correct->CMy->remove_pegged && correct->CMy->n_cycles_done!=correct->n_xy_cycles) {
+            /* Compute new matrices for next iteration */
+            fputs("Recomputing inverse response matrix for x plane to remove pegged corrector(s)\n", stdout);
+            remove_pegged_corrector(correct->CMAy, correct->CMFy, &correct->SLy, newly_pegged);
+            correct->CMy = correct->CMAy;
+          }
+        } else
+          y_failed = 1;
       }
       if ((x_failed && y_failed) || ((x_failed || y_failed) && correct->forceAlternation)) {
         if (correct->verbose && !(flags&NO_OUTPUT_CORRECTION))
@@ -1059,7 +1076,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         break;
       }
       if (correct->forceAlternation)
-	x_failed = y_failed = 0;
+        x_failed = y_failed = 0;
     }
     if (!(flags&NO_OUTPUT_CORRECTION) && (flags&FINAL_CORRECTION) && 
         ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
@@ -1111,124 +1128,138 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
       if (!x_failed && correct->CMx->ncor && correct->CMx->nmon && correct->xplane) {
-	newly_pegged = NULL;
-        if ((n_x_iter_taken = orbcor_plane(correct->CMx, 
-					 &correct->SLx,
-					 0, correct->traj, correct->n_iterations, correct->clorb_accuracy, 
-                                         correct->clorb_iterations, 
-                                         correct->clorb_iter_fraction,
-                                         correct->clorb_fraction_multiplier,
-                                         correct->clorb_multiplier_interval,
-                                         correct->clorb_track_for_orbit,
-                                         run, beamline, 
-                                         closed_orbit, Cdp, &newly_pegged))<0) {
-          printf("Horizontal correction has failed.\n");
-          fflush(stdout);
-          bombed = 1; 
-          break;
-        }
-	if (newly_pegged) {
-	  printf("One or more correctors newly pegged\n");
-	}
-	if (correct->CMx != correct->CMFx)
-	  copy_steering_results(correct->CMFx, correct->CMx, n_x_iter_taken);
-        correct->CMFx->n_cycles_done = i_cycle+1;
-        if (correct->n_iterations<1)
-          break;
-        rms_before = rms_value(correct->CMFx->posi[0], correct->CMFx->nmon);
-        rms_after  = rms_value(correct->CMFx->posi[n_x_iter_taken], correct->CMFx->nmon);
-#if defined(IEEE_MATH)
-        if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
-          x_failed = 1;
-          if (correct->verbose)
-            fputs("horizontal orbit diverged--setting correctors to zero\n", stdout);
-          zero_hcorrectors(&(beamline->elem), run, correct);
-        }
-        else
-#endif
-          if (rms_before<=(rms_after+correct->CMFx->corr_accuracy) && i_cycle>=correct->minimum_cycles) {
-            x_failed = 1;
-            if (correct->verbose && !correct->forceAlternation)
-              fputs("orbit not improved--discontinuing horizontal correction\n", stdout);
-          }
-        if (!(flags&NO_OUTPUT_CORRECTION)) {
-          dump_cormon_stats(correct->verbose, 0, correct->CMFx->kick, 
-                            correct->CMFx->ncor, correct->CMFx->posi, correct->CMFx->nmon, Cdp, 
-                            n_x_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
-                            sim_step, !(flags&FINAL_CORRECTION));
-          /*
-          if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || x_failed)) 
-            dump_corrector_data(correct->CMFx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
-          */
-        }
-	if (newly_pegged && correct->CMx->remove_pegged && correct->CMx->n_cycles_done!=correct->n_xy_cycles) {
-	  /* Compute new matrices for next iteratoin */
-	  fputs("Recomputing inverse response matrix for x plane to remove pegged corrector(s)\n", stdout);
-	  remove_pegged_corrector(correct->CMAx, correct->CMFx, &correct->SLx, newly_pegged);
+        if (preemptivelyFindPeggedCorrectors(correct->CMx, &correct->SLx)) {
+	  remove_pegged_corrector(correct->CMAx, correct->CMFx, &correct->SLx, NULL);
 	  correct->CMx = correct->CMAx;
-	}
+        }          
+        if (correct->CMx && correct->CMx->C && correct->CMx->ncor) {
+          newly_pegged = NULL;
+          if ((n_x_iter_taken = orbcor_plane(correct->CMx, 
+                                             &correct->SLx,
+                                             0, correct->traj, correct->n_iterations, correct->clorb_accuracy, 
+                                             correct->clorb_iterations, 
+                                             correct->clorb_iter_fraction,
+                                             correct->clorb_fraction_multiplier,
+                                             correct->clorb_multiplier_interval,
+                                             correct->clorb_track_for_orbit,
+                                             run, beamline, 
+                                             closed_orbit, Cdp, &newly_pegged))<0) {
+            printf("Horizontal correction has failed.\n");
+            fflush(stdout);
+            bombed = 1; 
+            break;
+          }
+          if (newly_pegged) {
+            printf("One or more correctors newly pegged\n");
+          }
+          if (correct->CMx != correct->CMFx)
+            copy_steering_results(correct->CMFx, correct->CMx, n_x_iter_taken);
+          correct->CMFx->n_cycles_done = i_cycle+1;
+          if (correct->n_iterations<1)
+            break;
+          rms_before = rms_value(correct->CMFx->posi[0], correct->CMFx->nmon);
+          rms_after  = rms_value(correct->CMFx->posi[n_x_iter_taken], correct->CMFx->nmon);
+#if defined(IEEE_MATH)
+          if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
+            x_failed = 1;
+            if (correct->verbose)
+              fputs("horizontal orbit diverged--setting correctors to zero\n", stdout);
+            zero_hcorrectors(&(beamline->elem), run, correct);
+          }
+          else
+#endif
+            if (rms_before<=(rms_after+correct->CMFx->corr_accuracy) && i_cycle>=correct->minimum_cycles) {
+              x_failed = 1;
+              if (correct->verbose && !correct->forceAlternation)
+                fputs("orbit not improved--discontinuing horizontal correction\n", stdout);
+            }
+          if (!(flags&NO_OUTPUT_CORRECTION)) {
+            dump_cormon_stats(correct->verbose, 0, correct->CMFx->kick, 
+                              correct->CMFx->ncor, correct->CMFx->posi, correct->CMFx->nmon, Cdp, 
+                              n_x_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
+                              sim_step, !(flags&FINAL_CORRECTION));
+            /*
+              if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || x_failed)) 
+              dump_corrector_data(correct->CMFx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
+            */
+          }
+          if (newly_pegged && correct->CMx->remove_pegged && correct->CMx->n_cycles_done!=correct->n_xy_cycles) {
+            /* Compute new matrices for next iteration */
+            fputs("Recomputing inverse response matrix for x plane to remove pegged corrector(s)\n", stdout);
+            remove_pegged_corrector(correct->CMAx, correct->CMFx, &correct->SLx, newly_pegged);
+            correct->CMx = correct->CMAx;
+          }
+          if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 && 
+              ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) 
+            dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
+        } else
+          x_failed = 1;
       }
-      if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 && 
-          ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) 
-        dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
       if (!y_failed && correct->CMy->ncor && correct->CMy->nmon && correct->yplane) {
         final_traj = 2;
-	newly_pegged = NULL;
-        if ((n_y_iter_taken = orbcor_plane(correct->CMy, 
-					 &correct->SLy, 
-					 2, correct->traj+1, 
-                                         correct->n_iterations, correct->clorb_accuracy, 
-                                         correct->clorb_iterations, 
-                                         correct->clorb_iter_fraction,
-                                         correct->clorb_fraction_multiplier,
-                                         correct->clorb_multiplier_interval,
-                                         correct->clorb_track_for_orbit,
-                                         run, beamline, 
-                                         closed_orbit, Cdp, &newly_pegged))<0) {
-          bombed = 1;
-          printf("Vertical correction has failed.\n");
-          fflush(stdout);
-          break;
+        if (preemptivelyFindPeggedCorrectors(correct->CMy, &correct->SLy)) {
+          remove_pegged_corrector(correct->CMAy, correct->CMFy, &correct->SLy, NULL);
+          correct->CMy = correct->CMAy;
         }
-	if (newly_pegged) {
-	  printf("One or more correctors newly pegged\n");
-	}
-	if (correct->CMFy != correct->CMy)
-	  copy_steering_results(correct->CMFy, correct->CMy, n_y_iter_taken);
-        correct->CMFy->n_cycles_done = i_cycle+1;
-        rms_before = rms_value(correct->CMFy->posi[0], correct->CMFy->nmon);
-        rms_after  = rms_value(correct->CMFy->posi[n_y_iter_taken], correct->CMFy->nmon);
-#if defined(IEEE_MATH)
-        if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
-          y_failed = 1;
-          if (correct->verbose)
-            fputs("vertical orbit diverged--setting correctors to zero\n", stdout);
-          zero_vcorrectors(&(beamline->elem), run, correct);
-        }
-        else
-#endif
-          if (rms_before<=(rms_after+correct->CMy->corr_accuracy) && i_cycle>=correct->minimum_cycles) {
-            y_failed = 1;
-            if (correct->verbose && !correct->forceAlternation)
-              fputs("orbit not improved--discontinuing vertical correction\n", stdout);
+        if (correct->CMy && correct->CMy->C && correct->CMy->ncor) {
+          newly_pegged = NULL;
+          if ((n_y_iter_taken = orbcor_plane(correct->CMy, 
+                                             &correct->SLy, 
+                                             2, correct->traj+1, 
+                                             correct->n_iterations, correct->clorb_accuracy, 
+                                             correct->clorb_iterations, 
+                                             correct->clorb_iter_fraction,
+                                             correct->clorb_fraction_multiplier,
+                                             correct->clorb_multiplier_interval,
+                                             correct->clorb_track_for_orbit,
+                                             run, beamline, 
+                                             closed_orbit, Cdp, &newly_pegged))<0) {
+            bombed = 1;
+            printf("Vertical correction has failed.\n");
+            fflush(stdout);
+            break;
           }
-        if (!(flags&NO_OUTPUT_CORRECTION)) {
-          dump_cormon_stats(correct->verbose, 2, correct->CMFy->kick, 
-                            correct->CMFy->ncor, correct->CMFy->posi, correct->CMFy->nmon, Cdp, 
-                            n_y_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
-                            sim_step, !(flags&FINAL_CORRECTION));
-          /*
-          if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || y_failed))
-            dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
-          */
-        }
-	if (newly_pegged && correct->CMFy->remove_pegged && correct->CMFy->n_cycles_done!=correct->n_xy_cycles) {
-	  /* Compute new matrices for next iteratoin */
-	  fputs("Recomputing inverse response matrix for y plane to remove pegged corrector(s)\n", stdout);
-	  remove_pegged_corrector(correct->CMAy, correct->CMFy, &correct->SLy, newly_pegged);
-	  correct->CMy = correct->CMAy;
-	}
-      }      
+          if (newly_pegged) {
+            printf("One or more correctors newly pegged\n");
+          }
+          if (correct->CMFy != correct->CMy)
+            copy_steering_results(correct->CMFy, correct->CMy, n_y_iter_taken);
+          correct->CMFy->n_cycles_done = i_cycle+1;
+          rms_before = rms_value(correct->CMFy->posi[0], correct->CMFy->nmon);
+          rms_after  = rms_value(correct->CMFy->posi[n_y_iter_taken], correct->CMFy->nmon);
+#if defined(IEEE_MATH)
+          if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
+            y_failed = 1;
+            if (correct->verbose)
+              fputs("vertical orbit diverged--setting correctors to zero\n", stdout);
+            zero_vcorrectors(&(beamline->elem), run, correct);
+          }
+          else
+#endif
+            if (rms_before<=(rms_after+correct->CMy->corr_accuracy) && i_cycle>=correct->minimum_cycles) {
+              y_failed = 1;
+              if (correct->verbose && !correct->forceAlternation)
+                fputs("orbit not improved--discontinuing vertical correction\n", stdout);
+            }
+          if (!(flags&NO_OUTPUT_CORRECTION)) {
+            dump_cormon_stats(correct->verbose, 2, correct->CMFy->kick, 
+                              correct->CMFy->ncor, correct->CMFy->posi, correct->CMFy->nmon, Cdp, 
+                              n_y_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
+                              sim_step, !(flags&FINAL_CORRECTION));
+            /*
+              if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || y_failed))
+              dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
+            */
+          }
+          if (newly_pegged && correct->CMFy->remove_pegged && correct->CMFy->n_cycles_done!=correct->n_xy_cycles) {
+            /* Compute new matrices for next iteratoin */
+            fputs("Recomputing inverse response matrix for y plane to remove pegged corrector(s)\n", stdout);
+            remove_pegged_corrector(correct->CMAy, correct->CMFy, &correct->SLy, newly_pegged);
+            correct->CMy = correct->CMAy;
+          }
+        } else
+          y_failed = 1;
+      }  
       if ((x_failed && y_failed) || ((x_failed || y_failed) && correct->forceAlternation)) {
         if (correct->verbose && !(flags&NO_OUTPUT_CORRECTION))
           fputs("orbit correction discontinued\n", stdout);
@@ -2648,7 +2679,8 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 }
 
 long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, long n_iterations, 
-                  double clorb_acc, long clorb_iter, double clorb_iter_frac, double clorb_frac_mult, long clorb_mult_interval, long clorb_track_for_orbit,
+                  double clorb_acc, long clorb_iter, double clorb_iter_frac, double clorb_frac_mult, 
+                  long clorb_mult_interval, long clorb_track_for_orbit,
                   RUN *run, LINE_LIST *beamline, double *closed_orbit, double *Cdp,
 		  ELEMENT_LIST **newly_pegged)
 {
@@ -2660,7 +2692,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
   double dp, x, y, reading;
   /* double last_rms_pos; */
   double best_rms_pos, rms_pos, corr_fraction;
-  double fraction, minFraction, param, change;
+  double fraction, param, change;
   MAT *Qo, *dK=NULL;
 
   log_entry("orbcor_plane");
@@ -2824,30 +2856,30 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
 #endif
 
     /* see if any correctors are over their limit */
-    minFraction = 1;
+    fraction = corr_fraction;
     i_pegged = -1;
     for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+      double coef;
       corr = CM->ucorr[i_corr];
       sl_index = CM->sl_index[i_corr];
       kick_offset = SL->param_offset[sl_index];
       param = fabs(*((double*)(corr->p_elem+kick_offset)) +
-                   (change=Mij(dK, i_corr, 0)/CM->kick_coef[i_corr]*corr_fraction));
+                   (coef=Mij(dK, i_corr, 0)/CM->kick_coef[i_corr])*corr_fraction);
       if (SL->corr_limit[sl_index] && param>SL->corr_limit[sl_index]) {
-        fraction = fabs((SL->corr_limit[sl_index]-fabs(*((double*)(corr->p_elem+kick_offset))))/change);
-        if (fraction<minFraction) {
+        double fraction1;
+        fraction1 = fabs((fabs(SL->corr_limit[sl_index])-fabs(*((double*)(corr->p_elem+kick_offset))))/coef);
+        if (fraction1<fraction) {
 	  i_pegged = i_corr;
-          minFraction = fraction;
+          fraction = fraction1;
 	}
       }
     }
     if (i_pegged!=-1) {
       *newly_pegged = CM->ucorr[i_pegged];
       CM->pegged[i_pegged] = 1;
+      printf("correction fraction reduced to %le due to pegged corrector %s#%ld\n", 
+             fraction, (*newly_pegged)->name, (*newly_pegged)->occurence);
     }
-    fraction = minFraction*corr_fraction;
-#ifdef DEBUG
-    printf("fraction = %le\n", fraction);
-#endif
 
     /* step through beamline and change correctors */
     for (i_corr=0; i_corr<CM->ncor; i_corr++) {
@@ -2880,10 +2912,13 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
     tfree(beamline->matrix);
     beamline->matrix = NULL;
     matrix_free(dK);
+    /*
+      messes up output !
     if (i_pegged!=-1) {
       iteration++;
       break;
     }
+    */
   }
   
 
@@ -3376,13 +3411,15 @@ int remove_pegged_corrector(CORMON_DATA *CMA, CORMON_DATA *CM, STEERING_LIST *SL
   long ic0, ic1, im; 
   double conditionNumber;
 
-  for (ic0=0; ic0<CM->ncor; ic0++) {
-    if (CM->ucorr[ic0]==newly_pegged) {
-      if (CM->pegged[ic0]==2)
-	bombElegant("Previously pegged corrector has pegged again---shouldn't happen. (4)", NULL);
-      /* printf("Corrector %ld is pegged\n", ic0); */
-      CM->pegged[ic0] = 2;
-      break;
+  if (newly_pegged) {
+    for (ic0=0; ic0<CM->ncor; ic0++) {
+      if (CM->ucorr[ic0]==newly_pegged) {
+        if (CM->pegged[ic0]==2)
+          bombElegant("Previously pegged corrector has pegged again---shouldn't happen. (4)", NULL);
+        /* printf("Corrector %ld is pegged\n", ic0); */
+        CM->pegged[ic0] = 2;
+        break;
+      }
     }
   }
 
@@ -3394,8 +3431,16 @@ int remove_pegged_corrector(CORMON_DATA *CMA, CORMON_DATA *CM, STEERING_LIST *SL
     if (!CM->pegged[ic0])
       CMA->ncor += 1;
     else {
-      printf("Corrector %ld, %s#%ld, is pegged\n",
-	      ic0, CM->ucorr[ic0]->name, CM->ucorr[ic0]->occurence);
+      ELEMENT_LIST *corr;
+      long sl_index, kick_offset;
+      double param;
+      corr = CM->ucorr[ic0];
+      sl_index = CM->sl_index[ic0];
+      kick_offset = SL->param_offset[sl_index];
+      param = *((double*)(corr->p_elem+kick_offset));
+      printf("Corrector %ld, %s#%ld, is pegged at %le\n",
+             ic0, corr->name, corr->occurence, param);
+
     }
   }
 
@@ -3452,3 +3497,31 @@ void finishCorrectionOutput() {
   finish_corrector_output();
   finish_cormon_stats();
 }
+
+long preemptivelyFindPeggedCorrectors
+  (
+   CORMON_DATA *CM, 
+   STEERING_LIST *SL
+   )  {
+  long i_corr, sl_index, kick_offset, nNewPegged;
+  double param;
+  ELEMENT_LIST *corr;
+
+  nNewPegged = 0;
+  for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+    corr = CM->ucorr[i_corr];
+    sl_index = CM->sl_index[i_corr];
+    kick_offset = SL->param_offset[sl_index];
+    param = fabs(*((double*)(corr->p_elem+kick_offset)));
+    if (SL->corr_limit[sl_index] && param>=SL->corr_limit[sl_index] && !CM->pegged[i_corr]) {
+      /*
+      printf("Marking corrector %ld, %s#%ld, as pegged\n",
+	      i_corr, CM->ucorr[i_corr]->name, CM->ucorr[i_corr]->occurence);
+      */
+      CM->pegged[i_corr] = 1;
+      nNewPegged++;
+    }
+  }
+  return nNewPegged;
+}
+
