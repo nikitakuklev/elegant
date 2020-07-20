@@ -91,6 +91,9 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
   as a global cap on the minimum and maximum vertical coordinates.
 \item The \verb|tune_shift_with_amplitude| command now uses an improved 2D polynomial fitting routine in all the
   tracking-based modes. Discussions with Y.P. Sun (APS) motivated this change.
+\item The corrector-pegging feature of the trajectory/orbit correction command \verb|correct| now works better.
+  In particular, when a corrector is pegged, the iteration stops until the response matrix can be recomputed.
+  Printouts and other output now reflect this.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
