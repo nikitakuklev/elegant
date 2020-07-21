@@ -89,7 +89,8 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
 double noise_value(double xamplitude, double xcutoff, long xerror_type);
 void do_response_matrix_output(char *filename, char *type, RUN *run, char *beamline_name, CORMON_DATA *CM, 
                                STEERING_LIST *SL, long plane);
-void copy_steering_results(CORMON_DATA *CM, CORMON_DATA *CMA, long slot);
+void copy_steering_results(CORMON_DATA *CM, STEERING_LIST *SL, CORMON_DATA *CMA, long slot);
+void prefillSteeringResultsArray(CORMON_DATA *CM, STEERING_LIST *SL, long iterations);
 int remove_pegged_corrector(CORMON_DATA *CMA, CORMON_DATA *CM, STEERING_LIST *SL, ELEMENT_LIST *newly_pegged);
 long preemptivelyFindPeggedCorrectors(CORMON_DATA *CM, STEERING_LIST *SL);
 void copy_CM_structure(CORMON_DATA *CMA, CORMON_DATA *CM);
@@ -921,6 +922,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     }
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
+      prefillSteeringResultsArray(correct->CMx, &correct->SLx, correct->n_iterations);
       if (!x_failed && correct->CMx->ncor && correct->CMx->nmon && correct->xplane) {
         if (preemptivelyFindPeggedCorrectors(correct->CMx, &correct->SLx)) {
 	  remove_pegged_corrector(correct->CMAx, correct->CMFx, &correct->SLx, NULL);
@@ -954,7 +956,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
             printf("One or more correctors newly pegged\n");
           }
           if (correct->CMx != correct->CMFx)
-            copy_steering_results(correct->CMFx, correct->CMx, n_x_iter_taken);
+            copy_steering_results(correct->CMFx, &correct->SLx, correct->CMx, n_x_iter_taken);
           correct->CMFx->n_cycles_done = i_cycle+1;
           if (correct->n_iterations<1)
             break;
@@ -997,6 +999,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         } else
           x_failed = 1;
       }
+      prefillSteeringResultsArray(correct->CMy, &correct->SLy, correct->n_iterations);
       if (!y_failed && correct->CMy->ncor && correct->CMy->nmon && correct->yplane) {                    
         final_traj = 2;
         if (preemptivelyFindPeggedCorrectors(correct->CMy, &correct->SLy)) {
@@ -1032,7 +1035,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
             printf("One or more correctors newly pegged\n");
           }
           if (correct->CMy != correct->CMFy)
-            copy_steering_results(correct->CMFy, correct->CMy, n_y_iter_taken);
+            copy_steering_results(correct->CMFy, &correct->SLy, correct->CMy, n_y_iter_taken);
           correct->CMFy->n_cycles_done = i_cycle+1;
           rms_before = rms_value(correct->CMFy->posi[0], correct->CMFy->nmon);
           rms_after  = rms_value(correct->CMFy->posi[correct->n_iterations], correct->CMFy->nmon);
@@ -1127,6 +1130,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
+      prefillSteeringResultsArray(correct->CMx, &correct->SLx, correct->n_iterations);
       if (!x_failed && correct->CMx->ncor && correct->CMx->nmon && correct->xplane) {
         if (preemptivelyFindPeggedCorrectors(correct->CMx, &correct->SLx)) {
 	  remove_pegged_corrector(correct->CMAx, correct->CMFx, &correct->SLx, NULL);
@@ -1146,6 +1150,8 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                                              closed_orbit, Cdp, &newly_pegged))<0) {
             printf("Horizontal correction has failed.\n");
             fflush(stdout);
+            if (correct->CMx != correct->CMFx)
+              copy_steering_results(correct->CMFx, &correct->SLx, correct->CMx, correct->n_iterations);
             bombed = 1; 
             break;
           }
@@ -1153,7 +1159,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
             printf("One or more correctors newly pegged\n");
           }
           if (correct->CMx != correct->CMFx)
-            copy_steering_results(correct->CMFx, correct->CMx, n_x_iter_taken);
+            copy_steering_results(correct->CMFx, &correct->SLx, correct->CMx, n_x_iter_taken);
           correct->CMFx->n_cycles_done = i_cycle+1;
           if (correct->n_iterations<1)
             break;
@@ -1183,18 +1189,19 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
               dump_corrector_data(correct->CMFx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
             */
           }
+          if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 && 
+              ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) 
+            dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
           if (newly_pegged && correct->CMx->remove_pegged && correct->CMx->n_cycles_done!=correct->n_xy_cycles) {
             /* Compute new matrices for next iteration */
             fputs("Recomputing inverse response matrix for x plane to remove pegged corrector(s)\n", stdout);
             remove_pegged_corrector(correct->CMAx, correct->CMFx, &correct->SLx, newly_pegged);
             correct->CMx = correct->CMAx;
           }
-          if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 && 
-              ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) 
-            dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
         } else
           x_failed = 1;
       }
+      prefillSteeringResultsArray(correct->CMy, &correct->SLy, correct->n_iterations);
       if (!y_failed && correct->CMy->ncor && correct->CMy->nmon && correct->yplane) {
         final_traj = 2;
         if (preemptivelyFindPeggedCorrectors(correct->CMy, &correct->SLy)) {
@@ -1215,6 +1222,8 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                                              run, beamline, 
                                              closed_orbit, Cdp, &newly_pegged))<0) {
             bombed = 1;
+            if (correct->CMy != correct->CMFy)
+              copy_steering_results(correct->CMFy, &correct->SLy, correct->CMy, correct->n_iterations);
             printf("Vertical correction has failed.\n");
             fflush(stdout);
             break;
@@ -1223,7 +1232,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
             printf("One or more correctors newly pegged\n");
           }
           if (correct->CMFy != correct->CMy)
-            copy_steering_results(correct->CMFy, correct->CMy, n_y_iter_taken);
+            copy_steering_results(correct->CMFy, &correct->SLy, correct->CMy, n_y_iter_taken);
           correct->CMFy->n_cycles_done = i_cycle+1;
           rms_before = rms_value(correct->CMFy->posi[0], correct->CMFy->nmon);
           rms_after  = rms_value(correct->CMFy->posi[n_y_iter_taken], correct->CMFy->nmon);
@@ -2692,7 +2701,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
   double dp, x, y, reading;
   /* double last_rms_pos; */
   double best_rms_pos, rms_pos, corr_fraction;
-  double fraction, param, change;
+  double fraction, param;
   MAT *Qo, *dK=NULL;
 
   log_entry("orbcor_plane");
@@ -2888,13 +2897,15 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
       kick_offset = SL->param_offset[sl_index];
       if (iteration==0)
         CM->kick[iteration][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
-      *((double*)(corr->p_elem+kick_offset)) += Mij(dK, i_corr, 0)/CM->kick_coef[i_corr]*fraction;
+      *((double*)(corr->p_elem+kick_offset)) += Mij(dK, i_corr, 0)*fraction/CM->kick_coef[i_corr];
       CM->kick[iteration+1][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
 #ifdef DEBUG
-      printf("corrector changing from %le to %le (kick_coef=%le, fraction=%le\n",
+      printf("corrector %s#%ld changing from %le to %le (kick_coef=%le, fraction=%le, param=%le)\n",
+             corr->name, corr->occurence,
 	     CM->kick[iteration][i_corr],
 	     CM->kick[iteration+1][i_corr],
-	     CM->kick_coef[i_corr], fraction);
+	     CM->kick_coef[i_corr], fraction,
+             *((double*)(corr->p_elem+kick_offset)));
 #endif
 
       if (corr->matrix) {
@@ -3387,19 +3398,43 @@ double getCorrectorCalibration(ELEMENT_LIST *elem, long coord)
   return value;
 }
 
-void copy_steering_results(CORMON_DATA *CM, CORMON_DATA *CMA, long iterations)
+void prefillSteeringResultsArray(CORMON_DATA *CM, STEERING_LIST *SL, long iterations)
+/* This ensures that the kick values are valid even if the correction algorithm totally fails to run */
+{
+  long ic, it;
+  for (it=0; it<=iterations; it++) {
+    for (ic=0; ic<CM->ncor; ic++) {
+      if (it==0) {
+        ELEMENT_LIST *corr;
+        long sl_index, kick_offset;
+        corr = CM->ucorr[ic];
+        sl_index = CM->sl_index[ic];
+        kick_offset = SL->param_offset[sl_index];
+        CM->kick[it][ic] = (*((double*)(corr->p_elem+kick_offset)))*CM->kick_coef[ic];
+      } else {
+        CM->kick[it][ic] = CM->kick[0][ic];
+      }
+    }
+  }
+}
+
+void copy_steering_results(CORMON_DATA *CM, STEERING_LIST *SL, CORMON_DATA *CMA, long iterations)
 {
   long ic0, ic1, it;
   for (it=0; it<=iterations; it++) {
     for (ic0=ic1=0; ic0<CM->ncor; ic0++) {
-      if (!CM->pegged[ic0]) {
+      if (CM->pegged[ic0] || it==iterations) {
+        /* compute value from the parameter */
+        ELEMENT_LIST *corr;
+        long sl_index, kick_offset;
+        corr = CM->ucorr[ic0];
+        sl_index = CM->sl_index[ic0];
+        kick_offset = SL->param_offset[sl_index];
+        CM->kick[it][ic0] = (*((double*)(corr->p_elem+kick_offset)))*CM->kick_coef[ic0];
+      } else {
 	/* copy new data */
 	CM->kick[it][ic0] = CMA->kick[it][ic1];
 	ic1++;
-      } else {
-	/* copy pegged data from last iteration */
-	if (it>0)
-	  CM->kick[it][ic0] = CM->kick[it-1][ic0];
       }
     }
     memcpy(CM->posi[it], CMA->posi[it], CM->nmon*sizeof(CMA->posi[0][0]));
@@ -3440,7 +3475,7 @@ int remove_pegged_corrector(CORMON_DATA *CMA, CORMON_DATA *CM, STEERING_LIST *SL
       param = *((double*)(corr->p_elem+kick_offset));
       printf("Corrector %ld, %s#%ld, is pegged at %le\n",
              ic0, corr->name, corr->occurence, param);
-
+      CM->pegged[ic0] = 2;
     }
   }
 
