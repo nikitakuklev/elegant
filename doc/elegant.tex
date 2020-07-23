@@ -50,6 +50,8 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
 \item Lost particle coordinates inside \verb|CSBEND| elements were recording the wrong value of the longitudinal coordinate.
   The reported coordinate was a mixture of the central path length and the individual particle's path length, whereas the
   correct coordinate should be just the central path length.
+\item The \verb|FRFMODE| and \verb|TFRFMODE| elements had a bug that caused them to use up all the available
+  file descriptors on a system when many such elements were inserted. This was reported by J. England (SLAC).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -69,7 +71,9 @@ Here is a summary of what's changed since release 2020.2.  Historical change log
 \item The \verb|MATTER| element now accepts \verb|PRESSURE| and \verb|TEMPERATURE| values, which are used to
   compute the density according to the ideal gas law, allowing easier simulation of scattering from gasses.
 \item The \verb|CSBEND| element now supports steering fields via the \verb|XKICK| and \verb|YKICK| parameters.
-  The \verb|FSE| parameter can also be used for horizontal steering.
+  The \verb|FSE| and \verb|FSE_DIPOLE| parameters can also be used for horizontal steering.
+\item The \verb|CCBEND| element now supports horizontal steering via the \verb|XKICK| parameter. One can also
+  use the \verb|FSE| and \verb|FSE_DIPOLE| parameters.
 \item The \verb|CSBEND| element now supports a new symplectic nonlinear edge model, developed by R. Lindberg (APS).
 \item The \verb|BRAT| and \verb|BMXYZ| elements, which propagate particles through 3D field maps for
   bending and non-bending elements, respectively, now offer higher-order 2D interpolation as an alternative to the
