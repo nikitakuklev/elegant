@@ -151,7 +151,7 @@ long track_through_ccbend(
         eptrCopy = eptr;
         ccbendCopy.fse = ccbendCopy.fseDipole = ccbendCopy.fseQuadrupole = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = 
           ccbendCopy.etilt = ccbendCopy.tilt = ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = 
-          ccbendCopy.KnDelta = ccbendCopy.lengthCorrection = 0;
+          ccbendCopy.KnDelta = ccbendCopy.lengthCorrection = ccbendCopy.xKick = 0;
         PoCopy = Po;
         stepSize[0] = 1e-3; /* FSE */
         stepSize[1] = 1e-4; /* X */
@@ -221,7 +221,7 @@ long track_through_ccbend(
   if ((angle = ccbend->angle)!=0) {
     rho0 = arcLength/angle;
     length = 2*rho0*sin(angle/2);
-    KnL[0] = (1+fse+ccbend->fseDipole)/rho0*length;
+    KnL[0] = (1+fse+ccbend->fseDipole)/rho0*length - ccbend->xKick;
   }
   else
     bombTracking("Can't have zero ANGLE for CCBEND.");

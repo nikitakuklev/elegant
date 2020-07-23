@@ -3410,6 +3410,7 @@ PARAMETER ccbend_param[N_CCBEND_PARAMS] = {
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"XKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.xKick), NULL, 0.0, 0, "horizontal steering angle (approximate)"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"FSE_DIPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.fseDipole), NULL, 0.0, 0, "fractional strength error of dipole component"},
     {"FSE_QUADRUPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.fseQuadrupole), NULL, 0.0, 0, "fractional strength error of quadrupole component"},
