@@ -216,7 +216,9 @@ class gpu_multipole_tracking2_kernel
             return 0;
           }
         /* obstructions are not implemented in GPU code
-        if (insideObstruction_xy(x, y, refTilt, (long)coord[6], i_kick, n_kicks))
+        if (insideObstruction_xyz(x, y, coord[particleIDIndex], 
+			                            globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
+			                            refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_kicks))
           {
             return 0;
           }
@@ -437,8 +439,10 @@ class gpu_multipole_tracking2_kernel
             return 0;
           }
         /* obstructions are not implemented in GPU code
-        if (insideObstruction_xy(x, y, refTilt, (long)coord[6], i_kick, n_parts))
-          {
+        if (insideObstruction_xyz(x, y, coord[particleIDIndex], 
+			                            globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
+			                            refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_kicks))
+         {
             return 0;
           }
         */
@@ -552,7 +556,9 @@ class gpu_multipole_tracking2_kernel
         return 0;
       }
     /* obstructions are not implemented in GPU code
-    if (insideObstruction_xy(x, y, refTilt, (long)coord[6], i_kick, n_parts))
+    if (insideObstruction_xy(x, y, coord[particleIDIndex], 
+			                       globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
+			                       refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts))
       {
         return 0;
       }

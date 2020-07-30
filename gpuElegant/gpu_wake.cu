@@ -11,7 +11,7 @@
 #include <gpu_funcs.h>           // gpu_do_match_energy
 #include <gpu_lsc.h>             // gpu_applyLongitudinalWakeKicksWithFactor
 #include <gpu_trwake.h>          // gpu_computeTimeCoordinatesAndMinMax
-#include <gpu_lrwake.h>          // gpu_determine_bucket_assignments
+#include <gpu_lrwake.h>          // gpu_index_bunch_assignments
 #include <gpu_simple_rfca.h>     // gpu_add_to_particle_energy
 
 extern "C"
@@ -59,11 +59,11 @@ extern "C"
           rampFactor = (i_pass + 1.0) / wakeData->rampPasses;
         Po = *PoInput;
 
-        gpu_determine_bucket_assignments(np0,
+        gpu_index_bunch_assignments(np0,
                                          (charge && wakeData->bunchedBeamMode) ? charge->idSlotsPerBunch : 0,
                                          Po, &d_time, &npBucket, &nBuckets, -1);
-        gpuErrorHandler("gpu_track_through_wake::gpu_determine_bucket_assignments");
-        /* set pointers after potential sort in gpu_determine_bucket_assignments */
+        gpuErrorHandler("gpu_track_through_wake::gpu_index_bunch_assignments");
+        /* set pointers after potential sort in gpu_index_bunch_assignments */
         d_particles = gpuBase->d_particles;
         d_temp_particles = gpuBase->d_temp_particles;
         d_Itime = d_temp_particles + 2 * particlePitch;

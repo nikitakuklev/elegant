@@ -5,64 +5,67 @@
 #include <gpu_trwake.h>                // gpu_computeTimeCoordinates
 #include <gpu_bin_time_distribution.h> // gpu_binTimeDistribution_and_countBinned
 
-class gpu_determine_bucket_assignments_kernel1
+class gpu_index_bunch_assignments_kernel1
 {
  public:
   unsigned int idSlotsPerBunch;
   double *d_ib;
 
- gpu_determine_bucket_assignments_kernel1(unsigned int idSlotsPerBunch,
+ gpu_index_bunch_assignments_kernel1(unsigned int idSlotsPerBunch,
                                           double *d_ib) : idSlotsPerBunch(idSlotsPerBunch), d_ib(d_ib){};
 
   __device__ void operator()(gpuParticleAccessor &coord)
   {
     unsigned int tid = coord.getParticleIndex();
-    d_ib[tid] = (coord[6] - 1) / idSlotsPerBunch;
+    //d_ib[tid] = (coord[6] - 1) / idSlotsPerBunch;
+    d_ib[tid] = coord[bunchIndex];
   }
 };
 
-class gpu_determine_bucket_assignments_kernel2
+class gpu_index_bunch_assignments_kernel2
 {
  public:
-  unsigned int idSlotsPerBunch, nBuckets, ibMin;
+  unsigned int idSlotsPerBunch, nBunches, ibMin;
   double *d_ibParticle;
 
- gpu_determine_bucket_assignments_kernel2(unsigned int idSlotsPerBunch,
-                                          unsigned int nBuckets, unsigned int ibMin, double *d_ibParticle) : idSlotsPerBunch(idSlotsPerBunch), nBuckets(nBuckets), ibMin(ibMin),
+ gpu_index_bunch_assignments_kernel2(unsigned int idSlotsPerBunch,
+                                          unsigned int nBunches, unsigned int ibMin, double *d_ibParticle) : idSlotsPerBunch(idSlotsPerBunch), nBunches(nBunches), ibMin(ibMin),
     d_ibParticle(d_ibParticle){};
 
   __device__ void operator()(gpuParticleAccessor &coord)
   {
     unsigned int tid = coord.getParticleIndex();
     unsigned int ib;
-    if (nBuckets == 1)
+    if (nBunches == 1)
       ib = 0;
-    else
-      ib = (coord[6] - 1) / idSlotsPerBunch - ibMin;
+    else {
+      //ib = (coord[6] - 1) / idSlotsPerBunch - ibMin;
+      ib = coord[bunchIndex] - ibMin;
+    }
     d_ibParticle[tid] = ib;
   }
 };
 
-void gpu_determine_bucket_assignments(long np, long idSlotsPerBunch,
-                                      double P0, double **d_time, long **npBucket, long *nBuckets, long lastNBuckets)
+void gpu_index_bunch_assignments(long np, long idSlotsPerBunch,
+                                      double P0, double **d_time, long **npBunch, long *nBunches, long lastNBunches)
 {
   long ibMin, ibMax, ib;
   double fibMin, fibMax;
-  double *fnpBucket = NULL;
+  double *fnpBunch = NULL;
   struct GPUBASE *gpuBase = getGpuBase();
   unsigned int particlePitch = gpuBase->gpu_array_pitch;
-  double *d_ibParticle, *d_npBucket;
+  double *d_ibParticle, *d_npBunch;
 #if USE_MPI
   long ibMinGlobal, ibMaxGlobal;
 #endif
 
 #ifdef DEBUG
-  printf("gpu_determine_bucket_assignments called, np=%ld, idSlotsPerBunch=%ld, lastNBuckets=%ld\n",
-         np, idSlotsPerBunch, lastNBuckets);
-  printf("pointer check: time %s, npBucket %s, nBuckets %s\n",
+  printf("gpu_index_bunch_assignments called, np=%ld, idSlotsPerBunch=%ld, lastNBunches=%ld\n",
+         np, idSlotsPerBunch, lastNBunches);
+  printf("pointer check: time %s, npBunch %s, nBunches %s\n",
          d_time ? "ok" : "NULL",
-         npBucket ? "ok" : "NULL",
-         nBuckets ? "ok" : "NULL");
+         npBunch ? "ok" : "NULL",
+         nBunches ? "ok" : "NULL");
   fflush(stdout);
 #endif
 
@@ -75,9 +78,9 @@ void gpu_determine_bucket_assignments(long np, long idSlotsPerBunch,
   if (idSlotsPerBunch <= 0)
     {
       ibMin = 0;
-      *nBuckets = 1;
+      *nBunches = 1;
 #ifdef DEBUG
-      printf("gpu_determine_bucket_assignments: only one bunch\n");
+      printf("gpu_index_bunch_assignments: only one bunch\n");
       fflush(stdout);
 #endif
     }
@@ -88,13 +91,13 @@ void gpu_determine_bucket_assignments(long np, long idSlotsPerBunch,
       ibMin = LONG_MAX;
       ibMax = LONG_MIN;
       gpuDriver(np,
-                gpu_determine_bucket_assignments_kernel1(idSlotsPerBunch, d_ibParticle));
+                gpu_index_bunch_assignments_kernel1(idSlotsPerBunch, d_ibParticle));
       gpuReduceMinMax(d_ibParticle, np, &fibMin, &fibMax);
       ibMin = (unsigned int)fibMin;
       ibMax = (unsigned int)fibMax;
 #if USE_MPI
 #  ifdef DEBUG
-      printf("Sharing bucket min/max data: %ld, %ld\n", ibMin, ibMax);
+      printf("Sharing bunch min/max data: %ld, %ld\n", ibMin, ibMax);
       fflush(stdout);
 #  endif
       MPI_Allreduce(&ibMin, &ibMinGlobal, 1, MPI_LONG, MPI_MIN, workers);
@@ -103,29 +106,29 @@ void gpu_determine_bucket_assignments(long np, long idSlotsPerBunch,
       ibMax = ibMaxGlobal;
 #endif
       if (ibMin == LONG_MAX || ibMax == LONG_MIN)
-        *nBuckets = 0;
+        *nBunches = 0;
       else
-        *nBuckets = (ibMax - ibMin) + 1;
+        *nBunches = (ibMax - ibMin) + 1;
 #ifdef DEBUG
-      printf("nPPB=%ld, ibMin = %ld, ibMax = %ld, nBuckets = %ld\n", idSlotsPerBunch, ibMin, ibMax, *nBuckets);
+      printf("nPPB=%ld, ibMin = %ld, ibMax = %ld, nBunches = %ld\n", idSlotsPerBunch, ibMin, ibMax, *nBunches);
       fflush(stdout);
 #endif
     }
   /* set pointers after the sort as the temp array is swapped. */
-  d_npBucket = gpuBase->d_temp_particles + 5 * particlePitch;
+  d_npBunch = gpuBase->d_temp_particles + 5 * particlePitch;
   *d_time = gpuBase->d_temp_particles + 6 * particlePitch;
 
-  if (*nBuckets)
+  if (*nBunches)
     {
-      /* To prevent problems in LRWAKE, need to ensure that number of buckets does not increase */
-      if (lastNBuckets > 0 && *nBuckets > lastNBuckets)
+      /* To prevent problems in LRWAKE, need to ensure that number of bunches does not increase */
+      if (lastNBunches > 0 && *nBunches > lastNBunches)
         {
 #ifdef DEBUG
-          printf("Error: lastNBuckets = %ld, *nBuckets = %ld\n", lastNBuckets, *nBuckets);
+          printf("Error: lastNBunches = %ld, *nBunches = %ld\n", lastNBunches, *nBunches);
           fflush(stdout);
 #endif
 #if USE_MPI
-          mpiAbort = MPI_ABORT_BUCKET_ASSIGNMENT_ERROR;
+          mpiAbort = MPI_ABORT_BUNCH_ASSIGNMENT_ERROR;
           return;
 #else
           bombElegant("Error: number of bunches has increased.", NULL);
@@ -133,14 +136,14 @@ void gpu_determine_bucket_assignments(long np, long idSlotsPerBunch,
         }
 
 #ifdef DEBUG
-      printf("Performing bucket assignment, nBuckets=%ld\n", *nBuckets);
+      printf("Performing bunch assignment, nBunches=%ld\n", *nBunches);
       fflush(stdout);
 #endif
 #if USE_MPI
       if (isSlave || !notSinglePart)
         {
 #  ifdef DEBUG
-          printf("...performing bucket assignment\n");
+          printf("...performing bunch assignment\n");
           fflush(stdout);
 #  endif
 #endif
@@ -156,29 +159,29 @@ void gpu_determine_bucket_assignments(long np, long idSlotsPerBunch,
               printf("Computed time coordinates\n");
               fflush(stdout);
 #endif
-              if (npBucket)
+              if (npBunch)
                 {
 #ifdef DEBUG
-                  printf("Allocating npBucket array\n");
+                  printf("Allocating npBunch array\n");
                   fflush(stdout);
 #endif
-                  *npBucket = (long *)malloc(sizeof(*npBucket) * (*nBuckets));
-                  /* No kernel launches for 1 bucket */
-                  if (*nBuckets == 1)
+                  *npBunch = (long *)malloc(sizeof(*npBunch) * (*nBunches));
+                  /* No kernel launches for 1 bunch */
+                  if (*nBunches == 1)
                     {
-                      *npBucket[0] = np;
+                      *npBunch[0] = np;
                     }
                   else
                     {
-                      gpuDriver(np, gpu_determine_bucket_assignments_kernel2(idSlotsPerBunch,
-                                                                             *nBuckets, ibMin, d_ibParticle));
-                      gpu_binTimeDistribution_and_countBinned(d_npBucket, d_ibParticle, np, 0.0,
-                                                              1.0, *nBuckets);
-                      fnpBucket = (double *)malloc(sizeof(double) * (*nBuckets));
-                      cudaMemcpy(fnpBucket, d_npBucket, sizeof(double) * (*nBuckets), cudaMemcpyDeviceToHost);
-                      for (ib = 0; ib < (*nBuckets); ib++)
-                        *npBucket[ib] = (long)fnpBucket[ib];
-                      free(fnpBucket);
+                      gpuDriver(np, gpu_index_bunch_assignments_kernel2(idSlotsPerBunch,
+                                                                             *nBunches, ibMin, d_ibParticle));
+                      gpu_binTimeDistribution_and_countBinned(d_npBunch, d_ibParticle, np, 0.0,
+                                                              1.0, *nBunches);
+                      fnpBunch = (double *)malloc(sizeof(double) * (*nBunches));
+                      cudaMemcpy(fnpBunch, d_npBunch, sizeof(double) * (*nBunches), cudaMemcpyDeviceToHost);
+                      for (ib = 0; ib < (*nBunches); ib++)
+                        *npBunch[ib] = (long)fnpBunch[ib];
+                      free(fnpBunch);
                     }
                 }
             }
@@ -189,14 +192,14 @@ void gpu_determine_bucket_assignments(long np, long idSlotsPerBunch,
     }
 
 #ifdef DEBUG
-  printf("%ld buckets found\n", *nBuckets);
-  for (ib = 0; ib < *nBuckets; ib++)
-    printf("npBucket[%ld] = %ld\n", ib, (*npBucket)[ib]);
+  printf("%ld bunches found\n", *nBunches);
+  for (ib = 0; ib < *nBunches; ib++)
+    printf("npBunch[%ld] = %ld\n", ib, (*npBunch)[ib]);
 #endif
 
 #if USE_MPI
 #  ifdef DEBUG
-  printf("Waiting on barrier at end of determine_bucket_assignment\n");
+  printf("Waiting on barrier at end of index_bunch_assignment\n");
   fflush(stdout);
 #  endif
   if (notSinglePart)
@@ -206,7 +209,7 @@ void gpu_determine_bucket_assignments(long np, long idSlotsPerBunch,
 #endif
 
 #ifdef DEBUG
-  printf("Leaving gpu_determine_bucket_assignment\n");
+  printf("Leaving gpu_index_bunch_assignment\n");
   fflush(stdout);
 #endif
 }

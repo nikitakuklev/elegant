@@ -399,7 +399,8 @@ long do_tracking(
   eptr = &(beamline->elem);
 
 #ifdef HAVE_GPU
-  gpuBaseInit(coord, nOriginal, accepted, lostBeam->particle, isMaster);
+  //gpuBaseInit(coord, nOriginal, accepted, lostBeam->particle, isMaster);
+  gpuBaseInit(coord, nOriginal, accepted, NULL, isMaster);
 #endif
 
   flags |= beamline->fiducial_flag;

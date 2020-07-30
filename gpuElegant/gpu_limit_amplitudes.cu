@@ -845,7 +845,7 @@ extern "C"
          * absorb energy
          */
         matter.length = scraper->length;
-        matter.lEffective = 0;
+        matter.lEffective = matter.temperature = matter.pressure = 0;
         matter.Xo = scraper->Xo;
         matter.energyDecay = scraper->energyDecay;
         matter.energyStraggle = scraper->energyStraggle;

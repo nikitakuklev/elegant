@@ -8,7 +8,7 @@
 #include <gpu_trwake.h>
 #include <gpu_convolve_arrays.h> // gpuConvolveArrays
 #include <gpu_funcs.h>           // gpu_rotateBeamCoordinates
-#include <gpu_lrwake.h>          // gpu_determine_bucket_assignments
+#include <gpu_lrwake.h>          // gpu_index_bunch_assignments
 
 #define c_mks (2.99792458e8)
 
@@ -106,11 +106,11 @@ extern "C"
 
     if (isSlave || !notSinglePart)
       {
-        gpu_determine_bucket_assignments(np0,
+        gpu_index_bunch_assignments(np0,
                                          (charge && wakeData->bunchedBeamMode) ? charge->idSlotsPerBunch : 0,
                                          Po, &d_time, &npBucket, &nBuckets, -1);
-        gpuErrorHandler("gpu_track_through_trwake::gpu_determine_bucket_assignments");
-        /* set pointers after potential sort in gpu_determine_bucket_assignments */
+        gpuErrorHandler("gpu_track_through_trwake::gpu_index_bunch_assignments");
+        /* set pointers after potential sort in gpu_index_bunch_assignments */
         d_particles = getGpuBase()->d_particles;
         d_pz = getGpuBase()->d_temp_particles + 2 * particlePitch;
         d_Vtime = getGpuBase()->d_temp_particles + 3 * particlePitch;

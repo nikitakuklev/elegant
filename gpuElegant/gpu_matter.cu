@@ -12,6 +12,8 @@
 
 #define AMU (1.6605e-27)
 #define ALPHA (1. / 137.036)
+#define mp_mks 1.672648500000000e-27
+#define kb_mks 1.380658000000000e-23
 
 class gpu_track_through_matter_kernel
 {
@@ -64,7 +66,7 @@ extern "C"
   {
 
     double sigmaTotal, probScatter = 0.0;
-    double K1, Xo, probBSScatter = 0, probERScatter = 0, beta;
+    double K1, Xo, probBSScatter = 0, probERScatter = 0, beta, rho;
 
     if (particleIsElectron == 0)
       bombElegant("MATTER element doesn't work for particles other than electrons", NULL);
@@ -73,29 +75,39 @@ extern "C"
       bombElegant("ENERGY_DECAY=1 and NUCLEAR_BREHMSSTRAHLUNG=1 or ELECTRON_RECOIL=1 options to MATTER/SCATTER element are mutually exclusive", NULL);
 
     beta = Po / sqrt(sqr(Po) + 1);
+    rho = matter->rho;
+    if (matter->pressure>0 && matter->temperature>0)
+        rho = matter->multiplicity*matter->pressure/(kb_mks*matter->temperature)*mp_mks*matter->A;
+
     if (matter->Xo == 0)
       {
         if (matter->Z < 1 || matter->A < 1 || matter->rho == 0)
-          bombElegant("XO=0 but Z, A, or rho invalid for MATTER element", NULL);
-        Xo = radiationLength(matter->Z, matter->A, matter->rho);
+          bombElegant("XO=0 but Z, A, rho, pressure, temperature, multiplicity invalid for MATTER element", NULL);
+        Xo = radiationLength(matter->Z, matter->A, rho);
         /* printf("Computed radiation length for Z=%ld, A=%le, rho=%le is %le m\n",
            matter->Z, matter->A, matter->rho, Xo);
         */
       }
-    else
+    else {
       Xo = matter->Xo;
-
+      if (matter->Z>0 || matter->A>0 || rho>0) {
+        if (matter->pressure && matter->temperature)
+          printWarningForTracking("Redundant data supplied for MATTER element", "Xo, Z, A, temperature, pressure all specified");
+        else
+          printWarningForTracking("Redundant data supplied for MATTER element", "Xo, Z, A, rho all specified");
+      }
+    }
     *Nrad = *L / Xo;
     *dGammaFactor = 1 - exp(-(*Nrad));
     *prob = *probBS = *probER = 0;
     if (*Nrad < 1e-3 || matter->nuclearBremsstrahlung || matter->electronRecoil)
       {
-        if (matter->Z < 1 || matter->A < 1 || matter->rho <= 0)
-          bombElegant("MATTER element is too thin or requests special features---provide Z, A, and rho for single-scattering calculation.", NULL);
+        if (rho==0)
+          bombElegant("MATTER element is too thin or requests special features---provide Z, A, and rho (or pressure and temperature) for single-scattering calculation.", NULL);
         K1 = 4 * matter->Z * (matter->Z + 1) * sqr(particleRadius / (beta * Po));
         *K2 = sqr(pow(matter->Z, 1. / 3.) * ALPHA / Po);
         sigmaTotal = K1 * pow(PI, 3) / (sqr(*K2) + (*K2) * SQR_PI);
-        probScatter = matter->rho / (AMU * matter->A) * (*L) * sigmaTotal;
+        probScatter = rho / (AMU * matter->A) * (*L) * sigmaTotal;
         /* printf("K1=%le, K2=%le, mean expected number of scatters is %le\n", K1, K2, probScatter); */
         probBSScatter = 0;
         if (matter->nuclearBremsstrahlung)
@@ -104,7 +116,7 @@ extern "C"
           }
         if (matter->electronRecoil)
           {
-            probERScatter = (*L) * matter->rho / (AMU * matter->A) * PIx2 * matter->Z * sqr(re_mks) / Po * (1 / BS_Y0 - 1);
+            probERScatter = (*L) * rho / (AMU * matter->A) * PIx2 * matter->Z * sqr(re_mks) / Po * (1 / BS_Y0 - 1);
           }
         *sections0 = probScatter / matter->pLimit + 1;
         *Nrad /= *sections0;
