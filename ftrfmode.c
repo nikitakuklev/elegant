@@ -668,6 +668,7 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
     for (imode=0; imode<rfmode->modes; imode++)
       rfmode->doY[imode] = 1;
   }
+  SDDS_Terminate(&SDDSin);
 
   if (!(rfmode->Vx  = malloc(sizeof(*(rfmode->Vx ))*rfmode->modes)) ||
       !(rfmode->Vxr = malloc(sizeof(*(rfmode->Vxr))*rfmode->modes)) ||

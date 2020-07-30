@@ -527,7 +527,8 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
     for (imode=0; imode<rfmode->modes; imode++)
       rfmode->beta[imode] = 0;
   }
-  
+  SDDS_Terminate(&SDDSin);
+
   if (!(rfmode->V  = malloc(sizeof(*(rfmode->V ))*rfmode->modes)) ||
       !(rfmode->Vr = malloc(sizeof(*(rfmode->Vr))*rfmode->modes)) ||
       !(rfmode->Vi = malloc(sizeof(*(rfmode->Vi))*rfmode->modes)) ||
