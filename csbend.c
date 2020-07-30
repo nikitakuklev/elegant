@@ -1176,7 +1176,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         dp = Qf[5];
       } else if (csbend->edge_effects[csbend->e2Index]==3) {
         applySimpleDipoleEdgeKick(&xp, &yp, x, y, dp, rho_actual, e2, psi2, e2_kick_limit, csbend->expandHamiltonian);
-      } else if (csbend->edge_effects[csbend->e1Index]==4) {
+      } else if (csbend->edge_effects[csbend->e2Index]==4) {
         /* K. Hwang's approach as symplectified by R. Lindberg */
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
