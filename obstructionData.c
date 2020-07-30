@@ -1,7 +1,7 @@
-#include "track.h"
 #include "mdb.h"
-#include "math.h"
-#include "stdio.h"
+#include "track.h"
+//#include "math.h"
+//#include "stdio.h"
 
 OBSTRUCTION_DATASETS obstructionDataSets = {0, 0, 0, {0.0, 0.0}, {-10.0, 10.0}, NULL, 0};
 
