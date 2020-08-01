@@ -1479,16 +1479,15 @@ long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, doub
   double x, y, xp, yp;
 
   rho = rho2 = rStart = rStart2 = r2Limit = 0;
+  r = MIN(taperApC->r[taperApC->e1Index], taperApC->r[taperApC->e2Index]);
+  r2Limit = sqr(r);
   if (taperApC->length>0) {
     rho = (taperApC->r[taperApC->e2Index]-taperApC->r[taperApC->e1Index])/taperApC->length;
     rho2 = sqr(rho);
     rStart = taperApC->r[taperApC->e1Index];
     rStart2 = sqr(taperApC->r[taperApC->e1Index]);
-  } else {
+  } else
     rho = 0;
-    r = MIN(taperApC->r[taperApC->e1Index], taperApC->r[taperApC->e2Index]);
-    r2Limit = sqr(r);
-  }
   dx = taperApC->dx;
   dy = taperApC->dy;
 
