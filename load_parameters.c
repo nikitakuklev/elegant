@@ -40,6 +40,7 @@ typedef struct {
     long last_code;          /* return code from SDDS_ReadTable */
     short string_data;       /* if non-zero, indicates data stored as strings */   
     double *starting_value;  /* only for numerical data */
+    char *use_start;         /* if nonzero, starting_value will be used to restore to initial state */
     void **reset_address;
     short *value_type;
     ELEMENT_LIST **element;
@@ -298,7 +299,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
   int32_t numberChanged, totalNumberChanged = 0;
   long lastMissingOccurence = 0;
   int32_t *occurence;
-  char elem_param[1024];
+  char elem_param[1024], inHash;
   htab *hash_table;
 
   if (!load_requests || !load_parameters_setup)
@@ -315,23 +316,26 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 
     allFilesIgnored = 0;
     if (load_request[i].last_code) {
+      printf("Reasserting starting values before loading parameters\n");
       for (j=0; j<load_request[i].values; j++) {
         load_request[i].element[j]->flags = load_request[i].element_flags[j];
-        switch (load_request[i].value_type[j]) {
-        case IS_DOUBLE:
-          *((double*)(load_request[i].reset_address[j])) = load_request[i].starting_value[j];
-          break;
-        case IS_LONG:
-          *((long*)(load_request[i].reset_address[j])) = nearestInteger(load_request[i].starting_value[j]);
-          break;
-        case IS_SHORT:
-          *((short*)(load_request[i].reset_address[j])) = nearestInteger(load_request[i].starting_value[j]);
-          break;
-        default:
-          printf("internal error: invalid value type for load request value restoration\n");
-          fflush(stdout);
-          exitElegant(1);
-          break;
+        if (load_request[i].use_start[j]) {
+          switch (load_request[i].value_type[j]) {
+          case IS_DOUBLE:
+            *((double*)(load_request[i].reset_address[j])) = load_request[i].starting_value[j];
+            break;
+          case IS_LONG:
+            *((long*)(load_request[i].reset_address[j])) = nearestInteger(load_request[i].starting_value[j]);
+            break;
+          case IS_SHORT:
+            *((short*)(load_request[i].reset_address[j])) = nearestInteger(load_request[i].starting_value[j]);
+            break;
+          default:
+            printf("internal error: invalid value type for load request value restoration\n");
+            fflush(stdout);
+            exitElegant(1);
+            break;
+          }
         }
       }
     }
@@ -349,6 +353,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       load_request[i].element_flags = NULL;
       free(load_request[i].starting_value);
       load_request[i].starting_value = NULL;
+      free(load_request[i].use_start);
+      load_request[i].use_start = NULL;
       free(load_request[i].element);
       load_request[i].element = NULL;
       if (code<0) {
@@ -473,17 +479,17 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 	free(element[j]);
 	cp_str(element+j, buffer);
       }
-      /* Compare to hash table to see if we've already done this element/parameter */
-      if (load_request[i].flags&COMMAND_FLAG_USE_FIRST){
-        if (!occurence) {
-          strcpy(elem_param, element[j]);
-          strcat(elem_param, parameter[j]);
-        } else {
-          sprintf(elem_param, "%s%s%"PRId32, element[j], parameter[j], occurence[j]);
-        }
-        if (!hadd(hash_table, elem_param, strlen(elem_param), NULL))
-          continue;
+
+      if (!occurence) {
+        strcpy(elem_param, element[j]);
+        strcat(elem_param, parameter[j]);
+      } else {
+        sprintf(elem_param, "%s%s%"PRId32, element[j], parameter[j], occurence[j]);
       }
+      inHash = !hadd(hash_table, elem_param, strlen(elem_param), NULL);
+      /* Compare to hash table to see if we've already done this element/parameter */
+      if (load_request[i].flags&COMMAND_FLAG_USE_FIRST && inHash)
+        continue;
 
       /* if occurence is available, we can take advantage of hash table */
       if ((occurence && (!find_element_hash(element[j], occurence[j], &eptr, &(beamline->elem)))) ||
@@ -595,12 +601,16 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         load_request[i].starting_value 
           = trealloc(load_request[i].starting_value,
                      sizeof(*load_request[i].starting_value)*(load_request[i].values+1));
+        load_request[i].use_start 
+          = trealloc(load_request[i].use_start,
+                     sizeof(*load_request[i].use_start)*(load_request[i].values+1));
         load_request[i].element 
           = trealloc(load_request[i].element,
                      sizeof(*load_request[i].element)*(load_request[i].values+1));
         load_request[i].reset_address[load_request[i].values]
           = ((double*)(p_elem+entity_description[eptr->type].parameter[param].offset));
         load_request[i].element[load_request[i].values] = eptr;
+        load_request[i].use_start[load_request[i].values] = !inHash; /* don't use start value if it is already recorded */
         switch (entity_description[eptr->type].parameter[param].type) {
         case IS_DOUBLE:
           if (valueString) {
