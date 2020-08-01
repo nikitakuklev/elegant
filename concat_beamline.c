@@ -27,7 +27,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
     long new_seq, n_seqs, in_seq;
     long n_matrices, n_nonmatrices;
     char s[100];
-    double z, last_z, z_begin, z_end;
+    double z, z_begin, z_end;
     ELEMENT_LIST *pred, *succ;
     
     log_entry("concatenate_beamline");
@@ -68,7 +68,6 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
         if (entity_description[elem->type].flags&HAS_MATRIX && elem->matrix==NULL) {
             compute_matrix(elem, run, NULL);
             }
-        last_z = z;
         if (entity_description[elem->type].flags&HAS_LENGTH)
             z += ((DRIFT*)elem->p_elem)->length;
         else 
