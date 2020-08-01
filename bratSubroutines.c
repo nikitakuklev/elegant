@@ -108,7 +108,9 @@ static double xCenter, zCenter;
 static double global_delta;
 
 static long isLost = 0;
+#ifndef ABRAT_PROGRAM
 static double lossCoordinates[3]; /* X, Y, Z */
+#endif
 
 #define TOLERANCE_FACTOR 1e-14
 #define OPTIMIZE_ON        0x0001
@@ -589,16 +591,16 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
     double accelCoord[6], q[10];
 #ifndef ABRAT_PROGRAM
     long i, j;
-#endif
     long iOut;
+#endif
     for (ic=0; ic<6; ic++)
       accelCoord[ic] = part[ip][ic];
     n_stored = 0;
     BRAT_lorentz_integration(accelCoord, q, brat->SDDSparticleOutput?1:0, NULL);
-    iOut = ip;
     for (ic=0; ic<6; ic++)
       part[ip][ic] = accelCoord[ic];
 #ifndef ABRAT_PROGRAM
+    iOut = ip;
     if (isLost) {
       if (globalLossCoordOffset!=-1)
         for (ic=0; ic<3; ic++) 
