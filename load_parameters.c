@@ -259,6 +259,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
 
   load_request[load_requests].last_code = 0;
   load_request[load_requests].starting_value = NULL;
+  load_request[load_requests].use_start = NULL;
   load_request[load_requests].element = NULL;
   load_request[load_requests].reset_address = NULL;
   load_request[load_requests].value_type = NULL;
