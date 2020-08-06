@@ -730,7 +730,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
    )
 {
   SDDS_TABLE SDDSin;
-  long i;
+  int64_t i;
   FIT_TRACE_PARAMETERS *ftp;
   long parameterIndex, elementType, changeLimitsPresent;
   long lowerLimitsPresent, upperLimitsPresent;
