@@ -31,7 +31,7 @@ The deflection map, if provided, should have four floating-point columns
 \end{enumerate}
 The resulting kick in each plane for a particle with coordinates $(x, y, t, \delta)$ is 
 \begin{equation}
-\Delta q^\prime (x, y, t, \delta) = \frac{\theta A(t) f_q(x, y)}{1 + \delta},
+\Delta q^\prime (x, y, t, \delta) = \frac{\theta A(t-t_{offset}) f_q(x, y)}{1 + \delta},
 \end{equation}
 where $q$ stands for $x$ or $y$, $\theta$ is the specfied deflection angle, 
 $A(t)$ is the time-dependent amplitude waveform, and $f_q(x, y)$ is the
