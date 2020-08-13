@@ -31,6 +31,7 @@
     STRING rootname = NULL;
     STRING output = NULL;
     STRING centroid = NULL;
+    STRING bpm_centroid = NULL;
     STRING sigma = NULL;
     STRING final = NULL;
     STRING acceptance = NULL;

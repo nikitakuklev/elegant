@@ -503,7 +503,7 @@ typedef struct {
     long combine_bunch_statistics, wrap_around, tracking_updates, final_pass; 
     long always_change_p0, stopTrackingParticleLimit, load_balancing_on, random_sequence_No, checkBeamStructure;
     long showElementTiming, monitorMemoryUsage, backtrack, lossesIncludeGlobalCoordinates;
-    char *runfile, *lattice, *acceptance, *centroid, *sigma, 
+    char *runfile, *lattice, *acceptance, *centroid, *bpmCentroid, *sigma, 
          *final, *output, *rootname, *losses;
     APERTURE_DATA apertureData;
     MODULATION_DATA modulationData;
@@ -783,8 +783,8 @@ typedef struct {
 /* structure to hold information for output files specified in run_setup namelist */
 
 typedef struct {
-    SDDS_TABLE SDDS_output, SDDS_accept, SDDS_centroid, SDDS_sigma, SDDS_final, SDDS_losses;
-    long output_initialized, accept_initialized, centroid_initialized, sigma_initialized,
+    SDDS_TABLE SDDS_output, SDDS_accept, SDDS_centroid, SDDS_bpmCentroid, SDDS_sigma, SDDS_final, SDDS_losses;
+    long output_initialized, accept_initialized, centroid_initialized, bpmCentroid_initialized, sigma_initialized,
          final_initialized, losses_initialized;
     BEAM_SUMS *sums_vs_z;
     long n_z_points;
@@ -4487,7 +4487,7 @@ extern void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, do
 extern void do_watch_FFT(double **data, long n_data, long slot, long window_code);
 extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particles, long step);
 extern void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long bunch,
-                          double p_central);
+                          double p_central, short bpmsOnly);
 extern void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po,
                              double charge, long idSlotsPerBunch);
 extern void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,

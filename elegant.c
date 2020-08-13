@@ -806,10 +806,12 @@ char **argv;
         dumpAcceptance = 1;
 #endif
       run_conditions.centroid   = compose_filename(centroid, rootname);
+      run_conditions.bpmCentroid   = compose_filename(bpm_centroid, rootname);
       run_conditions.sigma      = compose_filename(sigma, rootname);
 
       if (countIgnoreElementsSpecs(0)!=0) {
-        if (run_conditions.centroid && strlen(run_conditions.centroid))
+        if ((run_conditions.centroid && strlen(run_conditions.centroid)) ||
+            (run_conditions.bpmCentroid && strlen(run_conditions.bpmCentroid)))
           bombElegant("Can't request centroid output if ignore_elements command with completely=0 is in force", NULL);
         if (run_conditions.sigma && strlen(run_conditions.sigma))
           bombElegant("Can't request sigma output if ignore_elements command with completely=0 is in force", NULL);
@@ -1275,7 +1277,7 @@ char **argv;
       }
       fflush(stdout);
       /* reassert defaults for namelist run_setup */
-      lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses = 
+      lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses = 
         parameters = NULL;
       combine_bunch_statistics = 0;
       random_number_seed = 987654321;
@@ -1392,7 +1394,7 @@ char **argv;
       if (parameters)
         finishLatticeParametersFile();
       /* reassert defaults for namelist run_setup */
-      lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses =
+      lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses =
         parameters = NULL;
       combine_bunch_statistics = 0;
       random_number_seed = 987654321;
@@ -1698,7 +1700,7 @@ char **argv;
 #endif  
       fflush(stdout);
       /* reassert defaults for namelist run_setup */
-      lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses =
+      lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses =
         parameters = NULL;
       combine_bunch_statistics = 0;
       random_number_seed = 987654321;
@@ -1790,7 +1792,7 @@ char **argv;
         finishLatticeParametersFile();
       }
       /* reassert defaults for namelist run_setup */
-      lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses =
+      lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses =
         parameters = NULL;
       combine_bunch_statistics = 0;
       random_number_seed = 987654321;

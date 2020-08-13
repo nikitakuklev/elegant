@@ -1774,14 +1774,14 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
 }
 
 void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,
-		   double p_central)
+		   double p_central, short bpmsOnly)
 {
-    long i, j;
+    long i, j, row;
     BEAM_SUMS *beam;
     ELEMENT_LIST *eptr;
     double *cent;
     char *name, *type_name;
-    long s_index, Cx_index=0, occurence;
+    long s_index, Cx_index=0, occurence, type;
 
 #if USE_MPI  
     if (myid<0)
@@ -1821,22 +1821,15 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
     name = "_BEG_";
     type_name = "MARK";
     occurence = 1;
+    type = -1;
     cent = tmalloc(sizeof(*cent)*6);
-    for (i=0; i<n_elements; i++) {
+    for (i=row=0; i<n_elements; i++) {
         if (!eptr) {
             printf("element pointer is NULL, i=%ld (dump_centroid)", i);
             fflush(stdout);
             abort();
             }
         beam = sums+i;
-        /*
-        This is always false
-        if (!beam->centroid) {
-            printf("beam->centroid is NULL, i=%ld (dump_centroid)\n", i);
-            fflush(stdout);
-            abort();
-            }
-        */
         if (beam->n_part)
             for (j=0; j<6; j++) {
                 cent[j] = beam->centroid[j];
@@ -1846,19 +1839,21 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
         else
             for (j=0; j<6; j++)
                 cent[j] = 0;
-        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
-                               Cx_index  , cent[0], Cx_index+1, cent[1], Cx_index+2, cent[2],
-                               Cx_index+3, cent[3], Cx_index+4, cent[4], Cx_index+5, cent[5],
-                               Cx_index+6, beam->n_part, Cx_index+7, beam->p0,
-			       Cx_index+8, beam->charge, 
-			       s_index, beam->z, s_index+1, name, s_index+2, occurence,
-                               s_index+3, type_name, -1)) {
+        if (!bpmsOnly || type==T_MONI || type==T_HMON || type==T_VMON) {
+          if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row++,
+                                 Cx_index  , cent[0], Cx_index+1, cent[1], Cx_index+2, cent[2],
+                                 Cx_index+3, cent[3], Cx_index+4, cent[4], Cx_index+5, cent[5],
+                                 Cx_index+6, beam->n_part, Cx_index+7, beam->p0,
+                                 Cx_index+8, beam->charge, 
+                                 s_index, beam->z, s_index+1, name, s_index+2, occurence,
+                                 s_index+3, type_name, -1)) {
             SDDS_SetError("Problem setting row values for SDDS table (dump_centroid)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        
+          }
+        }
         name = eptr->name;
         type_name = entity_name[eptr->type];
+        type = eptr->type;
         occurence = eptr->occurence;
         if (eptr->succ)
             eptr = eptr->succ;
@@ -1866,7 +1861,7 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
             eptr = beamline->elem_recirc;
         else
             eptr = &(beamline->elem);
-        }
+    }
 
     if (!SDDS_WriteTable(SDDS_table)) {
         SDDS_SetError("Unable to write centroid data (dump_centroid)");

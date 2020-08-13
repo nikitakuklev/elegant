@@ -665,7 +665,7 @@ long track_beam(
   n_left = do_tracking(beam, NULL, 0, &effort, beamline, &p_central, 
                        beam->accepted, &output->sums_vs_z, &output->n_z_points,
                        NULL, run, control->i_step,
-                       (!(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0)|
+                       (!(run->centroid || run->bpmCentroid || run->sigma)?FINAL_SUMS_ONLY:0)|
                        ((control->fiducial_flag|flags)&
                         (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING
                          +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING
@@ -833,7 +833,23 @@ void do_track_beam_output(RUN *run, VARY *control,
       printf("Dumping centroid data...");
       fflush(stdout);
     }
-    dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
+    dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central, 0);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("done.\n");
+      fflush(stdout);
+    }
+  }
+
+  if (run->bpmCentroid && !run->combine_bunch_statistics && !(flags&FINAL_SUMS_ONLY)  && !(flags&INHIBIT_FILE_OUTPUT)) {
+    if (!output->bpmCentroid_initialized)
+      bombElegant("'bpm_centroid' file is uninitialized (track_beam)", NULL);
+    if (!output->sums_vs_z)
+      bombElegant("missing beam sums pointer (track_beam)", NULL);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("Dumping bpm_centroid data...");
+      fflush(stdout);
+    }
+    dump_centroid(&output->SDDS_bpmCentroid, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central, 1);
     if (!(flags&SILENT_RUNNING)) {
       printf("done.\n");
       fflush(stdout);
@@ -954,6 +970,13 @@ void setup_output(
         output->centroid_initialized = 1;
         }
 
+    if (run->bpmCentroid) {
+        /* prepare dump of centroid vs z at BPMs */
+        SDDS_CentroidOutputSetup(&output->SDDS_bpmCentroid, run->bpmCentroid, SDDS_BINARY, 1, "output of centroid at BPMs", run->runfile,
+                                 run->lattice, "setup_output");
+        output->bpmCentroid_initialized = 1;
+        }
+
     if (run->sigma) {
         /* prepare dump of sigma vs z */
         SDDS_SigmaOutputSetup(&output->SDDS_sigma, run->sigma, SDDS_BINARY, 1, run->runfile,
@@ -1046,7 +1069,14 @@ void finish_output(
       bombElegant("'centroid' file is uninitialized (finish_output)", NULL);
     if (!output->sums_vs_z)
       bombElegant("missing beam sums pointer (finish_output)", NULL);
-    dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, 0, beam->p0);
+    dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, 0, beam->p0, 0);
+  }
+  if (run->bpmCentroid && run->combine_bunch_statistics) {
+    if (!output->bpmCentroid_initialized)
+      bombElegant("'bpm_centroid' file is uninitialized (finish_output)", NULL);
+    if (!output->sums_vs_z)
+      bombElegant("missing beam sums pointer (finish_output)", NULL);
+    dump_centroid(&output->SDDS_bpmCentroid, output->sums_vs_z, beamline, output->n_z_points, 0, beam->p0, 1);
   }
   if (run->sigma && run->combine_bunch_statistics) {
     if (!output->sigma_initialized)
