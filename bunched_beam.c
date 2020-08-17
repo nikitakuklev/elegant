@@ -665,7 +665,7 @@ long track_beam(
   n_left = do_tracking(beam, NULL, 0, &effort, beamline, &p_central, 
                        beam->accepted, &output->sums_vs_z, &output->n_z_points,
                        NULL, run, control->i_step,
-                       (!(run->centroid || run->bpmCentroid || run->sigma)?FINAL_SUMS_ONLY:0)|
+                       (!(run->centroid || run->bpmCentroid || run->sigma)?FINAL_SUMS_ONLY:(!run->sigma?CENTROID_SUMS_ONLY:0))|
                        ((control->fiducial_flag|flags)&
                         (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING
                          +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING
@@ -865,6 +865,9 @@ void do_track_beam_output(RUN *run, VARY *control,
       printf("Dumping sigma data...");
       fflush(stdout);
     }
+    if (flags&CENTROID_SUMS_ONLY) {
+      bombElegant("sigma output requested but data wasn't accumulated. This is a bug!", NULL);
+    }
     dump_sigma(&output->SDDS_sigma, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
     if (!(flags&SILENT_RUNNING)) {
       printf("done.\n");
@@ -1011,8 +1014,8 @@ void setup_output(
         output->losses_initialized = 1;
         }
 
-    if (output->sums_vs_z)
-      free(output->sums_vs_z);
+    if (output->sums_vs_z) 
+      freeBeamSums(output->sums_vs_z, output->n_z_points+1);
     output->sums_vs_z = NULL;
     output->n_z_points = 0;
     }

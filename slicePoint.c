@@ -110,7 +110,7 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
   double emit[2], emitc[2];
   long Cx_index=0, Sx_index=0, ex_index=0;
   double t0, dt0, dt;
-  static BEAM_SUMS sums;
+  BEAM_SUMS *sums;
 #if USE_MPI  
   long particles_total;
   
@@ -202,19 +202,20 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
   printf("dt0 = %le\n", dt0);
 #endif
   
+  sums = allocateBeamSums(0, 1);
   for (iSlice=0; iSlice<slicePoint->nSlices; iSlice++, t0+=dt0) {
 #ifdef DEBUG
     printf("iSlice = %ld, t:[%le, %le]\n", iSlice, t0, t0+dt0);
     fflush(stdout);
 #endif
     /* compute centroids, sigmas, and emittances for x, y, and s */
-    zero_beam_sums(&sums, 1);
-    accumulate_beam_sums(&sums, particle, particles, Po, mp_charge, 
+    zero_beam_sums(sums, 1);
+    accumulate_beam_sums(sums, particle, particles, Po, mp_charge, 
                          timeCoord, t0, t0+dt0, 
                          slicePoint->startPID, slicePoint->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
     for (i=0; i<2; i++) {
       emitc[i] = emit[i] = 0;
-      computeEmitTwissFromSigmaMatrix(emit+i, emitc+i, NULL, NULL, sums.sigma, i*2);
+      computeEmitTwissFromSigmaMatrix(emit+i, emitc+i, NULL, NULL, sums->beamSums2->sigma, i*2);
     }
 #ifdef DEBUG
     printf("ex = %le, ey = %le\n", emit[0], emit[1]);
@@ -231,7 +232,7 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       if (!SDDS_SetRowValues(slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
-                             0, iSlice, 1, sums.n_part, 2, sums.charge,
+                             0, iSlice, 1, sums->n_part, 2, sums->charge,
                              3, dt0*(iSlice-(slicePoint->nSlices-1)/2.0),
                              -1)) {
         SDDS_SetError("Problem setting row values for SDDS table (dump_slice_analysis)");
@@ -239,7 +240,7 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
       }
       for (i=0; i<6; i++) {
         if (!SDDS_SetRowValues(slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
-                               Cx_index+i, i==4?(t0+dt0/2):sums.centroid[i],
+                               Cx_index+i, i==4?(t0+dt0/2):sums->centroid[i],
                                -1)) {
           SDDS_SetError("Problem setting row values for SDDS table (dump_slice_analysis)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -253,7 +254,7 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
       }
       for (i=0; i<6; i++) {
         if (!SDDS_SetRowValues(slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
-                               Sx_index+i, i==4?sqrt(sums.sigma[6][6]):sqrt(sums.sigma[i][i]),
+                               Sx_index+i, i==4?sqrt(sums->beamSums2->sigma[6][6]):sqrt(sums->beamSums2->sigma[i][i]),
                                -1)) {
           SDDS_SetError("Problem setting row values for SDDS table (dump_slice_analysis)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -268,6 +269,7 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
       }
     }
   }
+  freeBeamSums(sums, 1);
 
   if (isMaster) {
 #ifdef DEBUG

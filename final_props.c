@@ -459,17 +459,32 @@ long compute_final_properties
       /* centroid[i] = data[i+F_CENTROID_OFFSET] = sums->centroid[i]; */
       data[i+F_CENTROID_OFFSET] = sums->centroid[i];
     }
-    for (i=0; i<6; i++)
-      data[i+F_SIGMA_OFFSET   ] = sqrt(sums->sigma[i][i]);
-    for (i=0; i<4; i++)
-      data[i+F_MAXAMP_OFFSET] = sums->maxabs[i];
+    if (sums->beamSums2) {
+      for (i=0; i<6; i++)
+        data[i+F_SIGMA_OFFSET   ] = sqrt(sums->beamSums2->sigma[i][i]);
+      for (i=0; i<4; i++)
+        data[i+F_MAXAMP_OFFSET] = sums->beamSums2->maxabs[i];
+    } else {
+      for (i=0; i<6; i++)
+        data[i+F_SIGMA_OFFSET   ] = -DBL_MAX;
+      for (i=0; i<4; i++)
+        data[i+F_MAXAMP_OFFSET] = -DBL_MAX;
+    }
     offset = F_SIGMAT_OFFSET;
     /* index = 0; */
     /* sigma matrix elements sij */
-    for (i=0; i<7; i++) {
-      /* skip the diagonal element */
-      for (j=i+1; j<7; j++) 
-        data[offset++] = sums->sigma[i][j];
+    if (sums->beamSums2) {
+      for (i=0; i<7; i++) {
+        /* skip the diagonal element */
+        for (j=i+1; j<7; j++) 
+          data[offset++] = sums->beamSums2->sigma[i][j];
+      }
+    } else {
+      for (i=0; i<7; i++) {
+        /* skip the diagonal element */
+        for (j=i+1; j<7; j++) 
+          data[offset++] = -DBL_MAX;
+      }
     }
     /* time centroid, sigma, and delta */
     tmax = dp_max = -(tmin=dp_min=DBL_MAX);
@@ -648,33 +663,11 @@ long compute_final_properties
   fflush(stdout);
 #endif  
 
-  /* compute emittances */
-  computeEmitTwissFromSigmaMatrix(data+F_EMIT_OFFSET+0, data+F_EMIT_OFFSET+2, NULL, NULL, sums->sigma, 0);
-  computeEmitTwissFromSigmaMatrix(data+F_EMIT_OFFSET+1, data+F_EMIT_OFFSET+3, NULL, NULL, sums->sigma, 2);
-#if 0
-#if !SDDS_MPI_IO
-  data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part, NULL, NULL, NULL, NULL, NULL);
-  data[F_EMIT_OFFSET+1] = rms_emittance(coord, 2, 3, sums->n_part, NULL, NULL, NULL, NULL, NULL);
-#else
-  data[F_EMIT_OFFSET]   = rms_emittance_p(coord, 0, 1, sums->n_part, NULL, NULL, NULL, NULL, NULL, NULL);
-  data[F_EMIT_OFFSET+1] = rms_emittance_p(coord, 2, 3, sums->n_part, NULL, NULL, NULL, NULL, NULL, NULL);
-#endif
-
-  /* corrected transverse emittances */
-  if (sums->sigma[5][5]) {
-    data[F_EMIT_OFFSET+2] = SAFE_SQRT(sqr(data[F_EMIT_OFFSET]) - 
-                                      (sqr(sums->sigma[0][5])*sums->sigma[1][1] -
-                                       2*sums->sigma[0][1]*sums->sigma[0][5]*sums->sigma[1][5] +
-                                       sqr(sums->sigma[1][5])*sums->sigma[0][0])/sums->sigma[5][5]);
-    data[F_EMIT_OFFSET+3] = SAFE_SQRT(sqr(data[F_EMIT_OFFSET+1]) - 
-                                      (sqr(sums->sigma[2][5])*sums->sigma[3][3] -
-                                       2*sums->sigma[2][3]*sums->sigma[2][5]*sums->sigma[3][5] +
-                                       sqr(sums->sigma[3][5])*sums->sigma[2][2])/sums->sigma[5][5]);
-  } else {
-    data[F_EMIT_OFFSET+2] = data[F_EMIT_OFFSET];
-    data[F_EMIT_OFFSET+3] = data[F_EMIT_OFFSET+1];
+  if (sums->beamSums2) {
+    /* compute emittances */
+    computeEmitTwissFromSigmaMatrix(data+F_EMIT_OFFSET+0, data+F_EMIT_OFFSET+2, NULL, NULL, sums->beamSums2->sigma, 0);
+    computeEmitTwissFromSigmaMatrix(data+F_EMIT_OFFSET+1, data+F_EMIT_OFFSET+3, NULL, NULL, sums->beamSums2->sigma, 2);
   }
-#endif
 
 #if !SDDS_MPI_IO
   data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central, 0, 0);
@@ -684,15 +677,16 @@ long compute_final_properties
   else
     data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central, 0, 0);
 #endif
- 
-  /* compute normalized emittances */
+  
+    /* compute normalized emittances */
   if (!exactNormalizedEmittance) {
     for (i=0; i<4; i++)
       data[F_NEMIT_OFFSET+i]   = pAverage*data[F_EMIT_OFFSET+i];
   } else {
     double dummy;
-    for (i=0; i<2; i++)
-      computeEmitTwissFromSigmaMatrix(data+F_NEMIT_OFFSET+i+0, data+F_NEMIT_OFFSET+i+2, &dummy, &dummy, sums->sigman, 2*i);
+    if (sums->beamSums2)
+      for (i=0; i<2; i++)
+        computeEmitTwissFromSigmaMatrix(data+F_NEMIT_OFFSET+i+0, data+F_NEMIT_OFFSET+i+2, &dummy, &dummy, sums->beamSums2->sigman, 2*i);
   }
 
 #ifdef DEBUG

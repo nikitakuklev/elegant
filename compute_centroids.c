@@ -26,6 +26,33 @@
 #include <gpu_compute_centroids.h>
 #endif
 
+BEAM_SUMS *allocateBeamSums(unsigned long flags, long nz)
+{
+  BEAM_SUMS *ptr;
+  long i;
+  ptr = tmalloc(sizeof(BEAM_SUMS)*nz);
+  if (!(flags&CENTROID_SUMS_ONLY)) {
+    for (i=0; i<nz; i++) 
+      ptr[i].beamSums2 = tmalloc(sizeof(BEAM_SUMS2));
+  } else {
+    for (i=0; i<nz; i++) 
+      ptr[i].beamSums2 = NULL;
+  }
+  /* always compute beamSums2 for the final point */
+  if (flags&CENTROID_SUMS_ONLY)
+    ptr[nz-1].beamSums2 = tmalloc(sizeof(BEAM_SUMS2));
+  return ptr;
+}
+
+void freeBeamSums(BEAM_SUMS *sums, long nz)
+{
+  long i;
+  for (i=0; i<nz; i++)
+    if (sums[i].beamSums2)
+      free(sums[i].beamSums2);
+  free(sums);
+}
+
 void compute_centroids(
 		       double *centroid,
 		       double **coordinates,
@@ -252,15 +279,17 @@ void zero_beam_sums(
 {
   long i, j, k;
   for (i=0; i<n; i++) {
-    for (j=0; j<7; j++)
-      sums[i].maxabs[j] = 0;
-    for (j=0; j<7; j++)
-      sums[i].min[j] = -(sums[i].max[j] = -DBL_MAX);
+    if (sums[i].beamSums2) {
+      for (j=0; j<7; j++)
+        sums[i].beamSums2->maxabs[j] = 0;
+      for (j=0; j<7; j++)
+        sums[i].beamSums2->min[j] = -(sums[i].beamSums2->max[j] = -DBL_MAX);
+      for (j=0; j<7; j++)
+        for (k=0; k<7; k++)
+          sums[i].beamSums2->sigma[j][k] = sums[i].beamSums2->sigman[j][k] = 0;
+    }
     for (j=0; j<7; j++)
       sums[i].centroid[j] = 0;
-    for (j=0; j<7; j++)
-      for (k=0; k<7; k++)
-        sums[i].sigma[j][k] = sums[i].sigman[j][k] = 0;
     sums[i].n_part = sums[i].z = sums[i].p0 = 0;
     sums[i].charge = 0;
   }
@@ -338,19 +367,19 @@ void accumulate_beam_sums(
       } else 
         chosen[i_part] = 0;
     }
-    if (!(flags&BEAM_SUMS_NOMINMAX)) {
+    if (!(flags&BEAM_SUMS_NOMINMAX) && sums->beamSums2) {
       /* maximum amplitudes */
       for (i=0; i<6; i++) {
         if (i==4)
           continue;  /* done below */
         for (i_part=0; i_part<n_part; i_part++) {
           if (chosen[i_part]) {
-            if ((value=fabs(coord[i_part][i]))>sums->maxabs[i])
-              sums->maxabs[i] = value;
-            if ((value=coord[i_part][i]) > sums->max[i])
-              sums->max[i] = value;
-            if ((value=coord[i_part][i]) < sums->min[i])
-              sums->min[i] = value;
+            if ((value=fabs(coord[i_part][i]))>sums->beamSums2->maxabs[i])
+              sums->beamSums2->maxabs[i] = value;
+            if ((value=coord[i_part][i]) > sums->beamSums2->max[i])
+              sums->beamSums2->max[i] = value;
+            if ((value=coord[i_part][i]) < sums->beamSums2->min[i])
+              sums->beamSums2->min[i] = value;
           }
         }
       }
@@ -392,75 +421,77 @@ void accumulate_beam_sums(
     for (i_part=0; i_part<n_part; i_part++)
       timeCoord[i_part] -= centroid[6];
 
-    if (!(flags&BEAM_SUMS_NOMINMAX)) {
+    if (!(flags&BEAM_SUMS_NOMINMAX) && sums->beamSums2) {
       i = 4;
       for (i_part=0; i_part<n_part; i_part++) {
         if (chosen[i_part]) {
-          if ((value=fabs(coord[i_part][i]-centroid[i]))>sums->maxabs[i])
-            sums->maxabs[i] = value;
-          if ((value=coord[i_part][i]-centroid[i])>sums->max[i])
-            sums->max[i] = value;
-          if ((value=coord[i_part][i]-centroid[i])<sums->min[i])
-            sums->min[i] = value;
+          if ((value=fabs(coord[i_part][i]-centroid[i]))>sums->beamSums2->maxabs[i])
+            sums->beamSums2->maxabs[i] = value;
+          if ((value=coord[i_part][i]-centroid[i])>sums->beamSums2->max[i])
+            sums->beamSums2->max[i] = value;
+          if ((value=coord[i_part][i]-centroid[i])<sums->beamSums2->min[i])
+            sums->beamSums2->min[i] = value;
         }
       }
       i = 6;  /* time coordinate */
       for (i_part=0; i_part<n_part; i_part++) {
         if (chosen[i_part]) {
-          if ((value=fabs(timeCoord[i_part]))>sums->maxabs[i])
-            sums->maxabs[i] = value;
-          if ((value=timeCoord[i_part])>sums->max[i])
-            sums->max[i] = value;
-          if ((value=timeCoord[i_part])<sums->min[i])
-            sums->min[i] = value;
+          if ((value=fabs(timeCoord[i_part]))>sums->beamSums2->maxabs[i])
+            sums->beamSums2->maxabs[i] = value;
+          if ((value=timeCoord[i_part])>sums->beamSums2->max[i])
+            sums->beamSums2->max[i] = value;
+          if ((value=timeCoord[i_part])<sums->beamSums2->min[i])
+            sums->beamSums2->min[i] = value;
         }
       }
     }
     
-    /* compute Sigma[i][j] for present beam and add to existing data */
-    for (i=0; i<7; i++) {
-      for (j=i; j<7; j++) {
+    if (sums->beamSums2) {
+      /* compute Sigma[i][j] for present beam and add to existing data */
+      for (i=0; i<7; i++) {
+        for (j=i; j<7; j++) {
 #ifdef USE_KAHAN
-        double Y, b, SijOld;
-        double Yn, bn, SijOldn;
-        errorSig=errorSign=0.0;
+          double Y, b, SijOld;
+          double Yn, bn, SijOldn;
+          errorSig=errorSign=0.0;
 #endif
-        Sij = Sijn = 0;
-        if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
-          /* Only compute the diagonal blocks and dispersive correlations */
-          sums->sigma[j][i] = sums->sigma[i][j] = 0;
-          sums->sigman[j][i] = sums->sigman[i][j] = 0;
-          continue;
-        }
-        for (i_part=0; i_part<n_part; i_part++) {
-          if (chosen[i_part]) {
-            b = ((i<6?coord[i_part][i]-centroid[i]:timeCoord[i_part]))*((j<6?coord[i_part][j]-centroid[j]:timeCoord[i_part]));
-            if (exactNormalizedEmittance) {
-              bn = (coord[i_part][i]*(i==1 || i==3?pz[i_part]:1)-centroidn[i])*(coord[i_part][j]*(j==1 || j==3?pz[i_part]:1));
+          Sij = Sijn = 0;
+          if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
+            /* Only compute the diagonal blocks and dispersive correlations */
+            sums->beamSums2->sigma[j][i] = sums->beamSums2->sigma[i][j] = 0;
+            sums->beamSums2->sigman[j][i] = sums->beamSums2->sigman[i][j] = 0;
+            continue;
+          }
+          for (i_part=0; i_part<n_part; i_part++) {
+            if (chosen[i_part]) {
+              b = ((i<6?coord[i_part][i]-centroid[i]:timeCoord[i_part]))*((j<6?coord[i_part][j]-centroid[j]:timeCoord[i_part]));
+              if (exactNormalizedEmittance) {
+                bn = (coord[i_part][i]*(i==1 || i==3?pz[i_part]:1)-centroidn[i])*(coord[i_part][j]*(j==1 || j==3?pz[i_part]:1));
             }
 #ifndef USE_KAHAN
-            Sij += b;
-            if (exactNormalizedEmittance)
-              Sijn += bn;
+              Sij += b;
+              if (exactNormalizedEmittance)
+                Sijn += bn;
 #else
-            /* In-line KahanPlus to improve performance */
-            /* Sij = KahanPlus(Sij, b, &errorSig); */
-            Y = b + errorSig;
-            SijOld = Sij;
-            Sij += Y;
-            errorSig = Y - (Sij-SijOld);
-            if (exactNormalizedEmittance) {
-              Yn = bn + errorSign;
-              SijOldn = Sijn;
-              Sijn += Yn;
-              errorSign = Yn - (Sijn-SijOldn);
-            }
+              /* In-line KahanPlus to improve performance */
+              /* Sij = KahanPlus(Sij, b, &errorSig); */
+              Y = b + errorSig;
+              SijOld = Sij;
+              Sij += Y;
+              errorSig = Y - (Sij-SijOld);
+              if (exactNormalizedEmittance) {
+                Yn = bn + errorSign;
+                SijOldn = Sijn;
+                Sijn += Yn;
+                errorSign = Yn - (Sijn-SijOldn);
+              }
 #endif
+            }
           }
-        }
-        sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+npCount));
-        if (exactNormalizedEmittance) {
-          sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j]*sums->n_part+Sijn)/(sums->n_part+npCount));
+          sums->beamSums2->sigma[j][i] = (sums->beamSums2->sigma[i][j] = (sums->beamSums2->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+npCount));
+          if (exactNormalizedEmittance) {
+            sums->beamSums2->sigman[j][i] = (sums->beamSums2->sigman[i][j] = (sums->beamSums2->sigman[i][j]*sums->n_part+Sijn)/(sums->n_part+npCount));
+          }
         }
       }
     }
@@ -591,19 +622,19 @@ void accumulate_beam_sums1(
       chosen[i_part] = 0;
   }
   if (active) {
-    if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT)) {
+    if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT) && sums->beamSums2) {
       /* maximum amplitudes */
       for (i=0; i<6; i++) {
         if (i==4)
           continue;  /* done below */
         for (i_part=0; i_part<n_part; i_part++) {
           if (chosen[i_part]) {
-            if ((value=fabs(coord[i_part][i]))>sums->maxabs[i])
-              sums->maxabs[i] = value;
-            if ((value=coord[i_part][i]) > sums->max[i])
-              sums->max[i] = value;
-            if ((value=coord[i_part][i]) < sums->min[i])
-              sums->min[i] = value;
+            if ((value=fabs(coord[i_part][i]))>sums->beamSums2->maxabs[i])
+              sums->beamSums2->maxabs[i] = value;
+            if ((value=coord[i_part][i]) > sums->beamSums2->max[i])
+              sums->beamSums2->max[i] = value;
+            if ((value=coord[i_part][i]) < sums->beamSums2->min[i])
+              sums->beamSums2->min[i] = value;
           }
         }
       }
@@ -688,100 +719,123 @@ void accumulate_beam_sums1(
   if (active) {	        
     for (i_part=0; i_part<n_part; i_part++)
       timeCoord[i_part] -= centroid[6];
-    if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT)) {
+    if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT) && sums->beamSums2) {
       i = 4;
       for (i_part=0; i_part<n_part; i_part++) {
         if (chosen[i_part]) {
-          if ((value=fabs(coord[i_part][i]-centroid[i]))>sums->maxabs[i])
-            sums->maxabs[i] = value;
-          if ((value=coord[i_part][i]-centroid[i])>sums->max[i])
-            sums->max[i] = value;
-          if ((value=coord[i_part][i]-centroid[i])<sums->min[i])
-            sums->min[i] = value;
+          if ((value=fabs(coord[i_part][i]-centroid[i]))>sums->beamSums2->maxabs[i])
+            sums->beamSums2->maxabs[i] = value;
+          if ((value=coord[i_part][i]-centroid[i])>sums->beamSums2->max[i])
+            sums->beamSums2->max[i] = value;
+          if ((value=coord[i_part][i]-centroid[i])<sums->beamSums2->min[i])
+            sums->beamSums2->min[i] = value;
         }
       }
       i = 6;  /* time coordinate */
       for (i_part=0; i_part<n_part; i_part++) {
         if (chosen[i_part]) {
-          if ((value=fabs(timeCoord[i_part]))>sums->maxabs[i])
-            sums->maxabs[i] = value;
-          if ((value=timeCoord[i_part])>sums->max[i])
-            sums->max[i] = value;
-          if ((value=timeCoord[i_part])<sums->min[i])
-            sums->min[i] = value;
+          if ((value=fabs(timeCoord[i_part]))>sums->beamSums2->maxabs[i])
+            sums->beamSums2->maxabs[i] = value;
+          if ((value=timeCoord[i_part])>sums->beamSums2->max[i])
+            sums->beamSums2->max[i] = value;
+          if ((value=timeCoord[i_part])<sums->beamSums2->min[i])
+            sums->beamSums2->min[i] = value;
         }
       }
     }
   }
   
-  if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT)) {
+  if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT) && sums->beamSums2) {
     if (notSinglePart) {
       if (parallelStatus==trueParallel) {
-        /* compute sums->maxabs over processors*/
-        MPI_Allreduce(sums->maxabs, buffer, 7, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD); 
-        memcpy(sums->maxabs, buffer, sizeof(double)*7);     
-        /* compute sums->max over processors */
-        MPI_Allreduce(sums->max, buffer, 7, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD); 
-        memcpy(sums->max, buffer, sizeof(double)*7);      
-        /* compute sums->min over processors */
-        MPI_Allreduce(sums->min, buffer, 7, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD); 
-        memcpy(sums->min, buffer, sizeof(double)*7);  
+        /* compute sums->beamSums2->maxabs over processors*/
+        MPI_Allreduce(sums->beamSums2->maxabs, buffer, 7, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD); 
+        memcpy(sums->beamSums2->maxabs, buffer, sizeof(double)*7);     
+        /* compute sums->beamSums2->max over processors */
+        MPI_Allreduce(sums->beamSums2->max, buffer, 7, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD); 
+        memcpy(sums->beamSums2->max, buffer, sizeof(double)*7);      
+        /* compute sums->beamSums2->min over processors */
+        MPI_Allreduce(sums->beamSums2->min, buffer, 7, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD); 
+        memcpy(sums->beamSums2->min, buffer, sizeof(double)*7);  
       }    
     }
   }
 
-  /* compute Sigma[i][j] for present beam and add to existing data */
-  if (active) {
-    for (i=0; i<7; i++) {
-
-      /* if ((parallelStatus==trueParallel) && notSinglePart)  */
+  if (sums->beamSums2) {
+    /* compute Sigma[i][j] for present beam and add to existing data */
+    if (active) {
+      for (i=0; i<7; i++) {
+        
+        /* if ((parallelStatus==trueParallel) && notSinglePart)  */
         if (i>=1)        
           offset += i-1;
-
-      for (j=i; j<7; j++) {
-        double b;
+        
+        for (j=i; j<7; j++) {
+          double b;
 #ifdef USE_KAHAN
-        double Y, SijOld;
-        errorSig[j]=0.0;
+          double Y, SijOld;
+          errorSig[j]=0.0;
 #endif
-        if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
-          /* Only compute the diagonal blocks and dispersive correlations */
-          if (flags&BEAM_SUMS_EXACTEMIT)
-            sums->sigman[j][i] = sums->sigman[i][j] = 0;
-          else
-            sums->sigma[j][i] = sums->sigma[i][j] = 0;
-          continue;
-        }
-
-        if (notSinglePart) {
-          if (parallelStatus==trueParallel) {
-            index = 6*i+j-offset;
-            Sij_p[index] = 0;
+          if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
+            /* Only compute the diagonal blocks and dispersive correlations */
+            if (flags&BEAM_SUMS_EXACTEMIT)
+              sums->beamSums2->sigman[j][i] = sums->beamSums2->sigman[i][j] = 0;
+            else
+              sums->beamSums2->sigma[j][i] = sums->beamSums2->sigma[i][j] = 0;
+            continue;
+          }
+          
+          if (notSinglePart) {
+            if (parallelStatus==trueParallel) {
+              index = 6*i+j-offset;
+              Sij_p[index] = 0;
 #ifdef USE_KAHAN
-            errorSig[index] = 0.0;
+              errorSig[index] = 0.0;
 #endif
-            for (i_part=0; i_part<n_part; i_part++) {
-              if (chosen[i_part]) {
-                b = ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
-                  ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]-centroid[j]:timeCoord[i_part]));
+              for (i_part=0; i_part<n_part; i_part++) {
+                if (chosen[i_part]) {
+                  b = ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
+                    ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]-centroid[j]:timeCoord[i_part]));
 #ifndef USE_KAHAN
-                Sij_p[index] += b;
+                  Sij_p[index] += b;
 #else
-                /* Sij_p[index] = KahanPlus(Sij_p[index], b, &errorSig[index]);  */
-                Y = b + errorSig[index];
-                SijOld = Sij_p[index];
-                Sij_p[index] += Y;
-                errorSig[index] = Y - (Sij_p[index] - SijOld);
+                  /* Sij_p[index] = KahanPlus(Sij_p[index], b, &errorSig[index]);  */
+                  Y = b + errorSig[index];
+                  SijOld = Sij_p[index];
+                  Sij_p[index] += Y;
+                  errorSig[index] = Y - (Sij_p[index] - SijOld);
 #endif
+                }
+              }
+            }
+            else if (isMaster) {
+              for (Sij=i_part=0; i_part<n_part; i_part++) {
+                if (chosen[i_part]) {
+#ifndef USE_KAHAN
+                  Sij += ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]:timeCoord[i_part])-centroid[i])*
+                    ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]:timeCoord[i_part])-centroid[j]);
+#else
+                  Sij = KahanPlus(Sij, 
+                                  ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
+                                  ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]-centroid[j]:timeCoord[i_part])), &errorSig[j]); 
+#endif
+                }
+              }
+              if (npCount) {
+                if (flags&BEAM_SUMS_EXACTEMIT)
+                  /* sums->n_part was updated already, so we need to *subtract* npCount, not add it */
+                  sums->beamSums2->sigman[j][i] = (sums->beamSums2->sigman[i][j] = (sums->beamSums2->sigman[i][j]*(sums->n_part-npCount)+Sij)/sums->n_part);
+                else
+                  sums->beamSums2->sigma[j][i] = (sums->beamSums2->sigma[i][j] = (sums->beamSums2->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+npCount));
               }
             }
           }
-          else if (isMaster) {
+          else { /* Single particle case */
             for (Sij=i_part=0; i_part<n_part; i_part++) {
               if (chosen[i_part]) {
 #ifndef USE_KAHAN
-                Sij += ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]:timeCoord[i_part])-centroid[i])*
-                  ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]:timeCoord[i_part])-centroid[j]);
+                Sij += ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
+                  ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]-centroid[j]:timeCoord[i_part]));
 #else
                 Sij = KahanPlus(Sij, 
                                 ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
@@ -789,99 +843,78 @@ void accumulate_beam_sums1(
 #endif
               }
             }
-            if (npCount) {
+            if (n_part) {
               if (flags&BEAM_SUMS_EXACTEMIT)
                 /* sums->n_part was updated already, so we need to *subtract* npCount, not add it */
-                sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j]*(sums->n_part-npCount)+Sij)/sums->n_part);
+                sums->beamSums2->sigman[j][i] = (sums->beamSums2->sigman[i][j] = (sums->beamSums2->sigman[i][j]*(sums->n_part-npCount)+Sij)/sums->n_part);
               else
-                sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+npCount));
+                sums->beamSums2->sigma[j][i] = (sums->beamSums2->sigma[i][j] = (sums->beamSums2->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+npCount));
             }
-          }
-        }
-        else { /* Single particle case */
-          for (Sij=i_part=0; i_part<n_part; i_part++) {
-            if (chosen[i_part]) {
-#ifndef USE_KAHAN
-              Sij += ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
-                ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]-centroid[j]:timeCoord[i_part]));
-#else
-              Sij = KahanPlus(Sij, 
-                              ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
-                              ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]-centroid[j]:timeCoord[i_part])), &errorSig[j]); 
-#endif
-            }
-          }
-          if (n_part) {
-              if (flags&BEAM_SUMS_EXACTEMIT)
-                /* sums->n_part was updated already, so we need to *subtract* npCount, not add it */
-                sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j]*(sums->n_part-npCount)+Sij)/sums->n_part);
-              else
-                sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+npCount));
           }
         }
       }
     }
-  }
 
-  if (notSinglePart) {
-    if (parallelStatus==trueParallel) {
-      if (isMaster) {
-        memset(Sij_p, 0,  sizeof(double)*28);
+    if (notSinglePart) {
+      if (parallelStatus==trueParallel) {
+        if (isMaster) {
+          memset(Sij_p, 0,  sizeof(double)*28);
 #ifdef USE_KAHAN
-        memset(errorSig, 0,  sizeof(double)*28);
+          memset(errorSig, 0,  sizeof(double)*28);
 #endif
-      }
-      /* compute Sij sum over processors */
+        }
+        /* compute Sij sum over processors */
 #ifndef USE_KAHAN
-      MPI_Allreduce(Sij_p, Sij_total, 28, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(Sij_p, Sij_total, 28, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #else
-      MPI_Allgather(Sij_p, 28, MPI_DOUBLE, &sumMatrixSig[0][0], 28, MPI_DOUBLE, MPI_COMM_WORLD);
-      /* compute error sum over processors */
-      MPI_Allgather(errorSig, 28, MPI_DOUBLE, &errorMatrixSig[0][0], 28, MPI_DOUBLE,MPI_COMM_WORLD);
-      offset = 0;
-      for (i=0; i<7; i++) {
-        if (i>=1)        
-          offset += i-1;
-        for (j=i; j<7; j++) {
-          index = 6*i+j-offset;
-          if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
-            /* Only compute the diagonal blocks and dispersive correlations */
-            Sij_total[index] = 0;
-            continue;
-          }
-          error_sum = 0.0;
-          /* extract the columnwise array from the matrix */
-          for (k=0; k<n_processors; k++) {         
-            sumArray[k] = sumMatrixSig[k][index];             
-            errorArray[k] = errorMatrixSig[k][index];
-          }
-          Sij_total[index] = Kahan(n_processors-1,&sumArray[1],&error_sum);
-          error_total = Kahan(n_processors-1,&errorArray[1],&error_sum);
-          Sij_total[index] += error_total;
-        } 
-      }
-      
-#endif
-      if (npCount_total) {
-        offset = 0; 
+        MPI_Allgather(Sij_p, 28, MPI_DOUBLE, &sumMatrixSig[0][0], 28, MPI_DOUBLE, MPI_COMM_WORLD);
+        /* compute error sum over processors */
+        MPI_Allgather(errorSig, 28, MPI_DOUBLE, &errorMatrixSig[0][0], 28, MPI_DOUBLE,MPI_COMM_WORLD);
+        offset = 0;
         for (i=0; i<7; i++) {
-          if (i>=1)
+          if (i>=1)        
             offset += i-1;
           for (j=i; j<7; j++) {
+            index = 6*i+j-offset;
             if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
               /* Only compute the diagonal blocks and dispersive correlations */
-              if (flags&BEAM_SUMS_EXACTEMIT)
-                sums->sigman[j][i] = sums->sigman[i][j] = 0;
-              else
-                sums->sigma[j][i] = sums->sigma[i][j] = 0;
+              Sij_total[index] = 0;
               continue;
             }
-            index = 6*i+j-offset;
-            if (flags&BEAM_SUMS_EXACTEMIT)
+            error_sum = 0.0;
+            /* extract the columnwise array from the matrix */
+            for (k=0; k<n_processors; k++) {         
+              sumArray[k] = sumMatrixSig[k][index];             
+              errorArray[k] = errorMatrixSig[k][index];
+            }
+            Sij_total[index] = Kahan(n_processors-1,&sumArray[1],&error_sum);
+            error_total = Kahan(n_processors-1,&errorArray[1],&error_sum);
+            Sij_total[index] += error_total;
+          } 
+        }
+        
+#endif
+        if (npCount_total) {
+          offset = 0; 
+          for (i=0; i<7; i++) {
+            if (i>=1)
+              offset += i-1;
+            for (j=i; j<7; j++) {
+              if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
+                /* Only compute the diagonal blocks and dispersive correlations */
+                if (flags&BEAM_SUMS_EXACTEMIT)
+                  sums->beamSums2->sigman[j][i] = sums->beamSums2->sigman[i][j] = 0;
+                else
+                  sums->beamSums2->sigma[j][i] = sums->beamSums2->sigma[i][j] = 0;
+                continue;
+              }
+              index = 6*i+j-offset;
+              if (flags&BEAM_SUMS_EXACTEMIT)
                 /* sums->n_part was updated already, so we need to *subtract* npCount, not add it */
-              sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j]*(sums->n_part-npCount_total)+Sij_total[index])/sums->n_part);
-            else
-              sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij_total[index])/(sums->n_part+npCount_total));
+                sums->beamSums2->sigman[j][i] = (sums->beamSums2->sigman[i][j] = (sums->beamSums2->sigman[i][j]*(sums->n_part-npCount_total)+Sij_total[index])/sums->n_part);
+              else
+                sums->beamSums2->sigma[j][i] = (sums->beamSums2->sigma[i][j] = (sums->beamSums2->sigma[i][j]*sums->n_part+Sij_total[index])/(sums->n_part+npCount_total));
+            }
           }
         }
       }
@@ -889,7 +922,7 @@ void accumulate_beam_sums1(
   }
 
   if (!(flags&BEAM_SUMS_EXACTEMIT)) {
-  
+    
     if (!notSinglePart) {
       sums->n_part += npCount; 
       sums->charge = mp_charge*npCount;
@@ -938,15 +971,19 @@ void copy_beam_sums(
 {
   long i, j;
 
-  for (i=0; i<7; i++) {
-    target->maxabs[i] = source->maxabs[i];
-    target->max[i] = source->max[i];
-    target->min[i] = source->min[i];
+  if (target->beamSums2 && source->beamSums2) {
+    for (i=0; i<7; i++) {
+      target->beamSums2->maxabs[i] = source->beamSums2->maxabs[i];
+      target->beamSums2->max[i] = source->beamSums2->max[i];
+      target->beamSums2->min[i] = source->beamSums2->min[i];
+    }
   }
-  for (i=0; i<7; i++) {
+  for (i=0; i<7; i++) 
     target->centroid[i] = source->centroid[i];
-    for (j=0; j<7; j++)
-      target->sigma[i][j] = source->sigma[i][j];
+  if (target->beamSums2 && source->beamSums2) {
+    for (i=0; i<7; i++) 
+      for (j=0; j<7; j++)
+        target->beamSums2->sigma[i][j] = source->beamSums2->sigma[i][j];
   }
   target->n_part = source->n_part;
   target->z      = source->z;

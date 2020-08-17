@@ -258,12 +258,16 @@ typedef struct {
 #define DO_NORMEMIT_SUMS 0
 
 typedef struct {
-    double centroid[7];  /* centroid[i] = Sum(x[i]/n), i=6 is time */
     double sigma[7][7];  /* sigma[i][j] = Sum((x[i]-c[i])*(x[j]-c[j])/n) */
     double sigman[7][7]; /* sigman[i][j] = Sum((x[i]-c[i])*(x[j]-c[j])/n), for normalized coordinates */
     double maxabs[7];    /* maximum values for x, xp, y, yp, max deviation for s, max value for dp/p, max deviation for t */
     double min[7];
     double max[7];
+} BEAM_SUMS2;
+
+typedef struct {
+    double centroid[7];  /* centroid[i] = Sum(x[i]/n), i=6 is time */
+    BEAM_SUMS2 *beamSums2; /* second-order correlations, etc. */
     long n_part;         /* number of particles */
     double z;            /* z location */
     double p0;           /* reference momentum (beta*gamma) */
@@ -3501,6 +3505,7 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
 #define ALLOW_MPI_ABORT_TRACKING 0x08000UL
 #define RESET_RF_FOR_EACH_STEP   0x10000UL
 #define OPTIMIZING               0x20000UL
+#define CENTROID_SUMS_ONLY       0x40000UL
 /* return values for get_reference_phase and check_reference_phase */
 #define REF_PHASE_RETURNED 1
 #define REF_PHASE_NOT_SET  2
@@ -3623,6 +3628,8 @@ extern long check_duplic_elem(ELEMENT_LIST **elem, ELEMENT_LIST **new_elem, char
 extern long check_duplic_line(LINE_LIST *line, char *new_line, long n_lines, long checkOnly);
  
 /* prototypes for compute_centroids.c: */
+extern BEAM_SUMS *allocateBeamSums(unsigned long flags, long nz);
+extern void freeBeamSums(BEAM_SUMS *sums, long nz);
 extern void compute_centroids(double *centroid, double **coordinates, long n_part);
 extern void compute_sigmas(double *emit, double *sigma, double *centroid, double **coordinates, long n_part);
 extern void zero_beam_sums(BEAM_SUMS *sums, long n);

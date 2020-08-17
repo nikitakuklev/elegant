@@ -606,7 +606,7 @@ long do_tracking(
             (run->wrap_around?0:(n_passes-1)*(beamline->ncat_elems-beamline->i_recirc));
         if (flags&FINAL_SUMS_ONLY)
           *n_z_points = 0;
-        *sums_vs_z = tmalloc(sizeof(**sums_vs_z)*(*n_z_points+1));
+        *sums_vs_z = allocateBeamSums(flags, *n_z_points+1);
         zero_beam_sums(*sums_vs_z, *n_z_points+1);
         sums_allocated = 1;
       }
@@ -3580,7 +3580,7 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
 {
   long i, j, k;
   static double emit[3], sigma[6], centroid[6], beta[3], alpha[3], emitc[3];
-  static BEAM_SUMS sums;
+  static BEAM_SUMS *sums;
   static char *centroid_name_suffix[8] = {
     "Cx", "Cxp", "Cy", "Cyp", "Cs", "Cdelta", "pCentral", "Particles" };
   static char *sigma_name_suffix[6] = {
@@ -3595,17 +3595,16 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
   };
   static char s[1000];
 
-  zero_beam_sums(&sums, 1);
-  accumulate_beam_sums(&sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
+  sums = allocateBeamSums(0, 1);
+  zero_beam_sums(sums, 1);
+  accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
   if (isMaster || !notSinglePart) {
     for (i=0; i<6; i++) {
-      centroid[i] = sums.centroid[i];
-      sigma[i] = sqrt(sums.sigma[i][i]);
+      centroid[i] = sums->centroid[i];
+      sigma[i] = sqrt(sums->beamSums2->sigma[i][i]);
       if (i%2==0) {
         beta[i/2] = alpha[i/2] = emitc[i/2] = emit[i/2] = 0;
-        computeEmitTwissFromSigmaMatrix(emit+i/2, emitc+i/2, beta+i/2, alpha+i/2, sums.sigma, i);
-/*        printf("%s#%ld : emit = %e, beta = %e, alpha = %e\n",
-               name, occurence, emit[i/2], beta[i/2], alpha[i/2]); */
+        computeEmitTwissFromSigmaMatrix(emit+i/2, emitc+i/2, beta+i/2, alpha+i/2, sums->beamSums2->sigma, i);
       }
     }
     
@@ -3656,10 +3655,11 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
     }
     for (i=k=0; i<6; i++)
       for (j=i+1; j<6; j++, k++)
-	rpn_store(sums.sigma[i][j], NULL, fpt->sij_mem[k]);
+	rpn_store(sums->beamSums2->sigma[i][j], NULL, fpt->sij_mem[k]);
     rpn_store(Po, NULL, fpt->centroid_mem[6]);
     rpn_store((double)np, NULL, fpt->centroid_mem[7]);
   }
+  freeBeamSums(sums, 1);
 }
 
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr)
@@ -4821,7 +4821,7 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
 {
   double emit, emitc, factor, pAverage, eta, etap;
   long i, j;
-  BEAM_SUMS sums;
+  BEAM_SUMS *sums;
 
 #if SDDS_MPI_IO
   long npTotal;
@@ -4832,16 +4832,17 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
   }
 #endif
 
-  zero_beam_sums(&sums, 1);
-  accumulate_beam_sums(&sums, coord, np, pCentral, 0, NULL, 0.0, 0.0, 0, 0, 0);
-  pAverage = pCentral*(1+sums.centroid[5]);
+  sums = allocateBeamSums(0, 1);
+  zero_beam_sums(sums, 1);
+  accumulate_beam_sums(sums, coord, np, pCentral, 0, NULL, 0.0, 0.0, 0, 0, 0);
+  pAverage = pCentral*(1+sums->centroid[5]);
   
   for (i=0; i<2; i++) {
-    computeEmitTwissFromSigmaMatrix(&emit, &emitc, NULL, NULL, sums.sigma, 2*i);
+    computeEmitTwissFromSigmaMatrix(&emit, &emitc, NULL, NULL, sums->beamSums2->sigma, 2*i);
     eta = etap = 0;
-    if (sums.sigma[5][5]) {
-      eta  = sums.sigma[2*i+0][5]/sums.sigma[5][5];
-      etap = sums.sigma[2*i+1][5]/sums.sigma[5][5];
+    if (sums->beamSums2->sigma[5][5]) {
+      eta  = sums->beamSums2->sigma[2*i+0][5]/sums->beamSums2->sigma[5][5];
+      etap = sums->beamSums2->sigma[2*i+1][5]/sums->beamSums2->sigma[5][5];
     }
     if (ee->emit[i]>=0) {
       /* use geometric emittance */
@@ -4865,6 +4866,7 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
       coord[j][2*i+1] = factor*(coord[j][2*i+1]-eta*coord[j][5]) + eta*coord[j][5];
     }
   }
+  freeBeamSums(sums, 1);
 }
 
 void set_up_mhist(MHISTOGRAM *mhist, RUN *run, long occurence)

@@ -904,7 +904,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     double tc, tc0, tc0Error, p_sum, gamma_sum, sum, error_sum, p=0.0;
     double emit[2], emitc[2];
     long Cx_index=0, Sx_index=0, ex_index=0, ecx_index=0, npCount;
-    static BEAM_SUMS sums;
+    BEAM_SUMS *sums;
     double emittance_l;
     long memoryUsed;
 #if USE_MPI  
@@ -1000,8 +1000,9 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 #endif
 
     /* compute centroids, sigmas, and emittances for x, y, and s */
-    zero_beam_sums(&sums, 1);
-    accumulate_beam_sums(&sums, particle, particles, Po, mp_charge, NULL, 0.0, 0.0,
+    sums = allocateBeamSums(0, 1);
+    zero_beam_sums(sums, 1);
+    accumulate_beam_sums(sums, particle, particles, Po, mp_charge, NULL, 0.0, 0.0,
                          watch->startPID, watch->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
     if (isMaster) {
       if ((Cx_index=SDDS_GetColumnIndex(watch->SDDS_table, "Cx"))<0) {
@@ -1010,7 +1011,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       }
       for (i=0; i<6; i++) {
         if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample, 
-                               Cx_index+i, sums.centroid[i],
+                               Cx_index+i, sums->centroid[i],
                                -1)) {
 	  SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1026,7 +1027,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     if (watch->mode_code==WATCH_PARAMETERS) {
       for (i=0; i<2; i++) {
         emitc[i] = emit[i] = 0;
-        computeEmitTwissFromSigmaMatrix(emit+i, emitc+i, NULL, NULL, sums.sigma, i*2);
+        computeEmitTwissFromSigmaMatrix(emit+i, emitc+i, NULL, NULL, sums->beamSums2->sigma, i*2);
       }
       if (isMaster) {
         if ((Sx_index=SDDS_GetColumnIndex(watch->SDDS_table, "Sx"))<0 ||
@@ -1037,7 +1038,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
         }
         for (i=0; i<7; i++) {
           if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample, 
-                                 Sx_index+i, sqrt(sums.sigma[i][i]),
+                                 Sx_index+i, sqrt(sums->beamSums2->sigma[i][i]),
                                  -1)) {
             SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1220,7 +1221,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     printf("dump_watch_parameters checkpoint 7\n");
     fflush(stdout);
 #endif
-
+    freeBeamSums(sums, 1);
 }
 
 
@@ -1938,20 +1939,13 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   occurence = 1;
   for (ie=0; ie<n_elements; ie++) {
     beam  = sums+ie;
-    /*
-      This is always false
-    if (!beam->sigma) {
-      printf("error: sigma element of BEAM_SUMS is undefined for element %ld (%s)\n",
-              ie, name);
-      fflush(stdout);
-      exitElegant(1);
-    }
-    */
+    if (!beam->beamSums2)
+      bombElegant("beamSums2 pointer is NULL in dump_sigma. This is a bug!", NULL);
     if (beam->n_part) {
       for (i=0; i<7; i++) {
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
-                               Sx_index+i, sqrt(beam->sigma[i][i]),
-                               sNIndex[i], sqrt(beam->sigma[i][i]),
+                               Sx_index+i, sqrt(beam->beamSums2->sigma[i][i]),
+                               sNIndex[i], sqrt(beam->beamSums2->sigma[i][i]),
                                -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma 1)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1959,7 +1953,7 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
         offset = 1;
         for (j=i+1; j<7; j++, offset++) {
           if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
-                                 sNIndex[i]+offset, beam->sigma[i][j], -1)) {
+                                 sNIndex[i]+offset, beam->beamSums2->sigma[i][j], -1)) {
             SDDS_SetError("Problem setting SDDS row values (dump_sigma 2)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
@@ -1968,15 +1962,15 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
       
       /* Set values for maximum amplitudes of coordinates */
       for (i=0; i<7; i++) {
-        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, ma1_index+i, beam->maxabs[i], -1)) {
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, ma1_index+i, beam->beamSums2->maxabs[i], -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma 3)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, min1_index+i, beam->min[i], -1)) {
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, min1_index+i, beam->beamSums2->min[i], -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma 4)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, max1_index+i, beam->max[i], -1)) {
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, max1_index+i, beam->beamSums2->max[i], -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma 5)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
@@ -1984,9 +1978,9 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
       for (plane=0; plane<=2; plane+=2) {
         double dummy;
         /* emittance and beam twiss parameters */
-        computeEmitTwissFromSigmaMatrix(&emit, &emitc, &beta, &alpha, beam->sigma, plane);
+        computeEmitTwissFromSigmaMatrix(&emit, &emitc, &beta, &alpha, beam->beamSums2->sigma, plane);
         if (exactNormalizedEmittance)
-          computeEmitTwissFromSigmaMatrix(&emitNorm, &emitcNorm, &dummy, &dummy, beam->sigman, plane);
+          computeEmitTwissFromSigmaMatrix(&emitNorm, &emitcNorm, &dummy, &dummy, beam->beamSums2->sigman, plane);
         else {
           emitNorm = emit*beam->p0*(1+beam->centroid[5]);
           emitcNorm = emitc*beam->p0*(1+beam->centroid[5]);
