@@ -20,7 +20,7 @@
 
 void determineEquilibriumMoments(double **R, double *D, SIGMA_MATRIX *sigma0);
 void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj);
-void storeFitpointMomentsParameters(MARK *mark, char *name, long occurence, SIGMA_MATRIX *sigma0, double *centroid);
+void storeFitpointMomentsParameters(ELEMENT_LIST *elem);
 void prepareMomentsArray(double *data, ELEMENT_LIST *elem, double *sigma);
 void computeNaturalEmittances(VMATRIX *M, double *sigma, double *emittance);
 
@@ -529,7 +529,7 @@ void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj)
       /* Assume it doesn't modify the sigma matrix */
       memcpy(elem->sigmaMatrix, S1, sizeof(*S1));
     if (elem->type==T_MARK && ((MARK*)elem->p_elem)->fitpoint) 
-      storeFitpointMomentsParameters((MARK*)elem->p_elem, elem->name, elem->occurence, elem->sigmaMatrix, elem->Mld->C);
+      storeFitpointMomentsParameters(elem);
     elem = elem->succ;
   }
   
@@ -579,28 +579,54 @@ void determineEquilibriumMoments
   m_free(&M3);
 }
 
-void storeFitpointMomentsParameters(MARK *mark, char *name, long occurence, SIGMA_MATRIX *sigma0, double *centroid)
+void storeFitpointMomentsParameters(ELEMENT_LIST *elem)
 {
+  MARK *mark;
+  char *name;
+  long occurence;
+  SIGMA_MATRIX *sigma0;
+  double *centroid, data[N_COLUMNS];
   char s[1000];
   long i;
+  char plane[3] = "xy";
+
+  mark = (MARK*)elem->p_elem;
+  name = elem->name;
+  occurence = elem->occurence;
+  sigma0 = elem->sigmaMatrix;
+  centroid = elem->Mld->C;
+  prepareMomentsArray(data, elem, (double*)sigma0->sigma);
 
   if (!(mark->init_flags&32)) {
-    mark->moments_mem = tmalloc(sizeof(*(mark->moments_mem))*(21+6));
+    mark->moments_mem = tmalloc(sizeof(*(mark->moments_mem))*(2*21+6+2));
     mark->init_flags |= 32;
     for (i=0; i<21; i++) {
       sprintf(s, "%s#%ld.s%ld%ldm", name, occurence, 
               sigmaIndex1[i]+1, sigmaIndex2[i]+1);
       mark->moments_mem[i] = rpn_create_mem(s, 0);
     }
+    for (i=0; i<21; i++) {
+      sprintf(s, "%s#%ld.s%ld%ldbetam", name, occurence, 
+              sigmaIndex1[i]+1, sigmaIndex2[i]+1);
+      mark->moments_mem[i+21] = rpn_create_mem(s, 0);
+    }
     for (i=0; i<6; i++) {
       sprintf(s, "%s#%ld.c%ldm", name, occurence, i+1);
-      mark->moments_mem[i+21] = rpn_create_mem(s, 0);
+      mark->moments_mem[i+2*21] = rpn_create_mem(s, 0);
+    }
+    for (i=0; i<2; i++) {
+      sprintf(s, "%s#%ld.e%cbetam", name, occurence, plane[i]);
+      mark->moments_mem[i+6+2*21] = rpn_create_mem(s, 0);
     }
   }
   for (i=0; i<21; i++) 
     rpn_store(sigma0->sigma[i], NULL, mark->moments_mem[i]);
+  for (i=0; i<21; i++)
+    rpn_store(sigmaIndex1[i]==sigmaIndex2[i]?sqr(data[IC_SBETA+i]):data[IC_SBETA+i], NULL, mark->moments_mem[i+21]);
   for (i=0; i<6; i++) 
-    rpn_store(centroid[i], NULL, mark->moments_mem[i+21]);
+    rpn_store(centroid[i], NULL, mark->moments_mem[i+2*21]);
+  for (i=0; i<2; i++)
+    rpn_store(data[IC_EMITBETA+i], NULL, mark->moments_mem[i+2*21+6]);
 }
 
 
