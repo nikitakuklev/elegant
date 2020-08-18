@@ -587,7 +587,7 @@ void storeFitpointMomentsParameters(ELEMENT_LIST *elem)
   SIGMA_MATRIX *sigma0;
   double *centroid, data[N_COLUMNS];
   char s[1000];
-  long i, offset;
+  long i, j, offset, c;
   char plane[3] = "xy";
 
   mark = (MARK*)elem->p_elem;
@@ -606,10 +606,9 @@ void storeFitpointMomentsParameters(ELEMENT_LIST *elem)
               sigmaIndex1[i]+1, sigmaIndex2[i]+1);
       mark->moments_mem[offset++] = rpn_create_mem(s, 0);
     }
-    for (i=0; i<21; i++) {
-      if (sigmaIndex1[i]<4 && sigmaIndex2[i]<4) {
-        sprintf(s, "%s#%ld.s%ld%ldbetam", name, occurence, 
-                sigmaIndex1[i]+1, sigmaIndex2[i]+1);
+    for (i=0; i<4; i++) {
+      for (j=i; j<4; j++) {
+        sprintf(s, "%s#%ld.s%ld%ldbetam", name, occurence, i+1, j+1);
         mark->moments_mem[offset] = rpn_create_mem(s, 0);
         offset ++;
       }
@@ -625,12 +624,14 @@ void storeFitpointMomentsParameters(ELEMENT_LIST *elem)
     if (offset!=(21+10+6+2))
       bombElegant("Counting issue (1) for moments-related RPN variables", NULL);
   }
+
   offset = 0;
   for (i=0; i<21; i++)
     rpn_store(sigma0->sigma[i], NULL, mark->moments_mem[offset++]);
-  for (i=0; i<21; i++) {
-    if (sigmaIndex1[i]<4 && sigmaIndex2[i]<4)
-      rpn_store(sigmaIndex1[i]==sigmaIndex2[i]?sqr(data[IC_SBETA+i]):data[IC_SBETA+i], NULL, mark->moments_mem[offset++]);
+  for (i=c=0; i<4; i++) {
+    for (j=i; j<4; j++, c++) {
+      rpn_store(i==j?sqr(data[IC_SBETA+c]):data[IC_SBETA+c], NULL, mark->moments_mem[offset++]);
+    }
   }
   for (i=0; i<6; i++) 
     rpn_store(centroid[i], NULL, mark->moments_mem[offset++]);
@@ -638,29 +639,39 @@ void storeFitpointMomentsParameters(ELEMENT_LIST *elem)
     rpn_store(data[IC_EMITBETA+i], NULL, mark->moments_mem[offset++]);
   if (offset!=(21+10+6+2))
     bombElegant("Counting issue (2) for moments-related RPN variables", NULL);
-
+  
   /*
   printf("*********************\n");
   offset = 0;
   for (i=0; i<21; i++) {
-    printf("%s#%ld.s%ld%ldm = %le = %le\n", name, occurence, sigmaIndex1[i]+1, sigmaIndex2[i]+1, sigma0->sigma[i],
-           rpn_recall(mark->moments_mem[offset++]));
+    sprintf(s, "%s#%ld.s%ld%ldm", name, occurence, 
+            sigmaIndex1[i]+1, sigmaIndex2[i]+1);
+    printf("%s#%ld.s%ld%ldm = %le = %le = %le\n", name, occurence, sigmaIndex1[i]+1, sigmaIndex2[i]+1, sigma0->sigma[i],
+           rpn_recall(rpn_create_mem(s, 0)), rpn_recall(mark->moments_mem[offset++]));
   }
-  for (i=0; i<21; i++) {
-    if (sigmaIndex1[i]<4 && sigmaIndex2[i]<4) {
-      printf("%s#%ld.s%ld%ldbetam = %le = %le\n", name, occurence, sigmaIndex1[i]+1, sigmaIndex2[i]+1, 
-             sigmaIndex1[i]==sigmaIndex2[i]?sqr(data[IC_SBETA+i]):data[IC_SBETA+i],
+  for (i=c=0; i<4; i++) {
+    for (j=i; j<4; j++, c++) {
+      sprintf(s, "%s#%ld.s%ld%ldbetam", name, occurence, i+1, j+1);
+      printf("%s#%ld.s%ld%ldbetam = %le = %le = %le\n", name, occurence, i+1, j+1, 
+             i==j?sqr(data[IC_SBETA+c]):data[IC_SBETA+c],
+             rpn_recall(rpn_create_mem(s, 0)), 
              rpn_recall(mark->moments_mem[offset++]));
     }
   }
-  for (i=0; i<6; i++)
-    printf("%s#%ld.c%ld = %le = %le\n", name, occurence, i+1, centroid[i], rpn_recall(mark->moments_mem[offset++]));
-  for (i=0; i<2; i++)
-    printf("%s#%ld.e%cbetam = %le = %le\n", name, occurence, plane[i], 
-           data[IC_EMITBETA+i], rpn_recall(mark->moments_mem[offset++]));
+  for (i=0; i<6; i++) {
+    sprintf(s, "%s#%ld.c%ldm", name, occurence, i+1);    
+    printf("%s#%ld.c%ld = %le = %le = %le\n", 
+           name, occurence, i+1, centroid[i], 
+           rpn_recall(rpn_create_mem(s, 0)),
+           rpn_recall(mark->moments_mem[offset++]));
+  }
+  for (i=0; i<2; i++) {
+    sprintf(s, "%s#%ld.e%cbetam", name, occurence, plane[i]);
+    printf("%s#%ld.e%cbetam = %le = %le = %le\n", name, occurence, plane[i], 
+           data[IC_EMITBETA+i], rpn_recall(rpn_create_mem(s, 0)), rpn_recall(mark->moments_mem[offset++]));
+  }
   */
 }
-
 
 void prepareMomentsArray(double *data, ELEMENT_LIST *elem, double *sigma)
 {
