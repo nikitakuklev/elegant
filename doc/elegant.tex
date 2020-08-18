@@ -64,12 +64,15 @@ for the same element. This was reported by V. Sajaev (APS).
 \item Added \verb|bpm_centroid| parameter to the \verb|run_setup| command. This provides a facility similar to the 
   \verb|centroid| parameter, but instead of giving the centroids at all elements, it gives them at the BPMs only.
   This was requested by X. Huang (APS).
+\item The \verb|moments_output| command now provides additional quantities for optimization at \verb|MARK| locations.
+  See the documentation for the \verb|MARK| element.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
 
 \begin{itemize}
-\item None.
+\item The \verb|population_log| file produced by \verb|parallel_optimization_setup| erroneously recorded the
+  values of the optimization variables in the wrong in an offset fashion. 
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
