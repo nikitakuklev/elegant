@@ -3,7 +3,7 @@
 * National Laboratory.
 * Copyright (c) 2010 The Regents of the University of California, as
 * Operator of Los Alamos National Laboratory.
-* This file is distributed subject to a Software License Agreement found
+ This file is distributed subject to a Software License Agreement found
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
 
@@ -49,7 +49,7 @@ long swarmMin(
   static gsl_vector *local_best=NULL, *random_vector=NULL;
   static long initialized = 0;
   static double *Input=NULL;	
-
+  
   if (!initialized) {
     if (myid < remaining_populations)
       local_populations ++;
@@ -87,9 +87,16 @@ long swarmMin(
       for (i=0; i<local_populations; i++) {
 	if (isMaster && (i==0)) 
 	  gsl_matrix_set (coord_matrix, i, j, xGuess[j]);
-	else
-	 gsl_matrix_set (coord_matrix, i, j, xLow+xDiff*random_2(0));
-	 /* gsl_matrix_set (coord_matrix, i, j, xGuess[j]+stepSize[i]*(2*random_2(0)-1)); */
+	else {
+	  double value;
+	  /* gsl_matrix_set (coord_matrix, i, j, xGuess[j]+xDiff*(random_2(0)-0.5)); */
+	  value = xGuess[j]+stepSize[i]*(2*random_2(0)-1);
+	  if (value<xLow)
+	    value = xLow;
+	  if (value>xHigh)
+	    value = xHigh;
+	  gsl_matrix_set (coord_matrix, i, j, value);
+	}
 	gsl_matrix_set (velocity_matrix, i, j, 0); 
       }
     }
@@ -136,8 +143,10 @@ long swarmMin(
       fprintf (stdout, "on %d, Input[%ld]=%lf, velocity = %lf, step_limit=%lf\n", myid, j,Input[j], gsl_matrix_get(velocity_matrix, 0, j), xUpperLimit[j]-xLowerLimit[j]);
 #endif
     result = func (Input, &isInvalid);
-    if (isInvalid)
-      result = DBL_MAX;
+    if (isInvalid) {
+      printf("Run aborted by invalid function value in PSO\n");
+      MPI_Abort(MPI_COMM_WORLD, 1);
+    }
 #if MPI_DEBUG
     fprintf (stdout, "on %d, result=%lg\n", myid, result);
 #endif
@@ -164,6 +173,6 @@ long swarmMin(
 #if MPI_DEBUG
   printf ("Result=%lf\n", result);
 #endif
-
+  
   return local_populations;
 }
