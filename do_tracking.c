@@ -4247,8 +4247,10 @@ void recordLostParticles
     long newLost;
     newLost =(nToTrack-nLeft);
     beam->n_lost += newLost;
+    /* 
     printf("New lost = %ld, total lost = %ld\n",
            newLost, beam->n_lost);
+    */
     for (i=nLeft; i<nToTrack; i++) 
       beam->particle[i][lossPassIndex] = pass;
 #if USE_MPI && MPI_DEBUG
