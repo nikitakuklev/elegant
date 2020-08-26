@@ -4164,6 +4164,7 @@ equal, the range of the parameter is unlimited.
     long end_pass = LONG_MAX;
     double start_value = 0;
     double end_value = 0;
+    long refresh_matrix = 0;
     long differential = 1;
     long multiplicative = 0;
     long start_occurence = 0;
@@ -4181,6 +4182,7 @@ equal, the range of the parameter is unlimited.
 N.B.: This command will produce unpredictable results when used with
 \verb|error_element|, \verb|alter_elements|, \verb|modulate_elements|, and
 \verb|load_parameters| (except when \verb|change_defined_values=1|).
+It will also not work well if matrix concatenation is invoked.
 It should work properly with \verb|link_elements| in turn-by-turn mode
 when the source element is ramped, but not when the target element
 is ramped.
@@ -4202,6 +4204,11 @@ is ramped.
   R(i) = S + (E-S)*\left(\frac{i-i_{\rm start}}{i_{\rm end}-i_{\rm start}}\right)^p.
 \end{equation}
 Note that $i=0$ on the first pass.
+\item \verb|refresh_matrix| --- Frequently there is a matrix associated with an element even
+  if tracking through the element does not use the matrix.  In this case, {\tt elegant} doesn't
+  normally update the matrix for the element as it modulates the element, since that may involve
+  a significant time penalty.  If this parameter is set to a non-zero value, the matrix will
+  be updated.  For elements that use a matrix for tracking, the matrix is always updated.
 \item \verb|differential|, \verb|multiplicative| --- Determine how the amplitude function
   $A(t)$ is used to obtain the new value of the parameter.  There are four cases
   \begin{itemize}
