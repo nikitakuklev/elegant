@@ -74,21 +74,22 @@
 #define SET_DEVIATION_LIMIT 3
 #define SET_RESOLUTION 4
 #define SET_LIMIT_MODE 5
-#define SET_PIPE 6
-#define N_OPTIONS 7
+#define SET_ENERGY_SPREAD 6
+#define SET_PIPE 7
+#define N_OPTIONS 8
 
 char *option[N_OPTIONS] = {
     "nerrorsets", "seed", "verbosity",
-    "deviationlimit", "resolution", "limitmode",
+    "deviationlimit", "resolution", "limitmode", "energyspread",
     "pipe", 
     } ;
 
 #define USAGE "sddsemitproc\n\
  [<inputfile>] [<outputfile>] [-pipe=[input][,output]]\n\
  [-nErrorSets=<number> [-seed=<integer>]]\n\
- [-resolution=<xResolutionm>,<yResolutionm>]\n\
+ [-resolution=<xResolutionm>,<yResolutionm>] [-energySpread=<fractionalValue>]\n\
  [-seed=integer] [-verbosity=level]\n\n\
-Program by Michael Borland. (This is version 1, July 2019)"
+Program by Michael Borland. (This is version 2, August 2020)"
 
 static char *additional_help[] = {
 USAGE,
@@ -109,6 +110,8 @@ USAGE,
 "-deviationLimit is used to define what \"too far\" from the fit means.",
 "-resolution allows specification of the measurement resolution,",
 "    which is subtracted in quadrature from the sigma.",
+"-energySpread allows fixing the value of the fractional energy spread,",
+"    which may help get better results.",
 NULL
     } ; 
 
@@ -125,7 +128,7 @@ long SetSigmaData(SDDS_DATASET *SDDSout, char *dataName, MATRIX *s2, char *fitNa
                   long configs);
 void solveForSigmaMatrix(int i, int j, double *SMeasured, double *SStDev,
                          double *R11, double *R12, double *R33, double *R34, double *R16, double *R26, 
-                         long nConfigs, double Sij[5][5], double *SFit);
+                         long nConfigs, double Sij[5][5], double *SFit, double energySpread);
 
 #define GAUSSIAN_ERRORS 0
 #define UNIFORM_ERRORS  1
@@ -169,7 +172,8 @@ int main(
   double deviationLimit=0;
   long verbosity;
   unsigned long pipeFlags;
-  
+  double energySpread = 0;
+
   argc = scanargs(&scanned, argc, argv);
   if (argc<2 || argc>(2+N_OPTIONS)) {
     for (i=0; ; i++) {
@@ -223,6 +227,12 @@ int main(
             verbosity<0)
           bomb("invalid -verbosity syntax", USAGE);
         break;
+      case SET_ENERGY_SPREAD:
+        if (scanned[i_arg].n_items!=2 ||
+            !sscanf(scanned[i_arg].list[1], "%lf", &energySpread) ||
+            energySpread<=0)
+          bomb("invalid -energySpread syntax", USAGE);
+        break;
       case SET_PIPE:
 	if (!processPipeOption(scanned[i_arg].list+1, scanned[i_arg].n_items-1, &pipeFlags))
 	  SDDS_Bomb("invalid -pipe syntax");
@@ -242,7 +252,7 @@ int main(
     }
   }
 
-  processFilenames("sdds4x4sigmaproc", &input, &output, pipeFlags, 0, NULL);
+  processFilenames("sdds5x5sigmaproc", &input, &output, pipeFlags, 0, NULL);
 
   if (seed<0)
     /* generate seed from system clock */
@@ -405,9 +415,9 @@ int main(
           S33e[iConfig] = S33[iConfig] + gauss_rn_lim(0.0, S33StDev[iConfig], 2, random_1);
         }
 
-        solveForSigmaMatrix(1, 1, S11e, S11StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S11Fit);
-        solveForSigmaMatrix(3, 3, S33e, S33StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S33Fit);
-        solveForSigmaMatrix(1, 3, S13e, S13StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S13Fit);
+        solveForSigmaMatrix(1, 1, S11e, S11StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S11Fit, energySpread);
+        solveForSigmaMatrix(3, 3, S33e, S33StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S33Fit, energySpread);
+        solveForSigmaMatrix(1, 3, S13e, S13StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S13Fit, energySpread);
         goodResult = 1;
         for (i=0; i<5; i++) {
           if (Sij[i][i]<0) {
@@ -612,18 +622,20 @@ void solveForSigmaMatrix(int i, int j,
                          double *SStDev,    /* standard deviation in values */
                          double *R11, double *R12, double *R33, double *R34, double *R16, double *R26,
                          long nConfigs,
-                         double Sij[5][5], double *SFit
+                         double Sij[5][5], double *SFit,
+                         double energySpread
                          )
 {
   /* Sets up problem to solve M = P.F for one of the three cases described in the comment at the top
      of this file.
   */
-  long iConfig, nUnknowns, nConfigUsed, nValid;
+  long iConfig, nUnknowns;
   MATRIX *P, *F, *M, *K, *FSigma;
-  double *s2Fit;
 
   if (i==j && i==1) {
     nUnknowns = 6;
+    if (energySpread>0)
+      nUnknowns = 5;
   } else if (i==j && i==3) {
     nUnknowns = 3;
   } else if (i==1 && j==3) {
@@ -648,7 +660,8 @@ void solveForSigmaMatrix(int i, int j,
         P->a[iConfig][2] = sqr(R12[iConfig]);          
         P->a[iConfig][3] = 2*R11[iConfig]*R16[iConfig];
         P->a[iConfig][4] = 2*R12[iConfig]*R16[iConfig];
-        P->a[iConfig][5] = sqr(R16[iConfig]);
+        if (energySpread<=0)
+          P->a[iConfig][5] = sqr(R16[iConfig]);
       } else {
         P->a[iConfig][0] = sqr(R33[iConfig]);
         P->a[iConfig][1] = 2*R33[iConfig]*R34[iConfig];
@@ -669,8 +682,11 @@ void solveForSigmaMatrix(int i, int j,
   for (iConfig=0; iConfig<nConfigs; iConfig++) 
     K->a[iConfig][iConfig] = 1/sqr(2*SStDev[iConfig]);
 
-  for (iConfig=0; iConfig<nConfigs; iConfig++) 
+  for (iConfig=0; iConfig<nConfigs; iConfig++) {
     M->a[iConfig][0] = SMeasured[iConfig];
+    if (energySpread>0 && i==1 && j==1)
+      M->a[iConfig][0] -= sqr(R16[iConfig])*sqr(energySpread);
+  }
 
   solve_normal_form(F, FSigma, P, M, K, SFit);
   if (i==j) {
@@ -680,7 +696,10 @@ void solveForSigmaMatrix(int i, int j,
       Sij[1][1] = F->a[2][0];
       Sij[0][4] = F->a[3][0];
       Sij[1][4] = F->a[4][0];
-      Sij[4][4] = F->a[5][0];
+      if (energySpread<=0) 
+        Sij[4][4] = F->a[5][0];
+      else
+        Sij[4][4] = sqr(energySpread);
     } else {
       Sij[2][2] = F->a[0][0];
       Sij[2][3] = F->a[1][0];
