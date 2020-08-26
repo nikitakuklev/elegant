@@ -52,6 +52,8 @@ Here is a summary of what's changed since release 2020.3.  Historical change log
 \item The \verb|load_parameters| command produced incorrect results in multi-step runs (i.e., \verb|n_steps|>1 in
 \verb|run_control|) when a multi-page parameter file was used with multiple differential-mode load instructions
 for the same element. This was reported by V. Sajaev (APS).
+\item The \verb|HCOR|, \verb|VCOR|, and \verb|HVCOR| elements were not responding properly to the \verb|ramp_elements|
+  and \verb|modulate_elements| commands. This was reported by V. Sajaev (APS).
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -3152,6 +3154,8 @@ from which to begin concatenation and output.
 \item type: setup command.
 \item function: define parameters for time-dependent modulation of elements
 \item sequence: must follow \verb|run_setup|.
+\item N.B.: if the ramped element is modeled with a matrix, a significant performance hit may be seen.
+  It is best to use symplectic variants of the elements, since these don't invoke the matrix calculation.
 \item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
@@ -4152,6 +4156,8 @@ equal, the range of the parameter is unlimited.
 \item type: setup command.
 \item function: define parameters for time-dependent ramping of elements
 \item sequence: must follow \verb|run_setup|.
+\item N.B.: if the ramped element is modeled with a matrix, a significant performance hit may be seen.
+  It is best to use symplectic variants of the elements, since these don't invoke the matrix calculation.
 \item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
