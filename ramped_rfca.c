@@ -27,6 +27,7 @@ long ramped_rf_cavity(
     double *coord, t, t0, omega, beta_i;
     long fixed_freq;
     static long been_warned = 0;
+    double dphase;
 #if DEBUG
     static SDDS_TABLE debugTable;
     static long debugInitialized, debugCount = 0, debugLength;
@@ -121,7 +122,7 @@ long ramped_rf_cavity(
     volt = ramprf->volt/(1e6*particleMassMV*particleRelSign)*linear_interpolation(ramprf->Vfactor, ramprf->t_Vf, ramprf->n_Vpts, t0, i_volt);
     if (!fixed_freq) {
       omega = PIx2*ramprf->freq*linear_interpolation(ramprf->ffactor, ramprf->t_ff, ramprf->n_fpts, t0, i_freq);
-      phase = linear_interpolation(ramprf->dPhase, ramprf->t_dP, ramprf->n_Ppts, t0, i_phase)*PI/180.0 -
+      phase = (dphase=linear_interpolation(ramprf->dPhase, ramprf->t_dP, ramprf->n_Ppts, t0, i_phase)*PI/180.0) -
         omega*t0;
     }
     else {
@@ -163,6 +164,8 @@ long ramped_rf_cavity(
         debugCount = 0;
         if (!SDDS_InitializeOutput(&debugTable, SDDS_BINARY, 0, NULL, NULL, "rampedrf.debug") ||
             SDDS_DefineColumn(&debugTable, "t", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(&debugTable, "t0", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(&debugTable, "dphase", NULL, "rad", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&debugTable, "phase", NULL, "rad", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&debugTable, "V", NULL, "V", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&debugTable, "freq", NULL, "Hz", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
@@ -217,9 +220,9 @@ long ramped_rf_cavity(
 	    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 	  if (!SDDS_SetRowValues(&debugTable, SDDS_BY_INDEX|SDDS_PASS_BY_VALUE,
 				 debugCount, 
-				 0, t, 
-				 1, fmod(omega*(t-t0)+phase, PIx2), 2, volt, 3, omega/PIx2,
-				 4, volt*sin(omega*(t-t0)+phase), -1) ||
+				 0, t, 1, t0, 2, dphase, 
+				 3, fmod(omega*(t-t0)+phase, PIx2), 4, volt, 5, omega/PIx2,
+				 6, volt*sin(omega*(t-t0)+phase), -1) ||
 	      !SDDS_UpdateTable(&debugTable))
 	    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 	  debugCount++;
