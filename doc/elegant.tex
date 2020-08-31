@@ -68,6 +68,11 @@ for the same element. This was reported by V. Sajaev (APS).
   This was requested by X. Huang (APS).
 \item The \verb|moments_output| command now provides additional quantities for optimization at \verb|MARK| locations.
   See the documentation for the \verb|MARK| element.
+\item The \verb|CCBEND|, \verb|CSBEND|, \verb|FMULT|, \verb|KOCT|, \verb|KSEXT|, and \verb|KQUAD| now support 
+  sixth-order symplectic integrators. The coefficients were provided by Y.P. Sun (APS), who also assisted in testing.
+  The value of the \verb|N_KICKS| parameter may be reduced by a factor of $\sim$5 if the sixth-order integrator
+  is used in place of the fourth-order integrator, with essentially identical results but a $\sim$30\% reduction
+  in run time.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -5566,6 +5571,7 @@ defined as $\frac{d\alpha}{d\delta}$.
 {\tt h20200}, {\tt h00310}, {\tt h00400}--- Resonance driving terms\cite{Bengtsson}.  These will be
  zero unless \verb|compute_driving_terms| is nonzero.  See table \ref{tab:drivingTerms} for an explanation of each term.
 \item {\tt dnux/dJx}, {\tt dnux/dJy},  and {\tt dnuy/dJy} --- Tune shifts with amplitude from Bengtsson's theory \cite{Bengtsson}.
+  Note that $J_q = \frac{A_q}{2}$, where $q$ is $x$ or $y$.
  See documentation for \verb|tune_shift_with_amplitude| for discussion and comparison with {\tt dnux/dAx} etc.
  These will be zero unless \verb|compute_driving_terms| is nonzero.
 \item {\tt Ax} and {\tt Ay} --- The horizontal and vertical acceptance.  These will be zero if no apertures are
@@ -5721,8 +5727,9 @@ for a ring.  Use \verb|ILMATRIX| elements instead.
  This appears to be reliable for many cases we've tested.
  \item[Method 3]: tune shifts can be computed quickly using Bengtsson's formulae \cite{Bengtsson} by
  setting \verb|compute_driving_terms=1| in \verb|twiss_output|.  For cases where all methods are
- valid, the results will differ by a factor of 2 from the results obtained with this command.
- Also, the present command has more general validity because it includes dipole curvature effects.
+ valid, the results will be larger by a factor of 2 than the results obtained with this command, 
+ since $J_q = \frac{A_q}{2}$, where $q$ is $x$ or $y$.
+ Note that the present command has more general validity because it includes dipole curvature effects.
 \end{itemize}
 
 The quantities computed are $\frac{\partial}{\partial A_x^n \partial A_y^m}\nu_p$, where $n\geq 0$ and $m \geq 0$ are
