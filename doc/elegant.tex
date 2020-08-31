@@ -45,6 +45,9 @@ Here is a summary of what's changed since release 2020.3.  Historical change log
 \begin{itemize}
 \item The \verb|TAPERAPC| element would mark all particles as lost when the \verb|RSTART| and \verb|REND| parameters
   had the same value. This was reported by forum user \verb|Cai_Meng|.
+\item The \verb|FMULT| element had a bug that produced {\em very} invalid results with the \verb|FSE| parameter was non-zero,
+  as reported by A. Xiao (APS). Also, the \verb|FSE| and other parameters were not influencing matrix-related computations
+  if changed during a run.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
