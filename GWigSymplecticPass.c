@@ -34,7 +34,7 @@ void GWigInit(struct gwig *Wig,
               double BVmax, /* peak magnetic field (Tesla) for V wiggler expansion, ignored if Bmax is nonzero */
               double normGradient, /* normalized gradient, such that fields are multiplied by (1+gradient*x) */
 	      int Nstep,   /* number of integration steps (per period?) */
-	      int Nmeth,   /* integration method (2 or 4 for integration order) */
+	      int Nmeth,   /* integration method (2, 4 , or 6 for integration order) */
 	      int NHharm,  /* number of horizontal harmonics (By) */
 	      int NVharm,  /* number of vertical harmonics (Bx) */
               int HSplitPole,  /* use split-pole expansion for horizontal harmonics? */

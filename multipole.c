@@ -24,6 +24,17 @@ unsigned short expandHamiltonian = 0;
 
 #define ODD(j) ((j)%2)
 
+int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xkick, double ykick,
+                                  double Po, double rad_coef, double isr_coef,
+                                  long *order, double *KnL,  short *skew,
+                                  long n_parts, double drift,
+                                  long integration_order,
+                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
+                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
+				  long radial, 
+                                  double refTilt /* used for obstruction evaluation only */
+                                  );
+
 typedef struct {
   char *filename;
   MULTIPOLE_DATA data;
@@ -388,6 +399,7 @@ long fmultipole_tracking(
   double x=0.0, xp=0.0, y=0.0, yp=0.0;
   double rad_coef;
   MULTIPOLE_DATA multData;
+  double *KnLSave, *JnLSave;
   /* These are potentially accessed in integrate_kick_multipole_ord4, but in reality are irrelevant as long as all the
      KnL values are 0.
   */
@@ -414,11 +426,19 @@ long fmultipole_tracking(
   else
     rad_coef = 0;
 
-  multData = multipole->multData;
+  multData = multipole->multData; /* shares data stored in permanent structure! */
+  KnLSave = tmalloc(sizeof(*KnLSave)*multData.orders);
+  if (multData.JnL)
+    JnLSave = tmalloc(sizeof(*JnLSave)*multData.orders);
+  else
+    JnLSave = NULL;
   for (i_order=0; i_order<multData.orders; i_order++) {
+    KnLSave[i_order] = multData.KnL[i_order];
     multData.KnL[i_order] *= (1+multipole->fse);
-    if (multData.JnL)
+    if (multData.JnL) {
+      JnLSave[i_order] = multData.JnL[i_order];
       multData.JnL[i_order] *= (1+multipole->fse);
+    }
   }
   
   if (multipole->dx || multipole->dy || multipole->dz)
@@ -441,8 +461,8 @@ long fmultipole_tracking(
     }
 
     is_lost = 0;
-    if (!integrate_kick_multipole_ord4(coord, multipole->dx, multipole->dy, 0.0, 0.0, Po, rad_coef, 0.0,
-                                       order, KnL, skew, n_kicks, drift, &multData, NULL, NULL, NULL,
+    if (!integrate_kick_multipole_ordn(coord, multipole->dx, multipole->dy, 0.0, 0.0, Po, rad_coef, 0.0,
+                                       order, KnL, skew, n_kicks, drift, 4, &multData, NULL, NULL, NULL,
                                        &dzLoss, NULL, 0, multipole->tilt))
       is_lost = 1;
     
@@ -469,6 +489,13 @@ long fmultipole_tracking(
     rotateBeamCoordinates(particle, n_part, -multipole->tilt);
   if (multipole->dx || multipole->dy || multipole->dz)
     offsetBeamCoordinates(particle, n_part, -multipole->dx, -multipole->dy, -multipole->dz);
+
+  /* Restore the values so we don't change them permanently */
+  for (i_order=0; i_order<multData.orders; i_order++) {
+    multData.KnL[i_order] = KnLSave[i_order];
+    if (multData.JnL)
+      multData.JnL[i_order] = JnLSave[i_order];
+  }
 
   log_exit("fmultipole_tracking");
   return(i_top+1);
@@ -1028,8 +1055,8 @@ long multipole_tracking2(
     bombTracking("n_kicks<=0 in multipole()");
   if (order[0]<=0)
     bombTracking("order <= 0 in multipole()");
-  if (integ_order!=2 && integ_order!=4) 
-    bombTracking("multipole integration_order must be 2 or 4");
+  if (integ_order!=2 && integ_order!=4 && integ_order!=6) 
+    bombTracking("multipole integration_order must be 2, 4, or 6");
   
   for (iOrder=0; iOrder<3; iOrder++) {
     if (KnL[iOrder] && !expansion_coefficients(order[iOrder]))
@@ -1085,22 +1112,13 @@ long multipole_tracking2(
       abort();
     }
 
-    if ((integ_order==4 &&
-         !integrate_kick_multipole_ord4(coord, dx, dy, xkick, ykick,
-                                        Po, rad_coef, isr_coef, 
-                                        order, KnL, skew,
-                                        n_parts, drift, 
-                                        multData, edgeMultData, steeringMultData,
-                                        &apertureData, &dzLoss, sigmaDelta2,
-					elem->type==T_KQUAD?kquad->radial:0, tilt)) ||
-        (integ_order==2 &&
-         !integrate_kick_multipole_ord2(coord, dx, dy, xkick, ykick,
-                                        Po, rad_coef, isr_coef, 
-                                        order, KnL, skew,
-                                        n_parts, drift,
-                                        multData, edgeMultData, steeringMultData,
-                                        &apertureData, &dzLoss, sigmaDelta2,
-					elem->type==T_KQUAD?kquad->radial:0, tilt))) {
+    if (!integrate_kick_multipole_ordn(coord, dx, dy, xkick, ykick,
+                                       Po, rad_coef, isr_coef, 
+                                       order, KnL, skew,
+                                       n_parts, drift, integ_order,
+                                       multData, edgeMultData, steeringMultData,
+                                       &apertureData, &dzLoss, sigmaDelta2,
+                                       elem->type==T_KQUAD?kquad->radial:0, tilt)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
@@ -1592,6 +1610,275 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   }
   return 1;
 }
+
+int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xkick, double ykick,
+                                  double Po, double rad_coef, double isr_coef,
+                                  long *order, double *KnL,  short *skew,
+                                  long n_parts, double drift,
+                                  long integration_order,
+                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
+                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
+				  long radial, 
+                                  double refTilt /* used for obstruction evaluation only */
+                                  )
+{
+  double p, qx, qy, beta0, beta1, dp, s;
+  double x, y, xp, yp, sum_Fx, sum_Fy;
+  long i_kick, step, imult, iOrder;
+  double dsh;
+  long maxOrder;
+  double *xpow, *ypow;
+
+  static double driftFrac2[2] = {
+    0.5, 0.5
+  };
+  static double kickFrac2[2] = {
+    1.0, 0.0
+  };
+
+  static double driftFrac4[4] = {
+    0.5/(2-BETA),  (1-BETA)/(2-BETA)/2,  (1-BETA)/(2-BETA)/2,  0.5/(2-BETA)
+  } ;
+  static double kickFrac4[4] = {
+    1./(2-BETA),  -BETA/(2-BETA),  1/(2-BETA),  0
+  } ;
+
+  /* From AOP-TN-2020-064 */
+  static double driftFrac6[8] = {
+    0.39225680523878, 0.5100434119184585, -0.47105338540975655, 0.0687531682525181,
+    0.0687531682525181, -0.47105338540975655, 0.5100434119184585, 0.39225680523878,
+  } ;
+  static double kickFrac6[8] = {
+    0.784513610477560, 0.235573213359357, -1.17767998417887, 1.3151863206839063,
+    -1.17767998417887,  0.235573213359357, 0.784513610477560, 0
+  } ;
+
+  double *driftFrac = NULL, *kickFrac = NULL;
+  long nSubsteps = 0;
+  switch (integration_order) {
+  case 2:
+    nSubsteps = 2;
+    driftFrac = driftFrac2;
+    kickFrac = kickFrac2;
+    break;
+  case 4:
+    nSubsteps = 4;
+    driftFrac = driftFrac4;
+    kickFrac = kickFrac4;
+    break;
+  case 6:
+    nSubsteps = 8;
+    driftFrac = driftFrac6;
+    kickFrac = kickFrac6;
+    break;
+  default:
+    bombElegantVA("invalid order %ld given for symplectic integrator", integration_order);
+    break;
+  }
+
+  drift = drift/n_parts;
+  xkick = xkick/n_parts;
+  ykick = ykick/n_parts;
+
+  x = coord[0];
+  xp = coord[1];
+  y = coord[2];
+  yp = coord[3];
+  s  = 0;
+  dp = coord[5];
+  p = Po*(1+dp);
+  beta0 = p/sqrt(sqr(p)+1);
+
+#if defined(IEEE_MATH)
+  if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
+    return 0;
+  }
+#endif
+  if (FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
+      FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
+    return 0;
+  }
+
+  /* calculate initial canonical momenta */
+  convertSlopesToMomenta(&qx, &qy, xp, yp, dp);
+
+  maxOrder = findMaximumOrder(order[0], order[1]>order[2]?order[1]:order[2], edgeMultData, steeringMultData, multData);
+  xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
+  ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
+
+  if (edgeMultData && edgeMultData->orders) {
+    fillPowerArray(x, xpow, maxOrder);
+    fillPowerArray(y, ypow, maxOrder);
+    for (imult=0; imult<edgeMultData->orders; imult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->KnL[imult], 0);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->JnL[imult], 1);
+    }
+  }
+  /* We must do this in case steering or edge multipoles were run. We do it even if not in order
+   * to avoid numerical precision issues that may subtly change the results
+   */
+  if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
+    return 0;
+
+  *dzLoss = 0;
+  for (i_kick=0; i_kick<n_parts; i_kick++) {
+    if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
+	insideObstruction_xyz(x, y, coord[particleIDIndex], 
+			      globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
+			      refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
+      coord[0] = x;
+      coord[2] = y;
+      return 0;
+    }
+    for (step=0; step<nSubsteps; step++) {
+      if (drift) {
+        dsh = drift*driftFrac[step];
+        x += xp*dsh;
+        y += yp*dsh;
+        if (expandHamiltonian) {
+          s += dsh*(1 + (sqr(xp) + sqr(yp))/2);
+        } else {
+          s += dsh*sqrt(1 + sqr(xp) + sqr(yp));
+        }
+        *dzLoss += dsh;
+      }
+
+      if (!kickFrac[step])
+        break;
+
+      fillPowerArray(x, xpow, maxOrder);
+      fillPowerArray(y, ypow, maxOrder);
+
+      sum_Fx = sum_Fy = 0;
+
+      if (!radial) {
+	for (iOrder=0; iOrder<3; iOrder++)
+          if (KnL[iOrder])
+            apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
+                                            order[iOrder], KnL[iOrder]/n_parts*kickFrac[step], skew[iOrder]);
+      } else 
+	applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
+					   order[0], KnL[0]/n_parts*kickFrac[step], 0);
+
+      if (xkick)
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 0, -xkick*kickFrac[step], 0);
+      if (ykick)
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 0, -ykick*kickFrac[step], 1);
+	
+      if (steeringMultData && steeringMultData->orders) {
+        /* apply steering corrector multipoles */
+        for (imult=0; imult<steeringMultData->orders; imult++) {
+          if (steeringMultData->KnL[imult]) 
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                            steeringMultData->order[imult], 
+                                            steeringMultData->KnL[imult]*xkick*kickFrac[step], 0);
+          if (steeringMultData->JnL[imult]) 
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                            steeringMultData->order[imult], 
+                                            steeringMultData->JnL[imult]*ykick*kickFrac[step], 1);
+        }
+      }
+
+      if (multData) {
+        /* do kicks for spurious multipoles */
+        for (imult=0; imult<multData->orders; imult++) {
+          if (multData->KnL && multData->KnL[imult]) {
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                            multData->order[imult], 
+                                            multData->KnL[imult]*kickFrac[step]/n_parts,
+                                            0);
+          }
+          if (multData->JnL && multData->JnL[imult]) {
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                            multData->order[imult], 
+                                            multData->JnL[imult]*kickFrac[step]/n_parts,
+                                            1);
+          }
+        }
+      }
+
+      if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
+        return 0;
+
+      if ((rad_coef || isr_coef) && drift) {
+	double deltaFactor, F2, dsFactor, dsISRFactor;
+        qx /= (1+dp);
+        qy /= (1+dp);
+	deltaFactor = sqr(1+dp);
+	F2 = (sqr(sum_Fy*KnL[0]/n_parts-xkick)+sqr(sum_Fx*KnL[0]/n_parts+ykick))/sqr(drift);
+	dsFactor = sqrt(1+sqr(xp)+sqr(yp));
+	dsISRFactor = dsFactor*drift/(nSubsteps-1);   /* recall that kickFrac may be negative */
+	dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
+	if (rad_coef)
+	  dp -= rad_coef*deltaFactor*F2*dsFactor;
+	if (isr_coef>0)
+	  dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsISRFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+        if (sigmaDelta2)
+          *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
+        qx *= (1+dp);
+        qy *= (1+dp);
+        if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
+          return 0;
+      }
+    }
+  }
+  
+  if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
+      insideObstruction_xyz(x, y, coord[particleIDIndex],
+			    globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
+			    refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
+    coord[0] = x;
+    coord[2] = y;
+    return 0;
+  }
+  
+  if (edgeMultData && edgeMultData->orders) {
+    fillPowerArray(x, xpow, maxOrder);
+    fillPowerArray(y, ypow, maxOrder);
+    for (imult=0; imult<edgeMultData->orders; imult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->KnL[imult], 0);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->JnL[imult], 1);
+    }
+  }
+  if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
+    return 0;
+
+  free(xpow);
+  free(ypow);
+
+  coord[0] = x;
+  coord[1] = xp;
+  coord[2] = y;
+  coord[3] = yp;
+  if (rad_coef) {
+    p = Po*(1+dp);
+    beta1 = p/sqrt(sqr(p)+1);
+    coord[4] = beta1*(coord[4]/beta0 + 2*s/(beta0+beta1));
+  }
+  else 
+    coord[4] += s;
+  coord[5] = dp;
+
+#if defined(IEEE_MATH)
+  if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
+    return 0;
+  }
+#endif
+  if (FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
+      FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
+    return 0;
+  }
+  return 1;
+}
+
 
 void apply_canonical_multipole_kicks(double *qx, double *qy, 
                                      double *sum_Fx_return, double *sum_Fy_return,

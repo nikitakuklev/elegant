@@ -59,6 +59,10 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
                            double *dz_lost, MULT_APERTURE_DATA *apData);
 long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
                            double *dz_lost, MULT_APERTURE_DATA *apData);
+long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
+                           double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order);
+long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
+                                    double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order);
 void convertFromCSBendCoords(double **part, long np, double rho0, 
 			     double cos_ttilt, double sin_ttilt, long ctMode);
 void convertToCSBendCoords(double **part, long np, double rho0, 
@@ -720,8 +724,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (!(csbend->edgeFlags&BEND_EDGE_DETERMINED)) 
     bombElegant("CSBEND element doesn't have edge flags set.", NULL);
   
-  if (csbend->integration_order!=2 && csbend->integration_order!=4)
-    bombElegant("CSBEND integration_order is invalid--must be either 2 or 4", NULL);
+  if (csbend->integration_order!=2 && csbend->integration_order!=4 && csbend->integration_order!=6)
+    bombElegant("CSBEND integration_order is invalid--must be 2, 4, or 6", NULL);
 
   rho0 =  csbend->length/csbend->angle;
   if (csbend->use_bn) {
@@ -1070,21 +1074,12 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
     
-    if (csbend->integration_order==4) {
-      if (csbend->expandHamiltonian)
-        particle_lost = !integrate_csbend_ord4_expanded(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &dz_lost,
-                                                        &apertureData);
-      else
-        particle_lost = !integrate_csbend_ord4(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &dz_lost,
-                                                        &apertureData);
-    } else {
-      if (csbend->expandHamiltonian)
-        particle_lost = !integrate_csbend_ord2_expanded(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &dz_lost,
-                                                        &apertureData);
-      else 
-        particle_lost = !integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &dz_lost,
-                                               &apertureData);
-    }
+    if (csbend->expandHamiltonian)
+      particle_lost = !integrate_csbend_ordn_expanded(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &dz_lost,
+                                                      &apertureData, csbend->integration_order);
+    else
+      particle_lost = !integrate_csbend_ordn(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &dz_lost,
+                                             &apertureData, csbend->integration_order);
     if (csbend->fseCorrection==1)
       Qf[4] -= csbend->fseCorrectionPathError;
     convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
@@ -1564,6 +1559,8 @@ long integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
   return 1;
 }
 
+  /* BETA is 2^(1/3) */
+#define BETA 1.25992104989487316477
 
 long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
                            double *dz_lost, MULT_APERTURE_DATA *apData)
@@ -1587,9 +1584,6 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
 #define QY Qf[3]
 #define S Qf[4]
 #define DPoP Qf[5]
-
-  /* BETA is 2^(1/3) */
-#define BETA 1.25992104989487316477
 
   if (refTrajectoryMode && refTrajectoryPoints!=n)
     bombElegant("Problem with recorded reference trajectory for CSBEND element---has wrong number of points\n", NULL);
@@ -1789,6 +1783,171 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
   return 1;
 }
 
+
+long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
+                           double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order)
+{
+  long i;
+  double factor, f, phi, ds, dsh, dist;
+  double Fx, Fy, x, y;
+  double sine, cosi, tang;
+  double sin_phi, cos_phi;
+
+  static double driftFrac2[2] = {
+    0.5, 0.5
+  };
+  static double kickFrac2[2] = {
+    1.0, 0.0
+  };
+
+  static double driftFrac4[4] = {
+    0.5/(2-BETA),  (1-BETA)/(2-BETA)/2,  (1-BETA)/(2-BETA)/2,  0.5/(2-BETA)
+  } ;
+  static double kickFrac4[4] = {
+    1./(2-BETA),  -BETA/(2-BETA),  1/(2-BETA),  0
+  } ;
+
+  /* From AOP-TN-2020-064 */
+  static double driftFrac6[8] = {
+    0.39225680523878, 0.5100434119184585, -0.47105338540975655, 0.0687531682525181,
+    0.0687531682525181, -0.47105338540975655, 0.5100434119184585, 0.39225680523878,
+  } ;
+  static double kickFrac6[8] = {
+    0.784513610477560, 0.235573213359357, -1.17767998417887, 1.3151863206839063,
+    -1.17767998417887,  0.235573213359357, 0.784513610477560, 0
+  } ;
+
+  double *driftFrac = NULL, *kickFrac = NULL;
+  long nSubsteps = 0;
+  switch (integration_order) {
+  case 2:
+    nSubsteps = 2;
+    driftFrac = driftFrac2;
+    kickFrac = kickFrac2;
+    break;
+  case 4:
+    nSubsteps = 4;
+    driftFrac = driftFrac4;
+    kickFrac = kickFrac4;
+    break;
+  case 6:
+    nSubsteps = 8;
+    driftFrac = driftFrac6;
+    kickFrac = kickFrac6;
+    break;
+  default:
+    bombElegantVA("invalid order %ld given for symplectic integrator", integration_order);
+    break;
+  }
+  
+#define X0 Qi[0]
+#define XP0 Qi[1]
+#define Y0 Qi[2]
+#define YP0 Qi[3]
+#define S0 Qi[4]
+#define DPoP0 Qi[5]
+
+#define X Qf[0]
+#define QX Qf[1]
+#define Y Qf[2]
+#define QY Qf[3]
+#define S Qf[4]
+#define DPoP Qf[5]
+
+  if (refTrajectoryMode && refTrajectoryPoints!=n)
+    bombElegant("Problem with recorded reference trajectory for CSBEND element---has wrong number of points\n", NULL);
+  if (!Qf)
+    bombElegant("NULL final coordinates pointer ()", NULL);
+  if (!Qi)
+    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord4)", NULL);
+  if (n<1)
+    bombElegant("invalid number of steps (integrate_csbend_ord4)", NULL);
+
+  memcpy(Qf, Qi, sizeof(*Qi)*6);
+
+  dist = 0;
+
+  s /= n;
+  *dz_lost = 0; /* we'll accumulate this value even if the particle isn't lost */
+  for (i=0; i<n; i++) {
+    long j;
+    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
+      return 0;
+    }
+    for (j=0; j<nSubsteps; j++) {
+      /* do drift */
+      dsh = s*driftFrac[j];
+      if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
+        return 0;
+      }
+      f = sqrt(f);
+      if (fabs(QX/f)>1) {
+        return 0;
+      }
+      phi = asin(sin_phi=QX/f);
+      sine = sin(dsh/rho0+phi);
+      if ((cosi = cos(dsh/rho0+phi))==0) {
+        return 0;
+      }
+      tang = sine/cosi;
+      cos_phi = cos(phi);
+      QX = f*sine;
+      Y += QY*(factor=(rho0+X)*cos_phi/f*(tang-sin_phi/cos_phi));
+      dist += factor*(1+DPoP);
+      *dz_lost += dsh;
+      f = cos_phi/cosi;
+      X  = rho0*(f-1) + f*X;
+      if (apData && !checkMultAperture(X, Y, apData)) {
+        return 0;
+      }
+
+      if (kickFrac[j]==0)
+        break;
+      /* do kick */
+      ds = s*kickFrac[j];
+      /* -- calculate the scaled fields */
+      x = X;
+      y = Y;
+      
+      computeCSBENDFields(&Fx, &Fy, x, y);
+      
+      /* --do kicks */
+      QX += -ds*(1+X/rho0)*Fy/rho_actual;
+      QY += ds*(1+X/rho0)*Fx/rho_actual;
+      if (rad_coef || isrConstant) {
+        addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
+                         X, Y, (i+1./3)*s, s*n, 1./rho0, Fx, Fy, 
+                         ds, rad_coef, s/(nSubsteps-1), isrConstant,
+                         distributionBasedRadiation, includeOpeningAngle,
+                         meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
+      }
+    }
+
+    if (refTrajectoryMode==RECORD_TRAJECTORY) {
+      refTrajectoryData[i][0] = X;
+      refTrajectoryData[i][1] = QX;
+      refTrajectoryData[i][2] = Y;
+      refTrajectoryData[i][3] = QY;
+      refTrajectoryData[i][4] = dist - s;
+      X = QX = Y = QY = dist = 0;
+    }
+    if (refTrajectoryMode==SUBTRACT_TRAJECTORY) {
+      X -= refTrajectoryData[i][0];
+      QX -= refTrajectoryData[i][1];
+      Y -= refTrajectoryData[i][2];
+      QY -= refTrajectoryData[i][3];
+      dist -= refTrajectoryData[i][4];
+    }
+  }
+  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG,0.0, i, n)) {
+    *dz_lost = n*s;
+    return 0;
+  }
+
+  Qf[4] += dist;
+  return 1;
+}
+
 long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
                            double *dz_lost, MULT_APERTURE_DATA *apData)
 /* The Hamiltonian in this case is approximated as
@@ -1815,9 +1974,6 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 #define QY Qf[3]
 #define S Qf[4]
 #define DPoP Qf[5]
-
-  /* BETA is 2^(1/3) */
-#define BETA 1.25992104989487316477
 
   if (refTrajectoryMode && refTrajectoryPoints!=n)
     bombElegant("Problem with recorded reference trajectory for CSBEND element---has wrong number of points\n", NULL);
@@ -1964,6 +2120,159 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
   return 1;
 }
 
+long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
+                                    double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order)
+/* The Hamiltonian in this case is approximated as
+ * H = Hd + Hf, where Hd is the drift part and Hf is the field part.
+ * Hd = Hd1 + Hd2 + Hd1, where
+ * Hd1 = -0.5*(1+x/rho0)*(1+delta) 
+ * Hd2 = 0.5*(qx^2+qy^2)/(1+delta)
+ */
+{
+  long i;
+  double ds, dsh, dist;
+  double Fx, Fy, x, y;
+  
+  static double driftFrac2[2] = {
+    0.5, 0.5
+  };
+  static double kickFrac2[2] = {
+    1.0, 0.0
+  };
+
+  static double driftFrac4[4] = {
+    0.5/(2-BETA),  (1-BETA)/(2-BETA)/2,  (1-BETA)/(2-BETA)/2,  0.5/(2-BETA)
+  } ;
+  static double kickFrac4[4] = {
+    1./(2-BETA),  -BETA/(2-BETA),  1/(2-BETA),  0
+  } ;
+
+  /* From AOP-TN-2020-064 */
+  static double driftFrac6[8] = {
+    0.39225680523878, 0.5100434119184585, -0.47105338540975655, 0.0687531682525181,
+    0.0687531682525181, -0.47105338540975655, 0.5100434119184585, 0.39225680523878,
+  } ;
+  static double kickFrac6[8] = {
+    0.784513610477560, 0.235573213359357, -1.17767998417887, 1.3151863206839063,
+    -1.17767998417887,  0.235573213359357, 0.784513610477560, 0
+  } ;
+
+  double *driftFrac = NULL, *kickFrac = NULL;
+  long nSubsteps = 0;
+  switch (integration_order) {
+  case 2:
+    nSubsteps = 2;
+    driftFrac = driftFrac2;
+    kickFrac = kickFrac2;
+    break;
+  case 4:
+    nSubsteps = 4;
+    driftFrac = driftFrac4;
+    kickFrac = kickFrac4;
+    break;
+  case 6:
+    nSubsteps = 8;
+    driftFrac = driftFrac6;
+    kickFrac = kickFrac6;
+    break;
+  default:
+    bombElegantVA("invalid order %ld given for symplectic integrator", integration_order);
+    break;
+  }
+#define X0 Qi[0]
+#define XP0 Qi[1]
+#define Y0 Qi[2]
+#define YP0 Qi[3]
+#define S0 Qi[4]
+#define DPoP0 Qi[5]
+
+#define X Qf[0]
+#define QX Qf[1]
+#define Y Qf[2]
+#define QY Qf[3]
+#define S Qf[4]
+#define DPoP Qf[5]
+
+  if (refTrajectoryMode && refTrajectoryPoints!=n)
+    bombElegant("Problem with recorded reference trajectory for CSBEND element---has wrong number of points\n", NULL);
+  if (!Qf)
+    bombElegant("NULL final coordinates pointer ()", NULL);
+  if (!Qi)
+    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord4)", NULL);
+  if (n<1)
+    bombElegant("invalid number of steps (integrate_csbend_ord4)", NULL);
+
+  memcpy(Qf, Qi, sizeof(*Qi)*6);
+
+  dist = 0;
+
+  s /= n;
+  *dz_lost = 0; /* we'll accumulate this value even if the particle isn't lost */
+  for (i=0; i<n; i++) {
+    long j;
+    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
+      return 0;
+    }
+    for (j=0; j<nSubsteps; j++) {
+      /* do drift */
+      dsh = s*driftFrac[j];
+      QX += dsh*(1+DPoP)/(2*rho0);
+      dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
+      *dz_lost += dsh;
+      X += QX*dsh/(1+DPoP);
+      Y += QY*dsh/(1+DPoP);
+      QX += dsh*(1+DPoP)/(2*rho0);
+      
+      if (apData && !checkMultAperture(X, Y, apData)) {
+        return 0;
+      }
+      
+      if (kickFrac[j]==0)
+        break;
+      /* do kick */
+      ds = s*kickFrac[j];
+      /* -- calculate the scaled fields */
+      x = X;
+      y = Y;
+      
+      computeCSBENDFields(&Fx, &Fy, x, y);
+      
+      /* --do kicks */
+      QX += -ds*(1+X/rho0)*Fy/rho_actual;
+      QY += ds*(1+X/rho0)*Fx/rho_actual;
+      if (rad_coef || isrConstant) {
+        addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
+                         X, Y, (i+1./3)*s, s*n, 1./rho0, Fx, Fy, 
+                         ds, rad_coef, s/3, isrConstant,
+                         distributionBasedRadiation, includeOpeningAngle,
+                         meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
+      }
+    }
+  
+    if (refTrajectoryMode==RECORD_TRAJECTORY) {
+      refTrajectoryData[i][0] = X;
+      refTrajectoryData[i][1] = QX;
+      refTrajectoryData[i][2] = Y;
+      refTrajectoryData[i][3] = QY;
+      refTrajectoryData[i][4] = dist - s;
+      X = QX = Y = QY = dist = 0;
+    }
+    if (refTrajectoryMode==SUBTRACT_TRAJECTORY) {
+      X -= refTrajectoryData[i][0];
+      QX -= refTrajectoryData[i][1];
+      Y -= refTrajectoryData[i][2];
+      QY -= refTrajectoryData[i][3];
+      dist -= refTrajectoryData[i][4];
+    }
+  }
+  *dz_lost = n*s;
+  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
+    return 0;
+  }
+
+  Qf[4] += dist;
+  return 1;
+}
 
 CSR_LAST_WAKE csrWake;
 
@@ -2103,8 +2412,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     return n_part;
   }
 
-  if (csbend->integration_order!=2 && csbend->integration_order!=4)
-    bombElegant("CSBEND integration_order is invalid--must be either 2 or 4", NULL);
+  if (csbend->integration_order!=2 && csbend->integration_order!=4  && csbend->integration_order!=6)
+    bombElegant("CSBEND integration_order is invalid--must be either 2, 4, or 6", NULL);
 
   macroParticleCharge = 0;
   if (charge) {
@@ -2489,11 +2798,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             Qi[5] = DP;
             convertToDipoleCanonicalCoordinates(Qi, 0);
             
-            if (csbend->integration_order==4)
-              particleLost = !integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &dz_lost, &apertureData);
-            else
-              particleLost = !integrate_csbend_ord2(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &dz_lost, &apertureData);
-            
+            particleLost = !integrate_csbend_ordn(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &dz_lost, &apertureData, csbend->integration_order);
+
             /* retrieve coordinates from arrays */
             convertFromDipoleCanonicalCoordinates(Qf, 0);
             X  = Qf[0];  

@@ -339,7 +339,8 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
     
     if (entity_description[type].flags&HAS_MATRIX && 
         entity_description[type].parameter[param].flags&PARAM_CHANGES_MATRIX &&
-        ((modData->flags[iMod]&REFRESH_MATRIX_MOD) || (entity_description[type].flags&MATRIX_TRACKING))) {
+        ((modData->flags[iMod]&REFRESH_MATRIX_MOD) || 
+         (entity_description[type].flags&(MATRIX_TRACKING+HYBRID_TRACKING)))) {
       /* update the matrix */
       if (modData->element[iMod]->matrix) {
         free_matrices(modData->element[iMod]->matrix);

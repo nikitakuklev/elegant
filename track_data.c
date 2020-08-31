@@ -371,16 +371,16 @@ PARAMETER mult_param[N_MULT_PARAMS] = {
 FMULT fmult_example;
 /* multipole physical parameters */
 PARAMETER fmult_param[N_FMULT_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 0, (long)((char *)&fmult_example.length), NULL, 0.0, 0, "length"},
-    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&fmult_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&fmult_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&fmult_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 0, (long)((char *)&fmult_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "", IS_DOUBLE, 0, (long)((char *)&fmult_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&fmult_example.n_kicks), NULL, 0.0, 1, "number of kicks"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.length), NULL, 0.0, 0, "length"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.n_kicks), NULL, 0.0, 1, "number of kicks"},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&fmult_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&fmult_example.filename), NULL, 0.0, 0, "name of file containing multipole data"},
-    {"SQRT_ORDER", "", IS_SHORT, 0, (long)((char *)&fmult_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
+    {"SQRT_ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     };
 
 TAYLORSERIES taylorSeries_example;
@@ -3571,8 +3571,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_MULT_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,       sizeof(MULT),    mult_param     }, 
     {    N_SOLE_PARAMS,     MAT_LEN|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK|GPU_SUPPORT|BACKTRACK,
            sizeof(SOLE),    sole_param     }, 
-    {    N_HCOR_PARAMS,     MAT_LEN|IS_MAGNET|GPU_SUPPORT,        sizeof(HCOR),    hcor_param     }, 
-    {    N_VCOR_PARAMS,     MAT_LEN|IS_MAGNET|GPU_SUPPORT,        sizeof(VCOR),    vcor_param     }, 
+    {    N_HCOR_PARAMS,     MAT_LEN|IS_MAGNET|GPU_SUPPORT|HYBRID_TRACKING,        sizeof(HCOR),    hcor_param     }, 
+    {    N_VCOR_PARAMS,     MAT_LEN|IS_MAGNET|GPU_SUPPORT|HYBRID_TRACKING,        sizeof(VCOR),    vcor_param     }, 
     {    N_RFCA_PARAMS,     MAT_LEN_NCAT|BACKTRACK|HAS_RF_MATRIX|MAY_CHANGE_ENERGY|MPALGORITHM|DIVIDE_OK|GPU_SUPPORT,
                      sizeof(RFCA),    rfca_param     }, 
     {                0,           NO_DICT_OUTPUT,                  0,    NULL           },
@@ -3613,7 +3613,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
                                           sizeof(KQUAD),    kquad_param    },
     { N_MAGNIFY_PARAMS, HAS_MATRIX|MATRIX_TRACKING,     sizeof(MAGNIFY),    magnify_param  },
     {  N_SAMPLE_PARAMS,          0|NO_APERTURE,      sizeof(SAMPLE),    sample_param   },
-    {   N_HVCOR_PARAMS,    MAT_LEN|IS_MAGNET,        sizeof(HVCOR),    hvcor_param    }, 
+    {   N_HVCOR_PARAMS,    MAT_LEN|IS_MAGNET|HYBRID_TRACKING,        sizeof(HVCOR),    hvcor_param    }, 
     { N_SCATTER_PARAMS,          0,     sizeof(SCATTER),    scatter_param  },
     {  N_NIBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET,
                                          sizeof(NIBEND),    nibend_param   },

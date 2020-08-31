@@ -234,7 +234,7 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
     if (entity_description[type].flags&HAS_MATRIX && 
         entity_description[type].parameter[param].flags&PARAM_CHANGES_MATRIX &&
         ((rampData->flags[iMod]&REFRESH_MATRIX_RAMP) ||
-         (entity_description[type].flags&MATRIX_TRACKING))) {
+         (entity_description[type].flags&(MATRIX_TRACKING+HYBRID_TRACKING)))) {
       /* update the matrix */
       if (rampData->element[iMod]->matrix) {
         free_matrices(rampData->element[iMod]->matrix);

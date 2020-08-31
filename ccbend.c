@@ -349,8 +349,8 @@ long track_through_ccbend(
 
   if (n_kicks<=0)
     bombTracking("n_kicks<=0 in track_ccbend()");
-  if (integ_order!=2 && integ_order!=4) 
-    bombTracking("multipole integration_order must be 2 or 4");
+  if (integ_order!=2 && integ_order!=4 && integ_order!=6) 
+    bombTracking("multipole integration_order must be 2, 4, or 6");
 
   if (!(coef = expansion_coefficients(0)))
     bombTracking("expansion_coefficients(0) returned NULL pointer (track_through_ccbend)");
@@ -760,7 +760,7 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
                        double Po, double rad_coef, double isr_coef, /* radiation effects */
                        double *KnLFull, 
                        long nTerms,
-                       long integration_order, /* 2 or 4 */
+                       long integration_order, /* 2, 4, or 6 */
                        long n_parts, /* N_KICKS */
                        long iPart,   /* If <0, integrate the full magnet. If >=0, integrate just a single part and return.
                                       * This is needed to allow propagation of the radiation matrix. */
@@ -779,23 +779,56 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
   double xSum;
-  long i_kick, step, steps, iMult, nSum;
+  long i_kick, step, iMult, nSum;
   double dsh;
   long maxOrder, iTerm;
   double *xpow, *ypow, *KnL;
-  static double driftFrac[4] = {
+  static double driftFrac2[2] = {
+    0.5, 0.5
+  };
+  static double kickFrac2[2] = {
+    1.0, 0.0
+  };
+
+  static double driftFrac4[4] = {
     0.5/(2-BETA),  (1-BETA)/(2-BETA)/2,  (1-BETA)/(2-BETA)/2,  0.5/(2-BETA)
-    } ;
-  static double kickFrac[4] = {
+  } ;
+  static double kickFrac4[4] = {
     1./(2-BETA),  -BETA/(2-BETA),  1/(2-BETA),  0
-    } ;
-  if (integration_order==2) {
-    driftFrac[0] = driftFrac[1] = 0.5;
-    kickFrac[0] = 1;
-    kickFrac[1] = 0;
-    steps = 2;
-  } else
-    steps = 4;
+  } ;
+
+  /* From AOP-TN-2020-064 */
+  static double driftFrac6[8] = {
+    0.39225680523878, 0.5100434119184585, -0.47105338540975655, 0.0687531682525181,
+    0.0687531682525181, -0.47105338540975655, 0.5100434119184585, 0.39225680523878,
+  } ;
+  static double kickFrac6[8] = {
+    0.784513610477560, 0.235573213359357, -1.17767998417887, 1.3151863206839063,
+    -1.17767998417887,  0.235573213359357, 0.784513610477560, 0
+  } ;
+
+  double *driftFrac = NULL, *kickFrac = NULL;
+  long nSubsteps = 0;
+  switch (integration_order) {
+  case 2:
+    nSubsteps = 2;
+    driftFrac = driftFrac2;
+    kickFrac = kickFrac2;
+    break;
+  case 4:
+    nSubsteps = 4;
+    driftFrac = driftFrac4;
+    kickFrac = kickFrac4;
+    break;
+  case 6:
+    nSubsteps = 8;
+    driftFrac = driftFrac6;
+    kickFrac = kickFrac6;
+    break;
+  default:
+    bombElegantVA("invalid order %ld given for symplectic integrator", integration_order);
+    break;
+  }
 
   drift = drift/n_parts;
 
@@ -887,7 +920,7 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
       free(KnL);
       return 0;
     }
-    for (step=0; step<steps; step++) {
+    for (step=0; step<nSubsteps; step++) {
       if (drift) {
         dsh = drift*driftFrac[step];
         x += xp*dsh;
