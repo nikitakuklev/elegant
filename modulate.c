@@ -25,6 +25,8 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
   double *tData, *AData;
   long nData = 0;
   
+  modData->beamline = beamline;
+
   /* process namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
@@ -120,6 +122,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
     modData->record           = SDDS_Realloc(modData->record, sizeof(*modData->record)*(n_items+1));
     modData->flushRecord      = SDDS_Realloc(modData->flushRecord, sizeof(*modData->flushRecord)*(n_items+1));
     modData->fpRecord         = SDDS_Realloc(modData->fpRecord, sizeof(*modData->fpRecord)*(n_items+1));
+    modData->convertPassToTime = SDDS_Realloc(modData->convertPassToTime, sizeof(*modData->convertPassToTime)*(n_items+1));
 
     modData->element[n_items] = context;
     modData->flags[n_items] = (multiplicative?MULTIPLICATIVE_MOD:0) + (differential?DIFFERENTIAL_MOD:0) 
@@ -130,6 +133,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
     modData->fpRecord[n_items] = NULL;
     modData->nData[n_items] = 0;
     modData->flushRecord[n_items] = flush_record;
+    modData->convertPassToTime[n_items] = convert_pass_to_time;
 
     if (filename) {
       if ((modData->dataIndex[n_items] = firstIndexInGroup)==-1) {
@@ -212,7 +216,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
 {
   long iMod, code, matricesUpdated, jMod;
   /* short modulationValid = 0; */
-  double modulation, value, t, lastValue;
+  double modulation, value, t, tBeam, lastValue, beta;
   long type, param;
   char *p_elem;
  
@@ -232,16 +236,25 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
   if (modData->nItems<=0)
     return 0;
 
+  beta = pCentral/sqrt(pCentral*pCentral+1);
+
 #ifdef HAVE_GPU
   if (getGpuBase()->elementOnGpu)
-    t = gpu_findFiducialTime(np,0, 0, pCentral, FID_MODE_TMEAN|FID_MODE_FULLBEAM);
+    tBeam = gpu_findFiducialTime(np,0, 0, pCentral, FID_MODE_TMEAN|FID_MODE_FULLBEAM);
   else 
 #endif
-    t = findFiducialTime(coord, np, 0, 0, pCentral, FID_MODE_TMEAN|FID_MODE_FULLBEAM);
+    tBeam = findFiducialTime(coord, np, 0, 0, pCentral, FID_MODE_TMEAN|FID_MODE_FULLBEAM);
   matricesUpdated = 0;
 
 
   for (iMod=0; iMod<modData->nItems; iMod++) {
+    if (modData->convertPassToTime[iMod]) {
+      double s0;
+      s0 = modData->beamline->elem_recirc ? modData->beamline->elem_recirc->end_pos : 0;
+      t = (iPass*modData->beamline->revolution_length + (modData->element[iMod]->end_pos-s0))/(beta*c_mks);
+    } else
+      t = tBeam;
+
     type = modData->element[iMod]->type;
     param = modData->parameterNumber[iMod];
     p_elem = (char*)(modData->element[iMod]->p_elem);

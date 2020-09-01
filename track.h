@@ -460,6 +460,7 @@ typedef struct line_list {
 
 typedef struct {
     long nItems;
+    LINE_LIST *beamline;
     ELEMENT_LIST **element;      /* element to be modulated */
     char **item;                 /* name of item to vary for each element, e.g., "K1" */
     long *parameterNumber;       /* parameter number of varied value */
@@ -479,6 +480,7 @@ typedef struct {
     char **record;               /* output filenames */
     long *flushRecord;           /* passes between flushing the record file */
     FILE **fpRecord;             /* output file structures */
+    long *convertPassToTime;
   } MODULATION_DATA;
 
 typedef struct {

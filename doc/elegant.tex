@@ -61,7 +61,11 @@ for the same element. This was reported by V. Sajaev (APS).
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None.
+\item The \verb|CCBEND|, \verb|CSBEND|, \verb|FMULT|, \verb|KOCT|, \verb|KSEXT|, and \verb|KQUAD| now support 
+  sixth-order symplectic integrators. The coefficients were provided by Y.P. Sun (APS), who also assisted in testing.
+  The value of the \verb|N_KICKS| parameter may be reduced by a factor of $\sim$5 if the sixth-order integrator
+  is used in place of the fourth-order integrator, with essentially identical results but a $\sim$30\% reduction
+  in run time.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -71,11 +75,8 @@ for the same element. This was reported by V. Sajaev (APS).
   This was requested by X. Huang (APS).
 \item The \verb|moments_output| command now provides additional quantities for optimization at \verb|MARK| locations.
   See the documentation for the \verb|MARK| element.
-\item The \verb|CCBEND|, \verb|CSBEND|, \verb|FMULT|, \verb|KOCT|, \verb|KSEXT|, and \verb|KQUAD| now support 
-  sixth-order symplectic integrators. The coefficients were provided by Y.P. Sun (APS), who also assisted in testing.
-  The value of the \verb|N_KICKS| parameter may be reduced by a factor of $\sim$5 if the sixth-order integrator
-  is used in place of the fourth-order integrator, with essentially identical results but a $\sim$30\% reduction
-  in run time.
+\item The \verb|modulate_elements| command now provides the ability to use the pass number to compute the time,
+  which is helpful in simulations where the time is offset by \verb|CHANGE_T=1| on \verb|RFCA| elements.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -3175,6 +3176,7 @@ from which to begin concatenation and output.
     STRING expression = NULL;
     STRING filename = NULL;
     STRING time_column = NULL;
+    long convert_pass_to_time;
     STRING amplitude_column = NULL;
     long refresh_matrix = 0;
     long differential = 1;
@@ -3211,6 +3213,11 @@ is modulated.
   \verb|expression| is not used.
 \item \verb|time_column| --- Name of column in \verb|filename| giving time data for the
   modulation table.
+\item \verb|convert_pass_to_time| --- By default, the mean arrival time of the beam is used to
+  compute the time value for computing the modulation amplitude.
+  If the arrival time vales are offset by \verb|CHANGE_T=1| on \verb|RFCA| elements, this won't
+  work as desired. In that case, one can compute the time from the pass number and the position
+  of the element within the lattice.
 \item \verb|amplitude_column| --- Name of column in \verb|filename| giving amplitude data
   for the modulation.  Together, \verb|time_column| and \verb|amplitude_column| define
   a function $A(t)$.

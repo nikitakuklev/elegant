@@ -12,6 +12,7 @@
     STRING expression = NULL;
     STRING filename = NULL;
     STRING time_column = NULL;
+    long convert_pass_to_time = 0;
     STRING amplitude_column = NULL;
     long refresh_matrix = 0;
     long differential = 1;
