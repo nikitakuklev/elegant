@@ -27,14 +27,16 @@
 #define ION_FIELD_TRIGAUSSIAN 3
 #define ION_FIELD_TRILORENTZIAN 4
 #define ION_FIELD_EGAUSSIAN 5
-#define N_ION_FIELD_METHODS 6
+#define ION_FIELD_GAUSSIANFIT 6
+#define N_ION_FIELD_METHODS 7
 static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
   (char*)"gaussian",
   (char*)"bigaussian",
   (char*)"bilorentzian",
   (char*)"trigaussian",
   (char*)"trilorentzian",
-  (char*)"egaussian"
+  (char*)"egaussian",
+  (char*)"gaussianfit"
 };
 static long ionFieldMethod = -1;
 static long isLorentzian = 0;
@@ -98,7 +100,7 @@ void computeIonEffectsElectronBunchParameters(double **part, double *time, long 
 					      double centroid[2], double sigma[2]);
 void setIonEffectsElectronBunchOutput(IONEFFECTS *ionEffects, double tNow, long iPass, long iBunch, double qBunch, 
 				      long npTotal, double bunchSigma[4], double bunchCentroid[4]);
-void setIonEffectsIonParameterOutput(IONEFFECTS *ionEffects, double tNow, long iPass, long iBunch, double qIon,
+void setIonEffectsIonParameterOutput(IONEFFECTS *ionEffects, double tNow, long iPass, long iBunch, long nBunches, double qIon,
 				     double ionSigma[2], double ionCentroid[2]);
 void advanceIonPositions(IONEFFECTS *ionEffects, long iPass, double tNow);
 void computeIonOverallParameters(IONEFFECTS *ionEffects, double ionCentroid[2], double ionSigma[2], double *qIonReturn,
@@ -406,6 +408,8 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     nFunctions = 2;
   else if (ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN)
     nFunctions = 3;
+  else if (ionFieldMethod==ION_FIELD_GAUSSIANFIT)
+    nFunctions = 1;
   isLorentzian = 0;
   if (ionFieldMethod==ION_FIELD_BILORENTZIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN)
     isLorentzian = 1;
@@ -759,7 +763,7 @@ void trackWithIonEffects
 
     computeIonOverallParameters(ionEffects, ionCentroid, ionSigma, &qIon, &nIonsTotal, bunchCentroid, bunchSigma, iBunch);
 
-    setIonEffectsIonParameterOutput(ionEffects, tNow, iPass, iBunch, qIon, ionSigma, ionCentroid);
+    setIonEffectsIonParameterOutput(ionEffects, tNow, iPass, iBunch, nBunches, qIon, ionSigma, ionCentroid);
 
     if (npTotal)
       applyIonKicksToElectronBunch(ionEffects, part, np, Po, iBunch, iPass, qBunch, bunchCentroid, bunchSigma, 
@@ -1362,7 +1366,8 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
     }
 
     pFunctions = 2;
-    for (mFunctions=2; mFunctions<=nFunctions; mFunctions++) {
+    for (mFunctions=1; mFunctions<=nFunctions; mFunctions++) {
+      if ((mFunctions == 1) && (nFunctions > 1)) continue;
       if (verbosity>100) {
 	printf("multipleWhateverFit, mFunctions=%ld\n", mFunctions);
 	fflush(stdout);
@@ -1384,7 +1389,42 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
       }
       
       /* smaller sigma is close to the beam size, larger is close to ion sigma */
-      if (mFunctions==2) {
+
+      if (mFunctions==1) { //single gaussian fit
+	#if USE_MPI
+	if (myid%2==0 && ionEffects->xyFitSet[plane]&0x01) {
+	  memcpy(paramValue, ionEffects->xyFitParameter2[plane], 6*sizeof(double));
+	} else {
+	  paramValue[0] = ionSigma[2*plane];
+	  paramValue[1] = ionCentroid[2*plane];
+	  paramValue[2] = peakVal;
+	}
+#else
+	if (ionEffects->xyFitSet[plane]&0x01) {
+	  memcpy(paramValue, ionEffects->xyFitParameter2[plane], 6*sizeof(double));
+	} else {
+	  paramValue[0] = ionSigma[2*plane];
+	  paramValue[1] = ionCentroid[2*plane];
+	  paramValue[2] = peakVal;
+	}
+#endif
+        paramDelta[0] = paramValue[0]/2;
+        paramDelta[1] = abs(bunchCentroid[2*plane])/2;
+        paramDelta[2] = peakVal/4;
+        lowerLimit[0] = paramValue[0]/100;
+        if (ionEffects->sigmaLimitMultiplier[plane]>0 && 
+	    lowerLimit[0]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
+          lowerLimit[0] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]; 
+        lowerLimit[1] = xMin/10;
+        lowerLimit[2] = peakVal/20;
+        //upperLimit[0] = paramValue[0]*10;
+	upperLimit[0] = 20*bunchSigma[2*plane];
+        if (upperLimit[0]<lowerLimit[0])
+          upperLimit[0] = 2*lowerLimit[0];
+        upperLimit[1] = xMax/10;
+        upperLimit[2] = 2*peakVal;
+	
+      } else if (mFunctions==2) {
 #if USE_MPI
 	if (myid%2==0 && ionEffects->xyFitSet[plane]&0x01) {
 	  memcpy(paramValue, ionEffects->xyFitParameter2[plane], 6*sizeof(double));
@@ -1418,7 +1458,8 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
         lowerLimit[1] = xMin/10;
         lowerLimit[2] = peakVal/20;
         //upperLimit[0] = paramValue[0]*10;
-	upperLimit[0] = 10*bunchSigma[2*plane];
+	//upperLimit[0] = 20*bunchSigma[2*plane];
+	upperLimit[0] = ionEffects->ionDelta[plane]*nData;
         if (upperLimit[0]<lowerLimit[0])
           upperLimit[0] = 2*lowerLimit[0];
         upperLimit[1] = xMax/10;
@@ -1434,7 +1475,8 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
         lowerLimit[4] = xMin/10;
         lowerLimit[5] = paramDelta[5]/5;
         //upperLimit[3] = paramValue[3]*10;
-	upperLimit[3] = 10*bunchSigma[2*plane];
+	//upperLimit[3] = 20*bunchSigma[2*plane];
+	upperLimit[3] = ionEffects->ionDelta[plane]*nData;
         if (upperLimit[3]<lowerLimit[3])
           upperLimit[3] = 2*lowerLimit[3];
         upperLimit[4] = xMax/10;
@@ -1542,7 +1584,7 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 #endif
 	fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
 				 NULL, nVariables, fitTarget, fitTolerance, 
-				 ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN
+				 ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_GAUSSIANFIT
 				 ?multiGaussianFunction:multiLorentzianFunction,
 				 (verbosity>200?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
 	memcpy(paramDelta, paramDeltaSave, sizeof(*paramDelta)*9);
@@ -1710,7 +1752,7 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 #else
     ionEffects->nEvaluations[plane] = nEvaluations;
 #endif
-    if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN)
+    if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_GAUSSIANFIT) 
       ionEffects->xyFitResidual[plane] = multiGaussianFunction(paramValue, &dummy);
     else
       ionEffects->xyFitResidual[plane] = multiLorentzianFunction(paramValue, &dummy);
@@ -2169,6 +2211,7 @@ void setIonEffectsIonParameterOutput
  double tNow,
  long iPass,
  long iBunch,
+ long nBunches,
  double qIon,
  double ionSigma[2],
  double ionCentroid[2]
@@ -2178,7 +2221,7 @@ void setIonEffectsIonParameterOutput
 #if USE_MPI
   if (myid==0) {
 #endif
-    if ((SDDS_ionDensityOutput) && (iPass-ionEffects->startPass+iBunch)%ionEffects->generationInterval==0) {
+    if ((SDDS_ionDensityOutput) && (((iPass-ionEffects->startPass)*nBunches+iBunch)%ion_output_interval==0)) {
       if (ion_output_all_locations || ionEffects==firstIonEffects) {
 	if (!SDDS_SetParameters(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, &
 				"s", ionEffects->sLocation, "Pass", iPass, NULL) ||
@@ -2833,7 +2876,7 @@ void applyIonKicksToElectronBunch
     normX = ionEffects->ionDelta[0];
     normY = ionEffects->ionDelta[1];
 
-    if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN) {
+    if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_GAUSSIANFIT) {
       /* paramValueX[0..8] = sigma1, centroid1, height1, sigma2, centroid2, height2, [sigma3, centroid3, height3] */
       /* paramValueY[0..8] = sigma1, centroid1, height1, sigma2, centroid2, height2, [sigma3, centroid3, height3] */
       for (int ix=0; ix<nFunctions; ix++) {
@@ -2857,7 +2900,7 @@ void applyIonKicksToElectronBunch
 	    tempQ[ix+iy*nFunctions] = 0;
 	}
       }
-    } else if (ionEffects->ionFieldMethod==ION_FIELD_BILORENTZIAN || ionEffects->ionFieldMethod==ION_FIELD_TRILORENTZIAN) {
+    } else if (ionEffects->ionFieldMethod==ION_FIELD_BILORENTZIAN || ionEffects->ionFieldMethod==ION_FIELD_TRILORENTZIAN || ionEffects->ionFieldMethod==ION_FIELD_GAUSSIANFIT) {
       /* paramValueX[0..8] = ax1, centroidx1, heightx1, ax2, centroidx2, heightx2, [ax3, centroidx3, heightx3] */
       /* paramValueY[0..8] = ay1, centroidy1, heighty1, ay2, centroidy2, heighty2, [ay3, centroidy3, heighty3] */
       for (int ix=0; ix<nFunctions; ix++) {
@@ -2924,6 +2967,7 @@ void applyIonKicksToElectronBunch
 	break;
       case ION_FIELD_BIGAUSSIAN:
       case ION_FIELD_TRIGAUSSIAN:
+      case ION_FIELD_GAUSSIANFIT:
 	double maxkick[2], tempart[4];
  	maxkick[0] = maxkick[1] = 0;
 	for (int i=0; i<nFunctions*nFunctions; i++)  {
