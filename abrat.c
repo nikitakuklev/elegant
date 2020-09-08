@@ -960,17 +960,17 @@ int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inpu
                            SDDS_DOUBLE, (sprintf(s, "%.15e", rigidity), s)) < 0 ||
       SDDS_DefineParameter(SDDS_output, "FSE", "$gr$r", "", "Optimal FSE", NULL,
                            SDDS_DOUBLE, (sprintf(s, "%.15e", fse), s)) < 0 ||
-      SDDS_DefineParameter(SDDS_output, "ZVertex", "Z$bv$n", "", "Vertex point Z coordinate", NULL,
+      SDDS_DefineParameter(SDDS_output, "ZVertex", "Z$bv$n", "m", "Vertex point Z coordinate", NULL,
                            SDDS_DOUBLE, (sprintf(s, "%.15e", zVertex), s)) < 0 ||
-      SDDS_DefineParameter(SDDS_output, "XVertex", "X$bv$n", "", "Vertex point Z coordinate", NULL,
+      SDDS_DefineParameter(SDDS_output, "XVertex", "X$bv$n", "m", "Vertex point Z coordinate", NULL,
                            SDDS_DOUBLE, (sprintf(s, "%.15e", xVertex), s)) < 0 ||
-      SDDS_DefineParameter(SDDS_output, "ZEntry", "Z$bv$n", "", "Entry point Z coordinate", NULL,
+      SDDS_DefineParameter(SDDS_output, "ZEntry", "Z$bv$n", "m", "Entry point Z coordinate", NULL,
                            SDDS_DOUBLE, (sprintf(s, "%.15e", zNomEntry), s)) < 0 ||
-      SDDS_DefineParameter(SDDS_output, "XEntry", "X$bv$n", "", "Entry point Z coordinate", NULL,
+      SDDS_DefineParameter(SDDS_output, "XEntry", "X$bv$n", "m", "Entry point Z coordinate", NULL,
                            SDDS_DOUBLE, (sprintf(s, "%.15e", xNomEntry), s)) < 0 ||
-      SDDS_DefineParameter(SDDS_output, "ZExit", "Z$bv$n", "", "Exit point Z coordinate", NULL,
+      SDDS_DefineParameter(SDDS_output, "ZExit", "Z$bv$n", "m", "Exit point Z coordinate", NULL,
                            SDDS_DOUBLE, (sprintf(s, "%.15e", zNomExit), s)) < 0 ||
-      SDDS_DefineParameter(SDDS_output, "XExit", "X$bv$n", "", "Exit point Z coordinate", NULL,
+      SDDS_DefineParameter(SDDS_output, "XExit", "X$bv$n", "m", "Exit point Z coordinate", NULL,
                            SDDS_DOUBLE, (sprintf(s, "%.15e", xNomExit), s)) < 0 ||
       SDDS_DefineParameter(SDDS_output, "xf", "x$bf$n", "m", "Final x", NULL, SDDS_DOUBLE, NULL) < 0 ||
       SDDS_DefineParameter(SDDS_output, "xpf", "x'$bf$n", NULL, "Final x'", NULL, SDDS_DOUBLE, NULL) < 0 ||
