@@ -14,6 +14,7 @@
           STRING ion_density_output = NULL;
           long ion_output_all_locations = 1;
           long ion_species_output = 0;
+	  long ion_output_interval = 1;	
           STRING field_calculation_method = NULL;
           long conserve_momentum = 0;
 	  double distribution_fit_target = 0.03;
@@ -45,6 +46,5 @@
 	  long freeze_electrons_until_pass = 0;
 	  long ion_fit_subtract_baseline = 1;
 	  long verbosity = 0;	
-	  long ion_output_interval = 1;	
 #end
 

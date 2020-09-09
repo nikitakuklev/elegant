@@ -57,6 +57,8 @@ Here is a summary of what's changed since release 2020.3.  Historical change log
 for the same element. This was reported by V. Sajaev (APS).
 \item The \verb|HKICK|, \verb|VKICK|, and \verb|HVKICK| elements were not responding properly to the \verb|ramp_elements|
   and \verb|modulate_elements| commands. This was reported by V. Sajaev (APS).
+\item A bug was fixed in \verb|ion_effects| that sometimes caused unphysical sigma values in the bi- and tri-gaussian
+  fits. The bug was found and fixed by J. Calvey (APS).
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -77,6 +79,10 @@ for the same element. This was reported by V. Sajaev (APS).
   See the documentation for the \verb|MARK| element.
 \item The \verb|modulate_elements| command now provides the ability to use the pass number to compute the time,
   which is helpful in simulations where the time is offset by \verb|CHANGE_T=1| on \verb|RFCA| elements.
+\item Several improvements were made to the \verb|ion_effects| command by J. Calvey (APS).  The \verb|gaussianfit| option was added
+  for the \verb|field_calculation_method| parameter; this provides a gaussian fit to model the ion fields, as an
+  alternative to using gaussian statistics or more complex fitting functions. Also, a new parameter, \verb|ion_output_interval|,
+  was added that allows increasing the interval between logging of ion data.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -2678,6 +2684,7 @@ included in the plane in question.
           STRING ion_density_output = NULL;
           long ion_output_all_locations = 1;
           long ion_species_output = 0;
+	  long ion_output_interval = 1;	
           STRING field_calculation_method = NULL;
 	  double distribution_fit_target = 0.03;
 	  double distribution_fit_tolerance = 1e-5;
@@ -2732,18 +2739,24 @@ included in the plane in question.
 \item \verb|ion_output_all_locations| --- If nonzero, \verb|ion_density_output| includes data at the location of
   all \verb|IONEFFECTS| elements. By default, only the first element is included.
 \item \verb|ion_species_output| --- If nonzero, \verb|ion_density_output| includes data for each ion species.
+\item \verb|ion_output_interval| --- The interval in bunches between output of ion data.
 \item \verb|field_calculation_method| --- By default, the fields are computed on the
   assumption that the beam and ion distributions are gaussian. This is a good assumption for the beam, but not highly accurate
   for the ions. More accurate, but slower, methods is sums of two or three gaussians, or sums 
   of two or three lorentzians, which can be invoked by setting
-  \verb|field_calculation_method| to \verb|"bigaussian"|, \verb|"trigaussian"|, \verb|"bilorentzian"|, or \verb|"trilorentzian"|;
+  \verb|field_calculation_method| to \verb|"gaussianfit"|, 
+  \verb|"bigaussian"|, \verb|"trigaussian"|, \verb|"bilorentzian"|, or \verb|"trilorentzian"|;
   these are collectively referred to as ``histogram fitting methods'' below.
+  In the gaussian-fit case, the charge distribution is of the form
+  \begin{equation}
+    \rho(x, y) = G(x, h_x, \sigma_x, c_x)*G(y, h_y, \sigma_y, c_y),
+  \end{equation}
+  where $G(q, h, \sigma, c) = h\exp{-(q-c)^2/(2\sigma^2)}$.
   In the bigaussian case, the charge distribution is of the form
   \begin{equation}
     \rho(x, y) = (G(x, h_{x,1}, \sigma_{x,1}, c_{x,1}) + G(x, h_{x,2}, \sigma_{x,2}, c_{x,2}))*
-    (G(y, h_{y,1}, \sigma_{y,1}, c_{y,1}) + G(y, h_{y,2}, \sigma_{y,2}, c_{y,2})),
+    (G(y, h_{y,1}, \sigma_{y,1}, c_{y,1}) + G(y, h_{y,2}, \sigma_{y,2}, c_{y,2})).
   \end{equation}
-  where $G(q, h, \sigma, c) = h\exp{-(q-c)^2/(2\sigma^2)}$.
   The charge distribution for the bilorentzian is
   \begin{equation}
     \rho(x, y) = (L(x, h_{x,1}, a_{x,1}, c_{x,1}) + L(x, h_{x,2}, a_{x,2}, c_{x,2}))*
