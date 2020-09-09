@@ -1071,6 +1071,11 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   /* check for valid data */
   if (filename==NULL)
     bombElegant("no filename given to save lattice to", NULL);
+
+#if USE_MPI
+  if (myid==0) {
+#endif
+
   if (str_in(filename, "%s"))
     filename = compose_filename(filename, run->rootname);
   fp = fopen_e(filename, "w", FOPEN_INFORM_OF_OPEN);
@@ -1276,6 +1281,10 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
   fprintf(fp, "RETURN\n");
   fclose(fp);
+
+#if USE_MPI
+  }
+#endif
 
   log_exit("do_save_lattice");
 }
