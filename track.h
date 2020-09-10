@@ -1111,7 +1111,7 @@ extern char *entity_text[N_TYPES];
 #define N_CCBEND_PARAMS 49
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS 19
-#define N_APCONTOUR_PARAMS 10
+#define N_APCONTOUR_PARAMS 12
 #define N_TAPERAPC_PARAMS 6
 #define N_TAPERAPE_PARAMS 12
 #define N_TAPERAPR_PARAMS 9
@@ -3417,6 +3417,8 @@ typedef struct {
   double dx, dy, dz;      /* misalignments */
   double resolution;
   short invert;           /* If non-zero, the shape is an obstruction not an aperture */
+  short sticky;           /* If non-zero, the shape is applied until canceled by another APCONTOUR element */
+  short cancel;           /* If non-zero, cancel previous APCONTOUR. Valid even without other parameters */
   char *filename;         /* filename for generalized gradients vs z */
   char *xColumn;          /* name of column containing x data */
   char *yColumn;          /* name of column containing y data */
@@ -4034,6 +4036,9 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
 int pointIsInsideContour(double x0, double y0, double *x, double *y, long n, double *center, double theta);
 long trackThroughApContour(double **initial, APCONTOUR *apcontour, long np, double **accepted, double z,
                            double Po);
+long imposeApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
+                     double Po);
+long checkApContour(double x, double y, APCONTOUR *apcontour);
 long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, double **accepted, double z,
                            double Po);
 long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np, double **accepted, double zStartElem,
@@ -4120,7 +4125,7 @@ extern int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, 
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);
 extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, 
                                 double Po, double **accepted, double z_start,
-                                MAXAMP *maxamp, APERTURE_DATA *apData, double *sigmaDelta2);
+                                MAXAMP *maxamp, APCONTOUR *apcontour, APERTURE_DATA *apData, double *sigmaDelta2);
 extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipole,
                                 double p_error, double Po, double **accepted, double z_start);
 int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xkick, double ykick,

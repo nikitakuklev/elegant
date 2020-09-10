@@ -1471,6 +1471,36 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
   return i_top+1;
 }
 
+/* Just impose the aperture contour, ignoring the length. Useful for STICKY=1 case when other elements
+ * need to impose the aperture
+ */
+
+long imposeApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
+                           double Po
+                           )
+{
+  APCONTOUR apc;
+  memcpy(&apc, apcontour, sizeof(apc));
+  apc.length = 0;
+  return trackThroughApContour(coord, &apc, np, accepted, z, Po);
+}
+
+long checkApContour(double x, double y, APCONTOUR *apcontour)
+{
+  APCONTOUR apc;
+  static double **coord = NULL;
+
+  if (!coord)
+    coord = (double**)czarray_2d(sizeof(**coord), 1, MAX_PROPERTIES_PER_PARTICLE);
+  
+  memset(coord[0], 0, sizeof(double)*MAX_PROPERTIES_PER_PARTICLE);
+  coord[0][0] = x;
+  coord[0][2] = y;
+  memcpy(&apc, apcontour, sizeof(apc));
+  apc.length = 0;
+  return trackThroughApContour(coord, &apc, 1, NULL, 0, 1);
+}
+
 long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, double **accepted, double z,
                              double Po)
 {

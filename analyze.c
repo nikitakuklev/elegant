@@ -1216,7 +1216,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       ltmp2 = ((KQUAD*)eptr->p_elem)->synch_rad;
       ((KQUAD*)eptr->p_elem)->isr = 0;
       ((KQUAD*)eptr->p_elem)->synch_rad = 0;
-      multipole_tracking2(finalCoord+my_offset, my_nTrack, eptr, 0, run->p_central, NULL, 0.0, NULL, NULL, NULL);
+      multipole_tracking2(finalCoord+my_offset, my_nTrack, eptr, 0, run->p_central, NULL, 0.0, NULL, NULL, NULL, NULL);
       ((KQUAD*)eptr->p_elem)->isr = ltmp1;
       ((KQUAD*)eptr->p_elem)->synch_rad = ltmp2;
       break;
@@ -1959,12 +1959,12 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   case T_KQUAD:
     kquad = (KQUAD*)elem->p_elem;
     multipole_tracking2(coord, n_track, elem, 0.0, run->p_central, NULL, elem->end_pos-kquad->length,
-                        NULL, NULL, &sigmaDelta2);
+                        NULL, NULL, NULL, &sigmaDelta2);
     break;
   case T_KSEXT:
     ksext = (KSEXT*)elem->p_elem;
     multipole_tracking2(coord, n_track, elem, 0.0, run->p_central, NULL, elem->end_pos-ksext->length,
-                        NULL, NULL, &sigmaDelta2);
+                        NULL, NULL, NULL, &sigmaDelta2);
     break;
   case T_RFCA:
     pCentral = run->p_central;

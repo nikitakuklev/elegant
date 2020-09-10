@@ -850,7 +850,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       kquad.isr1Particle = csbend->isr1Particle;
       kquad.n_kicks = csbend->n_kicks;
       kquad.integration_order = csbend->integration_order;
-      return multipole_tracking2(part, n_part, &elem, p_error, Po, accepted, z_start, maxamp, apFileData, sigmaDelta2);
+      return multipole_tracking2(part, n_part, &elem, p_error, Po, accepted, z_start, maxamp, NULL, apFileData, sigmaDelta2);
     } else {
       if (!largeRhoWarning) {
 #if USE_MPI

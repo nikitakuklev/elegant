@@ -183,9 +183,10 @@ long do_tracking(
   ENERGY *energy;
   MAXAMP *maxamp = NULL, maxampBuf;
   MALIGN *malign;
-  TAPERAPC *taperapc;
-  TAPERAPE *taperape;
-  TAPERAPR *taperapr;
+  TAPERAPC *taperapc = NULL;
+  TAPERAPE *taperape = NULL;
+  TAPERAPR *taperapr = NULL;
+  APCONTOUR *apcontour = NULL;
   ELEMENT_LIST *eptr, *eptrPred, *eptrCLMatrix=NULL;
   long nToTrack;  /* number of particles being tracked */
   long nLeft;     /* number of those that are left after a tracking routine returns */
@@ -1341,8 +1342,13 @@ long do_tracking(
 	    case T_APCONTOUR:
 	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
 		drift_beam(coord, nToTrack, ((APCONTOUR*)eptr->p_elem)->length, run->default_order);
-	      else
-		nLeft = trackThroughApContour(coord, (APCONTOUR*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
+	      else {
+                apcontour = (APCONTOUR*)eptr->p_elem;
+                if (apcontour->cancel)
+                  apcontour = NULL;
+                else
+                  nLeft = trackThroughApContour(coord, apcontour, nToTrack, accepted, last_z, *P_central);
+              }
 	      break;
 	    case T_TAPERAPC:
               taperapc = (TAPERAPC*)eptr->p_elem;
@@ -1851,7 +1857,7 @@ long do_tracking(
                 ((KQUAD*)eptr->p_elem)->isr = 0;
               }
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
-                                          *P_central, accepted, last_z, maxamp,
+                                          *P_central, accepted, last_z, maxamp, apcontour,
                                           &(run->apertureData), NULL);
               if (flags&TEST_PARTICLES)
                 ((KQUAD*)eptr->p_elem)->isr = saveISR;
@@ -1862,7 +1868,7 @@ long do_tracking(
                 ((KSEXT*)eptr->p_elem)->isr = 0;
               }
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
-                                          *P_central, accepted, last_z, maxamp,
+                                          *P_central, accepted, last_z, maxamp, apcontour,
                                           &(run->apertureData), NULL);
               if (flags&TEST_PARTICLES)
                 ((KSEXT*)eptr->p_elem)->isr = saveISR;
@@ -1873,7 +1879,7 @@ long do_tracking(
                 ((KOCT*)eptr->p_elem)->isr = 0;
               }
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
-                                          *P_central, accepted, last_z, maxamp,
+                                          *P_central, accepted, last_z, maxamp, apcontour,
                                           &(run->apertureData), NULL);
               if (flags&TEST_PARTICLES)
                 ((KOCT*)eptr->p_elem)->isr = saveISR;
@@ -1889,7 +1895,7 @@ long do_tracking(
                   ((KQUSE*)eptr->p_elem)->isr = 0;
                 }
                 nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
-                                            *P_central, accepted, last_z, maxamp,
+                                            *P_central, accepted, last_z, maxamp, apcontour,
                                             &(run->apertureData), NULL);
                 if (flags&TEST_PARTICLES)
                   ((KQUSE*)eptr->p_elem)->isr = saveISR;
@@ -2293,8 +2299,10 @@ long do_tracking(
             if (run->apertureData.initialized) 
               nLeft = imposeApertureData(coord, nLeft, accepted, z, *P_central, 
                                          &(run->apertureData));
-            }
+            if (apcontour)
+              nLeft = imposeApContour(coord, apcontour, nLeft, accepted, z, *P_central);
           }
+        }
 #ifdef DEBUG_CRASH 
         printMessageAndTime(stdout, "do_tracking checkpoint 10\n");
 #endif

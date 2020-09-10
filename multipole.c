@@ -30,7 +30,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
                                   long n_parts, double drift,
                                   long integration_order,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
+                                  MULT_APERTURE_DATA *apData, APCONTOUR *apcontour, double *dzLoss, double *sigmaDelta2,
 				  long radial, 
                                   double refTilt /* used for obstruction evaluation only */
                                   );
@@ -462,7 +462,7 @@ long fmultipole_tracking(
 
     is_lost = 0;
     if (!integrate_kick_multipole_ordn(coord, multipole->dx, multipole->dy, 0.0, 0.0, Po, rad_coef, 0.0,
-                                       order, KnL, skew, n_kicks, drift, 4, &multData, NULL, NULL, NULL,
+                                       order, KnL, skew, n_kicks, drift, 4, &multData, NULL, NULL, NULL, NULL,
                                        &dzLoss, NULL, 0, multipole->tilt))
       is_lost = 1;
     
@@ -766,7 +766,10 @@ long multipole_tracking2(
                          double Po,
                          double **accepted,
                          double z_start,
+                         /* From previous MAXAMP element */
                          MAXAMP *maxamp,
+                         /* From previous APCONTOUR element with STICKY=1 */
+                         APCONTOUR *apcontour,
                          /* from aperture_data command */
                          APERTURE_DATA *apFileData,
                          /* For return of accumulated change in sigmaDelta^2 */
@@ -1117,7 +1120,7 @@ long multipole_tracking2(
                                        order, KnL, skew,
                                        n_parts, drift, integ_order,
                                        multData, edgeMultData, steeringMultData,
-                                       &apertureData, &dzLoss, sigmaDelta2,
+                                       &apertureData, apcontour, &dzLoss, sigmaDelta2,
                                        elem->type==T_KQUAD?kquad->radial:0, tilt)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
@@ -1617,7 +1620,8 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
                                   long n_parts, double drift,
                                   long integration_order,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
+                                  MULT_APERTURE_DATA *apData, APCONTOUR *apContour,
+                                  double *dzLoss, double *sigmaDelta2,
 				  long radial, 
                                   double refTilt /* used for obstruction evaluation only */
                                   )
@@ -1727,6 +1731,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
   *dzLoss = 0;
   for (i_kick=0; i_kick<n_parts; i_kick++) {
     if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
+        (apContour && !checkApContour(x+dx, y+dy, apContour)) ||
 	insideObstruction_xyz(x, y, coord[particleIDIndex], 
 			      globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
 			      refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
@@ -1828,6 +1833,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
   }
   
   if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
+      (apContour && !checkApContour(x+dx, y+dy, apContour)) ||
       insideObstruction_xyz(x, y, coord[particleIDIndex],
 			    globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
 			    refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
