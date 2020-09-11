@@ -1407,8 +1407,13 @@ typedef struct {
     double phase_fiducial; /* -omega0*t0 */
     } MODRF;
 
-/* names and storage structure for horizontal monitor physical parameters */
+/* names and storage structure for beam-position-monitor physical parameters */
+/* NB: the length, dx, dy, and weight setpoint elements MUST
+ * be in the same position and order in all these structures !
+ */
 extern PARAMETER hmon_param[N_HMON_PARAMS] ;
+extern PARAMETER vmon_param[N_VMON_PARAMS] ;
+extern PARAMETER moni_param[N_MONI_PARAMS] ;
    
 typedef struct {
     double length, dx, dy, weight, tilt, calibration, setpoint;
@@ -1418,10 +1423,6 @@ typedef struct {
     short initialized;
     long coMemoryNumber[2];
     } HMON;
-
-/* names and storage structure for vertical monitor physical parameters */
-extern PARAMETER vmon_param[N_VMON_PARAMS] ;
-   
 typedef struct {
     double length, dx, dy, weight, tilt, calibration, setpoint;
     short order;
@@ -1430,10 +1431,6 @@ typedef struct {
     short initialized;
     long coMemoryNumber[2];
     } VMON;
-
-/* names and storage structure for two-plane monitor physical parameters */
-extern PARAMETER moni_param[N_MONI_PARAMS] ;
-   
 typedef struct {
     double length, dx, dy, weight, tilt, xcalibration, ycalibration, xsetpoint, ysetpoint;
     short order;

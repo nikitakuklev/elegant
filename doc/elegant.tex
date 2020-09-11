@@ -93,6 +93,8 @@ for the same element. This was reported by V. Sajaev (APS).
   for the \verb|field_calculation_method| parameter; this provides a gaussian fit to model the ion fields, as an
   alternative to using gaussian statistics or more complex fitting functions. Also, a new parameter, \verb|ion_output_interval|,
   was added that allows increasing the interval between logging of ion data.
+\item The \verb|correct| command accepts a new value, \verb|coupled|, for the \verb|method| parameter when 
+  \verb|mode| is \verb|trajectory|. This allows trajectory correction in strongly-coupled transport lines.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -1527,11 +1529,14 @@ is for the vertical plane.
 
 \item \verb|mode| --- Either ``trajectory'' or ``orbit'', indicating
 correction of a trajectory or a closed orbit.
-\item \verb|method| --- For trajectories, may be ``one-to-one'', ``one-to-best'', ``one-to-next'', ``thread'', or ``global''.  
+\item \verb|method| --- For trajectories, may be ``one-to-one'', ``one-to-best'', ``one-to-next'', ``thread'', ``global'',
+  or ``coupled''.
 ``One-to-one'' and ``one-to-next'' are the same: steering is performed by pairing one corrector with the next downstream BPM.
 ``One-to-best'' attempts to find a BPM with a large response to each corrector.  ``Thread'' does corrector sweeps to work the
 beam through a beamline with apertures; it is quite slow.  ``Global'' simply uses the global response matrix; it is the best
-choice if the trajectory is not lost on an aperture.
+choice if the trajectory is not lost on an aperture. ``Coupled'' is like global, but should be used for strongly-coupled
+transport lines; in this case, only \verb|HMON| and \verb|VMON| elements are permitted for monitors and only
+\verb|EHKICK|, \verb|EVKICK|, \verb|HKICK|, and \verb|VKICK| elements are permitted for correctors.
 For closed orbit, must be ``global''.
 \item \verb|trajectory_output| --- The (incomplete) name of an SDDS file to which the trajectories or orbits will be written.  Recommended value: ``\%s.traj'' or ``\%s.orb''.  
 \item \verb|corrector_output| --- The (incomplete) name of an SDDS file to which information about the final corrector strengths will be written. Recommended value: ``\%s.cor''.  N.B.: although this file looks as if it can be used with the \verb|load_parameters| command, care must be exercised because the data for the

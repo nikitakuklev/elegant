@@ -166,7 +166,7 @@ void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks,
         for (j=0; j<=n_iterations; j++) 
           if (Cdp) {
                 printf("   %c     %4ld     %8.3f    %8.3f     %8.3f     %8.3f   %8.3f %s\n",
-                    'x'+(plane?1:0), j,
+                       (plane!=4?'x'+(plane?1:0):'c'), j,
                     1e3*data[j][IC_KRMS], 1e3*data[j][IC_PRMS],
                     1e3*data[j][IC_KMAX], 1e3*data[j][IC_PMAX],
                     1e2*data[j][IC_CDP],
@@ -175,7 +175,7 @@ void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks,
               }
           else {
                 printf("   %c     %4ld     %8.3f    %8.3f     %8.3f     %8.3f %s\n",
-                    'x'+(plane?1:0), j,
+                       (plane!=4?'x'+(plane?1:0):'c'), j,
                     1e3*data[j][IC_KRMS], 1e3*data[j][IC_PRMS],
                     1e3*data[j][IC_KMAX], 1e3*data[j][IC_PMAX],
                     (j==n_iterations?"**":"") );

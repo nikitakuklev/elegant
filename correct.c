@@ -18,6 +18,8 @@
 #include "match_string.h"
 #include "correctDefs.h"
 
+#define TRAJECTORY_MODE 0
+#define ORBIT_MODE 1
 #define N_CORRECTION_MODES 2
 char *correction_mode[N_CORRECTION_MODES] = {
     "trajectory", "orbit"
@@ -28,9 +30,10 @@ char *correction_mode[N_CORRECTION_MODES] = {
 #define THREAD_CORRECTION 2
 #define ONE_TO_BEST_CORRECTION 3
 #define ONE_TO_NEXT_CORRECTION 4
-#define N_CORRECTION_METHODS 5
+#define COUPLED_CORRECTION 5
+#define N_CORRECTION_METHODS 6
 char *correction_method[N_CORRECTION_METHODS] = {
-    "global", "one-to-one", "thread", "one-to-best", "one-to-next",
+    "global", "one-to-one", "thread", "one-to-best", "one-to-next", "coupled"
     } ;
 
 /* For trajectory correction:
@@ -49,6 +52,8 @@ char *correction_method[N_CORRECTION_METHODS] = {
 
 long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, 
                           RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, ELEMENT_LIST **newly_pegged);
+long global_coupled_trajcor(CORMON_DATA *CM, STEERING_LIST *SL, TRAJECTORY **traject, long n_iterations, 
+                            RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, ELEMENT_LIST **newly_pegged);
 long one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
             LINE_LIST *beamline, double *starting_coord, BEAM *beam, long method);
 long thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
@@ -58,8 +63,9 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
                   long clorb_iter, double clorb_iter_frac, double clorb_frac_mult, long clorb_mult_interval, long clorb_track_for_orbit,
                   RUN *run, LINE_LIST *beamline, double *closed_orbit, double *Cdp, ELEMENT_LIST **newly_pegged);
 ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_index,
-				     ELEMENT_LIST ***umoni, ELEMENT_LIST ***ucorr, double **kick_coef, long **sl_index, short **pegged, double **weight,
-				     long plane, STEERING_LIST *SL, RUN *run, LINE_LIST *beamline, long recircs);
+				     ELEMENT_LIST ***umoni, ELEMENT_LIST ***ucorr, double **kick_coef, long **sl_index, 
+                                     short **pegged, double **weight, long plane, STEERING_LIST *SL, RUN *run, 
+                                     LINE_LIST *beamline, long recircs);
 ELEMENT_LIST *next_element_of_type(ELEMENT_LIST *elem, long type);
 ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index, char **corr_name,
                                     long *start_occurence, long *end_occurence, long *occurence_step, double *s_start, double *s_end);
@@ -179,6 +185,8 @@ void correction_setup(
         bombElegant("invalid correction mode", NULL);
     if ((_correct->method=match_string(method, correction_method, N_CORRECTION_METHODS, 0))<0)
         bombElegant("invalid correction method", NULL);
+    if (_correct->method==COUPLED_CORRECTION && _correct->mode==ORBIT_MODE)
+      bombElegant("coupled correction is only available for trajectories", NULL);
     if (corrector_tweek[0]==0 || corrector_tweek[0]==0)
         bombElegant("invalid corrector tweek(s)", NULL);
     if (corrector_limit[0]<0 || corrector_limit[1]<0 ||
@@ -281,90 +289,132 @@ void correction_setup(
     if (verbose)
       fputs("finding correctors/monitors and/or computing correction matrices\n", stdout);
     
-    if (_correct->SLx.n_corr_types==0) {
-      long found = 0;
-      cp_str(&item, "KICK");
-      found += add_steer_type_to_lists(&_correct->SLx, 0, T_HCOR, item, _correct->CMFx->default_tweek, 
-                              _correct->CMFx->corr_limit, beamline, run, 0);
-      found += add_steer_type_to_lists(&_correct->SLx, 0, T_EHCOR, item, _correct->CMFx->default_tweek, 
-                              _correct->CMFx->corr_limit, beamline, run, 0);
-      cp_str(&item, "HKICK");
-      found += add_steer_type_to_lists(&_correct->SLx, 0, T_HVCOR, item, _correct->CMFx->default_tweek, 
-                              _correct->CMFx->corr_limit, beamline, run, 0);
-      found += add_steer_type_to_lists(&_correct->SLx, 0, T_EHVCOR, item, _correct->CMFx->default_tweek, 
-                              _correct->CMFx->corr_limit, beamline, run, 0);
-      cp_str(&item, "HKICK");
-      found += add_steer_type_to_lists(&_correct->SLx, 0, T_QUAD, item, _correct->CMFx->default_tweek, 
-                              _correct->CMFx->corr_limit, beamline, run, 0);
-      found += add_steer_type_to_lists(&_correct->SLx, 0, T_KQUAD, item, _correct->CMFx->default_tweek, 
-                              _correct->CMFx->corr_limit, beamline, run, 0);
-      if (!found)
-        bombElegant("no horizontal steering elements found", NULL);
-      if (verbose)
-	printf("found %ld horizontal steering elements\n", found);
-    }
-    if (_correct->SLy.n_corr_types==0) {
-      long found = 0;
-      cp_str(&item, "KICK");
-      found += add_steer_type_to_lists(&_correct->SLy, 2, T_VCOR, item, _correct->CMFy->default_tweek, 
-                              _correct->CMFy->corr_limit, beamline, run, 0);
-      found += add_steer_type_to_lists(&_correct->SLy, 2, T_EVCOR, item, _correct->CMFy->default_tweek, 
-                              _correct->CMFy->corr_limit, beamline, run, 0);
-      cp_str(&item, "VKICK");
-      found += add_steer_type_to_lists(&_correct->SLy, 2, T_HVCOR, item, _correct->CMFy->default_tweek, 
-                              _correct->CMFy->corr_limit, beamline, run, 0);
-      found += add_steer_type_to_lists(&_correct->SLy, 2, T_EHVCOR, item, _correct->CMFy->default_tweek, 
-                              _correct->CMFy->corr_limit, beamline, run, 0);
-      cp_str(&item, "VKICK");
-      found += add_steer_type_to_lists(&_correct->SLy, 2, T_QUAD, item, _correct->CMFy->default_tweek, 
-                              _correct->CMFy->corr_limit, beamline, run, 0);
-      found += add_steer_type_to_lists(&_correct->SLy, 2, T_KQUAD, item, _correct->CMFy->default_tweek, 
-                              _correct->CMFy->corr_limit, beamline, run, 0);
-      if (!found)
-        bombElegant("no vertical steering elements found", NULL);
-      if (verbose)
-	printf("found %ld vertical steering elements\n", found);
-    }
-
-    if (_correct->mode==TRAJECTORY_CORRECTION) {
-      compute_trajcor_matrices(_correct->CMFx, &_correct->SLx, 0, run, beamline, 
-                               (_correct->method==THREAD_CORRECTION ? COMPUTE_RESPONSE_FINDONLY : 0) |
-                               ((!_correct->response_only && _correct->method==GLOBAL_CORRECTION) ? COMPUTE_RESPONSE_INVERT : 0));
-      compute_trajcor_matrices(_correct->CMFy, &_correct->SLy, 2, run, beamline, 
-                               (_correct->method==THREAD_CORRECTION ? COMPUTE_RESPONSE_FINDONLY : 0) |
-                               ((!_correct->response_only && _correct->method==GLOBAL_CORRECTION) ? COMPUTE_RESPONSE_INVERT : 0));
-    }
-    else if (_correct->mode==ORBIT_CORRECTION) {
-      if (!_correct->use_response_from_computed_orbits) {
-	compute_orbcor_matrices(_correct->CMFx, &_correct->SLx, 0, run, beamline, 
-				(!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
-				(fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
-				(verbose ? 0 : COMPUTE_RESPONSE_SILENT));
-	compute_orbcor_matrices(_correct->CMFy, &_correct->SLy, 2, run, beamline, 
-				(!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
-				(fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
-				(verbose ? 0 : COMPUTE_RESPONSE_SILENT));
-      } else {
-	compute_orbcor_matrices1(_correct->CMFx, &_correct->SLx, 0, run, beamline, 
-				 (!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
-				 (fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
-				 (verbose ? 0 : COMPUTE_RESPONSE_SILENT), _correct);
-	compute_orbcor_matrices1(_correct->CMFy, &_correct->SLy, 2, run, beamline, 
-				 (!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
-				 (fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
-				 (verbose ? 0 : COMPUTE_RESPONSE_SILENT), _correct);
+    if (_correct->method != COUPLED_CORRECTION) {
+      if (_correct->SLx.n_corr_types==0) {
+        long found = 0;
+        cp_str(&item, "KICK");
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_HCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_EHCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        cp_str(&item, "HKICK");
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_HVCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_EHVCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        cp_str(&item, "HKICK");
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_QUAD, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_KQUAD, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        if (!found)
+          bombElegant("no horizontal steering elements found", NULL);
+        if (verbose)
+          printf("found %ld horizontal steering elements\n", found);
       }
+      if (_correct->SLy.n_corr_types==0) {
+        long found = 0;
+        cp_str(&item, "KICK");
+        found += add_steer_type_to_lists(&_correct->SLy, 2, T_VCOR, item, _correct->CMFy->default_tweek, 
+                                         _correct->CMFy->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLy, 2, T_EVCOR, item, _correct->CMFy->default_tweek, 
+                                         _correct->CMFy->corr_limit, beamline, run, 0);
+        cp_str(&item, "VKICK");
+        found += add_steer_type_to_lists(&_correct->SLy, 2, T_HVCOR, item, _correct->CMFy->default_tweek, 
+                                         _correct->CMFy->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLy, 2, T_EHVCOR, item, _correct->CMFy->default_tweek, 
+                                         _correct->CMFy->corr_limit, beamline, run, 0);
+        cp_str(&item, "VKICK");
+        found += add_steer_type_to_lists(&_correct->SLy, 2, T_QUAD, item, _correct->CMFy->default_tweek, 
+                                         _correct->CMFy->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLy, 2, T_KQUAD, item, _correct->CMFy->default_tweek, 
+                                         _correct->CMFy->corr_limit, beamline, run, 0);
+        if (!found)
+          bombElegant("no vertical steering elements found", NULL);
+        if (verbose)
+          printf("found %ld vertical steering elements\n", found);
+      }
+
+      if (_correct->mode==TRAJECTORY_CORRECTION) {
+        compute_trajcor_matrices(_correct->CMFx, &_correct->SLx, 0, run, beamline, 
+                                 (_correct->method==THREAD_CORRECTION ? COMPUTE_RESPONSE_FINDONLY : 0) |
+                                 ((!_correct->response_only && _correct->method==GLOBAL_CORRECTION) ? COMPUTE_RESPONSE_INVERT : 0));
+        compute_trajcor_matrices(_correct->CMFy, &_correct->SLy, 2, run, beamline, 
+                                 (_correct->method==THREAD_CORRECTION ? COMPUTE_RESPONSE_FINDONLY : 0) |
+                                 ((!_correct->response_only && _correct->method==GLOBAL_CORRECTION) ? COMPUTE_RESPONSE_INVERT : 0));
+      } else if (_correct->mode==ORBIT_CORRECTION) {
+        if (!_correct->use_response_from_computed_orbits) {
+          compute_orbcor_matrices(_correct->CMFx, &_correct->SLx, 0, run, beamline, 
+                                  (!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
+                                  (fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
+                                  (verbose ? 0 : COMPUTE_RESPONSE_SILENT));
+          compute_orbcor_matrices(_correct->CMFy, &_correct->SLy, 2, run, beamline, 
+                                  (!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
+                                  (fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
+                                  (verbose ? 0 : COMPUTE_RESPONSE_SILENT));
+        } else {
+          compute_orbcor_matrices1(_correct->CMFx, &_correct->SLx, 0, run, beamline, 
+                                   (!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
+                                   (fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
+                                   (verbose ? 0 : COMPUTE_RESPONSE_SILENT), _correct);
+          compute_orbcor_matrices1(_correct->CMFy, &_correct->SLy, 2, run, beamline, 
+                                   (!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
+                                   (fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
+                                   (verbose ? 0 : COMPUTE_RESPONSE_SILENT), _correct);
+        }
+      }
+      else
+        bombElegant("something impossible happened (correction_setup)", NULL);
+    } else {
+      /* coupled correction uses the SLx and CMx structures only */
+      if (_correct->SLx.n_corr_types==0) {
+        long found = 0;
+        cp_str(&item, "KICK");
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_HCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_EHCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        cp_str(&item, "HKICK");
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_HVCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_EHVCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        cp_str(&item, "HKICK");
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_QUAD, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_KQUAD, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        cp_str(&item, "KICK");
+        found += add_steer_type_to_lists(&_correct->SLx, 2, T_VCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLx, 2, T_EVCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        cp_str(&item, "VKICK");
+        found += add_steer_type_to_lists(&_correct->SLx, 2, T_HVCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLx, 2, T_EHVCOR, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        cp_str(&item, "VKICK");
+        found += add_steer_type_to_lists(&_correct->SLx, 2, T_QUAD, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLx, 2, T_KQUAD, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+        if (!found)
+          bombElegant("no steering elements found", NULL);
+
+        compute_coupled_trajcor_matrices(_correct->CMFx, &_correct->SLx, run, beamline, COMPUTE_RESPONSE_INVERT);
+      }      
     }
-    else
-      bombElegant("something impossible happened (correction_setup)", NULL);
 
     if (n_iterations!=0) {
       /* allocate space to store before/after data for correctors and monitors */
       _correct->CMFx->kick = (double**)czarray_2d(sizeof(**(_correct->CMFx->kick)), _correct->n_iterations+1, _correct->CMFx->ncor);
       _correct->CMFx->posi = (double**)czarray_2d(sizeof(**(_correct->CMFx->posi)), _correct->n_iterations+1, _correct->CMFx->nmon);
-      _correct->CMFy->kick = (double**)czarray_2d(sizeof(**(_correct->CMFy->kick)), _correct->n_iterations+1, _correct->CMFy->ncor);
-      _correct->CMFy->posi = (double**)czarray_2d(sizeof(**(_correct->CMFy->posi)), _correct->n_iterations+1, _correct->CMFy->nmon);
-      
+      if (_correct->method!=COUPLED_CORRECTION) {
+        _correct->CMFy->kick = (double**)czarray_2d(sizeof(**(_correct->CMFy->kick)), _correct->n_iterations+1, _correct->CMFy->ncor);
+        _correct->CMFy->posi = (double**)czarray_2d(sizeof(**(_correct->CMFy->posi)), _correct->n_iterations+1, _correct->CMFy->nmon);
+      }
+
       /* Allocate space to store before/after trajectories/closed orbits.
        * After each correction pass through x and y, the first trajectory is the initial one,
        * the second is after x correction, and the third is after x and y correction.
@@ -376,18 +426,24 @@ void correction_setup(
       _correct->CMAx = tmalloc(sizeof(*_correct->CMAx));
       memset(_correct->CMAx, 0, sizeof(*_correct->CMAx));
     }
-    if (_correct->CMFy->remove_pegged) {
-      _correct->CMAy = tmalloc(sizeof(*_correct->CMAy));
-      memset(_correct->CMAy, 0, sizeof(*_correct->CMAy));
+    if (_correct->method!=COUPLED_CORRECTION) {
+      if (_correct->CMFy->remove_pegged) {
+        _correct->CMAy = tmalloc(sizeof(*_correct->CMAy));
+        memset(_correct->CMAy, 0, sizeof(*_correct->CMAy));
+      }
     }
 
     if (verbose) {
-      printf("there are %" PRId32 " useable horizontal monitors and %" PRId32 " useable horizontal correctors\n",
-              _correct->CMFx->nmon, _correct->CMFx->ncor);
-      fflush(stdout);
-      printf("there are %" PRId32 " useable   vertical monitors and %" PRId32 " useable   vertical correctors\n",
-              _correct->CMFy->nmon, _correct->CMFy->ncor);
-      fflush(stdout);
+      if (_correct->method!=COUPLED_CORRECTION) {
+        printf("there are %" PRId32 " useable horizontal monitors and %" PRId32 " useable horizontal correctors\n",
+               _correct->CMFx->nmon, _correct->CMFx->ncor);
+        printf("there are %" PRId32 " useable   vertical monitors and %" PRId32 " useable   vertical correctors\n",
+               _correct->CMFy->nmon, _correct->CMFy->ncor);
+        fflush(stdout);
+      } else {
+        printf("there are %" PRId32 " useable monitors and %" PRId32 " useable correctors\n",
+               _correct->CMFx->nmon, _correct->CMFx->ncor);
+      }
     }
 
     _correct->CMx = _correct->CMFx;
@@ -932,6 +988,12 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         if (correct->CMx && (correct->method==THREAD_CORRECTION || correct->CMx->C) && correct->CMx->ncor) {
           newly_pegged = NULL;
           switch (correct->method) {
+          case COUPLED_CORRECTION:
+            if ((n_x_iter_taken
+                 =global_coupled_trajcor(correct->CMx, &correct->SLx, correct->traj, correct->n_iterations, 
+                                       run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), &newly_pegged))<0)
+              return 0;
+            break;
           case GLOBAL_CORRECTION:
             if ((n_x_iter_taken
                  =global_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
@@ -979,7 +1041,8 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                 fputs("trajectory not improved--discontinuing horizontal correction\n", stdout);
             }
           if (!(flags&NO_OUTPUT_CORRECTION)) {
-            dump_cormon_stats(correct->verbose, 0, correct->CMFx->kick, 
+            dump_cormon_stats(correct->verbose, 
+                              correct->method==COUPLED_CORRECTION?4:0, correct->CMFx->kick, 
                               correct->CMFx->ncor, correct->CMFx->posi, correct->CMFx->nmon, NULL, 
                               n_x_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
                               sim_step, !(flags&FINAL_CORRECTION));
@@ -1001,78 +1064,80 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
           x_failed = 1;
       }
       prefillSteeringResultsArray(correct->CMy, &correct->SLy, correct->n_iterations);
-      if (!y_failed && correct->CMy->ncor && correct->CMy->nmon && correct->yplane) {                    
-        final_traj = 2;
-        if (preemptivelyFindPeggedCorrectors(correct->CMy, &correct->SLy)) {
-	  remove_pegged_corrector(correct->CMAy, correct->CMFy, &correct->SLy, NULL);
-	  correct->CMy = correct->CMAy;
-        }          
-        if (correct->CMy && (correct->method==THREAD_CORRECTION || correct->CMy->C) && correct->CMy->ncor) {
-          newly_pegged = NULL;
-          switch (correct->method) {
-          case GLOBAL_CORRECTION:
-            if ((n_y_iter_taken
-                 =global_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
-                                       run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), &newly_pegged))<0)
-              return 0;
-            break;
-          case ONE_TO_ONE_CORRECTION:
-          case ONE_TO_BEST_CORRECTION:
-          case ONE_TO_NEXT_CORRECTION:
-            n_y_iter_taken = one_to_one_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
-                                                      run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL),
-                                                      correct->method);
-            break;
-          case THREAD_CORRECTION:
-            n_y_iter_taken = thread_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
-                                                  run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), 
-                                                  correct->verbose);
-            break;
-          default:
-            bombElegant("Invalid y trajectory correction mode---this should never happen!", NULL);
-            break;
-          }
-          if (newly_pegged) {
-            printf("One or more correctors newly pegged\n");
-          }
-          if (correct->CMy != correct->CMFy)
-            copy_steering_results(correct->CMFy, &correct->SLy, correct->CMy, n_y_iter_taken);
-          correct->CMFy->n_cycles_done = i_cycle+1;
-          rms_before = rms_value(correct->CMFy->posi[0], correct->CMFy->nmon);
-          rms_after  = rms_value(correct->CMFy->posi[correct->n_iterations], correct->CMFy->nmon);
-#if defined(IEEE_MATH)
-          if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
-            y_failed = 1;
-            if (correct->verbose)
-              fputs("vertical trajectory diverged--setting correctors to zero\n", stdout);
-            zero_vcorrectors(&(beamline->elem), run, correct);
-          }
-          else
-#endif
-            if (rms_before<=(rms_after+correct->CMFy->corr_accuracy) && i_cycle>correct->minimum_cycles &&
-                correct->method!=THREAD_CORRECTION) {
-              y_failed = 1;
-              if (correct->verbose && !correct->forceAlternation)
-                fputs("trajectory not improved--discontinuing vertical correction\n", stdout);
-            }
-          if (!(flags&NO_OUTPUT_CORRECTION)) {
-            dump_cormon_stats(correct->verbose, 2, correct->CMFy->kick, 
-                              correct->CMFy->ncor, correct->CMFy->posi, correct->CMFy->nmon, NULL, 
-                              n_y_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
-                              sim_step, !(flags&FINAL_CORRECTION));
-            /*
-              if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || y_failed))
-              dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
-            */
-          }    
-          if (newly_pegged && correct->CMy->remove_pegged && correct->CMy->n_cycles_done!=correct->n_xy_cycles) {
-            /* Compute new matrices for next iteration */
-            fputs("Recomputing inverse response matrix for x plane to remove pegged corrector(s)\n", stdout);
-            remove_pegged_corrector(correct->CMAy, correct->CMFy, &correct->SLy, newly_pegged);
+      if (correct->method!=COUPLED_CORRECTION) {
+        if (!y_failed && correct->CMy->ncor && correct->CMy->nmon && correct->yplane) {                    
+          final_traj = 2;
+          if (preemptivelyFindPeggedCorrectors(correct->CMy, &correct->SLy)) {
+            remove_pegged_corrector(correct->CMAy, correct->CMFy, &correct->SLy, NULL);
             correct->CMy = correct->CMAy;
-          }
-        } else
-          y_failed = 1;
+          }          
+          if (correct->CMy && (correct->method==THREAD_CORRECTION || correct->CMy->C) && correct->CMy->ncor) {
+            newly_pegged = NULL;
+            switch (correct->method) {
+            case GLOBAL_CORRECTION:
+              if ((n_y_iter_taken
+                   =global_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+                                         run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), &newly_pegged))<0)
+                return 0;
+              break;
+            case ONE_TO_ONE_CORRECTION:
+            case ONE_TO_BEST_CORRECTION:
+            case ONE_TO_NEXT_CORRECTION:
+              n_y_iter_taken = one_to_one_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+                                                        run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL),
+                                                        correct->method);
+              break;
+            case THREAD_CORRECTION:
+              n_y_iter_taken = thread_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+                                                    run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), 
+                                                    correct->verbose);
+              break;
+            default:
+              bombElegant("Invalid y trajectory correction mode---this should never happen!", NULL);
+              break;
+            }
+            if (newly_pegged) {
+              printf("One or more correctors newly pegged\n");
+            }
+            if (correct->CMy != correct->CMFy)
+              copy_steering_results(correct->CMFy, &correct->SLy, correct->CMy, n_y_iter_taken);
+            correct->CMFy->n_cycles_done = i_cycle+1;
+            rms_before = rms_value(correct->CMFy->posi[0], correct->CMFy->nmon);
+            rms_after  = rms_value(correct->CMFy->posi[correct->n_iterations], correct->CMFy->nmon);
+#if defined(IEEE_MATH)
+            if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
+              y_failed = 1;
+              if (correct->verbose)
+                fputs("vertical trajectory diverged--setting correctors to zero\n", stdout);
+              zero_vcorrectors(&(beamline->elem), run, correct);
+            }
+            else
+#endif
+              if (rms_before<=(rms_after+correct->CMFy->corr_accuracy) && i_cycle>correct->minimum_cycles &&
+                  correct->method!=THREAD_CORRECTION) {
+                y_failed = 1;
+                if (correct->verbose && !correct->forceAlternation)
+                  fputs("trajectory not improved--discontinuing vertical correction\n", stdout);
+              }
+            if (!(flags&NO_OUTPUT_CORRECTION)) {
+              dump_cormon_stats(correct->verbose, 2, correct->CMFy->kick, 
+                                correct->CMFy->ncor, correct->CMFy->posi, correct->CMFy->nmon, NULL, 
+                                n_y_iter_taken, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
+                                sim_step, !(flags&FINAL_CORRECTION));
+              /*
+                if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || y_failed))
+                dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
+              */
+            }    
+            if (newly_pegged && correct->CMy->remove_pegged && correct->CMy->n_cycles_done!=correct->n_xy_cycles) {
+              /* Compute new matrices for next iteration */
+              fputs("Recomputing inverse response matrix for x plane to remove pegged corrector(s)\n", stdout);
+              remove_pegged_corrector(correct->CMAy, correct->CMFy, &correct->SLy, newly_pegged);
+              correct->CMy = correct->CMAy;
+            }
+          } else
+            y_failed = 1;
+        }
       }
       if ((x_failed && y_failed) || ((x_failed || y_failed) && correct->forceAlternation)) {
         if (correct->verbose && !(flags&NO_OUTPUT_CORRECTION))
@@ -1086,8 +1151,11 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
       dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
       dump_bpm_data(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
-      dump_corrector_data(correct->CMFx, &correct->SLx, n_x_iter_taken, "horizontal", sim_step);
-      dump_corrector_data(correct->CMFy, &correct->SLy, n_y_iter_taken, "vertical", sim_step);
+      if (correct->mode!=COUPLED_CORRECTION) {
+        dump_corrector_data(correct->CMFx, &correct->SLx, n_x_iter_taken, "horizontal", sim_step);
+        dump_corrector_data(correct->CMFy, &correct->SLy, n_y_iter_taken, "vertical", sim_step);
+      } else
+        dump_corrector_data(correct->CMFx, &correct->SLx, n_x_iter_taken, "coupled", sim_step);
     }
     if (starting_coord)
       for (i=0; i<6; i++)
@@ -2170,30 +2238,49 @@ long thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 }
 
 
+long findLongInArray(long key, long *array, long nElements)
+ {
+   long i;
+   for (i=0; i<nElements; i++)
+     if (key==array[i])
+       return i;
+   return -1;
+ }
+
 ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_index,
                                      ELEMENT_LIST ***umoni, ELEMENT_LIST ***ucorr,
-                                     double **kick_coef, long **sl_index, short **pegged, double **weight, long plane, STEERING_LIST *SL, 
+                                     double **kick_coef, long **sl_index, short **pegged, double **weight, 
+                                     long plane, STEERING_LIST *SL, 
                                      RUN *run, LINE_LIST *beamline, long recircs)
 {
   ELEMENT_LIST *corr, *moni, *start;
   long i_elem, moni_follows, corr_seen, index;
-  long moni_type_1, moni_type_2;
+  long moni_type[2]={0,0};
+  long iplane, planeToInclude[2] = {-1, -1};
 
   log_entry("find_useable_moni_corr");
 
   switch (plane) {
   case 0:
-    moni_type_1 = T_HMON;
-    moni_type_2 = T_MONI;
+    moni_type[0] = T_HMON;
+    moni_type[1] = T_MONI;
+    planeToInclude[0] = 0;
     break;
   case 2:
-    moni_type_1 = T_VMON;
-    moni_type_2 = T_MONI;
+    moni_type[0] = T_VMON;
+    moni_type[1] = T_MONI;
+    planeToInclude[0] = 2;
+    break;
+  case 4:
+    /* kludge for both planes */
+    moni_type[0] = T_HMON;
+    moni_type[1] = T_VMON;
+    planeToInclude[0] = 0;
+    planeToInclude[1] = 2;
     break;
   default:
     printf("error: invalid coordinate for correction: %ld\n", plane);
     fflush(stdout);
-    moni_type_1 = moni_type_2 = 0; /* suppress spurious compiler warning */
     exitElegant(1);
     break;
   }
@@ -2231,37 +2318,58 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
                                        SL->corr_name, SL->start_occurence, SL->end_occurence, SL->occurence_step,
                                        SL->s_start, SL->s_end)))
       break;
-    if (steering_corrector(corr, SL, plane)) {
-      printf("Adding %s#%ld at %e m to %c plane steering\n",
-             corr->name, corr->occurence, corr->end_pos, plane?'v':'h');
-      *ucorr = trealloc(*ucorr, sizeof(**ucorr)*(*ncor+1));
-      (*ucorr)[*ncor] = corr;
-      *sl_index = trealloc(*sl_index, sizeof(**sl_index)*(*ncor+1));
-      (*sl_index)[*ncor] = index;
-      *kick_coef = trealloc(*kick_coef, sizeof(**kick_coef)*(*ncor+1));
-      if (!((*kick_coef)[*ncor] = compute_kick_coefficient(corr, plane, corr->type, 
-                                                           SL->corr_tweek[index], corr->name, SL->corr_param[index], run))) {
-        printf("warning: changing %s.%s does not kick the beam--use for steering may result in a crash!\n",
-                corr->name, SL->corr_param[index]);
-        fflush(stdout);
+    if (!recircs) {
+      /* Since the beamline doesn't recirculate, advance through remainder of beamline
+       * to make sure there are subsequent monitors */
+      moni = corr->succ;
+      moni_follows = 0;
+      do {
+        while (moni && !(findLongInArray(moni->type, moni_type, 2)!=-1 &&
+                         ((MONI*)moni->p_elem)->weight>0) )
+          moni = moni->succ;
+        if (moni)
+          moni_follows = 1;
+      } while (moni && (moni=moni->succ) && !moni_follows);
+      if (!moni_follows)
+        break;        /* ignore correctors with no monitors following */
+    }
+
+    for (iplane=0; iplane<2; iplane++) {
+      if (planeToInclude[iplane]>=0) {
+        if (steering_corrector(corr, SL, planeToInclude[iplane])) {
+          printf("Adding %s#%ld (type %s) at %e m to %c plane steering\n",
+                 corr->name, corr->occurence, entity_name[corr->type], 
+                 corr->end_pos, planeToInclude[iplane]?'v':'h');
+          printf("The steering parameter is name = %s, value = %e\n",
+                 entity_description[corr->type].parameter[SL->param_index[index]].name,
+                 *((double*)(corr->p_elem+SL->param_offset[index])));
+          *ucorr = trealloc(*ucorr, sizeof(**ucorr)*(*ncor+1));
+          (*ucorr)[*ncor] = corr;
+          *sl_index = trealloc(*sl_index, sizeof(**sl_index)*(*ncor+1));
+          (*sl_index)[*ncor] = index;
+          *kick_coef = trealloc(*kick_coef, sizeof(**kick_coef)*(*ncor+1));
+          if (!((*kick_coef)[*ncor] = compute_kick_coefficient(corr, planeToInclude[iplane], corr->type, 
+                                                               SL->corr_tweek[index], corr->name, 
+                                                               SL->corr_param[index], run))) {
+            if (plane!=4) {
+              printf("warning: changing %s.%s does not directly kick the beam--use for steering may result in a crash!\n",
+                     corr->name, SL->corr_param[index]);
+              fflush(stdout);
+            } else {
+              if (!((*kick_coef)[*ncor] 
+                    = compute_kick_coefficient(corr, planeToInclude[iplane]==0?2:0, corr->type, 
+                                               SL->corr_tweek[index], corr->name, 
+                                               SL->corr_param[index], run))) {
+                printf("warning: changing %s.%s does not directly kick the beam--use for steering may result in a crash!\n",
+                       corr->name, SL->corr_param[index]);
+                fflush(stdout);
+              }
+            }
+          }
+          *ncor += 1;
+          break;
+        }
       }
-      
-      if (!recircs) {
-        /* Since the beamline doesn't recirculate, advance through remainder of beamline
-         * to make sure there are subsequent monitors */
-        moni = corr->succ;
-        moni_follows = 0;
-        do {
-          while (moni && !((moni->type==moni_type_1 || moni->type==moni_type_2) &&
-                           ((MONI*)moni->p_elem)->weight>0) )
-            moni = moni->succ;
-          if (moni)
-            moni_follows = 1;
-        } while (moni && (moni=moni->succ) && !moni_follows);
-        if (!moni_follows)
-          break;        /* ignore correctors with no monitors following */
-      }
-      *ncor += 1;
     }
   } while ((corr=corr->succ));
 
@@ -2272,10 +2380,12 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
     i_elem = 0;
     while (moni) {
       if (find_index(moni->type, SL->corr_type, SL->n_corr_types)!=-1 && 
-          (steering_corrector(moni, SL, plane) || match_string(moni->name, SL->corr_name, SL->n_corr_types, EXACT_MATCH)>=0))
+          ((plane==4 && (steering_corrector(moni, SL, 0) || steering_corrector(moni, SL, 2)))
+           || (plane!=4 && steering_corrector(moni, SL, plane))
+           || match_string(moni->name, SL->corr_name, SL->n_corr_types, EXACT_MATCH)>=0))
         corr_seen = 1;
-      if ((moni->type==moni_type_1 || moni->type==moni_type_2) 
-          && ((MONI*)moni->p_elem)->weight>0 && corr_seen) {
+      if (((MONI*)moni->p_elem)->weight>0 && corr_seen && 
+          findLongInArray(moni->type, moni_type, 2)!=-1) {
         *nmon += 1;
         *umoni = trealloc(*umoni, *nmon*sizeof(**umoni));
         (*umoni)[*nmon-1] = moni;
@@ -2291,8 +2401,8 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
     moni = start;
     i_elem = 0;
     while (moni) {
-      if ((moni->type==moni_type_1 || moni->type==moni_type_2) 
-          && ((MONI*)moni->p_elem)->weight>0) {
+      if (((MONI*)moni->p_elem)->weight>0 && 
+          findLongInArray(moni->type, moni_type, 2)!=-1) {
         *nmon += 1;
         *umoni = trealloc(*umoni, *nmon*sizeof(**umoni));
         (*umoni)[*nmon-1] = moni;
@@ -3559,5 +3669,376 @@ long preemptivelyFindPeggedCorrectors
     }
   }
   return nNewPegged;
+}
+
+void compute_coupled_trajcor_matrices
+  (
+   CORMON_DATA *CM, STEERING_LIST *SL, RUN *run, LINE_LIST *beamline, unsigned long flags
+)
+{
+  ELEMENT_LIST *corr;
+  TRAJECTORY *traj0, *traj1;
+  long kick_offset, i_corr, i_moni, i, corrPlane;
+  long n_part;
+  double **one_part, p, p0, kick0, corr_tweek, corrCalibration, *moniCalibration, W0=0.0;
+  double conditionNumber;
+  VMATRIX *save;
+  long i_type;
+
+  find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index,
+			 &CM->umoni, &CM->ucorr, &CM->kick_coef, &CM->sl_index, 
+			 &CM->pegged, &CM->weight, 4, SL, run, beamline, 0);
+  
+  if (CM->nmon<CM->ncor) {
+    printf("*** Warning: more correctors than monitors for coupled correction.\n");
+    printf("*** Correction may be unstable (use SV controls).\n");
+    fflush(stdout);
+  }
+  if (CM->ncor==0) {
+    printf("Warning: no correctors for coupled correction.  No correction done.\n");
+    fflush(stdout);
+    return;
+  }
+  if (CM->nmon==0) {
+    printf("Warning: no monitors for coupled correction. No correction done.\n");
+    fflush(stdout);
+    CM->ncor = 0;
+    return;
+  }
+
+  if (flags&COMPUTE_RESPONSE_FINDONLY)
+    return;
+
+  if (!(flags&COMPUTE_RESPONSE_SILENT)) {
+    printf("computing response matrix...\n");
+    fflush(stdout);
+    report_stats(stdout, "start");
+  }
+  
+  /* allocate matrices for this plane */
+  if (CM->C)
+    matrix_free(CM->C);
+  CM->C  = matrix_get(CM->nmon, CM->ncor);   /* Response matrix */
+  if (CM->T)
+    matrix_free(CM->T);
+  CM->T  = NULL;
+  
+  /* arrays for trajectory data */
+  traj0 = tmalloc(sizeof(*traj0)*beamline->n_elems);
+  traj1 = tmalloc(sizeof(*traj1)*beamline->n_elems);
+  one_part = (double**)czarray_2d(sizeof(**one_part), 1, totalPropertiesPerParticle);
+
+  /* find initial trajectory */
+  p = p0 = sqrt(sqr(run->ideal_gamma)-1);
+  n_part = 1;
+  fill_double_array(*one_part, totalPropertiesPerParticle, 0.0);
+  if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+                   traj0, run, 0, 
+                   TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
+    bombElegant("tracking failed for test particle (compute_trajcor_matrices())", NULL);
+
+  /* set up weight matrix and monitor calibration array */
+  moniCalibration = tmalloc(sizeof(*moniCalibration)*CM->nmon);
+  CM->equalW = 1;
+  for (i_moni=0; i_moni<CM->nmon; i_moni++) {
+    CM->weight[i_moni] = getMonitorWeight(CM->umoni[i_moni]);
+    if (!i_moni)
+      W0 = CM->weight[i_moni];
+    else if (W0!=CM->weight[i_moni])
+      CM->equalW = 0;
+    moniCalibration[i_moni] = getMonitorCalibration(CM->umoni[i_moni], 
+                                                    CM->umoni[i_moni]->type==T_HMON?0:2);
+  }
+
+  for (i_corr = 0; i_corr<CM->ncor; i_corr++) {
+    corr = CM->ucorr[i_corr];
+
+    if ((i_type = find_index(corr->type, SL->corr_type, SL->n_corr_types))<0)
+      bombElegant("failed to find corrector type in type list", NULL);
+
+    kick_offset = SL->param_offset[i_type];
+    corr_tweek  = SL->corr_tweek[i_type];
+
+    /* record value of corrector */
+    kick0 = *((double*)(corr->p_elem+kick_offset));
+
+    /* change the corrector by corr_tweek and compute the new matrix for the corrector */
+    *((double*)(corr->p_elem+kick_offset)) = kick0 + corr_tweek;
+
+    if (corr->matrix) {
+      save = corr->matrix;
+      corr->matrix = NULL;
+    } else
+      save = NULL;
+    compute_matrix(corr, run, NULL);
+
+    /* track with positively-tweeked corrector */
+    p = p0;
+    n_part = 1;
+    fill_double_array(*one_part, totalPropertiesPerParticle, 0.0);
+    if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+                     traj1, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
+      bombElegant("tracking failed for test particle (compute_trajcor_matrices())", NULL);
+
+    corrPlane = CM->ucorr[i_corr]->type==T_HCOR || CM->ucorr[i_corr]->type==T_EHCOR ? 0 : 2;
+    corrCalibration = getCorrectorCalibration(CM->ucorr[i_corr], corrPlane)/corr_tweek;
+
+    for (i_moni=0; i_moni<CM->nmon; i_moni++) {
+      long coord;
+      i = CM->mon_index[i_moni];
+      coord = 0;
+      if (CM->umoni[i_moni]->type!=T_HMON)
+        coord = 2;
+      Mij(CM->C, i_moni, i_corr) = corrCalibration*
+        (computeMonitorReading(CM->umoni[i_moni], coord, traj1[i].centroid[0], traj1[i].centroid[2], 0)
+         - computeMonitorReading(CM->umoni[i_moni], coord, traj0[i].centroid[0], traj0[i].centroid[2], 0));
+    }
+
+    /* change the corrector back */
+    *((double*)(corr->p_elem+kick_offset)) = kick0;
+    if (beamline->links)
+      assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
+    if (corr->matrix) {
+      free_matrices(corr->matrix);
+      free(corr->matrix);
+      corr->matrix = NULL;
+    }
+    if (save) {
+      corr->matrix = save;
+      save = NULL;
+    } else 
+      compute_matrix(corr, run, NULL);
+  } 
+  free(moniCalibration);
+  tfree(traj0); traj0 = NULL;
+  tfree(traj1); traj1 = NULL;
+  free_czarray_2d((void**)one_part, 1, totalPropertiesPerParticle); one_part = NULL;
+#ifdef DEBUG
+  matrix_show(CM->C    , "%13.6le ", "influence matrix\n", stdout);
+#endif
+  if (!(flags&COMPUTE_RESPONSE_SILENT)) {
+    report_stats(stdout, "done");
+  }
+  
+  if (flags&COMPUTE_RESPONSE_INVERT) {
+    if (!(flags&COMPUTE_RESPONSE_SILENT)) {
+      report_stats(stdout, "Computing correction matrix ");
+      fflush(stdout);
+    }
+    
+    /* compute correction matrix T */
+    if (CM->auto_limit_SVs && (CM->C->m < CM->C->n) && CM->remove_smallest_SVs < (CM->C->n - CM->C->m)) {
+      CM->remove_smallest_SVs = CM->C->n - CM->C->m;
+      printf("Removing %ld smallest singular values to prevent instability\n", (long)CM->remove_smallest_SVs);
+    }
+    
+    CM->T = matrix_invert(CM->C, CM->equalW?NULL:CM->weight, (int32_t)CM->keep_largest_SVs, (int32_t)CM->remove_smallest_SVs,
+                          CM->minimum_SV_ratio, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
+    matrix_scmul(CM->T, -1);
+
+    if (!(flags&COMPUTE_RESPONSE_SILENT)) {
+      report_stats(stdout, "\ndone.");
+      printf("Condition number is %e\n", conditionNumber);
+      fflush(stdout);
+    }
+  }
+
+#ifdef DEBUG
+    matrix_show(CM->C, "%13.6le ", "response matrix\n", stdout);
+    matrix_show(CM->T, "%13.6le ", "correction matrix\n", stdout);
+#endif
+}
+
+long global_coupled_trajcor
+   (CORMON_DATA *CM, STEERING_LIST *SL, TRAJECTORY **traject, long n_iterations, 
+    RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, ELEMENT_LIST **newly_pegged)
+{
+  ELEMENT_LIST *corr, *eptr;
+  TRAJECTORY *traj;
+  long iteration, kick_offset;
+  long i_moni, i_corr;
+  long n_part, i, tracking_flags, sl_index;
+  double **particle;
+  double p, x, y, reading, fraction, minFraction, param, change;
+  MAT *Qo, *dK;
+  long i_pegged;
+
+  if (!matrix_check(CM->C) || !matrix_check(CM->T))
+    bombElegant("corrupted response matrix detected (global_coupled_trajcor)", NULL);
+  if (!CM->mon_index)
+    bombElegant("monitor index array is NULL (global_coupled_trajcor)", NULL);
+  if (!CM->posi)
+    bombElegant("monitor readout array is NULL (global_coupled_trajcor)", NULL);
+  if (!CM->kick)
+    bombElegant("corrector value array is NULL (global_coupled_trajcor)", NULL);
+  if (!traject)
+    bombElegant("no trajectory arrays supplied (global_coupled_trajcor)", NULL);
+  if (!CM->T)
+    bombElegant("no inverse matrix computed (global_coupled_trajcor)", NULL);
+
+  Qo = matrix_get(CM->nmon, 1);   /* Vector to store trajectory error at BPMs */
+   
+  if (!beam) {
+    particle = (double**)czarray_2d(sizeof(**particle), 1, totalPropertiesPerParticle);
+    tracking_flags = TEST_PARTICLES;
+  }
+  else {
+    if (beam->n_to_track==0)
+      bombElegant("no particles to track in global_coupled_trajcor()", NULL);
+    particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, totalPropertiesPerParticle);
+    tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
+  }
+
+  if (CM->nmon<CM->ncor) {
+    printf("*** Warning: more correctors than monitors for coupled trajectory correction.\n");
+    printf("*** Correction may be unstable (use SV controls)\n");
+    fflush(stdout);
+  }
+  for (iteration=0; iteration<=n_iterations; iteration++) {
+    if (!CM->posi[iteration])
+      bombElegant("monitor readout array for this iteration is NULL (global_coupled_trajcor)", NULL);
+    if (!CM->kick[iteration])
+      bombElegant("corrector value array for this iteration is NULL (global_coupled_trajcor)", NULL);
+
+    /* find trajectory */
+    p = sqrt(sqr(run->ideal_gamma)-1);
+
+    if (!beam) {
+      if (!starting_coord)
+        fill_double_array(*particle, totalPropertiesPerParticle, 0.0);
+      else {
+        for (i=0; i<6; i++)
+          particle[0][i] = starting_coord[i];
+      }
+      n_part = 1;
+    }
+    else
+      copy_particles(particle, beam->particle, n_part=beam->n_to_track);
+
+    n_part = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
+                         (BEAM_SUMS**)NULL, (long*)NULL,
+                         traj=traject[iteration==0?0:1], run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
+    if (beam) {
+      printf("%ld particles survived tracking", n_part);
+      fflush(stdout);
+      if (n_part==0) {
+        for (i=0; i<beamline->n_elems+1; i++)
+          if (traj[i].n_part==0)
+            break;
+        if (i!=0 && i<beamline->n_elems+1)
+          printf("---all beam lost before z=%em (element %s)",
+                  traj[i].elem->end_pos, traj[i].elem->name);
+        fflush(stdout);
+        fputc('\n', stdout);
+      }
+      fputc('\n', stdout);
+    } else if (n_part==0) {
+      /* This actually should never happen given the tracking flags */
+      printf("Beam lost before end of beamline during trajectory correction\n");
+      fflush(stdout);
+    }
+
+    /* find readings at monitors and add in reading errors */
+    for (i_moni=0; i_moni<CM->nmon; i_moni++) {
+      long coord;
+      if (!(eptr=traj[CM->mon_index[i_moni]].elem))
+        bombElegant("invalid element pointer in trajectory array (global_coupled_trajcor)", NULL);
+      x = traj[CM->mon_index[i_moni]].centroid[0];
+      y = traj[CM->mon_index[i_moni]].centroid[2];
+      coord = 0;
+      if (CM->umoni[i_moni]->type!=T_HMON)
+        coord = 2;
+      reading = computeMonitorReading(eptr, coord, x, y, 0);
+      if (isnan(reading) || isinf(reading)) 
+        return 0;
+      CM->posi[iteration][i_moni] = reading;
+      Mij(Qo, i_moni, 0) = reading + (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0);
+    }
+    
+    if (iteration==n_iterations)
+      break;
+
+    /* solve for the corrector changes */
+    dK = matrix_mult(CM->T, Qo);
+#ifdef DEBUG
+    matrix_show(Qo, "%13.6le ", "traj matrix\n", stdout);
+    matrix_show(dK, "%13.6le ", "kick matrix\n", stdout);
+#endif
+
+    /* step through beamline find any kicks that are over their limits */
+    minFraction = 1;
+    i_pegged = -1;
+    for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+      corr = CM->ucorr[i_corr];
+      sl_index = CM->sl_index[i_corr];
+      kick_offset = SL->param_offset[sl_index];
+      param = fabs(*((double*)(corr->p_elem+kick_offset)) +
+                   (change=Mij(dK, i_corr, 0)/CM->kick_coef[i_corr]*CM->corr_fraction));
+      if (SL->corr_limit[sl_index] && param>SL->corr_limit[sl_index]) {
+        fraction = fabs((SL->corr_limit[sl_index]-fabs(*((double*)(corr->p_elem+kick_offset))))/change);
+        if (fraction<minFraction) {
+	  i_pegged = i_corr;
+          minFraction = fraction;
+	}
+      }
+    }
+    if (i_pegged!=-1) {
+      *newly_pegged = CM->ucorr[i_pegged];
+      CM->pegged[i_pegged] = 1;
+    }
+    fraction = minFraction*CM->corr_fraction;
+
+#if defined(DEBUG)
+    printf("Changing correctors:");
+    fflush(stdout);
+#endif
+    /* step through beamline and change correctors */
+    for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+      corr = CM->ucorr[i_corr];
+      sl_index = CM->sl_index[i_corr];
+      kick_offset = SL->param_offset[sl_index];
+#if defined(DEBUG)
+      printf("name = %s#%ld, before = %e, ", corr->name, corr->occurence, *((double*)(corr->p_elem+kick_offset)));
+      fflush(stdout);
+#endif
+      if (iteration==0)
+        CM->kick[iteration][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
+      *((double*)(corr->p_elem+kick_offset)) += Mij(dK, i_corr, 0)*fraction/CM->kick_coef[i_corr];
+      if (SL->corr_limit[sl_index] && fabs(*((double*)(corr->p_elem+kick_offset)))>(1+1e-6)*SL->corr_limit[sl_index]) {
+        printf("**** Corrector %s#%ld went past limit (%e > %e) --- This shouldn't happen (1)\n",
+               corr->name, corr->occurence, fabs(*((double*)(corr->p_elem+kick_offset))), SL->corr_limit[sl_index]);
+        printf("fraction=%e -> kick = %e\n", fraction, *((double*)(corr->p_elem+kick_offset)));
+      }
+      CM->kick[iteration+1][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
+#if defined(DEBUG)
+      printf("after = %e, limit = %le, sl_index = %ld (coef = %le)\n", *((double*)(corr->p_elem+kick_offset)), SL->corr_limit[sl_index], sl_index, CM->kick_coef[i_corr]);
+      fflush(stdout);
+#endif
+      if (corr->matrix) {
+        free_matrices(corr->matrix);
+        tfree(corr->matrix);
+        corr->matrix = NULL;
+      }
+      compute_matrix(corr, run, NULL);
+    }
+    matrix_free(dK);
+    if (beamline->links)
+      assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
+  }
+
+  /* indicate that beamline concatenation and Twiss parameter computation (if wanted) are not current */
+  beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
+  beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+
+  if (!beam)
+    free_czarray_2d((void**)particle, 1, totalPropertiesPerParticle);
+  else
+    free_czarray_2d((void**)particle, beam->n_to_track, totalPropertiesPerParticle);
+  particle = NULL;
+  log_exit("global_coupled_trajcor");
+
+  matrix_free(Qo);
+
+  return iteration;
 }
 
