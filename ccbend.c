@@ -57,6 +57,7 @@ long track_through_ccbend(
                           double *sigmaDelta2, /* use for accumulation of energy spread for radiation matrix computation */
                           char *rootname,
                           MAXAMP *maxamp,
+                          APCONTOUR *apContour,
                           APERTURE_DATA *apFileData,
                           /* If iPart non-negative, we do one step. The caller is responsible 
                            * for handling the coordinates appropriately outside this routine. 
@@ -77,7 +78,7 @@ long track_through_ccbend(
   long i_part, i_top;
   double *coef;
   double fse, tilt, rad_coef, isr_coef, dzLoss=0;
-  double rho0, arcLength, length, angle, yaw, angleSign;
+  double rho0, arcLength, length, angle, yaw, angleSign, extraTilt;
   MULTIPOLE_DATA *multData = NULL, *edge1MultData = NULL, *edge2MultData = NULL;
   long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
@@ -174,7 +175,7 @@ long track_through_ccbend(
 
         particle0 = (double**)czarray_2d(sizeof(**particle0), 1, totalPropertiesPerParticle);
         memset(particle0[0], 0, totalPropertiesPerParticle*sizeof(**particle));
-        track_through_ccbend(particle0, 1, eptr, ccbend, Po, NULL, 0.0, NULL, NULL, NULL, NULL, -1, 0);
+        track_through_ccbend(particle0, 1, eptr, ccbend, Po, NULL, 0.0, NULL, NULL, NULL, NULL, NULL, -1, 0);
         ccbend->lengthCorrection = ccbend->length - particle0[0][4];
         free_czarray_2d((void**)particle0, 1, totalPropertiesPerParticle);
         ccbend->optimized = 1;
@@ -241,8 +242,10 @@ long track_through_ccbend(
     rho0 = -rho0;
     yaw = -ccbend->yaw*(ccbend->edgeFlip?-1:1);
     rotateBeamCoordinates(particle, n_part, PI);
+    extraTilt = PI;
   } else {
     angleSign = 1;
+    extraTilt = 0;
     yaw = ccbend->yaw*(ccbend->edgeFlip?-1:1);
   }
   if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles ||
@@ -364,7 +367,7 @@ long track_through_ccbend(
   dy = ccbend->dy;
   dz = ccbend->dz*(ccbend->edgeFlip?-1:1);
 
-  setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+length/2);
+  setupMultApertureData(&apertureData, -(tilt+extraTilt), apContour, maxamp, apFileData, z_start+length/2);
 
   if (iPart<=0) {
     /*
@@ -1150,7 +1153,7 @@ double ccbend_trajectory_error(double *value, long *invalid)
   if (ccbendCopy.compensateKn)
     ccbendCopy.KnDelta = -ccbendCopy.fseOffset;
   /* printf("** fse = %le, dx = %le, x[0] = %le\n", value[0], value[1], particle[0][0]); fflush(stdout);  */
-  if (!track_through_ccbend(particle, 1, eptrCopy, &ccbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1, -1)) {
+  if (!track_through_ccbend(particle, 1, eptrCopy, &ccbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, NULL, -1, -1)) {
     *invalid = 1;
     return DBL_MAX;
   }
@@ -1237,7 +1240,7 @@ VMATRIX *determinePartialCcbendLinearMatrix(CCBEND *ccbend, double *startingCoor
   ltmp2 = ccbend->synch_rad;
 
   ccbend->isr = ccbend->synch_rad = 0;
-  track_through_ccbend(coord, n_track, NULL, ccbend, pCentral, NULL, 0.0, NULL, NULL, NULL, NULL, -1, iFinalSlice);
+  track_through_ccbend(coord, n_track, NULL, ccbend, pCentral, NULL, 0.0, NULL, NULL, NULL, NULL, NULL, -1, iFinalSlice);
 
   ccbend->isr = ltmp1;
   ccbend->synch_rad = ltmp2;

@@ -4114,10 +4114,13 @@ extern long motion(double **part, long n_part, void *field, long field_type, dou
 /* prototypes for multipole.c: */
 typedef struct {
   double xCen, yCen, xMax, yMax;
+  double reverseTilt;
+  double reverseTiltCS[2]; /* cos(tilt), sin(tilt): used to undo coordinate tilts when those are done for computational reasons */
   short elliptical, present, xExponent, yExponent;
   short openSide;
+  APCONTOUR *apContour;
 } MULT_APERTURE_DATA;
-extern void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, double tilt, 
+extern void setupMultApertureData(MULT_APERTURE_DATA *apertureData, double reverseTilt, APCONTOUR *apContour, MAXAMP *maxamp, 
                                   APERTURE_DATA *apFileData, double zPosition);
 extern long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData);
 extern int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta);
@@ -4417,9 +4420,11 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
 void addCorrectorRadiationKick(double **coord, long np, ELEMENT_LIST *elem, long type, double Po, double *sigmaDelta2, 
 			       long disableISR);
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, double Po, double **accepted,
-                             double z_start, double z_end, CHARGE *charge, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData);
+                             double z_start, double z_end, CHARGE *charge, char *rootname, MAXAMP *maxamp, 
+                             APCONTOUR *apContour, APERTURE_DATA *apFileData);
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
-                          double z_start, double *sigmaDelta2, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData);
+                          double z_start, double *sigmaDelta2, char *rootname, MAXAMP *maxamp, 
+                          APCONTOUR *apContour, APERTURE_DATA *apFileData);
 void csbend_update_fse_adjustment(CSBEND *csbend);
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, 
@@ -4431,7 +4436,7 @@ long applyLHPassFilters(double *histogram, long bins, double startHP, double end
 
 long track_through_ccbend(double **particle, long n_part, ELEMENT_LIST *eptr, CCBEND *ccbend, double Po,
                           double **accepted, double z_start, double *sigmaDelta2, char *rootname,
-                          MAXAMP *maxamp, APERTURE_DATA *apFileData, long iSlice, long iFinalSlice);
+                          MAXAMP *maxamp, APCONTOUR *apContour, APERTURE_DATA *apFileData, long iSlice, long iFinalSlice);
 void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double pCentral,
                                  double eta0, double etap0, double beta0, double alpha0,
                                  double *I1, double *I2, double *I3, double *I4, double *I5, ELEMENT_LIST *elem);

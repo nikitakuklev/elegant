@@ -606,7 +606,8 @@ void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlin
 
 
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
-                          double z_start, double *sigmaDelta2, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData)
+                          double z_start, double *sigmaDelta2, char *rootname, MAXAMP *maxamp, 
+                          APCONTOUR *apContour, APERTURE_DATA *apFileData)
 {
   double h;
   long i_part, i_top, particle_lost, j;
@@ -653,8 +654,6 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   setUpCsbendPhotonOutputFile(csbend, rootname, n_part);
   
-  setupMultApertureData(&apertureData, maxamp, csbend->tilt, apFileData, z_start+csbend->length/2);
-
   if (csbend->edge_order>1 && (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2) && csbend->hgap==0)
     bombElegant("CSBEND has EDGE_ORDER>1 and EDGE[12]_EFFECTS==2, but HGAP=0. This gives undefined results.", NULL);
   
@@ -690,7 +689,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       /* This forces us into the next branch on the next call to this routine */
       csbend0.refTrajectoryChangeSet = 1;
       setTrackingContext("csbend0", 0, T_CSBEND, "none", NULL);
-      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apFileData);
+      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apContour, apFileData);
       csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
 
       csbend->refKicks = csbend->n_kicks;
@@ -809,6 +808,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     rho0  = csbend->length/angle;
   }
 
+  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start+csbend->length/2);
 
   if (rho0>1e6) {
     if (csbend->k2!=0)
@@ -1792,6 +1792,7 @@ long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s
   double Fx, Fy, x, y;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
+  APCONTOUR *apContour;
 
   static double driftFrac2[2] = {
     0.5, 0.5
@@ -1865,13 +1866,16 @@ long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s
 
   memcpy(Qf, Qi, sizeof(*Qi)*6);
 
-  dist = 0;
+  if (apData)
+    apContour = apData->apContour;
 
+  dist = 0;
   s /= n;
   *dz_lost = 0; /* we'll accumulate this value even if the particle isn't lost */
   for (i=0; i<n; i++) {
     long j;
-    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
+    if ((apData && !checkMultAperture(X, Y, apData)) ||
+        insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
       return 0;
     }
     for (j=0; j<nSubsteps; j++) {
@@ -1939,7 +1943,8 @@ long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s
       dist -= refTrajectoryData[i][4];
     }
   }
-  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG,0.0, i, n)) {
+  if ((apData && !checkMultAperture(X, Y, apData)) ||
+      insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
     *dz_lost = n*s;
     return 0;
   }
@@ -2132,7 +2137,7 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
   long i;
   double ds, dsh, dist;
   double Fx, Fy, x, y;
-  
+
   static double driftFrac2[2] = {
     0.5, 0.5
   };
@@ -2205,12 +2210,12 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
   memcpy(Qf, Qi, sizeof(*Qi)*6);
 
   dist = 0;
-
   s /= n;
   *dz_lost = 0; /* we'll accumulate this value even if the particle isn't lost */
   for (i=0; i<n; i++) {
     long j;
-    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
+    if ((apData && !checkMultAperture(X, Y, apData)) ||
+        insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
       return 0;
     }
     for (j=0; j<nSubsteps; j++) {
@@ -2266,7 +2271,8 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
     }
   }
   *dz_lost = n*s;
-  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
+  if ((apData && !checkMultAperture(X, Y, apData)) ||
+      insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
     return 0;
   }
 
@@ -2285,7 +2291,8 @@ void readWakeFilterFile(long *values, double **freq, double **real, double **ima
 
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, 
                              double Po, double **accepted, double z_start, double z_end,
-                             CHARGE *charge, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData)
+                             CHARGE *charge, char *rootname, MAXAMP *maxamp, APCONTOUR *apContour,
+                             APERTURE_DATA *apFileData)
 {
   double h, n, he1, he2;
   static long csrWarning = 0;
@@ -2365,8 +2372,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   }
 #endif /* HAVE_GPU */
  
-  setupMultApertureData(&apertureData, maxamp, csbend->tilt, apFileData, z_start+csbend->length/2);
-
   gamma2 = Po*Po+1;
   gamma3 = pow(gamma2, 3./2);
 
@@ -2490,7 +2495,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     tilt  = csbend->tilt;
     rho0  = csbend->length/angle;
   }
-  
+
+  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start+csbend->length/2);
+
   if (rho0>1e6) {
     if (!largeRhoWarning) {
       printf("Warning: One or more CSRCSBENDs have radius > 1e6.  Treated as drift.\n");
@@ -5768,7 +5775,7 @@ double csbend_fse_adjustment_penalty(double *value, long *invalid)
 
   csbendWorking.fseCorrectionValue = *value;
   optimizationEvaluations ++;
-  if (!track_through_csbend(optParticle, 1, &csbendWorking, 0, 1e3, NULL, 0.0, NULL, NULL, NULL, NULL)) {
+  if (!track_through_csbend(optParticle, 1, &csbendWorking, 0, 1e3, NULL, 0.0, NULL, NULL, NULL, NULL, NULL)) {
     *invalid = 1;
     return 0.0;
   }

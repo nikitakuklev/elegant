@@ -48,6 +48,8 @@ Here is a summary of what's changed since release 2020.3.  Historical change log
 \item The \verb|FMULT| element had a bug that produced {\em very} invalid results with the \verb|FSE| parameter was non-zero,
   as reported by A. Xiao (APS). Also, the \verb|FSE| and other parameters were not influencing matrix-related computations
   if changed during a run.
+\item Use of the \verb|XREADOUT| and \verb|YREADOUT| features of the \verb|MONI| element resulted in a message about
+  undefined \verb|rpn| variables.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -68,6 +70,12 @@ for the same element. This was reported by V. Sajaev (APS).
   The value of the \verb|N_KICKS| parameter may be reduced by a factor of $\sim$5 if the sixth-order integrator
   is used in place of the fourth-order integrator, with essentially identical results but a $\sim$30\% reduction
   in run time.
+\item The \verb|APCONTOUR| element has two new parameters: \verb|STICKY| and \verb|CANCEL|. The \verb|STICKY|
+  parameter results in the aperture contour being applied inside subsequent \verb|CCBEND|, \verb|CSBEND|,
+  \verb|KQUAD|, \verb|KSEXT|, verb|KOCT|, and \verb|KQUSE| elements, as well as at the end of other downstream
+  elements. This continues until another \verb|APCONTOUR| element asserts a new contour, or uses \verb|CANCEL=1|
+  to cancel the feature.
+  This improvement was inspired by forum user \verb|dondreka|.
 \end{itemize}
 
 \subsection{New and Modified Commands}

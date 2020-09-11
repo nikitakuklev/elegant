@@ -30,7 +30,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
                                   long n_parts, double drift,
                                   long integration_order,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, APCONTOUR *apcontour, double *dzLoss, double *sigmaDelta2,
+                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial, 
                                   double refTilt /* used for obstruction evaluation only */
                                   );
@@ -462,7 +462,7 @@ long fmultipole_tracking(
 
     is_lost = 0;
     if (!integrate_kick_multipole_ordn(coord, multipole->dx, multipole->dy, 0.0, 0.0, Po, rad_coef, 0.0,
-                                       order, KnL, skew, n_kicks, drift, 4, &multData, NULL, NULL, NULL, NULL,
+                                       order, KnL, skew, n_kicks, drift, 4, &multData, NULL, NULL, NULL, 
                                        &dzLoss, NULL, 0, multipole->tilt))
       is_lost = 1;
     
@@ -1079,7 +1079,7 @@ long multipole_tracking2(
   if (multData)
     multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
 
-  setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+drift/2);
+  setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, z_start+drift/2);
   
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, dx, dy, dz);
@@ -1120,7 +1120,7 @@ long multipole_tracking2(
                                        order, KnL, skew,
                                        n_parts, drift, integ_order,
                                        multData, edgeMultData, steeringMultData,
-                                       &apertureData, apcontour, &dzLoss, sigmaDelta2,
+                                       &apertureData, &dzLoss, sigmaDelta2,
                                        elem->type==T_KQUAD?kquad->radial:0, tilt)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
@@ -1620,7 +1620,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
                                   long n_parts, double drift,
                                   long integration_order,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, APCONTOUR *apContour,
+                                  MULT_APERTURE_DATA *apData, 
                                   double *dzLoss, double *sigmaDelta2,
 				  long radial, 
                                   double refTilt /* used for obstruction evaluation only */
@@ -1731,7 +1731,6 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
   *dzLoss = 0;
   for (i_kick=0; i_kick<n_parts; i_kick++) {
     if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
-        (apContour && !checkApContour(x+dx, y+dy, apContour)) ||
 	insideObstruction_xyz(x, y, coord[particleIDIndex], 
 			      globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
 			      refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
@@ -1833,7 +1832,6 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
   }
   
   if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
-      (apContour && !checkApContour(x+dx, y+dy, apContour)) ||
       insideObstruction_xyz(x, y, coord[particleIDIndex],
 			    globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
 			    refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
@@ -2163,15 +2161,28 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
 
 }
 
-void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, double tilt, 
-     APERTURE_DATA *apFileData, double zPosition)
+void setupMultApertureData
+(
+ MULT_APERTURE_DATA *apertureData, 
+ /* used to undo the tilt of the element when it's done for computational reasons, e.g., negative bend with TILT+=PI */
+ double reverseTilt,  
+ APCONTOUR *apContour, 
+ MAXAMP *maxamp, APERTURE_DATA *apFileData, double zPosition)
 {
   double x_max, y_max;
+
+  apertureData->apContour = apContour;
+
+  apertureData->reverseTilt = reverseTilt;
+  apertureData->reverseTiltCS[0] = cos(reverseTilt);
+  apertureData->reverseTiltCS[1] = sin(reverseTilt);
+
   /* zPosition=_start+drift/2 */
   apertureData->xCen = apertureData->yCen = 0;
   x_max = y_max = apertureData->xMax = apertureData->yMax = 0;
   apertureData->elliptical = 0;
   apertureData->present = apertureData->openSide = 0;
+
   if (maxamp) {
     x_max = apertureData->xMax = maxamp->x_max;
     y_max = apertureData->yMax = maxamp->y_max;
@@ -2183,6 +2194,7 @@ void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, dou
       apertureData->yExponent = maxamp->yExponent;
     apertureData->openSide = determineOpenSideCode(maxamp->openSide);
   }
+
   if (apFileData && apFileData->initialized) {
     /* If there is file-based aperture data, it may override MAXAMP data. */
     double xCenF, yCenF, xMaxF, yMaxF;
@@ -2203,21 +2215,25 @@ void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, dou
       }
     }
   }
-  if (fabs(tilt)>0.1) {
-    /* If rotation is greater than 100 mrad, disable aperture inside the element */
-    /* Prevents unexpected results with skew elements */
-    apertureData->present = 0;
-  }
 }
 
 long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData) 
 {
   double xa, yb;
-  if (!apData || !apData->present)
+  if (!apData)
     return 1;
 
   x -= apData->xCen;
   y -= apData->yCen;
+
+  if (apData->reverseTilt) {
+    double x0, y0;
+    x0 = x;
+    y0 = y;
+    x =  x0*apData->reverseTiltCS[0] + y0*apData->reverseTiltCS[1];
+    y = -x0*apData->reverseTiltCS[1] + y0*apData->reverseTiltCS[0];
+  }
+
 
   if (apData->elliptical==0 || apData->xMax<=0 || apData->yMax<=0) {
     /* rectangular or one-dimensional */
@@ -2238,5 +2254,9 @@ long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData)
         evaluateLostWithOpenSides(apData->openSide, x, y, apData->xMax, apData->yMax))
       return 0;
   }
+
+  if (apData->apContour && !checkApContour(x, y, apData->apContour))
+    return 0;
+
   return 1;
 }

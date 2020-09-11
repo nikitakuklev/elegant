@@ -1801,7 +1801,7 @@ long do_tracking(
 #endif
 
 	      nLeft = track_through_csbend(coord, nToTrack, (CSBEND*)eptr->p_elem, 0.0,
-					   *P_central, accepted, last_z, NULL, run->rootname, maxamp,
+					   *P_central, accepted, last_z, NULL, run->rootname, maxamp, apcontour,
 					   &(run->apertureData));
 	      if (flags&TEST_PARTICLES)
 		((CSBEND*)eptr->p_elem)->isr = saveISR;	  
@@ -1812,7 +1812,7 @@ long do_tracking(
 		((CCBEND*)eptr->p_elem)->isr = 0;
 	      }
 	      nLeft = track_through_ccbend(coord, nToTrack, eptr, (CCBEND*)eptr->p_elem, *P_central, accepted, 
-                                           last_z, NULL, run->rootname, maxamp, &(run->apertureData), -1, -1);
+                                           last_z, NULL, run->rootname, maxamp, apcontour, &(run->apertureData), -1, -1);
 	      if (flags&TEST_PARTICLES)
 		((CCBEND*)eptr->p_elem)->isr = saveISR;	  
 	      break;
@@ -1827,7 +1827,7 @@ long do_tracking(
 	      }
 	      nLeft = track_through_csbendCSR(coord, nToTrack, (CSRCSBEND*)eptr->p_elem, 0.0,
 					      *P_central, accepted, last_z, z, charge, run->rootname,
-					      maxamp, &(run->apertureData));
+					      maxamp, apcontour, &(run->apertureData));
 	      if (flags&TEST_PARTICLES)
 		((CSRCSBEND*)eptr->p_elem)->isr = saveISR;
 	      break;
