@@ -81,6 +81,7 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
       CMyx.C = NULL;
       CMyx.bpmPlane = 1;
       CMyx.corrPlane = 0;
+      CMyx.weight = correct->CMFy->weight;
       
       /* CMxy is the horizontal response to vertical correctors */
       /* --- copy corrector information */
@@ -98,6 +99,7 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
       CMxy.bpmPlane = 0;
       CMxy.corrPlane = 1;
       CMxy.fixed_length = fixed_length;
+      CMxy.weight = correct->CMFx->weight;
     }
     
 #if USE_MPI
