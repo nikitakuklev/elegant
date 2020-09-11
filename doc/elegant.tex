@@ -71,7 +71,7 @@ for the same element. This was reported by V. Sajaev (APS).
   is used in place of the fourth-order integrator, with essentially identical results but a $\sim$30\% reduction
   in run time.
 \item The \verb|APCONTOUR| element has two new parameters: \verb|STICKY| and \verb|CANCEL|. The \verb|STICKY|
-  parameter results in the aperture contour being applied inside subsequent \verb|CCBEND|, \verb|CSBEND|,
+  parameter results in the aperture contour being applied inside subsequent \verb|CCBEND|, \verb|CSBEND|, \verb|CSRCSBEND|,
   \verb|KQUAD|, \verb|KSEXT|, verb|KOCT|, and \verb|KQUSE| elements, as well as at the end of other downstream
   elements. This continues until another \verb|APCONTOUR| element asserts a new contour, or uses \verb|CANCEL=1|
   to cancel the feature.

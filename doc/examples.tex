@@ -1,0 +1,544 @@
+\begin{itemize}
+\item \verb|acceptance| --- 
+ Use of the acceptance feature when tracking collections of particles. 
+
+\begin{itemize}
+\item \verb|energyScan1| --- 
+ Tracking a FODO line with various apertures, with variation of the initial momentum offset. 
+
+\item \verb|fodoScan1| --- 
+ Tracking a FODO line with various apertures, with scanning of the quadrupole strengths. 
+
+\item \verb|transportLineAcceptance| --- 
+Determine transverse and momentum acceptance of a transport line using tracking.
+Example by M. Borland (ANL).
+
+\end{itemize}
+\item \verb|alphaMagnet| --- 
+ Optimization of the strength of an alpha magnet to compress the beam from a thermionic rf gun. 
+
+\item \verb|APSRing| --- 
+Examples for the APS storage ring
+
+\begin{itemize}
+\item \verb|beamMoments| --- 
+6D beam moments calculation with errors
+
+\item \verb|ibsAndTouschekLifetime| --- 
+Compute touschek lifetime with IBS-inflated emittances
+
+\item \verb|ibsVsEnergy| --- 
+Compute IBS as a function of energy.
+
+\item \verb|ionEffects1| --- 
+Basic simulation of ion effects.
+
+\end{itemize}
+\item \verb|beamBasedAlignment| --- 
+ Determines quadrupole offsets based on simulated beam-based alignment procedure. 
+
+\item \verb|beamBreakup| --- 
+ Example of simulating beam-driven deflecting rf mode in a simple linac. 
+
+\item \verb|bendErrors| --- 
+ Analysis of the effect of errors on the matrix elements for a four-dipole bunch compression chicane. 
+
+\item \verb|boosterRamp| --- 
+Examples of simulating ramping in a booster.
+
+\begin{itemize}
+\item \verb|elementByElement| --- 
+ Example of simulating ramping in a booster, using the NSLS-II booster lattice (R. Fliller). 
+
+\item \verb|ILMATRIX| --- 
+Example of ramping using ILMATRIX for faster tracking.
+
+\end{itemize}
+\item \verb|bpmOffsets1| --- 
+ Example of loading BPM offsets from an external file and then correcting the orbit with those offsets. 
+
+\item \verb|bunchCompression| --- 
+Examples of using a four-dipole chicane for bunch compression.
+
+\begin{itemize}
+\item \verb|backtrack-bunchCompCSRLSCWake| --- 
+Simluation of bunch compression with CSR, LSC, and wakes. Both forward and backward tracking are performed.
+
+
+\item \verb|bunchComp| --- 
+ Four examples revolving around a four-dipole chicane bunch compressor. Simulations include basic compression, sensitivity to timing, phase, and beam energy. 
+
+\item \verb|bunchCompJitter| --- 
+ Simulation of a linac with a bunch compressor, including phase and voltage errors in the linac. 
+
+\item \verb|bunchCompJitter2| --- 
+ Simulation of a linac with a bunch compressor, including phase and voltage errors in the linac. In this case, the errors are generated externally. 
+
+\item \verb|bunchCompLSC| --- 
+ Inclusion of longitudinal space charge in simulation of a linac with a bunch compressor. 
+
+\item \verb|bunchCompOptimize| --- 
+ Example of using tracking to optimize a linac and bunch compressor including a 4th-harmonic linearizer. 
+
+\end{itemize}
+\item \verb|chromaticAmplitudes| --- 
+Example of minimizing chromatic amplitude functions in a simple beamline.
+
+\item \verb|chromaticResponse| --- 
+ Example of computing the chromatic transfer functions R16(s) and R26(s) as described in P. Emma and R. Brinkmann, SLAC-PUB-7554. 
+
+\item \verb|constructOrbitBump1| --- 
+ Illustration of how to make an orbit bump using BPM offsets and the orbit correction algorithm. 
+
+\item \verb|coupling| --- 
+Examples of coupling calculation and correction.
+
+\begin{itemize}
+\item \verb|couplingCorrection1| --- 
+ Scripts to perform coupling correction for the APS ring, emulating what is done in APS operations. These scripts are now part of the elegant distribution. 
+
+\item \verb|couplingCorrection2| --- 
+ Example of  using cross-plane response matrix and vertical dispersion to correct the coupling. 
+
+\end{itemize}
+\item \verb|customBeamDistributions| --- 
+ Examples of making custom beam distributions for tracking with elegant. 
+
+\begin{itemize}
+\item \verb|doubleBeam1| --- 
+ Example of how to make a double-gaussian time distribution using two runs.  The resultant beam would be used in a subsequent run using the sdds\_beam command. 
+
+\item \verb|example1| --- 
+ Gaussian energy distribution, linearly-ramped time distribution, and uniform transverse distributions. 
+
+\item \verb|parabolic| --- 
+ Gaussian longitudinal distribution combined with parabolic transverse distributions. 
+
+\end{itemize}
+\item \verb|cwiggler| --- 
+Examples of using the CWIGGLER element.
+
+\begin{itemize}
+\item \verb|cwig+kickmap| --- 
+ Example of simulating a simple wiggler with CWIGGLER, making a kickmap from trackings, then validating the kickmap. 
+
+\item \verb|cwiggler1| --- 
+ A simple example of dynamic aperture with a set of sinusoidal wigglers, using the CWIGGLER element. 
+
+\item \verb|cwiggler2| --- 
+ An simple example of dynamic aperture with a set of two-component horizontal wigglers, using the CWIGGLER element. 
+
+\end{itemize}
+\item \verb|DATuneScan| --- 
+ Performs a scan of the tunes in a storage ring and determines the variation in dynamic aperture. 
+
+\item \verb|defeatLinkage| --- 
+ Example of how to defeat the automatic link between the gradient and other multipoles in a dipole and the strength of the dipole itself. 
+
+\item \verb|ellipseComparison| --- 
+ Example of comparing beam ellipse from tracking to ellipse implied by the twiss parameters. 
+
+\item \verb|emitProc| --- 
+ Various applications of the program sddsemitproc, which processes quad-scan emittance measurements. 
+
+\begin{itemize}
+\item \verb|emitProc1| --- 
+ Simple example with constant measurement errors. 
+
+\item \verb|emitProc2| --- 
+ Measurement errors are supplied in the data file. 
+
+\item \verb|emitProc3| --- 
+ Includes the presence of dispersion, with constant measurement errors. 
+
+\item \verb|emitProc4| --- 
+ Quadrupole scan values are supplied from an external source. 
+
+\item \verb|emitProc5| --- 
+ Includes acceleration as part of the beamline. 
+
+\end{itemize}
+\item \verb|fiducialization| --- 
+ Examples for fiducializaton of a beamline. 
+
+\begin{itemize}
+\item \verb|fiducial1| --- 
+ Example of fiducialization with a fiducial bunch and a perturbed bunch.  The system in question is a linac with 50 structures, a four dipole chicane, then 50 more structures 
+
+\end{itemize}
+\item \verb|followIndividualParticles| --- 
+Tracking a bunch of particles, then extracting and plotting the trajectories of a few particles.
+
+\item \verb|full457MeV| --- 
+ Tracking of the APS linac with a PC gun beam, up to the entrance of the LEUTL undulator. 
+
+\item \verb|GENESIS2.0| --- 
+ Example of running SDDS-compliant GENESIS 1.3 with output from elegant for LCLS. 
+
+\item \verb|geneticOptimizer1| --- 
+ Illustration of using the geneticOptimizer script together with elegant. 
+
+\item \verb|ILMatrixFromTracking| --- 
+ Determination of the values for ILMATRIX based on analysis of tracking data. 
+
+\item \verb|injRingMatch| --- 
+ Matching of a transport line to a storage ring. 
+
+\begin{itemize}
+\item \verb|injRingMatch1| --- 
+ Illustration of finding the periodic solution for a ring, then matching a transport line to that solution. 
+
+\item \verb|injRingMatch2| --- 
+ Illustration of finding the periodic solution for a ring, then matching a transport line to that solution. In this case, a single run is used. 
+
+\item \verb|movingElements| --- 
+ Example of matching a transport line to a ring with movable quadrupoles but fixed total length. 
+
+\end{itemize}
+\item \verb|LCLS| --- 
+ LCLS-I tracking example from P. Emma, November 2007. 
+
+\begin{itemize}
+\item \verb|wakes| --- 
+ 
+
+\end{itemize}
+\item \verb|linacDispersion1| --- 
+ Example of determining the initial dispersion error in a linac. 
+
+\item \verb|LongitudinalSpaceCharge| --- 
+Examples related to longitudinal space charge.
+
+\begin{itemize}
+\item \verb|LSCOscillationExample| --- 
+Example of longitudinal space charge oscillations in a drift space.
+
+\end{itemize}
+\item \verb|lsrMdltr| --- 
+ Various examples of using the LSRMDLTR (Laser Modulator) element 
+
+\begin{itemize}
+\item \verb|example1| --- 
+ Simple example using LCLS-I-like parameters 
+
+\item \verb|example2| --- 
+ Includes a time-profile on the laser. 
+
+\item \verb|example3| --- 
+ Simulation of laser slicing for a storage ring. 
+
+\end{itemize}
+\item \verb|matching| --- 
+Various examples of lattice matching and optimization.
+
+\begin{itemize}
+\item \verb|beamSizeMatch1| --- 
+ Example of adjusting the initial beam parameters to match the measured beam sizes at a set of diagnositcs. 
+
+\item \verb|betaMatching| --- 
+ A simple two-stage matching example. 
+
+\item \verb|IDCompensation| --- 
+Example of compensating for insertion device focusing effects.
+
+\item \verb|linacMatching1| --- 
+ Example of three-part matching of a linac with a bunch compressor. 
+
+\item \verb|linearize2| --- 
+ Example of reducing nonlinearities in phase space using the REMCOR element to remove linear correlations first.
+
+\item \verb|matchMeasuredBetas| --- 
+ Optimization of lattice quadrupoles to create a model that reproduces measured beta functions. 
+
+\item \verb|matchTwoEnergies| --- 
+ Example of matching beams with two different initial energies in a linac. The beams are affected by common quadrupoles, but also by quadrupoles unique to each beam. 
+
+\item \verb|multiPartMatching1| --- 
+ Complex example of multi-part matching for a linac with several splice points. 
+
+\item \verb|multiPartMatching2| --- 
+ Example of storage ring matching with three types of cells. 
+
+\item \verb|spectrometer1| --- 
+ Optimizes a simple spectrometer to maximize energy resolution. 
+
+\end{itemize}
+\item \verb|MBALatticeDAWithErrors| --- 
+Example of performing DA vs momentum offset tracking when the lattice has strong sextupoles that
+make the orbit difficult to correct.
+
+\item \verb|multibunchCollectiveEffects| --- 
+Examples of multi-bunch collective effects for APS storage ring and other cases.
+
+\begin{itemize}
+\item \verb|APS-24Bunch-CBI| --- 
+Includes main and harmonic cavities, beamloading, rf feedback, beam feedback, and short-range impedance.
+
+\item \verb|ILMatrixFromTracking| --- 
+Example of using tracking to set up the ILMATRIX element for fast tracking.
+This is useful for increasing the speed of collective effects simulations.
+
+\item \verb|linacBunchTrain1| --- 
+Includes main linac cavities, dipole HOMs, and monopole HOMs for a simple linac, showing beam breakup.
+
+\end{itemize}
+\item \verb|multiStepErrors1| --- 
+ Example of multi-step addition and correction of errors for a storage ring. 
+
+\item \verb|NSLS-II-GirderMisalignment| --- 
+ Simulation of girder misalignment for NSLS-II, by S. Kramer (BNL) and M. Borland (ANL). 
+
+\item \verb|outboardTrajCorr| --- 
+ Examples of using the response matrix computed by elegant to perform trajectory correction with a script. 
+
+\begin{itemize}
+\item \verb|outboardTrajCorr1| --- 
+ Compares trajectory correction inside elegant to correction performed with an external script. 
+
+\item \verb|outboardTrajCorr2| --- 
+ Compares trajectory correction inside elegant to correction performed with an external script. Includes BPM offsets. 
+
+\end{itemize}
+\item \verb|PAR| --- 
+ Numerous examples using the small APS Particle Accumulator Ring. 
+
+\begin{itemize}
+\item \verb|accumulate| --- 
+Simulates adding particles to an already-stored beam.
+
+\item \verb|alphaExpansion| --- 
+Example of computing momentum compaction (alpha) to higher order using tracking.
+
+
+\item \verb|broadBandImpedance| --- 
+Example of using ZLONGIT, ILMATRIX, and SREFFECTS to
+simulate a broad-band impedance in a storage ring.
+
+
+\item \verb|bunchLengthening| --- 
+ Simulation of a passive bunch-lengthening cavity using the RFMODE element. 
+
+\item \verb|chromCorrection| --- 
+ Simple chromaticity correction with two families. Also illustrates saving and loading correction results. 
+
+\item \verb|chromTracking| --- 
+ Illustration of using tracking to determine variation of tune with momentum. 
+
+\item \verb|chromTracking2| --- 
+ Similar to chromTracking, but includes determination of the momentum dependence of the beta functions. 
+
+\item \verb|CSR| --- 
+ Example of tracking with APS Particle Accumulator Ring with a Coherent Synchrotron Radiation impedance. 
+
+\item \verb|DANormSigma| --- 
+Determination of dynamic aperture in terms of beam size.
+
+
+\item \verb|daOpt| --- 
+Example of optimization of dynamic acceptance.
+
+\item \verb|dynamicAperture| --- 
+ Determination of dynamic aperture for a series of momentum errors. 
+
+\item \verb|dynamicApertureWithSynchMotion| --- 
+ Example of dynamic aperture with radiation damping and synchrotron motion. 
+
+\item \verb|ejectionOptimization| --- 
+ Tuning of a multi-turn extraction system using several kickers. 
+
+\item \verb|elasticScatteringTracking| --- 
+Tracking to determine elastic scattering lifetime and loss distribution.
+
+\item \verb|emittanceOptimization| --- 
+ Direct optimization of the emittance using linear optics tuning. 
+
+\item \verb|fineDynamicAperture| --- 
+ High-resolution dynamic aperture including a map of where particles are lost. 
+
+\item \verb|fixedLVsRegularOrbit| --- 
+ Illustration of the difference between orbits computed with fixed path length (fixed rf frequency) and fixed beam energy (variable rf frequency). 
+
+\item \verb|frequencyMap| --- 
+ Example of frequency map analysis 
+
+\item \verb|frequencyMap-x-delta| --- 
+ Example of frequency map analysis for (x, delta)
+
+
+\item \verb|gasScatteringLifetime| --- 
+ Simple computation of gas scattering lifetime using a fixed pressure and gas mixture. 
+
+\item \verb|gasScatteringLifetimePresFile| --- 
+ Computation of gas scattering lifetime using a file giving the pressure around the ring. 
+
+\item \verb|ILMatrixScan| --- 
+Set up ILMATRIX element, then scan the tune.
+
+
+\item \verb|inelasticScatteringTracking| --- 
+Tracking to determine inelastic scattering lifetime and loss distribution.
+
+\item \verb|moments| --- 
+ Computes 6D beam moments with coupling errors. 
+
+\item \verb|momentumAperture| --- 
+ Computes the s-dependent momentum aperture without errors. 
+
+\item \verb|offMomentumDA| --- 
+ Another computation of off-momentum dynamic aperture 
+
+\item \verb|offMomentumTwiss| --- 
+ Computation of off-momentum twiss parameters. 
+
+\item \verb|offMomentumTwiss2| --- 
+Computation of off-momentum twiss parameters vs s.
+
+\item \verb|quadScan| --- 
+ Computation of twiss parameters as quadrupoles are varied according to an external table. 
+
+\item \verb|randomMultipoles| --- 
+ Dynamic aperture including random multipole errors in the quadrupoles and sextupoles. 
+
+\item \verb|synchrotronTune| --- 
+ Simple example of tracking with synchrotron motion. 
+
+\item \verb|tracking| --- 
+ Visualization of motion in x-x' and y-y' phase space. 
+
+\item \verb|trajOrbitCorrect| --- 
+ Correct the first-turn trajectory, then correct the orbit. 
+
+\item \verb|tswa| --- 
+Example of obtaining amplitude-dependence of tunes from tracking.
+
+\item \verb|TSWATracking| --- 
+ Uses tracking and post-processing to determine tune variation with amplitude. 
+
+\item \verb|tuneExcitation| --- 
+Use a swept kick to excite the horizontal tune, observing excitation of the synchrotron tune as well.
+
+\item \verb|tuneOptimization| --- 
+ Correct the tunes and chromaticities. 
+
+\item \verb|twissCalculation| --- 
+ Simple calculation of the twiss parameters 
+
+\item \verb|twoCavityMoments| --- 
+ Calculation of 6D beam moments in the presence of main and harmonic rf cavities. 
+
+\end{itemize}
+\item \verb|parallel| --- 
+ Various runs illustrating a few features of the parallel version. 
+
+\begin{itemize}
+\item \verb|DA| --- 
+ Dynamic aperture calculation. 
+
+\item \verb|FMA| --- 
+ Frequency map analysis. 
+
+\item \verb|LMA| --- 
+ Local momentum aperture calculation. 
+
+\item \verb|swarmOptimizer| --- 
+Simple example of using the particle-swarm optimizer.
+
+\end{itemize}
+\item \verb|pepperPot| --- 
+Examples of using the PEPPER\_POT element
+
+\begin{itemize}
+\item \verb|basic| --- 
+ Basic example of simulating a pepper-pot plate. 
+
+\item \verb|pepperPotScan| --- 
+ Example of simulating a pepper-pot plate with emittance analysis. 
+
+\end{itemize}
+\item \verb|periodicTwissRFCA| --- 
+ Demonstration that one can't have periodic beta functions in a FODO cell array with linac structures. 
+
+\item \verb|pulsedSextInjection| --- 
+ Illustration of optimizing the sextupoles of pulsed sextupole kickers for injection into a storage ring. 
+
+\item \verb|rampTunesWithBeam| --- 
+ Example of ramping tunes while tracking beam. In this case, we ramp the tunes across the difference coupling resonance. 
+
+\item \verb|rfDeflectingCavity| --- 
+ A simple example of using a traveling wave rf deflector (RFDF). 
+
+\item \verb|RFTMEZ0| --- 
+ Tracking through a TM-mode rf cavity based on an off-axis expansion starting from Ez(z) at r=0. 
+
+\item \verb|scanParameters| --- 
+ Examples of scanning parameters of beamline elements. 
+
+\begin{itemize}
+\item \verb|scanParameters1| --- 
+ Scan two quadrupoles together. 
+
+\item \verb|scanParameters2| --- 
+ Scan the phase of an rf cavity and look at synchrotron oscillations. 
+
+\end{itemize}
+\item \verb|scriptElement| --- 
+ Examples of using the SCRIPT element 
+
+\begin{itemize}
+\item \verb|elegantShower| --- 
+ Use of the SCRIPT element to execute the electron-gamma shower simulation code SHOWER as part of an elegant run. 
+
+\item \verb|mergeBeams| --- 
+ Using the SCRIPT element to merge several beams into a simulation that already has a beam. 
+
+\item \verb|slitArray| --- 
+ Simulation of an array of slits using the SCRIPT element. 
+
+\end{itemize}
+\item \verb|sddsoptimizeExample| --- 
+ Example of using the program sddsoptimize to optimize the results of elegant simulations. In this example, we vary a strength fudge factor for a set of quadrupoles in a transport line in order to attempt to match measured H and V response matrices. 
+
+\item \verb|serverExample| --- 
+ Example of using elegant in server mode to update lattice functions when magnet strengths change. 
+
+\item \verb|SPEAR3| --- 
+ Various examples using an early SPEAR3 lattice 
+
+\begin{itemize}
+\item \verb|dynamicAperture| --- 
+ Compute DA for several error seeds, including multipole errors. 
+
+\item \verb|latticeErrors| --- 
+ Compute variation in lattice functions with errors, including correction of the orbit, tunes, and chromaticities. 
+
+\end{itemize}
+\item \verb|staticPlusDynamicErrors| --- 
+ Example of combining static and dynamic errors in one simulation. 
+
+\item \verb|storageRingRfNoise| --- 
+ Example of including rf phase and amplitude noise in a tracking simulation. 
+
+\item \verb|transportLineHigherOrderDispersion| --- 
+ Determine higher-order dispersion in a transport line using tracking. 
+
+\item \verb|twissDerivatives| --- 
+ Example of how to compute slopes of beta, alpha, and dispersion as a function of initial momentum for a transport line. 
+
+\item \verb|twoBunchPhasing| --- 
+ Example of putting two bunches through a linac with the linac phased to the first bunch. 
+
+\item \verb|varyPlotExample| --- 
+ Example of varying a beamline parameter and computing beam properties, then plotting those properties vs s. 
+
+\item \verb|wakesAndImpedances| --- 
+Examples of wakes and impedances.
+
+\begin{itemize}
+\item \verb|csrImpedance| --- 
+Comparison of using CSR impedance (from csrImpedance) and CSRCSBEND.
+
+\item \verb|transverse1| --- 
+Compare use of transverse wake and impedance methods for a damped oscillator.
+
+\end{itemize}
+\end{itemize}
