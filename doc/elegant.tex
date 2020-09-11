@@ -61,6 +61,8 @@ for the same element. This was reported by V. Sajaev (APS).
   and \verb|modulate_elements| commands. This was reported by V. Sajaev (APS).
 \item A bug was fixed in \verb|ion_effects| that sometimes caused unphysical sigma values in the bi- and tri-gaussian
   fits. The bug was found and fixed by J. Calvey (APS).
+\item A bug was fixed that resulted in a crash when \verb|coupled=1| was set for trajectory response matrix output
+  from \verb|correction_matrix_output|.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -1482,7 +1484,7 @@ during the computations.
     STRING corrector_output = NULL;
     STRING statistics = NULL;
     STRING bpm_output = NULL;
-    double corrector_tweek[2] = {1e-3, 1e-3};
+    double corrector_tweek[2] = {1e-6, 1e-6};
     double corrector_limit[2] = {0, 0};
     double correction_fraction[2] = {1, 1};
     double correction_accuracy[2] = {1e-6, 1e-6};
