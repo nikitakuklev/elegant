@@ -124,6 +124,9 @@ void correction_setup(
 
     log_entry("correction_setup");
 
+    rpn_x_mem = rpn_create_mem("x", 0);
+    rpn_y_mem = rpn_create_mem("y", 0);
+
     if (_correct->traj) {
         free_czarray_2d((void**)_correct->traj, 3, beamline->n_elems+1);
         _correct->traj = NULL;
@@ -386,8 +389,6 @@ void correction_setup(
               _correct->CMFy->nmon, _correct->CMFy->ncor);
       fflush(stdout);
     }
-    rpn_x_mem = rpn_create_mem("x", 0);
-    rpn_y_mem = rpn_create_mem("y", 0);
 
     _correct->CMx = _correct->CMFx;
     _correct->CMy = _correct->CMFy;
