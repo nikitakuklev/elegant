@@ -778,7 +778,7 @@ double compute_end_positions(LINE_LIST *lptr)
         BRANCH *branch;
         branch = (BRANCH*)eptr->p_elem;
         branch->z = z;
-        if (branch->counter) {
+        if (branch->counter && !branch->defaultToElse) {
           eptr = branch->beptr1;
           continue;
         } else {
