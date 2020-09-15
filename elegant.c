@@ -182,7 +182,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define IGNORE_ELEMENTS 68
 #define SET_REFERENCE_PARTICLE_OUTPUT 69
 #define OBSTRUCTION_DATA 70
-#define N_COMMANDS      71
+#define SET_BUNCHED_BEAM_MOMENTS 71
+#define N_COMMANDS      72
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -198,7 +199,7 @@ char *command[N_COMMANDS] = {
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
     "tune_footprint", "ion_effects", "elastic_scattering", "inelastic_scattering", "ignore_elements",
-    "set_reference_particle_output", "obstruction_data",
+    "set_reference_particle_output", "obstruction_data", "bunched_beam_moments"
   } ;
 
 char *description[N_COMMANDS] = {
@@ -272,7 +273,8 @@ char *description[N_COMMANDS] = {
     "inelastic_scattering             determine inelastic scattering aperture from tracking as a function of position in the ring",
     "ignore_elements                  declare that elements with certain names and types should be ignored in tracking",
     "set_reference_particle_output    set reference particle coordinates to be matched via optimization",
-    "obstruction_data                 set (Z,X) contours of obstructions in the vertical midplane"
+    "obstruction_data                 set (Z,X) contours of obstructions in the vertical midplane",
+    "bunched_beam_moments             defines beam distribution using user-supplied beam moments",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -963,6 +965,18 @@ char **argv;
                          &output_data, beamline, beamline->n_elems,
                          correct.mode!=-1 && 
                          (correct.track_before_and_after || correct.start_from_centroid));
+      setup_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, beamline);
+      beam_type = SET_BUNCHED_BEAM;
+      break;
+    case SET_BUNCHED_BEAM_MOMENTS:
+      if (!run_setuped || !run_controled)
+        bombElegant("run_setup and run_control must precede bunched_beam_moments namelist", NULL);
+      if (beam_type!=-1)
+        bombElegant("a beam definition was already given for this run sequence", NULL);
+      setup_bunched_beam_moments(&beam, &namelist_text, &run_conditions, &run_control, &error_control, &optimize.variables,
+                                 &output_data, beamline, beamline->n_elems,
+                                 correct.mode!=-1 && 
+                                 (correct.track_before_and_after || correct.start_from_centroid));
       setup_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, beamline);
       beam_type = SET_BUNCHED_BEAM;
       break;

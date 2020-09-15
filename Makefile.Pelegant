@@ -126,10 +126,13 @@ aperture_search$(OBJ): aperture_search.h
 aperture_search.h: ../aperture_search.nl
 	nlpp -suppressSummaryVariables ../aperture_search.nl aperture_search.h
 
-bunched_beam$(OBJ): bunched_beam.h
+bunched_beam$(OBJ): bunched_beam.h bunched_beam2.h
 
 bunched_beam.h: ../bunched_beam.nl
 	nlpp -suppressSummaryVariables ../bunched_beam.nl bunched_beam.h
+
+bunched_beam2.h: ../bunched_beam2.nl
+	nlpp -suppressSummaryVariables ../bunched_beam2.nl bunched_beam2.h
 
 chrom$(OBJ): chrom.h
 

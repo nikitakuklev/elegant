@@ -63,6 +63,8 @@ for the same element. This was reported by V. Sajaev (APS).
   fits. The bug was found and fixed by J. Calvey (APS).
 \item A bug was fixed that resulted in a crash when \verb|coupled=1| was set for trajectory response matrix output
   from \verb|correction_matrix_output|.
+\item A bug was fixed that resulted in a crash if a beamline definition contained unbalanced quotation marks.
+  This was reported by X. Huang (APS).
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -95,6 +97,9 @@ for the same element. This was reported by V. Sajaev (APS).
   was added that allows increasing the interval between logging of ion data.
 \item The \verb|correct| command accepts a new value, \verb|coupled|, for the \verb|method| parameter when 
   \verb|mode| is \verb|trajectory|. This allows trajectory correction in strongly-coupled transport lines.
+\item The \verb|bunched_beam_moments| command was added. This command is virtually identical to the venerable
+  \verb|bunched_beam| command, but instead of specifying the beam dimensions in terms of emittances, beta functions, etc.,
+  the user provides beam moments (e.g., beam size, divergence, etc.).
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -713,6 +718,7 @@ Command name & Type & Description \\\hline
 \hyperref[subsec:analyzemap]{\tt analyze\_map} & major action & Determine first-order matrix from tracking. \\ \hline
 \hyperref[subsec:aperturedata]{\tt aperture\_data} & setup & Define aperture using an SDDS file. \\ \hline
 \hyperref[subsec:bunchedbeam]{\tt bunched\_beam} & setup & Set up beam generation. \\ \hline
+\hyperref[subsec:bunchedbeammoments]{\tt bunched\_beam\_moments} & setup & Set up beam generation. \\ \hline
 \hyperref[subsec:changeparticle]{\tt change\_particle} & action & Change the type of particle. Default is electron.\\ \hline
 \hyperref[subsec:chaosmap]{\tt chaos\_map} & action & Compute a map of the degree of chaos in particle motion.\\ \hline
 \hyperref[subsec:chromaticity]{\tt chromaticity} & setup & Correct the chromaticity. \\ \hline
@@ -1023,8 +1029,14 @@ Recommended value: ``\%s.kaf''.
 \item type: setup command.
 \item sequence: must follow \verb|run_control|.
 \item function: set up for tracking of particle coordinates with various distributions.
-\item In \verb|Pelegant|, the exact particles generated will change as the number of cores is changed.
 \item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
+\item Notes:
+  \begin{itemize}
+  \item In \verb|Pelegant|, the exact particles generated will change as the number of cores is changed.
+  \item This command is used when it is convenient to specify the beam dimensions in terms of lattice functions
+    and emittances. The \verb|bunched_beam_moments| command can be used when it is more convenient to specify
+    beam sizes, divergences, etc.
+  \end{itemize}
 \end{itemize}
 
 \begin{verbatim}
@@ -1117,6 +1129,194 @@ indicates that a 1mm long bunch has a linear variation in momentum of
 0.1\% from end-to-end.  A positive chirp is needed to provide
 compression of a bunch with an ordinary $R_{56}<0$ four-dipole
 chicane.
+
+\item \verb|one_random_bunch| --- If non-zero, then only one random
+particle distribution is generated.  Otherwise, a new distribution
+will be generated for every simulation step.
+
+\item \verb|enforce_rms_values[3]| --- Flags, one for each plane,
+indicating whether to force the distribution to have the specified RMS
+properties.
+
+\item \verb|distribution_cutoff[3]| --- Distribution cutoff parameters
+for each plane.  For gaussian distributions, this is the number of
+sigmas to use.  For other distributions (except dynamic aperture),
+this number simply multiplies the sizes.  This is potentially
+confusing and hence it is suggested that the distribution cutoff be
+set to 1 for nongaussian beams.
+
+The exception is ``dynamic-aperture'' distribution type.  In this case,
+the cutoff value is the number of grid points in the dimension in question.
+
+\item \verb|distribution_type[3]| --- Distribution type for each
+plane.  May be ``gaussian'', ``hard-edge'', ``uniform-ellipse'',
+``shell'', ``dynamic-aperture'', ``line'', ``halo(gaussian)''.
+
+For the transverse plane, the interpretation of the emittance is
+different for the different beam types.  For gaussian beams, the
+emittances are rms values.  For all other types, $\sqrt{\epsilon*\beta}$
+times the distribution cutoff defines the edge of the beam in position
+space, while $\sqrt{\epsilon*(1+\alpha^2)/\beta}$ times the distribution
+cutoff defines the edge of the beam in slope space.  
+
+A hard-edge beam is a uniformly-filled parallelogram in phase space.
+A uniform-ellipse beam is a uniformly-filled ellipse in phase space.
+A shell beam is a hollow ellipse in phase space.  A dynamic aperture
+beam has zero slope and uniform spacing in position coordinates.  A
+line beam is a line in phase space.  A ``halo(gaussian)'' beam is
+the part of the gaussian distribution {\em beyond} the distribution cutoff.
+
+\item \verb|limit_invariants| --- If non-zero, the distribution
+cutoffs are applied to the invariants, rather than to the coordinates.
+This is useful for gaussian beams when the distribution cutoff is
+small.
+
+\item \verb|limit_in_4d| --- If non-zero, then the transverse
+distribution is taken to be a 4-d gaussian or uniform distribution.
+One of these must be chosen using the \verb|distribution_type|
+control.  It must be the same for x and y.  This is useful, for
+example, if you want to make a cylindrically symmetric beam.
+
+\item \verb|symmetrize| --- If non-zero, the distribution is symmetric
+under changes of sign in the coordinates.  Automatically results in a
+zero centroid for all coordinates.
+
+\item \verb|halton_sequence[3]| and \verb|halton_radix[6]| and \verb|optimized_halton|
+--- This provides a ``quiet-start'' feature by choosing Halton sequences in
+place of random number generation.  There are three new variables that
+control this feature.  \verb|halton_sequence| is an array of three
+flags that permit turning on Halton sequence generation for the
+horizontal, vertical, or longitudinal planes.  For example,
+\verb|halton_sequence[0] = 3*1| will turn on Halton sequences for all
+three planes, while \verb|halton_sequence[2] = 1|, will turn it on for
+the longitudinal plane only.
+
+\verb|halton_radix| is an array of six integers that permit giving the
+radix for each sequence (i.e., x, x', y, y', t, p).  Each radix must
+be a prime number.  One should never use the same prime for two
+sequences, unless one randomizes the order of the sequences relative to
+each other (see the next item).  If these are left at zero, then
+elegant chooses values that eliminate phase-space banding to some
+extent.  The user is cautioned to plot all coordinate combinations for
+the initial phase space to ensure that no unacceptable banding is
+present.
+
+A suggested way to use Halton sequences is to set
+\verb|halton_radix[0] = 2, 3, 2, 3, 2, 3| and
+to set 
+\verb|randomize_order[0] = 2, 2, 2,|.  This avoids banding that may
+result from choosing larger radix values.
+
+\verb|optimized_halton| uses the improved halton sequence \cite{Chi2005}.
+(Algorithm 659, Collected Algorithm from ACM. Derandom Algorithm is added
+by Hongmei CHI (CS/FSU)). It avoids the banding problem automatically and
+the \verb|halton_radix| values are ignored.
+
+\item \verb|randomize_order[3]| --- Allows randomizing the order of
+assigned coordinates for the pairs (x, x'), (y, y'), and (t,p).  0
+means no randomization; 1 means randomize (x, x', y, y', t, p) values
+independently, which destroys any x-x', y-y', and t-p correlations; 2
+means randomize (x, x'), (y, y'), and (t, p) in pair-wise fashion.
+This is used with Halton sequences to remove banding.  It is suggested
+that that the user employ \verb|sddsanalyzebeam| to verify that the
+beam properties when randomization is used.
+
+\item \verb|centroid[6]| --- Centroid offsets for each of the six coordinates.
+
+\item \verb|first_is_fiducial| --- Specifies that the first beam
+generated shall be a single particle beam, which is suitable for
+fiducialization.  See the section on ``Fiducialization in
+\verb|elegant|'' for more discussion.
+
+\item \verb|save_initial_coordinates| --- A flag that, if set, results
+in saving initial coordinates of tracked particles in memory.  This is
+the default behavior.  If unset, the initial coordinates are not
+saved, but are regenerated each time they are needed.  This is more
+memory efficient and is useful for tracking very large numbers of
+particles.
+\end{itemize}
+
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|bunched_beam_moments|}\end{center}
+%\end{latexonly}
+\subsection{bunched\_beam\_moments \label{subsec:bunchedbeammoments}}
+
+\begin{itemize}
+\item type: setup command.
+\item sequence: must follow \verb|run_control|.
+\item function: set up for tracking of particle coordinates with various distributions.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
+\item Notes:
+  \begin{itemize}
+  \item In \verb|Pelegant|, the exact particles generated will change as the number of cores is changed.
+  \item This command is used when it is convenient to specify the beam dimensions in terms of beam sizes, divergences,
+    and other moments. 
+    The \verb|bunched_beam| command can be used when it is more convenient to specify lattice functions, emittances, etc.
+  \end{itemize}
+\end{itemize}
+
+\begin{verbatim}
+&bunched_beam_moments
+    STRING bunch = NULL;
+    long n_particles_per_bunch = 1;
+    long use_moments_output_values = 0;
+    double S1_beta = 0;
+    double S2_beta = 0;
+    double S12_beta = 0;
+    double S16 = 0;
+    double S26 = 0;
+    double S3_beta = 0;
+    double S4_beta = 0;
+    double S34_beta = 0;
+    double S36 = 0;
+    double S46 = 0;
+    double S5 = 0;
+    double S6 = 0;
+    double S56 = 0;
+    double time_start = 0;
+    double Po = 0.0;
+    long one_random_bunch = 1;
+    long save_initial_coordinates = 1;
+    long limit_invariants = 0;
+    long symmetrize = 0;
+    long halton_sequence[3] = {0, 0, 0};
+    int32_t halton_radix[6] = {0, 0, 0, 0, 0, 0};
+    long optimized_halton = 0;
+    long randomize_order[3] = {0, 0, 0};
+    long limit_in_4d = 0;
+    long enforce_rms_values[3] = {0, 0, 0};
+    double distribution_cutoff[3] = {2, 2, 2};
+    STRING distribution_type[3] = {"gaussian","gaussian","gaussian"};
+    double centroid[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    long first_is_fiducial = 0;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|bunch| --- The (incomplete) name of an SDDS file to which the phase-space coordinates
+of the bunches are to be written.  Recommended value: ``\%s.bun''.  
+\item \verb|n_particles_per_bunch| --- Number of particles in each bunch.
+\item \verb|time_start| --- The central value of the time coordinate for the bunch.
+\item \verb|matched_to_cell| --- The name of a beamline from which the Twiss parameters of the bunch
+are to be computed.
+\item \verb|use_moments_output_values| --- If nonzero, then the beam is generated to match the
+  6D matched, equilibrium beam moments computed by the \verb|moments_output| command.
+  The distribution type must be gaussian.
+  This mode is incompatible with using closed orbit correction with \verb|start_from_centroid=1|
+  (the default value).
+\item \verb|Po| --- Central momentum of the bunch.
+
+\item \verb|S1_beta|, \verb|S2_beta|, \verb|S3_beta|, \verb|S4_beta| --- Horizontal beam size and divergence, vertical
+  beam size and divergence, for betatron coordinates. For example, for the $x$ coordinate, we have
+\begin{equation}
+x = x_\beta + \delta \eta_x
+\end{equation}
+where $x_\beta$ is the betatron component, $\delta$ is the fractional momentum deviation, and $\eta_x = \Sigma_{16}/\Sigma_{66}$.
+\item \verb|S5| --- Fractional energy spread.
+\item \verb|S6| --- Fractional bunch length.
+\item \verb|S56| --- $\Sigma_{56}$.
+\item \verb|S|{\em i}{\em j}\verb|_beta| --- Element of the beam sigma matrix for betatron coordinates.
 
 \item \verb|one_random_bunch| --- If non-zero, then only one random
 particle distribution is generated.  Otherwise, a new distribution

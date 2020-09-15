@@ -42,6 +42,9 @@ void fill_longitudinal_structure(LONGITUDINAL *xlongit, double xsigma_dp,
                                  double *xcentroid);
 long generateBunchForMoments(double **particle, long np, long symmetrize, 
                              long *haltonID, long haltonOpt, double cutoff);
+void finish_bunched_beam_setup(BEAM *beam, RUN *run, VARY *control, ERRORVAL *errcon,
+                                 OPTIM_VARIABLES *optim,  OUTPUT_FILES *output, LINE_LIST *beamline, 
+                                 long n_elements, long save_original );
 
 void setup_bunched_beam(
     BEAM *beam,
@@ -56,11 +59,6 @@ void setup_bunched_beam(
     long save_original
     )
 {
-  long i, offset;
-  log_entry("setup_bunched_beam");
-  
-  setFiducializationBunch(-1, -1);
-
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
@@ -70,6 +68,7 @@ void setup_bunched_beam(
     Po = run->p_central;
   if (use_twiss_command_values && use_moments_output_values)
     bombElegant("Only one of use_twiss_command_values and use_moments_output_values may be nonzero", NULL);
+
   if (use_twiss_command_values) {
     TWISS twiss;
     long mode;
@@ -90,6 +89,25 @@ void setup_bunched_beam(
     bombElegant("&correct settings are incompatible with using results of moments_output for generating the beam. Set start_from_centroid and track_before_and_after to 0.", NULL);
 
   if (echoNamelists) print_namelist(stdout, &bunched_beam);
+
+  finish_bunched_beam_setup(beam, run, control, errcon, optim, output, beamline, n_elements, save_original);
+}
+
+void finish_bunched_beam_setup
+(
+ BEAM *beam,
+ RUN *run,
+ VARY *control,
+ ERRORVAL *errcon,
+ OPTIM_VARIABLES *optim,
+ OUTPUT_FILES *output,
+ LINE_LIST *beamline,
+ long n_elements,
+ long save_original
+ )
+{
+  long i, offset;
+  setFiducializationBunch(-1, -1);
 
   /* check for validity of namelist inputs */
   if (emit_nx && !emit_x)
@@ -303,6 +321,100 @@ void setup_bunched_beam(
   fflush(stdout);
   
   log_exit("setup_bunched_beam");
+}
+
+void setup_bunched_beam_moments(
+    BEAM *beam,
+    NAMELIST_TEXT *nltext,
+    RUN *run,
+    VARY *control,
+    ERRORVAL *errcon,
+    OPTIM_VARIABLES *optim,
+    OUTPUT_FILES *output,
+    LINE_LIST *beamline,
+    long n_elements,
+    long save_original
+    )
+{
+  long i;
+  #include "bunched_beam2.h"
+
+  /* process namelist input */
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  if (processNamelist(&bunched_beam_moments, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
+  if (bunched_beam_moments_struct.Po<=0)
+    bunched_beam_moments_struct.Po = run->p_central;
+  if (bunched_beam_moments_struct.use_moments_output_values && save_original)
+    bombElegant("&correct settings are incompatible with using results of moments_output for generating the beam. Set start_from_centroid and track_before_and_after to 0.", NULL);
+
+  if (echoNamelists) print_namelist(stdout, &bunched_beam_moments);
+
+  /* We'll be copying values to the variables for &bunched_beam, so we do a reset first */
+  reset_namelist_values(&bunched_beam);
+
+  if (bunched_beam_moments_struct.S1_beta<0 || bunched_beam_moments_struct.S2_beta<0 || 
+      bunched_beam_moments_struct.S3_beta<0 || bunched_beam_moments_struct.S4_beta<0 ) 
+    bombElegant("S1_beta, S2_beta, S3_beta, and S4_beta must all be non-negative", NULL);
+  if (bunched_beam_moments_struct.S5<0 || bunched_beam_moments_struct.S6<0 )
+    bombElegant("S5 and S6 must be non-negative", NULL);
+  
+  if ((emit_x = sqr(bunched_beam_moments_struct.S1_beta*bunched_beam_moments_struct.S2_beta) - 
+       sqr(bunched_beam_moments_struct.S12_beta))<0)
+    bombElegant("implied horizontal emittance is invalid", NULL);
+  if ((emit_x = sqrt(emit_x))>0) {
+    beta_x = sqr(bunched_beam_moments_struct.S1_beta)/emit_x;
+    alpha_x = -bunched_beam_moments_struct.S12_beta/emit_x;
+  }
+
+  if ((emit_y = sqr(bunched_beam_moments_struct.S3_beta*bunched_beam_moments_struct.S4_beta) - 
+       sqr(bunched_beam_moments_struct.S34_beta))<0)
+    bombElegant("implied vertical emittance is invalid", NULL);
+  if ((emit_y = sqrt(emit_y))>0) {
+    beta_y = sqr(bunched_beam_moments_struct.S3_beta)/emit_y;
+    alpha_y = -bunched_beam_moments_struct.S34_beta/emit_y;
+  }
+
+  if (bunched_beam_moments_struct.S6) {
+    eta_x = bunched_beam_moments_struct.S16/sqr(bunched_beam_moments_struct.S6);
+    etap_x = bunched_beam_moments_struct.S26/sqr(bunched_beam_moments_struct.S6);
+    eta_y = bunched_beam_moments_struct.S36/sqr(bunched_beam_moments_struct.S6);
+    etap_y = bunched_beam_moments_struct.S46/sqr(bunched_beam_moments_struct.S6);
+    if (bunched_beam_moments_struct.S5)
+      dp_s_coupling = bunched_beam_moments_struct.S56/(bunched_beam_moments_struct.S5*bunched_beam_moments_struct.S6);
+  }
+  sigma_s = bunched_beam_moments_struct.S5;
+  sigma_dp = bunched_beam_moments_struct.S6;
+
+  for (i=0; i<3; i++) {
+    halton_sequence[i] = bunched_beam_moments_struct.halton_sequence[i];
+    randomize_order[i] = bunched_beam_moments_struct.randomize_order[i];
+    enforce_rms_values[i] = bunched_beam_moments_struct.enforce_rms_values[i];
+    distribution_cutoff[i] = bunched_beam_moments_struct.distribution_cutoff[i];
+    distribution_type[i] = bunched_beam_moments_struct.distribution_type[i];
+  }
+  for (i=0; i<6; i++) {
+    halton_radix[i] = bunched_beam_moments_struct.halton_radix[i];
+    centroid[i] = bunched_beam_moments_struct.centroid[i];
+  }
+
+  bunch = bunched_beam_moments_struct.bunch;
+  n_particles_per_bunch = bunched_beam_moments_struct.n_particles_per_bunch;
+  use_twiss_command_values = 0;
+  use_moments_output_values = bunched_beam_moments_struct.use_moments_output_values;
+  matched_to_cell = NULL;
+  time_start = bunched_beam_moments_struct.time_start;
+  Po = bunched_beam_moments_struct.Po;
+  one_random_bunch = bunched_beam_moments_struct.one_random_bunch;
+  save_initial_coordinates = bunched_beam_moments_struct.save_initial_coordinates;
+  limit_invariants = bunched_beam_moments_struct.limit_invariants;
+  symmetrize = bunched_beam_moments_struct.symmetrize;
+  optimized_halton = bunched_beam_moments_struct.optimized_halton;
+  limit_in_4d = bunched_beam_moments_struct.limit_in_4d;
+  first_is_fiducial = bunched_beam_moments_struct.first_is_fiducial;
+
+  finish_bunched_beam_setup(beam, run, control, errcon, optim, output, beamline, n_elements, save_original);
 }
 
 long new_bunched_beam(
