@@ -55,6 +55,7 @@ void fill_line(
     register long i;
     ELEMENT_LIST *leptr;
     LINE_LIST *lptr;
+    long quoteCounter;
 
     log_entry("fill_line");
 
@@ -62,6 +63,14 @@ void fill_line(
     printf("expanding beamline: %s\n", s);
     fflush(stdout);
 #endif
+    
+    ptr = s;
+    quoteCounter = 0;
+    while (*ptr)
+      if (*ptr++=='"')
+        quoteCounter++;
+    if (quoteCounter%2!=0)
+      bombElegantVA("Mismatched quotation marks in LINE definition:\n%s\n", s);
 
     /* get pointer to empty spot in list of LINE definitions */
     lptr = line;
