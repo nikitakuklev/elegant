@@ -99,7 +99,7 @@ void setup_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 	    printf("Element %s not found in beamline.\n", after);
           exitElegant(1);
         }
-        s_start = context->end_pos;
+        s_start = context->end_pos*(1+1e-15);
         if (find_element(after, &context, &(beamline->elem))) {
 	  if (printingEnabled)
 	    printf("Element %s found in beamline more than once.\n", after);
@@ -117,7 +117,7 @@ void setup_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 	    printf("Element %s not found in beamline.\n", before);
           exitElegant(1);
         }
-        s_end = context->end_pos;
+        s_end = context->end_pos*(1-1e-15);
         if (find_element(before, &context, &(beamline->elem))) {
 	  if (printingEnabled)
 	    printf("Element %s found in beamline more than once.\n", before);
@@ -216,8 +216,9 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
               (eptr->occurence-alterSpec[i].start_occurence)%alterSpec[i].occurence_step!=0)
             continue;
         }
-        if (alterSpec[i].s_start>=0 && alterSpec[i].s_end>=0 &&
-            (eptr->end_pos<alterSpec[i].s_start || eptr->end_pos>alterSpec[i].s_end))
+        if (alterSpec[i].s_start>=0 && eptr->end_pos<alterSpec[i].s_start)
+          continue;
+        if (alterSpec[i].s_end>=0 && eptr->end_pos>alterSpec[i].s_end)
           continue;
         if (alterSpec[i].type && !wild_match(entity_name[context->type], alterSpec[i].type))
           continue;

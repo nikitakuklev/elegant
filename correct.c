@@ -366,6 +366,9 @@ void correction_setup(
       else
         bombElegant("something impossible happened (correction_setup)", NULL);
     } else {
+      /* Coupled global trajectory correction */
+      if (_correct->SLy.n_corr_types!=0)
+        bombElegant("For coupled correction, use plane='h' in all steering_elements commands", NULL);
       /* coupled correction uses the SLx and CMx structures only */
       if (_correct->SLx.n_corr_types==0) {
         long found = 0;
@@ -402,8 +405,8 @@ void correction_setup(
         if (!found)
           bombElegant("no steering elements found", NULL);
 
-        compute_coupled_trajcor_matrices(_correct->CMFx, &_correct->SLx, run, beamline, COMPUTE_RESPONSE_INVERT);
-      }      
+      } 
+      compute_coupled_trajcor_matrices(_correct->CMFx, &_correct->SLx, run, beamline, COMPUTE_RESPONSE_INVERT);
     }
 
     if (n_iterations!=0) {
@@ -514,7 +517,7 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
         printf("Element %s not found in beamline.\n", after);
         exitElegant(1);
       }
-      s_start = context->end_pos;
+      s_start = context->end_pos*(1+1e-15);
       if (find_element(after, &context, &(beamline->elem))) {
         printf("Element %s found in beamline more than once.\n", after);
         exitElegant(1);
@@ -530,7 +533,7 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
         printf("Element %s not found in beamline.\n", before);
         exitElegant(1);
       }
-      s_end = context->end_pos;
+      s_end = context->end_pos*(1-1e-15);
       if (find_element(before, &context, &(beamline->elem))) {
         printf("Element %s found in beamline more than once.\n", before);
         exitElegant(1);
@@ -660,9 +663,16 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
         continue;
       }
     }
-    if (s_start>=0 && s_end>=0 && (context->end_pos<s_start || context->end_pos>s_end)) {
+    if (s_start>=0 && context->end_pos<s_start) {
       if (verbose>1) {
-        printf("Position %le out of range [%le, %le]\n", context->end_pos, s_start, s_end);
+        printf("Position %le before start position %le\n", context->end_pos, s_start);
+        fflush(stdout);
+      }
+      continue;
+    }
+    if (s_end>=0 && context->end_pos>s_end) {
+      if (verbose>1) {
+        printf("Position %le before end position %le\n", context->end_pos, s_end);
         fflush(stdout);
       }
       continue;
@@ -1151,7 +1161,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
       dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
       dump_bpm_data(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
-      if (correct->mode!=COUPLED_CORRECTION) {
+      if (correct->method!=COUPLED_CORRECTION) {
         dump_corrector_data(correct->CMFx, &correct->SLx, n_x_iter_taken, "horizontal", sim_step);
         dump_corrector_data(correct->CMFy, &correct->SLy, n_y_iter_taken, "vertical", sim_step);
       } else
