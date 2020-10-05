@@ -12,21 +12,15 @@
 /* see correction.c for additional explanation of the next three structures */
 
 typedef struct {
-    /* arrays for information on individual correcting elements */
-    char **corr_name;                      /* names of groups of correcting elements */
-    long *corr_type;                       /* type numbers */
-    char **corr_param;                     /* parameter names */
-    long *param_offset;                    /* offset of correcting parameter in element structure */
-    long *param_index;                     /* index of correcting parameter in entity description */
-    double *corr_tweek;                    /* tweek values--amount to change parameter by to get dkick/dparam */
-    double *corr_limit;                    /* limiting absolute value of the parameter */
-    long *start_occurence;                 /* start, end, and step for occurence filter */
-    long *end_occurence;
-    long *occurence_step;
-    double *s_start;                       /* start and end for s-based filter */
-    double *s_end;
-    long n_corr_types;
-    } STEERING_LIST;
+  /* arrays for information on individual correcting elements */
+  ELEMENT_LIST **elem;                   /* pointers to elements */
+  char **corr_param;                     /* parameter names */
+  long *param_offset;                    /* offset of correcting parameter in element structure */
+  long *param_index;                     /* index of correcting parameter in entity description */
+  double *corr_tweek;                    /* tweek values--amount to change parameter by to get dkick/dparam */
+  double *corr_limit;                    /* limiting absolute value of the parameter */
+  long n_corr_types;
+} STEERING_LIST;
 
 typedef struct {
     /* information on useful monitors and correctors */

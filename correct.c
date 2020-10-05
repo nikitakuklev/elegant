@@ -66,22 +66,23 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
 				     ELEMENT_LIST ***umoni, ELEMENT_LIST ***ucorr, double **kick_coef, long **sl_index, 
                                      short **pegged, double **weight, long plane, STEERING_LIST *SL, RUN *run, 
                                      LINE_LIST *beamline, long recircs);
+void reorderCorrectorArray(ELEMENT_LIST **ucorr, long *sl_index, double *kick_coef, long ncor);
 ELEMENT_LIST *next_element_of_type(ELEMENT_LIST *elem, long type);
 ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index, char **corr_name,
                                     long *start_occurence, long *end_occurence, long *occurence_step, double *s_start, double *s_end);
 long find_parameter_offset(char *param_name, long elem_type);
-long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, long plane);
+long zero_correctors_one_plane(CORMON_DATA *CM, RUN *run, STEERING_LIST *SL);
 long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 #if USE_MPI
-long sync_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, long plane);
+long sync_correctors_one_plane(CORMON_DATA *CM, RUN *run, STEERING_LIST *SL);
 long sync_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 long sync_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 long sync_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 #endif
 double rms_value(double *data, long n_data);
-long steering_corrector(ELEMENT_LIST *eptr, STEERING_LIST *SL, long plane);
+long steering_corrector(ELEMENT_LIST *eptr, long plane);
 void zero_closed_orbit(TRAJECTORY *clorb, long n);
 long find_index(long key, long *list, long n_listed);
 long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, 
@@ -561,9 +562,14 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
                                  start_occurence, end_occurence, occurence_step, s_start, s_end,
                                  beamline, run, 1, verbose))
       bombElegant("no match to given element name or type", NULL);
+  } else if (plane[0]=='c' || plane[0]=='C')  {
+    if (!add_steer_elem_to_lists(&correct->SLx, 4, name, item, element_type, tweek, limit, 
+                                 start_occurence, end_occurence, occurence_step, s_start, s_end,
+                                 beamline, run, 1, verbose+10))
+      bombElegant("no match to given element name or type", NULL);
   }
   else
-    bombElegant("invalid plane specified for steering element", NULL);
+    bombElegantVA("invalid plane %c specified for steering element", plane[0]);
 }
 
 long add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *item, double tweek, double limit,
@@ -590,10 +596,8 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
   long param_number, i, found, n_corr_types_start, notNeeded;
 
   if (SL->n_corr_types==0) {
-    if (SL->corr_name)    tfree(SL->corr_name);
-    SL->corr_name = NULL;
-    if (SL->corr_type)    tfree(SL->corr_type);
-    SL->corr_type = NULL;
+    if (SL->elem) tfree(SL->elem);
+    SL->elem = NULL;
     if (SL->corr_param)   tfree(SL->corr_param);
     SL->corr_param = NULL;
     if (SL->corr_tweek)   tfree(SL->corr_tweek);
@@ -604,16 +608,6 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
     SL->param_offset = NULL;
     if (SL->param_index) tfree(SL->param_index);
     SL->param_index = NULL;
-    if (SL->start_occurence) tfree(SL->start_occurence);
-    SL->start_occurence = NULL;
-    if (SL->end_occurence) tfree(SL->end_occurence);
-    SL->end_occurence = NULL;
-    if (SL->occurence_step) tfree(SL->occurence_step);
-    SL->occurence_step = NULL;
-    if (SL->s_start) tfree(SL->s_start);
-    SL->s_start = NULL;
-    if (SL->s_end) tfree(SL->s_end);
-    SL->s_end = NULL;
   }
 
   if (!name && !element_type)
@@ -642,13 +636,15 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
 
   while ((context=wfind_element(name, &context, &(beamline->elem)))) {
     if (verbose>1) {
-      printf("Checking %s #%ld at s=%le m\n", context->name, context->occurence, context->end_pos);
+      printf("Checking %s#%ld.%s at s=%le m for plane %c\n", context->name, context->occurence, item, context->end_pos,
+             plane==0?'x':(plane==2?'y':'c'));
       fflush(stdout);
     }
     if (element_type &&
         !wild_match(entity_name[context->type], element_type)) {
       if (verbose>1) {
-        printf("Type (%s) doesn't match required type %s\n", entity_name[context->type], element_type);
+        printf("Type (%s) doesn't match required type %s for plane %c\n", entity_name[context->type], element_type,
+               plane==0?'x':(plane==2?'y':'c'));
         fflush(stdout);
       }
       continue;
@@ -677,33 +673,51 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
       }
       continue;
     }
-    if (verbose) {
-      printf("Found matching element (%s #%ld at s=%le m).\n", context->name, context->occurence, context->end_pos);
-      fflush(stdout);
-    }
 
     notNeeded = 1;
     switch (context->type) {
     case T_QUAD:
-      if (!plane) {
+      if (plane==0) {
         if (!((QUAD*)(context->p_elem))->xSteering)
           ((QUAD*)(context->p_elem))->xSteering = forceQuads;
         notNeeded = !((QUAD*)(context->p_elem))->xSteering;
-      } else {
+      } else if (plane==2) {
         if (!((QUAD*)(context->p_elem))->ySteering)
           ((QUAD*)(context->p_elem))->ySteering = forceQuads;
         notNeeded = !((QUAD*)(context->p_elem))->ySteering;
+      } else {
+        if (strcmp(item, "HKICK")==0 || strcmp(item, "DX")==0) {
+          if (!((QUAD*)(context->p_elem))->xSteering)
+            ((QUAD*)(context->p_elem))->xSteering = forceQuads;
+          notNeeded = !((QUAD*)(context->p_elem))->xSteering;
+        }
+        if (strcmp(item, "VKICK")==0 || strcmp(item, "DY")==0) {
+          if (!((QUAD*)(context->p_elem))->ySteering)
+            ((QUAD*)(context->p_elem))->ySteering = forceQuads;
+          notNeeded = !((QUAD*)(context->p_elem))->ySteering;
+        }
       }
       break;
     case T_KQUAD:
-      if (plane) {
+      if (plane==0) {
         if (!((KQUAD*)(context->p_elem))->xSteering)
           ((KQUAD*)(context->p_elem))->xSteering = forceQuads;
         notNeeded = !((KQUAD*)(context->p_elem))->xSteering;
-      } else {
+      } else if (plane==2) {
         if (!((KQUAD*)(context->p_elem))->ySteering)
           ((KQUAD*)(context->p_elem))->ySteering = forceQuads;
         notNeeded = !((KQUAD*)(context->p_elem))->ySteering;
+      } else {
+        if (strcmp(item, "HKICK")==0 || strcmp(item, "DX")==0) {
+          if (!((KQUAD*)(context->p_elem))->xSteering)
+            ((KQUAD*)(context->p_elem))->xSteering = forceQuads;
+          notNeeded = !((KQUAD*)(context->p_elem))->xSteering;
+        }
+        if (strcmp(item, "VKICK")==0 || strcmp(item, "DY")==0) {
+          if (!((KQUAD*)(context->p_elem))->ySteering)
+            ((KQUAD*)(context->p_elem))->ySteering = forceQuads;
+          notNeeded = !((KQUAD*)(context->p_elem))->ySteering;
+        }
       }
       break;
     default:
@@ -715,93 +729,37 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
       continue;
 
     for (i=0; i<n_corr_types_start; i++) {
-      long need_s_limit;
-      need_s_limit = 0;
-      if (strcmp(context->name, SL->corr_name[i])==0) {
-        if (!(SL->start_occurence[i]==0 && SL->end_occurence[i]==0)) {
-          /* saved spec has occurence data */
-          if (!(start_occurence==0 && end_occurence==0)) {
-            /* new spec has occurence data --- they can't overlap */
-            if (!(end_occurence<SL->start_occurence[i] || start_occurence>SL->end_occurence[i])) {
-              printf("Error: steering element selection overlaps with previous selection (1). Not supported.\n");
-              exit(1);
-            }
-            need_s_limit = 0;
-          } else {
-            /* new spec has no occurence data, so s limits must prevent overlap */
-            need_s_limit = 1;
-          }
-        } else {
-          /* saved spec has no occurence data, so s limits must prevent overlap */
-          need_s_limit = 1;
-        }
-        if (need_s_limit) {
-          if (!(SL->s_start[i]<0 && SL->s_end[i]<0 && SL->s_start[i]<=SL->s_end[i])) {
-            /* saved spec has s limits */
-            if (!(s_start<0 && s_end<0 && s_start<=s_end)) {
-              /* new spec has s limits */
-              if (!(s_end<SL->s_start[i] || s_start>SL->s_end[i])) {
-                printf("Error: steering element selection overlaps with previous selection (2, %s, %s). Not supported.\n",
-                       context->name, SL->corr_name[i]);
-                exit(1);
-              }
-            } else {
-              /* new spec has no s limits, but we need them */
-              printf("Error: steering element selection overlaps with previous selection (3). Not supported.\n");
-              exit(1);
-            }
-          } else {
-            if (!(s_start<0 && s_end<0 && s_start<=s_end)) {
-              /* saved spec has s limits, which means we have an overlap issue */
-              printf("Error: steering element selection overlaps with previous selection (4). Not supported.\n");
-              exit(1);
-            }
-          }
-        }
-      }
+      if (SL->elem[i]==context && strcmp(SL->corr_param[i], item)==0)
+        break;
     }
     if (i!=n_corr_types_start) 
       continue;
-    for (; i<SL->n_corr_types; i++) {
-      if (strcmp(context->name, SL->corr_name[i])==0)
-        break;
+
+    if (verbose) {
+      printf("Found matching element (%s #%ld at s=%le m).\n", context->name, context->occurence, context->end_pos);
+      fflush(stdout);
     }
-    if (i!=SL->n_corr_types)
-      continue;
 
 #ifdef DEBUG
   printf("Adding %s to %c plane steering list\n",
-         context->name, plane?'y':'x');
+         context->name, plane?(plane==4?'c':'y'):'x');
 #endif
 
-    SL->corr_name    = trealloc(SL->corr_name, (SL->n_corr_types+1)*sizeof(*SL->corr_name));
-    SL->corr_type    = trealloc(SL->corr_type, (SL->n_corr_types+1)*sizeof(*SL->corr_type));
+    SL->elem         = trealloc(SL->elem, (SL->n_corr_types+1)*sizeof(*SL->elem));
     SL->corr_param   = trealloc(SL->corr_param, (SL->n_corr_types+1)*sizeof(*SL->corr_param));
     SL->corr_tweek   = trealloc(SL->corr_tweek, (SL->n_corr_types+1)*sizeof(*SL->corr_tweek));
     SL->corr_limit   = trealloc(SL->corr_limit, (SL->n_corr_types+1)*sizeof(*SL->corr_limit));
     SL->param_offset = trealloc(SL->param_offset, (SL->n_corr_types+1)*sizeof(*SL->param_offset));
     SL->param_index  = trealloc(SL->param_index , (SL->n_corr_types+1)*sizeof(*SL->param_index ));
-    SL->start_occurence = trealloc(SL->start_occurence, (SL->n_corr_types+1)*sizeof(*SL->start_occurence));
-    SL->end_occurence = trealloc(SL->end_occurence, (SL->n_corr_types+1)*sizeof(*SL->end_occurence));
-    SL->occurence_step = trealloc(SL->occurence_step, (SL->n_corr_types+1)*sizeof(*SL->occurence_step));
-    SL->s_start = trealloc(SL->s_start, (SL->n_corr_types+1)*sizeof(*SL->s_start));
-    SL->s_end = trealloc(SL->s_end, (SL->n_corr_types+1)*sizeof(*SL->s_end));
 
-    SL->corr_type[SL->n_corr_types] = context->type;
-    cp_str(SL->corr_name+SL->n_corr_types, context->name);
-
+    SL->elem[SL->n_corr_types] = context;
     cp_str(SL->corr_param+SL->n_corr_types, item);
     SL->corr_tweek[SL->n_corr_types] = tweek;
     SL->corr_limit[SL->n_corr_types] = limit;
-    SL->start_occurence[SL->n_corr_types] = start_occurence;
-    SL->end_occurence[SL->n_corr_types] = end_occurence;
-    SL->occurence_step[SL->n_corr_types] = occurence_step;
-    SL->s_start[SL->n_corr_types] = s_start;
-    SL->s_end[SL->n_corr_types] = s_end;
 
     if ((SL->param_index[SL->n_corr_types]=param_number=confirm_parameter(item, context->type))<0 ||
         entity_description[context->type].parameter[param_number].type!=IS_DOUBLE ||
-        (SL->param_offset[SL->n_corr_types]=find_parameter_offset(item, SL->corr_type[SL->n_corr_types]))<0) {
+        (SL->param_offset[SL->n_corr_types]=find_parameter_offset(item, SL->elem[SL->n_corr_types]->type))<0) {
       fprintf(stderr, "No such floating-point parameter (%s) for %s (add_steer_elem_to_lists)\n", 
               item, context->name);
       exitElegant(1);
@@ -1379,12 +1337,6 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 
 void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, unsigned long flags)
 {
-#ifdef DEBUG
-  long i_debug;
-  FILE *fpdeb;
-  char s[100];
-  double kick1;
-#endif
   ELEMENT_LIST *corr;
   TRAJECTORY *traj0, *traj1;
   long kick_offset, i_corr, i_moni, i;
@@ -1392,12 +1344,24 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   double **one_part, p, p0, kick0, corr_tweek, corrCalibration, *moniCalibration, W0=0.0;
   double conditionNumber;
   VMATRIX *save;
-  long i_type;
 
   find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index,
 			 &CM->umoni, &CM->ucorr, &CM->kick_coef, &CM->sl_index, 
 			 &CM->pegged, &CM->weight, coord, SL, run, beamline, 0);
-  
+
+#ifdef DEBUG
+  for (i=0; i<CM->ncor; i++) {
+    long sl_index;
+    sl_index = CM->sl_index[i];
+    printf("Corrector %ld: %s#%ld at s=%le, sl_index = %ld, kick_coef = %le, type = %s/%s, param_offset = %ld, param_name = %s\n",
+           i, CM->ucorr[i]->name, CM->ucorr[i]->occurence, CM->ucorr[i]->end_pos, 
+           CM->sl_index[i], CM->kick_coef[i],
+           entity_name[SL->elem[sl_index]->type], entity_name[CM->ucorr[i]->type], 
+           SL->param_offset[sl_index], 
+           entity_description[CM->ucorr[i]->type].parameter[SL->param_index[sl_index]].name);
+  }
+#endif
+
   if (CM->nmon<CM->ncor) {
     printf("*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
     printf("*** Correction may be unstable (use SV controls).\n");
@@ -1446,17 +1410,6 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
                    TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
     bombElegant("tracking failed for test particle (compute_trajcor_matrices())", NULL);
 
-#ifdef  DEBUG
-  i_debug = 0;
-  sprintf(s, "traj%c-%ld.deb", (coord==0?'x':'y'), i_debug++);
-  fpdeb = fopen_e(s, "w", 0);
-  fprintf(fpdeb, "z (m)\n%c (m)\ninitial trajectory computed in compute_trajcor_matrices\n\n%ld\n", 
-          (coord==0?'x':'y'), beamline->n_elems);
-  for (i=0; i<beamline->n_elems; i++)
-    fprintf(fpdeb, "%e\t%e\n", traj0[i].elem->end_pos, traj0[i].centroid[coord]);
-  fclose(fpdeb);
-#endif
-
   /* set up weight matrix and monitor calibration array */
   moniCalibration = tmalloc(sizeof(*moniCalibration)*CM->nmon);
   CM->equalW = 1;
@@ -1471,12 +1424,8 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 
   for (i_corr = 0; i_corr<CM->ncor; i_corr++) {
     corr = CM->ucorr[i_corr];
-
-    if ((i_type = find_index(corr->type, SL->corr_type, SL->n_corr_types))<0)
-      bombElegant("failed to find corrector type in type list", NULL);
-
-    kick_offset = SL->param_offset[i_type];
-    corr_tweek  = SL->corr_tweek[i_type];
+    kick_offset = SL->param_offset[CM->sl_index[i_corr]];
+    corr_tweek  = SL->corr_tweek[CM->sl_index[i_corr]];
 
     /* record value of corrector */
     kick0 = *((double*)(corr->p_elem+kick_offset));
@@ -1484,9 +1433,10 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     /* change the corrector by corr_tweek and compute the new matrix for the corrector */
     *((double*)(corr->p_elem+kick_offset)) = kick0 + corr_tweek;
 #ifdef DEBUG
-    kick1 = kick0 + corr_tweek;
-    printf("corrector %s tweeked to %e (type=%ld, offset=%ld)\n", corr->name, *((double*)(corr->p_elem+kick_offset)),
-            i_type, kick_offset);
+    printf("corrector %s tweeked to %e (type=%s, name=%s, offset=%ld)\n", corr->name, *((double*)(corr->p_elem+kick_offset)),
+           entity_name[corr->type], 
+           entity_description[corr->type].parameter[SL->param_index[CM->sl_index[i_corr]]].name, 
+           kick_offset);
     fflush(stdout);
 #endif
 
@@ -1507,17 +1457,6 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                      traj1, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
       bombElegant("tracking failed for test particle (compute_trajcor_matrices())", NULL);
-
-#ifdef DEBUG
-    sprintf(s, "traj%c-%ld.deb", (coord==0?'x':'y'), i_debug++);
-    fpdeb = fopen_e(s, "w", 0);
-    fprintf(fpdeb, "z (m)\n%c (m)\ntrajectory computed in compute_trajcor_matrices\n%s = %e\n%ld\n", 
-            (coord==0?'x':'y'), corr->name, kick1, beamline->n_elems);
-    for (i=0; i<beamline->n_elems; i++)
-      fprintf(fpdeb, "%e\t%e\n", traj1[i].elem->end_pos, traj1[i].centroid[coord]);
-    fclose(fpdeb);
-#endif
-
 
 #if TWO_POINT_TRAJRESPONSE
     /* change the corrector by -corr_tweek and compute the new matrix for the corrector */
@@ -1608,12 +1547,12 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
       printf("Condition number is %e\n", conditionNumber);
       fflush(stdout);
     }
-  }
-  
   
 #ifdef DEBUG
     matrix_show(CM->T, "%13.6le ", "correction matrix\n", stdout);
 #endif
+  }
+
 }
 
 long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, 
@@ -1771,7 +1710,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     fraction = minFraction*CM->corr_fraction;
 
 #if defined(DEBUG)
-    printf("Changing correctors:");
+    printf("Changing correctors:\n");
     fflush(stdout);
 #endif
     /* step through beamline and change correctors */
@@ -2264,7 +2203,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
                                      RUN *run, LINE_LIST *beamline, long recircs)
 {
   ELEMENT_LIST *corr, *moni, *start;
-  long i_elem, moni_follows, corr_seen, index;
+  long i_elem, index;
   long moni_type[2]={0,0};
   long iplane, planeToInclude[2] = {-1, -1};
 
@@ -2319,34 +2258,32 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
   *kick_coef = NULL;
   *sl_index = NULL;
   *pegged = NULL;
-  
-  /* first count correctors */
-  corr = start;
-  do {
-    /* advance to position of next corrector */
-    if (!(corr = next_element_of_types(corr, SL->corr_type, SL->n_corr_types, &index,
-                                       SL->corr_name, SL->start_occurence, SL->end_occurence, SL->occurence_step,
-                                       SL->s_start, SL->s_end)))
-      break;
+
+  for (index=0; index<SL->n_corr_types; index++) {
+    /* first count correctors */
+    corr = SL->elem[index];
+
     if (!recircs) {
       /* Since the beamline doesn't recirculate, advance through remainder of beamline
        * to make sure there are subsequent monitors */
       moni = corr->succ;
-      moni_follows = 0;
-      do {
-        while (moni && !(findLongInArray(moni->type, moni_type, 2)!=-1 &&
-                         ((MONI*)moni->p_elem)->weight>0) )
-          moni = moni->succ;
-        if (moni)
-          moni_follows = 1;
-      } while (moni && (moni=moni->succ) && !moni_follows);
-      if (!moni_follows)
-        break;        /* ignore correctors with no monitors following */
+      while (moni) {
+        if (findLongInArray(moni->type, moni_type, 2)!=-1 &&
+            ((MONI*)moni->p_elem)->weight>0)
+          break;
+        moni = moni->succ;
+      }
+      if (!moni)  {
+        printf("Warning: no monitor found following %s#%ld at s=%le\n",
+               corr->name, corr->occurence, corr->end_pos);
+        continue;   /* ignore correctors with no monitors following */
+      }
     }
-
+    
     for (iplane=0; iplane<2; iplane++) {
       if (planeToInclude[iplane]>=0) {
-        if (steering_corrector(corr, SL, planeToInclude[iplane])) {
+        /* check that corrector is permitted to steer in this plane */
+        if (steering_corrector(corr, planeToInclude[iplane])) {
           printf("Adding %s#%ld (type %s) at %e m to %c plane steering\n",
                  corr->name, corr->occurence, entity_name[corr->type], 
                  corr->end_pos, planeToInclude[iplane]?'v':'h');
@@ -2381,21 +2318,32 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
         }
       }
     }
-  } while ((corr=corr->succ));
+  }
+
+  if (*ncor==0)
+    return start;
+
+  /* put the correctors into s order */
+#ifdef DEBUG
+  printf("Corrector list before ordering\n");
+  for (index=0; index<*ncor; index++) {
+    printf("Corrector %ld: %s#%ld at s=%le, sl_index = %ld, param_offset = %ld, param_index = %ld, kick_coef = %le\n",
+           index, (*ucorr)[index]->name, (*ucorr)[index]->occurence, (*ucorr)[index]->end_pos, 
+           (*sl_index)[index], SL->param_offset[(*sl_index)[index]], 
+           SL->param_index[(*sl_index)[index]], (*kick_coef)[index]);
+  }
+#endif
+  reorderCorrectorArray(*ucorr, *sl_index, *kick_coef, *ncor);
 
   if (!recircs) {
     /* count all monitors with one or more correctors upstream and non-negative weight */
     moni = start;
-    corr_seen = 0;
     i_elem = 0;
     while (moni) {
-      if (find_index(moni->type, SL->corr_type, SL->n_corr_types)!=-1 && 
-          ((plane==4 && (steering_corrector(moni, SL, 0) || steering_corrector(moni, SL, 2)))
-           || (plane!=4 && steering_corrector(moni, SL, plane))
-           || match_string(moni->name, SL->corr_name, SL->n_corr_types, EXACT_MATCH)>=0))
-        corr_seen = 1;
-      if (((MONI*)moni->p_elem)->weight>0 && corr_seen && 
-          findLongInArray(moni->type, moni_type, 2)!=-1) {
+      if (moni->end_pos>=(*ucorr)[0]->end_pos && 
+          findLongInArray(moni->type, moni_type, 2)!=-1 && ((MONI*)moni->p_elem)->weight>0) {
+        printf("Found monitor %s#%ld (type %s) at s=%e\n",
+               moni->name, moni->occurence, entity_name[moni->type], moni->end_pos);
         *nmon += 1;
         *umoni = trealloc(*umoni, *nmon*sizeof(**umoni));
         (*umoni)[*nmon-1] = moni;
@@ -2411,8 +2359,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
     moni = start;
     i_elem = 0;
     while (moni) {
-      if (((MONI*)moni->p_elem)->weight>0 && 
-          findLongInArray(moni->type, moni_type, 2)!=-1) {
+      if (findLongInArray(moni->type, moni_type, 2)!=-1 && ((MONI*)moni->p_elem)->weight>0) {
         *nmon += 1;
         *umoni = trealloc(*umoni, *nmon*sizeof(**umoni));
         (*umoni)[*nmon-1] = moni;
@@ -2640,7 +2587,6 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   long kick_offset, i_corr, i_moni, i;
   double kick0, corr_tweek;
   VMATRIX *save, *M;
-  long i_type;
   char *matrixTypeName[2][2] = {{"H", "HV"}, {"VH", "V"}};
   char memName[1024];
   double conditionNumber, W0=0.0;
@@ -2692,12 +2638,8 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 
   for (i_corr = 0; i_corr<CM->ncor; i_corr++) {
     corr = CM->ucorr[i_corr];
-
-    if ((i_type = find_index(corr->type, SL->corr_type, SL->n_corr_types))<0)
-      bombElegant("failed to find corrector type in type list", NULL);
-
-    kick_offset = SL->param_offset[i_type];
-    corr_tweek  = SL->corr_tweek[i_type];
+    kick_offset = SL->param_offset[i_corr];
+    corr_tweek  = SL->corr_tweek[i_corr];
 
     /* record value of corrector */
     kick0 = *((double*)(corr->p_elem+kick_offset));
@@ -3108,7 +3050,7 @@ ELEMENT_LIST *next_element_of_type(ELEMENT_LIST *elem, long type)
   return(elem);
 }
 
- ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index, char **corr_name,
+ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index, char **corr_name,
                                     long *start_occurence, long *end_occurence, long *occurence_step, double *s_start, double *s_end)
 {
   register long i;
@@ -3140,30 +3082,24 @@ long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
       zero_vcorrectors(elem, run, correct);
 }
 
-long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, long plane)
+long zero_correctors_one_plane(CORMON_DATA *CM, RUN *run, STEERING_LIST *SL)
 {
-  long n_zeroed = 0, i;
-  long paramOffset;
-
-  while (elem) {
-    paramOffset = -1;
-    if (steering_corrector(elem, SL, plane)) {
-      for (i=0; i<SL->n_corr_types; i++)
-        if (strcmp(elem->name, SL->corr_name[i])==0)
-          break;
-      if (i!=SL->n_corr_types) {
-        paramOffset = SL->param_offset[i];
-        *((double*)(elem->p_elem+paramOffset)) = 0;
-        if (elem->matrix) {
-          free_matrices(elem->matrix);
-          tfree(elem->matrix);
-          elem->matrix = NULL;
-        }
-        compute_matrix(elem, run, NULL);
-        n_zeroed++;
-      }
+  long slIndex, i, paramOffset, n_zeroed;
+  ELEMENT_LIST *elem;
+  
+  n_zeroed = 0;
+  for (i=0; i<CM->ncor; i++) {
+    slIndex = CM->sl_index[i];
+    paramOffset = SL->param_offset[slIndex];
+    elem = CM->ucorr[i];
+    *((double*)(elem->p_elem+paramOffset)) = 0;
+    if (elem->matrix) {
+      free_matrices(elem->matrix);
+      tfree(elem->matrix);
+      elem->matrix = NULL;
     }
-    elem = elem->succ;
+    compute_matrix(elem, run, NULL);
+    n_zeroed++;
   }
   return(n_zeroed);
 }
@@ -3171,16 +3107,16 @@ long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, 
 long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
-  nz = zero_correctors_one_plane(elem, run, &(correct->SLx), 0);
+  nz = zero_correctors_one_plane(correct->CMx, run, &(correct->SLx));
   if (correct->verbose)
     printf("%ld H correctors set to zero\n", nz);
   return nz;
 }
-
+ 
 long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
-  nz = zero_correctors_one_plane(elem, run, &(correct->SLy), 1);
+  nz = zero_correctors_one_plane(correct->CMy, run, &(correct->SLy));
   if (correct->verbose)
     printf("%ld V correctors set to zero\n", nz);
   return nz;
@@ -3189,38 +3125,27 @@ long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 #if USE_MPI
 long sync_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
-  return 
-    sync_hcorrectors(elem, run, correct) +
-      sync_vcorrectors(elem, run, correct);
+  return sync_hcorrectors(elem, run, correct) + sync_vcorrectors(elem, run, correct);
 }
-
-long sync_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, long plane)
+ 
+long sync_correctors_one_plane(CORMON_DATA *CM, RUN *run, STEERING_LIST *SL)
 {  
-  long n_synced = 0, i;
-  long paramOffset;
-
-  while (elem) {
-    paramOffset = -1;
-    if (steering_corrector(elem, SL, plane)) {
-      for (i=0; i<SL->n_corr_types; i++)
-	if (strcmp(elem->name, SL->corr_name[i])==0)
-	  break;
-      if (i!=SL->n_corr_types) {
-	paramOffset = SL->param_offset[i];
-       
-	if (last_optimize_function_call)
-	  MPI_Bcast (elem->p_elem+paramOffset, 1, MPI_DOUBLE, min_value_location, MPI_COMM_WORLD);
-
-	if (elem->matrix) {
-	  free_matrices(elem->matrix);
-	  tfree(elem->matrix);
-	  elem->matrix = NULL;
-	}
-	compute_matrix(elem, run, NULL); 
-	n_synced++;
-      }
+  long slIndex, i, paramOffset, n_zeroed;
+  long n_synced = 0;
+  ELEMENT_LIST *elem;
+  for (i=0; i<CM->ncor; i++) {
+    slIndex = CM->sl_index[i];
+    paramOffset = SL->param_offset[slIndex];
+    elem = CM->ucorr[i];
+    if (last_optimize_function_call)
+      MPI_Bcast (elem->p_elem+paramOffset, 1, MPI_DOUBLE, min_value_location, MPI_COMM_WORLD);
+    if (elem->matrix) {
+      free_matrices(elem->matrix);
+      tfree(elem->matrix);
+      elem->matrix = NULL;
     }
-    elem = elem->succ;
+    compute_matrix(elem, run, NULL); 
+    n_synced++;
   }
 
   return(n_synced);
@@ -3230,7 +3155,7 @@ long sync_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
 
-  nz = sync_correctors_one_plane(elem, run, &(correct->SLx), 0);
+  nz = sync_correctors_one_plane(correct->CMx, run, &(correct->SLx));
 
   return nz;
 }
@@ -3239,7 +3164,7 @@ long sync_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
 
-  nz = sync_correctors_one_plane(elem, run, &(correct->SLy), 1);
+  nz = sync_correctors_one_plane(correct->CMy, run, &(correct->SLy));
 
   return nz;
 }
@@ -3269,37 +3194,32 @@ double rms_value(double *data, long n_data)
         return(0.0);
     }
 
-long steering_corrector(ELEMENT_LIST *eptr, STEERING_LIST *SL, long plane)
+long steering_corrector(ELEMENT_LIST *eptr, long plane)
 {
-  long i;
-  for (i=0; i<SL->n_corr_types; i++)
-    if (strcmp(eptr->name, SL->corr_name[i])==0) {
-      switch (eptr->type) {
-      case T_HVCOR:
-        return ((HVCOR*)(eptr->p_elem))->steering;
-      case T_HCOR:
-        return ((HCOR*)(eptr->p_elem))->steering;
-      case T_VCOR:
-        return ((VCOR*)(eptr->p_elem))->steering;
-      case T_EHVCOR:
-        return ((EHVCOR*)(eptr->p_elem))->steering;
-      case T_EHCOR:
-        return ((EHCOR*)(eptr->p_elem))->steering;
-      case T_EVCOR:
-        return ((EVCOR*)(eptr->p_elem))->steering;
-      case T_QUAD:
-        if (plane==0)
-          return ((QUAD*)(eptr->p_elem))->xSteering;
-        return ((QUAD*)(eptr->p_elem))->ySteering;
-      case T_KQUAD:
-        if (plane==0)
-          return ((KQUAD*)(eptr->p_elem))->xSteering;
-        return ((KQUAD*)(eptr->p_elem))->ySteering;
-      default:
-        return 1;
-      }
-    }
-  return 0;
+  switch (eptr->type) {
+  case T_HVCOR:
+    return ((HVCOR*)(eptr->p_elem))->steering;
+  case T_HCOR:
+    return ((HCOR*)(eptr->p_elem))->steering;
+  case T_VCOR:
+    return ((VCOR*)(eptr->p_elem))->steering;
+  case T_EHVCOR:
+    return ((EHVCOR*)(eptr->p_elem))->steering;
+  case T_EHCOR:
+    return ((EHCOR*)(eptr->p_elem))->steering;
+  case T_EVCOR:
+    return ((EVCOR*)(eptr->p_elem))->steering;
+  case T_QUAD:
+    if (plane==0)
+      return ((QUAD*)(eptr->p_elem))->xSteering;
+    return ((QUAD*)(eptr->p_elem))->ySteering;
+  case T_KQUAD:
+    if (plane==0)
+      return ((KQUAD*)(eptr->p_elem))->xSteering;
+    return ((KQUAD*)(eptr->p_elem))->ySteering;
+  default:
+    return 1;
+  }
 }
 
 long find_index(long key, long *list, long n_listed)
@@ -3693,12 +3613,24 @@ void compute_coupled_trajcor_matrices
   double **one_part, p, p0, kick0, corr_tweek, corrCalibration, *moniCalibration, W0=0.0;
   double conditionNumber;
   VMATRIX *save;
-  long i_type;
 
   find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index,
 			 &CM->umoni, &CM->ucorr, &CM->kick_coef, &CM->sl_index, 
 			 &CM->pegged, &CM->weight, 4, SL, run, beamline, 0);
   
+#ifdef DEBUG
+  for (i=0; i<CM->ncor; i++) {
+    long sl_index;
+    sl_index = CM->sl_index[i];
+    printf("Corrector %ld: %s#%ld at s=%le, sl_index = %ld, kick_coef = %le, type = %s/%s, param_offset = %ld, param_name = %s\n",
+           i, CM->ucorr[i]->name, CM->ucorr[i]->occurence, CM->ucorr[i]->end_pos, 
+           CM->sl_index[i], CM->kick_coef[i],
+           entity_name[SL->elem[sl_index]->type], entity_name[CM->ucorr[i]->type], 
+           SL->param_offset[sl_index], 
+           entity_description[CM->ucorr[i]->type].parameter[SL->param_index[sl_index]].name);
+  }
+#endif
+
   if (CM->nmon<CM->ncor) {
     printf("*** Warning: more correctors than monitors for coupled correction.\n");
     printf("*** Correction may be unstable (use SV controls).\n");
@@ -3762,12 +3694,8 @@ void compute_coupled_trajcor_matrices
 
   for (i_corr = 0; i_corr<CM->ncor; i_corr++) {
     corr = CM->ucorr[i_corr];
-
-    if ((i_type = find_index(corr->type, SL->corr_type, SL->n_corr_types))<0)
-      bombElegant("failed to find corrector type in type list", NULL);
-
-    kick_offset = SL->param_offset[i_type];
-    corr_tweek  = SL->corr_tweek[i_type];
+    kick_offset = SL->param_offset[CM->sl_index[i_corr]];
+    corr_tweek  = SL->corr_tweek[CM->sl_index[i_corr]];
 
     /* record value of corrector */
     kick0 = *((double*)(corr->p_elem+kick_offset));
@@ -3999,7 +3927,7 @@ long global_coupled_trajcor
     fraction = minFraction*CM->corr_fraction;
 
 #if defined(DEBUG)
-    printf("Changing correctors:");
+    printf("Changing correctors:\n");
     fflush(stdout);
 #endif
     /* step through beamline and change correctors */
@@ -4052,3 +3980,36 @@ long global_coupled_trajcor
   return iteration;
 }
 
+void reorderCorrectorArray(ELEMENT_LIST **ucorr, long *sl_index, double *kick_coef, long ncor)
+{
+  long *index, i;
+  double *sData;
+  ELEMENT_LIST **ucorr2;
+  long *sl_index2;
+  double *kick_coef2;
+
+  sData = tmalloc(sizeof(*sData)*ncor);
+  for (i=0; i<ncor; i++)
+    sData[i] = ucorr[i]->end_pos;
+
+  index = sort_and_return_index(sData, SDDS_DOUBLE, ncor, 1);
+
+  ucorr2 = tmalloc(sizeof(*ucorr)*ncor);
+  sl_index2 = tmalloc(sizeof(*sl_index2)*ncor);
+  kick_coef2 = tmalloc(sizeof(*kick_coef2)*ncor);
+
+  memcpy(ucorr2, ucorr, sizeof(*ucorr2)*ncor);
+  memcpy(sl_index2, sl_index, sizeof(*sl_index2)*ncor);
+  memcpy(kick_coef2, kick_coef, sizeof(*kick_coef2)*ncor);
+
+  for (i=0; i<ncor; i++) {
+    ucorr[i] = ucorr2[index[i]];
+    sl_index[i] = sl_index2[index[i]];
+    kick_coef[i] = kick_coef2[index[i]];
+  }
+
+  free(index);
+  free(ucorr2);
+  free(sl_index2);
+  free(kick_coef2);
+}
