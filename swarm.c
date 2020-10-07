@@ -41,7 +41,8 @@ long swarmMin(
   long i, j, isInvalid;
   static long best_index;
   static double best_result=DBL_MAX;
-  double local_rand, result, xLow, xHigh, xDiff;
+  double local_rand, result, xLow, xHigh;
+  //double xDiff;
  /* See reference:  Good Parameters for Particle Swarm Optimization By Magnus Erik
   double omiga = -0.4438, phi_p =-0.2699, phi_g = 3.3950; */
   double phi_p = 2.0, phi_g = 2.0, w_max = 0.9, w_min = 0.2;
@@ -83,7 +84,7 @@ long swarmMin(
     for (j=0; j<dimensions; j++) {
       xLow =  xLowerLimit[j];
       xHigh = xUpperLimit[j];
-      xDiff = xHigh - xLow;
+      //xDiff = xHigh - xLow;
       for (i=0; i<local_populations; i++) {
 	if (isMaster && (i==0)) 
 	  gsl_matrix_set (coord_matrix, i, j, xGuess[j]);

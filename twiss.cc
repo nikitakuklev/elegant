@@ -3685,7 +3685,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
       ix = order[0][iterm];
       iy = order[1][iterm];
       if (ix<0 || iy<0)
-        bombElegantVA("order invalid (%ld, %ld) after fitting for TSWA", ix, iy);
+        bombElegantVA((char*)"order invalid (%ld, %ld) after fitting for TSWA", ix, iy);
       if (ix>=N_TSWA || iy>=N_TSWA)
         continue;
       dnux_dA[ix][iy] = nuxCoef[iterm]*factorial(ix)*factorial(iy);

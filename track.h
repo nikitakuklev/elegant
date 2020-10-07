@@ -3542,6 +3542,18 @@ typedef struct {
     double cent_s, cent_dp;
     } LONGITUDINAL;
 
+void setup_bunched_beam_moments(
+    BEAM *beam,
+    NAMELIST_TEXT *nltext,
+    RUN *run,
+    VARY *control,
+    ERRORVAL *errcon,
+    OPTIM_VARIABLES *optim,
+    OUTPUT_FILES *output,
+    LINE_LIST *beamline,
+    long n_elements,
+    long save_original
+    );
 void zero_centroid(double **particle, long n_particles, long coord);
 long generate_bunch(double **particle, long n_particles, TRANSVERSE *x_plane,  TRANSVERSE *y_plane,
                     LONGITUDINAL *longit, long *enforce_rms_params, long limit_invar, long symmetrize, 
@@ -4128,18 +4140,15 @@ extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *el
                                 MAXAMP *maxamp, APCONTOUR *apcontour, APERTURE_DATA *apData, double *sigmaDelta2);
 extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipole,
                                 double p_error, double Po, double **accepted, double z_start);
-int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xkick, double ykick,
+int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
-                                  long *order, double *KnL, short *skew, long n_kicks, double drift,
+                                  long *order, double *KnL,  short *skew,
+                                  long n_parts, double drift,
+                                  long integration_order,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
-				  long radial, double refTilt);
-int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xkick, double ykick,
-                                  double Po, double rad_coef, double isr_coef,
-                                  long *order, double *KnL, short *skew, long n_kicks, double drift,
-                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
-				  long radial, double refTilt);
+				  long radial, 
+                                  double refTilt /* used for obstruction evaluation only */);
 void apply_canonical_multipole_kicks(double *qx, double *qy, 
                                      double *sum_Fx_return, double *sum_Fy_return,
                                      double *xpow, double *ypow,

@@ -70,7 +70,8 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
 #endif
   long ib, nb, nfreq, iReal, iImag, plane, first;
   /* long n_binned; */
-  double factor, tmin, tmax, tmean, dt, userFactor[2], rampFactor=1;
+  double factor, tmin, tmax, dt, userFactor[2], rampFactor=1;
+  //double tmean;
   static long not_first_call = -1;
   long ip, i_pass0;
 #if defined(DEBUG)
@@ -162,9 +163,9 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
       find_global_min_max(&tmin, &tmax, np, workers); 
       tmin_part = tmin;
       tmax_part = tmax;     
-      tmean = computeAverage_p(time, np, workers);
+      //tmean = computeAverage_p(time, np, workers);
 #else
-      compute_average(&tmean, time, np);
+      //compute_average(&tmean, time, np);
 #endif
       /* use np0 here since we need to compute the macroparticle charge */
       set_up_ztransverse(ztransverse, run, i_pass, np0, charge, tmax-tmin);

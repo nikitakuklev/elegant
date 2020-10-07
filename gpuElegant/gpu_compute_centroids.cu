@@ -333,7 +333,7 @@ extern "C"
           {
             npCount = n_part;
           }
-        if (!(flags & BEAM_SUMS_NOMINMAX))
+        if (!(flags & BEAM_SUMS_NOMINMAX) && sums->beamSums2)
           {
             /* maximum amplitudes */
             for (i = 0; i < 6; i++)
@@ -383,23 +383,29 @@ extern "C"
                 centroidn[i] /= npCount;
               }
           }
+        if (sums->beamSums2) {
+          for (i = 0; i < 7; i++)
+            {
+              if (i == 4)
+                continue; /* done below */
+              if (pmax[i] > -pmin[i])
+                sums->beamSums2->maxabs[i] = pmax[i];
+              else
+                sums->beamSums2->maxabs[i] = -pmin[i];
+              if (pmax[i] > sums->beamSums2->max[i])
+                sums->beamSums2->max[i] = pmax[i];
+              if (pmin[i] < sums->beamSums2->min[i])
+                sums->beamSums2->min[i] = pmin[i];
+            }
+        }
         for (i = 0; i < 7; i++)
           {
             if (i == 4)
               continue; /* done below */
-            if (pmax[i] > -pmin[i])
-              sums->maxabs[i] = pmax[i];
-            else
-              sums->maxabs[i] = -pmin[i];
-            if (pmax[i] > sums->max[i])
-              sums->max[i] = pmax[i];
-            if (pmin[i] < sums->min[i])
-              sums->min[i] = pmin[i];
             if (i != 1 && i != 3)
               centroidn[i] = centroid[i];
           }
-
-        if (!(flags & BEAM_SUMS_NOMINMAX))
+        if (!(flags & BEAM_SUMS_NOMINMAX) && sums->beamSums2)
           {
             i = 4;
             gpuDriver(npCount, gpuCenter(d_center4, d_particles + particlePitch * i, centroid[i]));
@@ -411,13 +417,13 @@ extern "C"
             for (i = 4; i <= 6; i += 2)
               {
                 if (pmax[i] > -pmin[i])
-                  sums->maxabs[i] = pmax[i];
+                  sums->beamSums2->maxabs[i] = pmax[i];
                 else
-                  sums->maxabs[i] = -pmin[i];
-                if (pmax[i] > sums->max[i])
-                  sums->max[i] = pmax[i];
-                if (pmin[i] < sums->min[i])
-                  sums->min[i] = pmin[i];
+                  sums->beamSums2->maxabs[i] = -pmin[i];
+                if (pmax[i] > sums->beamSums2->max[i])
+                  sums->beamSums2->max[i] = pmax[i];
+                if (pmin[i] < sums->beamSums2->min[i])
+                  sums->beamSums2->min[i] = pmin[i];
               }
           }
 
@@ -430,11 +436,11 @@ extern "C"
                 errorSig = errorSign = 0.0;
 #  endif
                 //Sij = Sijn = 0;
-                if (flags & BEAM_SUMS_SPARSE && !sparse[i][j])
+                if (flags & BEAM_SUMS_SPARSE && !sparse[i][j] && sums->beamSums2)
                   {
                     /* Only compute the diagonal blocks and dispersive correlations */
-                    sums->sigma[j][i] = sums->sigma[i][j] = 0;
-                    sums->sigman[j][i] = sums->sigman[i][j] = 0;
+                    sums->beamSums2->sigma[j][i] = sums->beamSums2->sigma[i][j] = 0;
+                    sums->beamSums2->sigman[j][i] = sums->beamSums2->sigman[i][j] = 0;
                     continue;
                   }
 #  ifndef USE_KAHAN
@@ -481,14 +487,17 @@ extern "C"
               }
           }
         finishReductionStreams();
-        for (i = 0; i < 7; i++)
+        if (sums->beamSums2)
           {
-            for (j = i; j < 7; j++)
+            for (i = 0; i < 7; i++)
               {
-                sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j] * sums->n_part + Sijarr[i][j]) / (sums->n_part + npCount));
-                if (exactNormalizedEmittance)
+                for (j = i; j < 7; j++)
                   {
-                    sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j] * sums->n_part + Sijnarr[i][j]) / (sums->n_part + npCount));
+                    sums->beamSums2->sigma[j][i] = (sums->beamSums2->sigma[i][j] = (sums->beamSums2->sigma[i][j] * sums->n_part + Sijarr[i][j]) / (sums->n_part + npCount));
+                    if (exactNormalizedEmittance)
+                      {
+                        sums->beamSums2->sigman[j][i] = (sums->beamSums2->sigman[i][j] = (sums->beamSums2->sigman[i][j] * sums->n_part + Sijnarr[i][j]) / (sums->n_part + npCount));
+                      }
                   }
               }
           }
@@ -602,7 +611,7 @@ extern "C"
       }
     if (active)
       {
-        if (!(flags & BEAM_SUMS_NOMINMAX) && !(flags & BEAM_SUMS_EXACTEMIT))
+        if (!(flags & BEAM_SUMS_NOMINMAX) && !(flags & BEAM_SUMS_EXACTEMIT) && sums->beamSums2)
           {
             /* maximum amplitudes */
             for (i = 0; i < 6; i++)
@@ -661,20 +670,21 @@ extern "C"
                   }
               }
           }
-        for (i = 0; i < 6; i++)
-          {
-            if (i == 4)
-              continue; /* done below */
-            if (pmax[i] > -pmin[i])
-              sums->maxabs[i] = pmax[i];
-            else
-              sums->maxabs[i] = -pmin[i];
-            if (pmax[i] > sums->max[i])
-              sums->max[i] = pmax[i];
-            if (pmin[i] < sums->min[i])
-              sums->min[i] = pmin[i];
-          }
-      }
+        if (sums->beamSums2) {
+          for (i = 0; i < 6; i++)
+            {
+              if (i == 4)
+                continue; /* done below */
+              if (pmax[i] > -pmin[i])
+                sums->beamSums2->maxabs[i] = pmax[i];
+              else
+                sums->beamSums2->maxabs[i] = -pmin[i];
+              if (pmax[i] > sums->beamSums2->max[i])
+                sums->beamSums2->max[i] = pmax[i];
+              if (pmin[i] < sums->beamSums2->min[i])
+                sums->beamSums2->min[i] = pmin[i];
+            }
+        }
 
     if (notSinglePart)
       {
@@ -724,7 +734,7 @@ extern "C"
 
     if (active)
       {
-        if (!(flags & BEAM_SUMS_NOMINMAX) && !(flags & BEAM_SUMS_EXACTEMIT))
+        if (!(flags & BEAM_SUMS_NOMINMAX) && !(flags & BEAM_SUMS_EXACTEMIT) && sums->beamSums2)
           {
             i = 4;
             gpuDriver(npCount, gpuCenter(d_center4, d_particles + particlePitch * i, centroid[i]));
@@ -736,32 +746,32 @@ extern "C"
             for (i = 4; i <= 6; i += 2)
               {
                 if (pmax[i] > -pmin[i])
-                  sums->maxabs[i] = pmax[i];
+                  sums->beamSums2->maxabs[i] = pmax[i];
                 else
-                  sums->maxabs[i] = -pmin[i];
-                if (pmax[i] > sums->max[i])
-                  sums->max[i] = pmax[i];
-                if (pmin[i] < sums->min[i])
-                  sums->min[i] = pmin[i];
+                  sums->beamSums2->maxabs[i] = -pmin[i];
+                if (pmax[i] > sums->beamSums2->max[i])
+                  sums->beamSums2->max[i] = pmax[i];
+                if (pmin[i] < sums->beamSums2->min[i])
+                  sums->beamSums2->min[i] = pmin[i];
               }
           }
       }
 
-    if (!(flags & BEAM_SUMS_NOMINMAX) && !(flags & BEAM_SUMS_EXACTEMIT))
+    if (!(flags & BEAM_SUMS_NOMINMAX) && !(flags & BEAM_SUMS_EXACTEMIT) && sums->beamSums2)
       {
         if (notSinglePart)
           {
             if (parallelStatus == trueParallel)
               {
-                /* compute sums->maxabs over processors*/
-                MPI_Allreduce(sums->maxabs, buffer, 7, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                memcpy(sums->maxabs, buffer, sizeof(double) * 7);
-                /* compute sums->max over processors */
-                MPI_Allreduce(sums->max, buffer, 7, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-                memcpy(sums->max, buffer, sizeof(double) * 7);
-                /* compute sums->min over processors */
-                MPI_Allreduce(sums->min, buffer, 7, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-                memcpy(sums->min, buffer, sizeof(double) * 7);
+                /* compute sums->beamSums2->maxabs over processors*/
+                MPI_Allreduce(sums->beamSums2->maxabs, buffer, 7, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                memcpy(sums->beamSums2->maxabs, buffer, sizeof(double) * 7);
+                /* compute sums->beamSums2->max over processors */
+                MPI_Allreduce(sums->beamSums2->max, buffer, 7, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                memcpy(sums->beamSums2->max, buffer, sizeof(double) * 7);
+                /* compute sums->beamSums2->min over processors */
+                MPI_Allreduce(sums->beamSums2->min, buffer, 7, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                memcpy(sums->beamSums2->min, buffer, sizeof(double) * 7);
               }
           }
       }
@@ -781,13 +791,13 @@ extern "C"
 #  ifdef USE_KAHAN
                 errorSig[j] = 0.0;
 #  endif
-                if (flags & BEAM_SUMS_SPARSE && !sparse[i][j])
+                if (flags & BEAM_SUMS_SPARSE && !sparse[i][j] && sums->beamSums2)
                   {
                     /* Only compute the diagonal blocks and dispersive correlations */
                     if (flags & BEAM_SUMS_EXACTEMIT)
-                      sums->sigman[j][i] = sums->sigman[i][j] = 0;
+                      sums->beamSums2->sigman[j][i] = sums->beamSums2->sigman[i][j] = 0;
                     else
-                      sums->sigma[j][i] = sums->sigma[i][j] = 0;
+                      sums->beamSums2->sigma[j][i] = sums->beamSums2->sigma[i][j] = 0;
                     continue;
                   }
 
@@ -934,39 +944,42 @@ extern "C"
               }
           }
         finishReductionStreams();
-        for (i = 0; i < 7; i++)
+        if (sums->beamSums2)
           {
-            for (j = i; j < 7; j++)
+            for (i = 0; i < 7; i++)
               {
-                if (notSinglePart)
+                for (j = i; j < 7; j++)
                   {
-                    if (parallelStatus == trueParallel)
+                    if (notSinglePart)
                       {
-                        /* nothing to do */
-                      }
-                    else if (isMaster)
-                      {
-                        if (npCount)
+                        if (parallelStatus == trueParallel)
                           {
-                            sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j] * sums->n_part + Sijarr[i][j]) / (sums->n_part + npCount));
-                            if (flags & BEAM_SUMS_EXACTEMIT)
+                            /* nothing to do */
+                          }
+                        else if (isMaster)
+                          {
+                            if (npCount)
                               {
-                                sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j] * sums->n_part + Sijnarr[i][j]) / (sums->n_part + npCount));
+                                sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j] * sums->n_part + Sijarr[i][j]) / (sums->n_part + npCount));
+                                if (flags & BEAM_SUMS_EXACTEMIT)
+                                  {
+                                    sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j] * sums->n_part + Sijnarr[i][j]) / (sums->n_part + npCount));
+                                  }
                               }
                           }
                       }
-                  }
-                else
-                  { /* Single particle case */
-                    if (n_part)
-                      {
-                        if (flags & BEAM_SUMS_EXACTEMIT)
+                    else
+                      { /* Single particle case */
+                        if (n_part)
                           {
-                            sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j] * sums->n_part - npCount + Sijnarr[i][j]) / (sums->n_part));
-                          }
-                        else
-                          {
-                            sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j] * sums->n_part + Sijarr[i][j]) / (sums->n_part + npCount));
+                            if (flags & BEAM_SUMS_EXACTEMIT)
+                              {
+                                sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j] * sums->n_part - npCount + Sijnarr[i][j]) / (sums->n_part));
+                              }
+                            else
+                              {
+                                sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j] * sums->n_part + Sijarr[i][j]) / (sums->n_part + npCount));
+                              }
                           }
                       }
                   }
@@ -1020,7 +1033,7 @@ extern "C"
               }
 
 #  endif
-            if (npCount_total)
+            if (npCount_total && sums->beamSums2)
               {
                 offset = 0;
                 for (i = 0; i < 7; i++)
@@ -1033,17 +1046,17 @@ extern "C"
                           {
                             /* Only compute the diagonal blocks and dispersive correlations */
                             if (flags & BEAM_SUMS_EXACTEMIT)
-                              sums->sigman[j][i] = sums->sigman[i][j] = 0;
+                              sums->beamSums2->sigman[j][i] = sums->beamSums2->sigman[i][j] = 0;
                             else
-                              sums->sigma[j][i] = sums->sigma[i][j] = 0;
+                              sums->beamSums2->sigma[j][i] = sums->beamSums2->sigma[i][j] = 0;
                             continue;
                           }
                         index = 6 * i + j - offset;
                         if (flags & BEAM_SUMS_EXACTEMIT)
                           /* sums->n_part was updated already, so we need to *subtract* npCount, not add it */
-                          sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j] * (sums->n_part - npCount_total) + Sij_total[index]) / sums->n_part);
+                          sums->beamSums2->sigman[j][i] = (sums->beamSums2->sigman[i][j] = (sums->beamSums2->sigman[i][j] * (sums->n_part - npCount_total) + Sij_total[index]) / sums->n_part);
                         else
-                          sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j] * sums->n_part + Sij_total[index]) / (sums->n_part + npCount_total));
+                          sums->beamSums2->sigma[j][i] = (sums->beamSums2->sigma[i][j] = (sums->beamSums2->sigma[i][j] * sums->n_part + Sij_total[index]) / (sums->n_part + npCount_total));
                       }
                   }
               }

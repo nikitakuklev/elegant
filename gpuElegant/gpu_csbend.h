@@ -8,12 +8,13 @@ extern "C" {
 #endif
 
 long gpu_track_through_csbend(long n_part, CSBEND *csbend,
-      double p_error, double Po, double **accepted, double z_start,
-      double *sigmaDelta2, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData);
+                              double p_error, double Po, double **accepted, double z_start,
+                              double *sigmaDelta2, char *rootname, MAXAMP *maxamp, 
+                              APCONTOUR *apContour, APERTURE_DATA *apFileData);
 
 long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
        double p_error, double Po, double **accepted, double z_start,
-       double z_end, CHARGE *charge, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData);
+       double z_end, CHARGE *charge, char *rootname, MAXAMP *maxamp, APCONTOUR *apContour, APERTURE_DATA *apFileData);
 
 long gpu_track_through_driftCSR(long np, CSRDRIFT *csrDrift, double Po,
        double **accepted, double zStart, double revolutionLength,

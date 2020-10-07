@@ -9,9 +9,9 @@ extern "C" {
 #endif
 
 long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
-       double p_error, double Po, double **accepted, double z_start,
-       MAXAMP *maxamp, APERTURE_DATA *apFileData,
-       double *sigmaDelta2);
+                             double p_error, double Po, double **accepted, double z_start,
+                             MAXAMP *maxamp, APCONTOUR *apcontour, APERTURE_DATA *apFileData,
+                             double *sigmaDelta2);
 
 #ifdef __cplusplus
 }

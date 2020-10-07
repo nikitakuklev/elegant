@@ -45,6 +45,10 @@ __device__ __constant__ double edgeMultDataJnL[expansionOrderMax];
 __device__ __constant__ double d_coef[expansionOrderMax * expansionOrderMax];
 
 // Defined below
+__device__ int
+    gpu_integrate_kick_multipole_ordn(gpuParticleAccessor &coord, long *order, double *KnL, short *skew, long n_kicks,
+                                      double drift, long integration_order, double *dzLoss, double *sigmaDelta2, int radial, double refTilt,
+                                      double srGaussianLimit, short expandHamiltonian);
 __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
                                                     double *sum_Fx_return, double *sum_Fy_return, double x, double y,
                                                     int order, double KnL, int skew);
@@ -105,16 +109,8 @@ class gpu_multipole_tracking2_kernel
     double *tSigmaDelta2 = NULL;
     if (d_sigmaDelta2)
       tSigmaDelta2 = &d_sigmaDelta2[tid];
-    if (integ_order == 4)
-      {
-        particle_lost = !gpu_integrate_kick_multipole_ord4(coord, order, KnL, skew, n_parts,
-                                                           drift, &dzLoss, tSigmaDelta2, radial, refTilt, srGaussianLimit, expandHamiltonian);
-      }
-    else if (integ_order == 2)
-      {
-        particle_lost = !gpu_integrate_kick_multipole_ord2(coord, order, KnL, skew, n_parts,
-                                                           drift, &dzLoss, tSigmaDelta2, radial, refTilt, srGaussianLimit, expandHamiltonian);
-      }
+    particle_lost = !gpu_integrate_kick_multipole_ordn(coord, order, KnL, skew, n_parts,
+                                                       drift, integ_order, &dzLoss, tSigmaDelta2, radial, refTilt, srGaussianLimit, expandHamiltonian);
     if (particle_lost)
       {
         coord[4] = z_start + dzLoss;
@@ -132,252 +128,66 @@ class gpu_multipole_tracking2_kernel
 #define yp coord[3]
 #define dp coord[5]
 
-  __device__ int
-    gpu_integrate_kick_multipole_ord2(gpuParticleAccessor &coord, long *order, double *KnL, short *skew, long n_kicks,
-                                      double drift, double *dzLoss, double *sigmaDelta2, int radial, double refTilt,
-                                      double srGaussianLimit, short expandHamiltonian)
-  {
-    double p, qx, qy, beta0, beta1, s;
-    double sum_Fx, sum_Fy;
-    int i_kick, imult;
-
-    drift = drift / n_parts / 2.0;
-    //KnL = KnL / n_parts;
-    xkick = xkick / n_kicks;
-    ykick = ykick / n_kicks;
-    //KnL2 = KnL2 / n_parts;
-
-    // prepocessor defines
-    //x = coord[0];
-    //xp = coord[1];
-    //y = coord[2];
-    //yp = coord[3];
-    s = 0;
-    //dp = coord[5];
-    p = Po * (1 + dp);
-    beta0 = p / sqrt(sqr(p) + 1);
-
-#if defined(IEEE_MATH)
-    if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp))
-      {
-        return 0;
-      }
-#endif
-    if (fabs(x) > COORD_LIMIT || fabs(y) > COORD_LIMIT ||
-        fabs(xp) > SLOPE_LIMIT || fabs(yp) > SLOPE_LIMIT)
-      {
-        return 0;
-      }
-
-    *dzLoss = 0;
-
-    /* calculate initial canonical momenta */
-    gpu_convertSlopesToMomenta(&qx, &qy, xp, yp, dp, expandHamiltonian);
-
-    if (edgeMultDataOrders >= 0)
-      {
-        for (imult = 0; imult < edgeMultDataOrders; imult++)
-          {
-            gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y,
-                                                edgeMultDataOrder[imult],
-                                                edgeMultDataKnL[imult], 0);
-            gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y,
-                                                edgeMultDataOrder[imult],
-                                                edgeMultDataJnL[imult], 1);
-          }
-      }
-
-    /* We must do this in case steering or edge multipoles were run. We do it even if not in order
-     * to avoid numerical precision issues that may subtly change the results
-     */
-    if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
-      return 0;
-
-    for (i_kick = 0; i_kick < n_parts; i_kick++)
-      {
-        if (drift)
-          {
-            x += xp * drift * (i_kick ? 2 : 1);
-            y += yp * drift * (i_kick ? 2 : 1);
-            if (expandHamiltonian)
-              {
-                s += drift * (i_kick ? 2 : 1) * (1 + (sqr(xp) + sqr(yp)) / 2);
-              }
-            else
-              {
-                s += drift * (i_kick ? 2 : 1) * sqrt(1 + sqr(xp) + sqr(yp));
-              }
-            *dzLoss += drift * (i_kick ? 2 : 1);
-          }
-        if (present &&
-            ((xMax && fabs(x + dx - xCen) > xMax) ||
-             (yMax && fabs(y + dy - yCen) > yMax)))
-          {
-            return 0;
-          }
-        /* obstructions are not implemented in GPU code
-        if (insideObstruction_xyz(x, y, coord[particleIDIndex], 
-			                            globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
-			                            refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_kicks))
-          {
-            return 0;
-          }
-        */
-        sum_Fx = sum_Fy = 0;
-
-        if (!radial) {
-          for (int iOrder=0; iOrder<3; iOrder++)
-            if (KnL[iOrder])
-              gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
-                                                  order[iOrder], KnL[iOrder]/n_kicks, skew[iOrder]);
-        } else
-          gpu_applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
-                                                 order[0], KnL[0]/n_kicks, 0);
-
-        if (xkick)
-          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 0, -xkick, 0);
-        if (ykick)
-          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 0, -ykick, 1);
-
-        /* apply steering corrector multipoles */
-        if (steeringMultDataOrders >= 0)
-          {
-            for (imult = 0; imult < steeringMultDataOrders; imult++)
-              {
-                gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y,
-                                                    steeringMultDataOrder[imult],
-                                                    steeringMultDataKnL[imult] * xkick / n_kicks, 0);
-                gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y,
-                                                    steeringMultDataOrder[imult],
-                                                    steeringMultDataJnL[imult] * ykick / n_kicks, 1);
-              }
-          }
-
-        /* do kicks for spurious multipoles */
-        for (imult = 0; imult < multDataOrders; imult++)
-          {
-            if (multDataKnL[imult])
-              gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y,
-                                                  multDataOrder[imult],
-                                                  multDataKnL[imult] / n_parts, 0);
-            if (multDataJnL[imult])
-              gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y,
-                                                  multDataOrder[imult],
-                                                  multDataJnL[imult] / n_parts, 1);
-          }
-
-        if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
-          return 0;
-
-        if ((rad_coef || isr_coef) && drift)
-          {
-            double deltaFactor, F2, dsFactor;
-            deltaFactor = sqr(1 + dp);
-            F2 = (sqr(sum_Fy * KnL[0] / n_kicks - xkick) + sqr(sum_Fx * KnL[0] / n_kicks + ykick)) / sqr((2*drift));
-            dsFactor = xp * xp + yp * yp;
-            dsFactor = sqrt(1 + dsFactor) * 2 * drift;
-            qx /= (1 + dp);
-            qy /= (1 + dp);
-            if (rad_coef)
-              dp -= rad_coef * deltaFactor * F2 * dsFactor;
-            if (isr_coef > 0)
-              {
-                // Get a srGaussianLimit sigma (1) limited random number
-                double rand = curand_uniform_double(state);
-                while (fabs(rand) > srGaussianLimit)
-                  rand = curand_uniform_double(state);
-                dp -= isr_coef * deltaFactor * pow(F2, 0.75) * sqrt(dsFactor) * rand;
-              }
-            if (sigmaDelta2)
-              *sigmaDelta2 += sqr(isr_coef * deltaFactor) * pow(F2, 1.5) * dsFactor;
-            qx *= (1 + dp);
-            qy *= (1 + dp);
-            if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
-              return 0;
-          }
-      }
-    if (drift)
-      {
-        /* go through final drift */
-        x += xp * drift;
-        y += yp * drift;
-        if (expandHamiltonian)
-          {
-            s += drift * (1 + (sqr(xp) + sqr(yp)) / 2);
-          }
-        else
-          {
-            s += drift * sqrt(1 + sqr(xp) + sqr(yp));
-          }
-        *dzLoss += drift;
-      }
-    if (present &&
-        ((xMax && fabs(x + dx - xCen) > xMax) ||
-         (yMax && fabs(y + dy - yCen) > yMax)))
-      {
-        return 0;
-      }
-
-    if (edgeMultDataOrders >= 0)
-      {
-        for (imult = 0; imult < edgeMultDataOrders; imult++)
-          {
-            gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y,
-                                                edgeMultDataOrder[imult],
-                                                edgeMultDataKnL[imult], 0);
-            gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y,
-                                                edgeMultDataOrder[imult],
-                                                edgeMultDataJnL[imult], 1);
-          }
-      }
-
-    if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
-      return 0;
-
-    //coord[0] = x;
-    //coord[1] = xp;
-    //coord[2] = y;
-    //coord[3] = yp;
-    if (rad_coef || isr_coef)
-      {
-        p = Po * (1 + dp);
-        beta1 = p / sqrt(sqr(p) + 1);
-        coord[4] = beta1 * (coord[4] / beta0 + 2 * s / (beta0 + beta1));
-      }
-    else
-      coord[4] += s;
-    //coord[5] = dp;
-
-#if defined(IEEE_MATH)
-    if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp))
-      {
-        return 0;
-      }
-#endif
-    if (fabs(x) > COORD_LIMIT || fabs(y) > COORD_LIMIT ||
-        fabs(xp) > SLOPE_LIMIT || fabs(yp) > SLOPE_LIMIT)
-      {
-        return 0;
-      }
-    return 1;
-  }
 
   /* BETA is 2^(1/3) */
 #define BETA 1.25992104989487316477
 
   __device__ int
-    gpu_integrate_kick_multipole_ord4(gpuParticleAccessor &coord, long *order, double *KnL, short *skew, long n_kicks,
-                                      double drift, double *dzLoss, double *sigmaDelta2, int radial, double refTilt,
+    gpu_integrate_kick_multipole_ordn(gpuParticleAccessor &coord, long *order, double *KnL, short *skew, long n_kicks,
+                                      double drift, long integration_order, double *dzLoss, double *sigmaDelta2, int radial, double refTilt,
                                       double srGaussianLimit, short expandHamiltonian)
   {
     double p, qx, qy, beta0, beta1, s;
     double sum_Fx, sum_Fy;
     int i_kick, step, imult;
     double dsh;
-    const double driftFrac[4] = {0.5 / (2 - BETA), (1 - BETA) / (2 - BETA) / 2,
-                                 (1 - BETA) / (2 - BETA) / 2, 0.5 / (2 - BETA)};
-    const double kickFrac[4] = {1. / (2 - BETA), -BETA / (2 - BETA),
-                                1 / (2 - BETA), 0};
+    
+    static double driftFrac2[2] = {
+      0.5, 0.5
+    };
+    static double kickFrac2[2] = {
+      1.0, 0.0
+    };
+    static double driftFrac4[4] = {
+      0.5/(2-BETA),  (1-BETA)/(2-BETA)/2,  (1-BETA)/(2-BETA)/2,  0.5/(2-BETA)
+    };
+    static double kickFrac4[4] = {
+      1./(2-BETA),  -BETA/(2-BETA),  1/(2-BETA),  0
+    };
+
+    /* From AOP-TN-2020-064 */
+    static double driftFrac6[8] = {
+      0.39225680523878, 0.5100434119184585, -0.47105338540975655, 0.0687531682525181,
+      0.0687531682525181, -0.47105338540975655, 0.5100434119184585, 0.39225680523878,
+    } ;
+    static double kickFrac6[8] = {
+      0.784513610477560, 0.235573213359357, -1.17767998417887, 1.3151863206839063,
+      -1.17767998417887,  0.235573213359357, 0.784513610477560, 0
+    } ;
+
+    double *driftFrac = NULL, *kickFrac = NULL;
+    long nSubsteps = 0;
+    switch (integration_order) {
+    case 2:
+      nSubsteps = 2;
+      driftFrac = driftFrac2;
+      kickFrac = kickFrac2;
+      break;
+    case 4:
+      nSubsteps = 4;
+      driftFrac = driftFrac4;
+      kickFrac = kickFrac4;
+      break;
+    case 6:
+      nSubsteps = 8;
+      driftFrac = driftFrac6;
+      kickFrac = kickFrac6;
+      break;
+    default:
+      printf("invalid order %ld given for symplectic integrator", integration_order);
+      return(0);
+    }
+
 
     drift = drift / n_parts;
     //KnL = KnL / n_parts;
@@ -446,7 +256,7 @@ class gpu_multipole_tracking2_kernel
             return 0;
           }
         */
-        for (step = 0; step < 4; step++)
+        for (step = 0; step < nSubsteps; step++)
           {
             if (drift)
               {
@@ -528,7 +338,7 @@ class gpu_multipole_tracking2_kernel
                 F2 = (sqr(sum_Fy * KnL[0] / n_parts - xkick) + sqr(sum_Fx * KnL[0] / n_parts + ykick)) / sqr(drift);
                 dsFactor = xp * xp + yp * yp;
                 dsFactor = sqrt(1 + dsFactor);
-                dsISRFactor = dsFactor * drift / 3; /* recall that kickFrac may be negative */
+                dsISRFactor = dsFactor * drift / (nSubsteps - 1); /* recall that kickFrac may be negative */
                 dsFactor *= drift * kickFrac[step]; /* that's ok here, since we don't take sqrt */
                 if (rad_coef)
                   dp -= rad_coef * deltaFactor * F2 * dsFactor;
@@ -624,7 +434,7 @@ extern "C"
 
   long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
                                double p_error, double Po, double **accepted, double z_start,
-                               MAXAMP *maxamp, APERTURE_DATA *apFileData,
+                               MAXAMP *maxamp, APCONTOUR *apcontour, APERTURE_DATA *apFileData,
                                double *sigmaDelta2)
   {
     double *KnL;  /* integrated strength = L/(B.rho)*(Dx^n(By))_o for central momentum */
@@ -921,8 +731,8 @@ extern "C"
       bombTracking("n_kicks<=0 in multipole()");
     if (order[0] <= 0)
       bombTracking("order <= 0 in multipole()");
-    if (integ_order != 2 && integ_order != 4)
-      bombTracking("multipole integration_order must be 2 or 4");
+    if (integ_order != 2 && integ_order != 4 && integ_order != 6)
+      bombTracking("multipole integration_order must be 2, 4 or 6");
 
     for (iOrder=0; iOrder<3; iOrder++)
       {
@@ -949,7 +759,7 @@ extern "C"
     //Copy d_multipoleKicksDone from gpu device to host cpu
     cudaMemcpyToSymbol(&multipoleKicksDone, &d_multipoleKicksDone, sizeof(long), 0, cudaMemcpyDeviceToHost);
 
-    setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start + drift / 2);
+    setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, z_start + drift / 2);
 
     struct GPUBASE *gpuBase = getGpuBase();
     unsigned int particlePitch = gpuBase->gpu_array_pitch;

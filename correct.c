@@ -3130,7 +3130,7 @@ long sync_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
  
 long sync_correctors_one_plane(CORMON_DATA *CM, RUN *run, STEERING_LIST *SL)
 {  
-  long slIndex, i, paramOffset, n_zeroed;
+  long slIndex, i, paramOffset;
   long n_synced = 0;
   ELEMENT_LIST *elem;
   for (i=0; i<CM->ncor; i++) {

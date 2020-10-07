@@ -532,11 +532,12 @@ void compareGpuCpu(unsigned int n_part, char *name)
  * Set pointers to stored reduction arrays computed by the CUDA code
  */
 void setGpuReductionArrays(double **pgpu_centroid, double **pgpu_sigma,
-                           BEAM_SUMS **pgpu_sums)
+                           BEAM_SUMS **pgpu_sums, BEAM_SUMS2 **pgpu_sums2)
 {
   static double gpu_centroid[NCOMP] = {0., 0., 0., 0., 0., 0., 0.};
   static double gpu_sigma[NCOMP] = {0., 0., 0., 0., 0., 0., 0.};
   static BEAM_SUMS gpu_sums;
+  static BEAM_SUMS2 gpu_sums2;
 
   if (pgpu_centroid)
     *pgpu_centroid = gpu_centroid;
@@ -544,6 +545,8 @@ void setGpuReductionArrays(double **pgpu_centroid, double **pgpu_sigma,
     *pgpu_sigma = gpu_sigma;
   if (pgpu_sums)
     *pgpu_sums = &gpu_sums;
+  if (pgpu_sums2)
+    *pgpu_sums2 = &gpu_sums2;
 }
 
 /**
@@ -553,21 +556,27 @@ void *getGpuBeamSums(void *cpu_beam_sums)
 {
   BEAM_SUMS *gpu_sums;
   BEAM_SUMS *sums = (BEAM_SUMS *)cpu_beam_sums;
-  setGpuReductionArrays(NULL, NULL, &gpu_sums);
-
-  /* copy the beam sums */
   long i, j;
-  for (i = 0; i < 7; i++)
+
+  setGpuReductionArrays(NULL, NULL, &gpu_sums, NULL);
+  if (sums->beamSums2)
     {
-      gpu_sums->maxabs[i] = sums->maxabs[i];
-      gpu_sums->max[i] = sums->max[i];
-      gpu_sums->min[i] = sums->min[i];
+      setGpuReductionArrays(NULL, NULL, NULL, &(gpu_sums->beamSums2));
+      /* copy the beam sums */
+      for (i = 0; i < 7; i++)
+        {
+          gpu_sums->beamSums2->maxabs[i] = sums->beamSums2->maxabs[i];
+          gpu_sums->beamSums2->max[i] = sums->beamSums2->max[i];
+          gpu_sums->beamSums2->min[i] = sums->beamSums2->min[i];
+          for (j = i; j < 7; j++)
+            {
+              gpu_sums->beamSums2->sigma[i][j] = sums->beamSums2->sigma[i][j];
+            }
+        }
     }
   for (i = 0; i < 7; i++)
     {
       gpu_sums->centroid[i] = sums->centroid[i];
-      for (j = i; j < 7; j++)
-        gpu_sums->sigma[i][j] = sums->sigma[i][j];
     }
   gpu_sums->n_part = sums->n_part;
   gpu_sums->z = sums->z;
@@ -582,7 +591,7 @@ void *getGpuBeamSums(void *cpu_beam_sums)
 void copyReductionArrays(double *centroid, double *sigma)
 {
   double *gpu_centroid, *gpu_sigma;
-  setGpuReductionArrays(&gpu_centroid, &gpu_sigma, NULL);
+  setGpuReductionArrays(&gpu_centroid, &gpu_sigma, NULL, NULL);
 
   for (unsigned int ii = 0; ii < NCOMP; ii++)
     {
@@ -638,18 +647,18 @@ void compareReductionArrays(double *centroid, double *sigma, void *vsums,
   endTimer(name);
   //  std::cout << "Comparing reduction routine " << name << std::endl;
 
-  setGpuReductionArrays(&gpu_centroid, &gpu_sigma, &gpu_sums);
+  setGpuReductionArrays(&gpu_centroid, &gpu_sigma, &gpu_sums, NULL);
   if (sums)
     {
       compareValues(sums->p0, gpu_sums->p0, "p0");
       for (ii = 0; ii < 7; ii++)
         {
-          compareValues(sums->maxabs[ii], gpu_sums->maxabs[ii], "maxabs", ii);
-          compareValues(sums->max[ii], gpu_sums->max[ii], "max", ii);
-          compareValues(sums->min[ii], gpu_sums->min[ii], "min", ii);
+          compareValues(sums->beamSums2->maxabs[ii], gpu_sums->beamSums2->maxabs[ii], "maxabs", ii);
+          compareValues(sums->beamSums2->max[ii], gpu_sums->beamSums2->max[ii], "max", ii);
+          compareValues(sums->beamSums2->min[ii], gpu_sums->beamSums2->min[ii], "min", ii);
           compareValues(sums->centroid[ii], gpu_sums->centroid[ii], "centroid", ii);
           for (jj = ii; jj < 7; jj++)
-            compareValues(sums->sigma[ii][jj], gpu_sums->sigma[ii][jj],
+            compareValues(sums->beamSums2->sigma[ii][jj], gpu_sums->beamSums2->sigma[ii][jj],
                           "sigma", ii, jj);
         }
     }

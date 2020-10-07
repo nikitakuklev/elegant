@@ -51,14 +51,6 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
                       double normalizedCriticalEnergy, double Po);
 double pickNormalizedPhotonEnergy(double RN);
 
-long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
-                           double *dz_lost, MULT_APERTURE_DATA *apData);
-long integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
-                           double *dz_lost, MULT_APERTURE_DATA *apData);
-long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
-                           double *dz_lost, MULT_APERTURE_DATA *apData);
-long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
-                           double *dz_lost, MULT_APERTURE_DATA *apData);
 long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
                            double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order);
 long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
@@ -639,10 +631,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if(getElementOnGpu()){
     startGpuTimer();
     i_part = gpu_track_through_csbend(n_part, csbend, p_error, Po, accepted, 
-                                      z_start, sigmaDelta2, rootname, maxamp, apFileData);
+                                      z_start, sigmaDelta2, rootname, maxamp, apContour, apFileData);
 #ifdef GPU_VERIFY     
     startCpuTimer();
-    track_through_csbend(part, n_part, csbend, p_error, Po, accepted, z_start, sigmaDelta2, rootname, maxamp, apFileData);
+    track_through_csbend(part, n_part, csbend, p_error, Po, accepted, z_start, sigmaDelta2, rootname, maxamp, apContour, apFileData);
     compareGpuCpu(n_part, "track_through_csbend");
 #endif /* GPU_VERIFY */
     return i_part;
@@ -1248,540 +1240,10 @@ void convertFromDipoleCanonicalCoordinates(double *Qi, long expanded)
 }
 
 
-long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
-                           double *dz_lost, MULT_APERTURE_DATA *apData)
-{
-  long i;
-  double factor, f, phi, ds, dsh, dist;
-  double Fx, Fy, x, y;
-  double sine, cosi, tang;
-  double sin_phi, cos_phi;
-  
-  
-#define X0 Qi[0]
-#define XP0 Qi[1]
-#define Y0 Qi[2]
-#define YP0 Qi[3]
-#define S0 Qi[4]
-#define DPoP0 Qi[5]
-
-#define X Qf[0]
-#define QX Qf[1]
-#define Y Qf[2]
-#define QY Qf[3]
-#define S Qf[4]
-#define DPoP Qf[5]
-
-  if (refTrajectoryMode && refTrajectoryPoints!=n)
-    bombElegant("Problem with recorded reference trajectory for CSBEND element---has wrong number of points\n", NULL);
-  if (!Qf)
-    bombElegant("NULL final coordinates pointer ()", NULL);
-  if (!Qi)
-    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord2)", NULL);
-  if (n<1)
-    bombElegant("invalid number of steps (integrate_csbend_ord2)", NULL);
-
-  memcpy(Qf, Qi, sizeof(*Qi)*6);
-  
-  X = X0;
-  Y = Y0;
-  S = S0;
-  DPoP = DPoP0;
-
-  ds = s/n;
-  dsh = ds/2;
-  dist = 0;
-  *dz_lost = 0; /* we'll accumulate this value even if the particle isn't lost */
-  for (i=0; i<n; i++) {
-    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
-      return 0;
-    }
-    if (i==0) {
-      /* do half-length drift */
-      if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-        return 0;
-      }
-      f = sqrt(f);
-      if (fabs(QX/f)>1) {
-        return 0;
-      }
-      phi = asin(sin_phi=QX/f);
-      sine = sin(dsh/rho0+phi);
-      if ((cosi = cos(dsh/rho0+phi))==0) {
-        return 0;
-      }
-      tang = sine/cosi;
-      cos_phi = cos(phi);
-      QX = f*sine;
-      Y += QY*(factor=(rho0+X)*cos_phi/f*(tang-sin_phi/cos_phi));
-      dist += factor*(1+DPoP);
-      *dz_lost += dsh;
-      f = cos_phi/cosi;
-      X  = rho0*(f-1) + f*X;
-    }
-
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      return 0;
-    }
-
-    /* calculate the scaled fields */
-    x = X;
-    y = Y;
-
-    computeCSBENDFields(&Fx, &Fy, x, y);
-
-    /* do kicks */
-    QX += -ds*(1+X/rho0)*Fy/rho_actual;
-    QY += ds*(1+X/rho0)*Fx/rho_actual;
-
-    if (rad_coef || isrConstant)
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
-		       X, Y, (i+0.5)*ds/rho0, s/rho0, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, ds, isrConstant, 
-                       distributionBasedRadiation, includeOpeningAngle,
-                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
-    
-    if (i==n-1) {
-      /* do half-length drift */
-      if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-        return 0;
-      }
-      f = sqrt(f);
-      if (fabs(QX/f)>1) {
-        return 0;
-      }
-      phi = asin(sin_phi=QX/f);
-      sine = sin(dsh/rho0+phi);
-      if ((cosi = cos(dsh/rho0+phi))==0) {
-        return 0;
-      }
-      tang = sine/cosi;
-      cos_phi = cos(phi);
-      QX = f*sine;
-      Y += QY*(factor=(rho0+X)*cos_phi/f*(tang-sin_phi/cos_phi));
-      dist += factor*(1+DPoP);
-      *dz_lost += dsh;
-      f = cos_phi/cosi;
-      X  = rho0*(f-1) + f*X;
-    }
-    else {
-      /* do full-length drift */
-      if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-        return 0;
-      }
-      f = sqrt(f);
-      if (fabs(QX/f)>1) {
-        return 0;
-      }
-      phi = asin(sin_phi=QX/f);
-      sine = sin(ds/rho0+phi);
-      if ((cosi = cos(ds/rho0+phi))==0) {
-        return 0;
-      }
-      tang = sine/cosi;
-      cos_phi = cos(phi);
-      QX = f*sine;
-      Y += QY*(factor=(rho0+X)*cos_phi/f*(tang-sin_phi/cos_phi));
-      dist += factor*(1+DPoP);
-      *dz_lost += ds;
-      f = cos_phi/cosi;
-      X  = rho0*(f-1) + f*X;
-    }
-
-    if (refTrajectoryMode==RECORD_TRAJECTORY) {
-      refTrajectoryData[i][0] = X;
-      refTrajectoryData[i][1] = QX;
-      refTrajectoryData[i][2] = Y;
-      refTrajectoryData[i][3] = QY;
-      refTrajectoryData[i][4] = dist - ds;
-      X = QX = Y = QY = dist = 0;
-    }
-    if (refTrajectoryMode==SUBTRACT_TRAJECTORY) {
-      X -= refTrajectoryData[i][0];
-      QX -= refTrajectoryData[i][1];
-      Y -= refTrajectoryData[i][2];
-      QY -= refTrajectoryData[i][3];
-      dist -= refTrajectoryData[i][4];
-    }
-    
-#if defined(IEEE_MATH)
-    if (isnan(X) || isnan(QX) || isnan(Y) || isnan(QY)) {
-      return 0;
-    }
-#endif
-    if (FABS(X)>COORD_LIMIT || FABS(Y)>COORD_LIMIT ||
-        FABS(QX)>SLOPE_LIMIT || FABS(QY)>SLOPE_LIMIT) {
-      return 0;
-    }
-  }
-  *dz_lost = ds*n;
-  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
-    return 0;
-  }
-  
-  Qf[4] += dist;
-  return 1;
-}
-
-long integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
-                           double *dz_lost, MULT_APERTURE_DATA *apData)
-/* The Hamiltonian in this case is approximated as
- * H = Hd + Hf, where Hd is the drift part and Hf is the field part.
- * Hd = Hd1 + Hd2 + Hd1, where
- * Hd1 = -0.5*(1+x/rho0)*(1+delta) 
- * Hd2 = 0.5*(qx^2+qy^2)/(1+delta)
- */
-{
-  long i;
-  double ds, dsh, dist;
-  double Fx, Fy, x, y;
-  
-#define X0 Qi[0]
-#define XP0 Qi[1]
-#define Y0 Qi[2]
-#define YP0 Qi[3]
-#define S0 Qi[4]
-#define DPoP0 Qi[5]
-
-#define X Qf[0]
-#define QX Qf[1]
-#define Y Qf[2]
-#define QY Qf[3]
-#define S Qf[4]
-#define DPoP Qf[5]
-
-  if (refTrajectoryMode && refTrajectoryPoints!=n)
-    bombElegant("Problem with recorded reference trajectory for CSBEND element---has wrong number of points\n", NULL);
-  if (!Qf)
-    bombElegant("NULL final coordinates pointer ()", NULL);
-  if (!Qi)
-    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord2)", NULL);
-  if (n<1)
-    bombElegant("invalid number of steps (integrate_csbend_ord2)", NULL);
-
-  memcpy(Qf, Qi, sizeof(*Qi)*6);
-  
-  X = X0;
-  Y = Y0;
-  S = S0;
-  DPoP = DPoP0;
-
-  ds = s/n;
-  dsh = ds/2;
-  dist = 0;
-  *dz_lost = 0; /* we'll accumulate this value even if the particle isn't lost */
-  for (i=0; i<n; i++) {
-    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
-      return 0;
-    }
-    if (i==0) {
-      /* do half-length drift */
-      QX += dsh*(1+DPoP)/(2*rho0);
-      dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-      *dz_lost += dsh;
-      X += QX*dsh/(1+DPoP);
-      Y += QY*dsh/(1+DPoP);
-      QX += dsh*(1+DPoP)/(2*rho0);
-    }
-
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      return 0;
-    }
-
-    /* calculate the scaled fields */
-    x = X;
-    y = Y;
-
-    computeCSBENDFields(&Fx, &Fy, x, y);
-
-    /* do kicks */
-    QX += -ds*(1+X/rho0)*Fy/rho_actual;
-    QY += ds*(1+X/rho0)*Fx/rho_actual;
-
-    if (rad_coef || isrConstant)
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
-		       X, Y, (i+0.5)*ds/rho0, s/rho0, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, ds, isrConstant, 
-                       distributionBasedRadiation, includeOpeningAngle,
-                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
-    
-    if (i==n-1) {
-      /* do half-length drift */
-      QX += dsh*(1+DPoP)/(2*rho0);
-      dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-      *dz_lost += dsh;
-      X += QX*dsh/(1+DPoP);
-      Y += QY*dsh/(1+DPoP);
-      QX += dsh*(1+DPoP)/(2*rho0);
-    }
-    else {
-      /* do full-length drift */
-      QX += ds*(1+DPoP)/(2*rho0);
-      dist += ds*(1 + (sqr(QX)+sqr(QY))/2);
-      *dz_lost += ds;
-      X += QX*ds/(1+DPoP);
-      Y += QY*ds/(1+DPoP);
-      QX += ds*(1+DPoP)/(2*rho0);
-    }
-
-    if (refTrajectoryMode==RECORD_TRAJECTORY) {
-      refTrajectoryData[i][0] = X;
-      refTrajectoryData[i][1] = QX;
-      refTrajectoryData[i][2] = Y;
-      refTrajectoryData[i][3] = QY;
-      refTrajectoryData[i][4] = dist - ds;
-      X = QX = Y = QY = dist = 0;
-    }
-    if (refTrajectoryMode==SUBTRACT_TRAJECTORY) {
-      X -= refTrajectoryData[i][0];
-      QX -= refTrajectoryData[i][1];
-      Y -= refTrajectoryData[i][2];
-      QY -= refTrajectoryData[i][3];
-      dist -= refTrajectoryData[i][4];
-    }
-    
-#if defined(IEEE_MATH)
-    if (isnan(X) || isnan(QX) || isnan(Y) || isnan(QY)) {
-      return 0;
-    }
-#endif
-    if (FABS(X)>COORD_LIMIT || FABS(Y)>COORD_LIMIT ||
-        FABS(QX)>SLOPE_LIMIT || FABS(QY)>SLOPE_LIMIT) {
-      return 0;
-    }
-  }
-  *dz_lost = n*ds;
-  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
-    return 0;
-  }
-
-  Qf[4] += dist;
-  return 1;
-}
 
   /* BETA is 2^(1/3) */
 #define BETA 1.25992104989487316477
 
-long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
-                           double *dz_lost, MULT_APERTURE_DATA *apData)
-{
-  long i;
-  double factor, f, phi, ds, dsh, dist;
-  double Fx, Fy, x, y;
-  double sine, cosi, tang;
-  double sin_phi, cos_phi;
-  
-#define X0 Qi[0]
-#define XP0 Qi[1]
-#define Y0 Qi[2]
-#define YP0 Qi[3]
-#define S0 Qi[4]
-#define DPoP0 Qi[5]
-
-#define X Qf[0]
-#define QX Qf[1]
-#define Y Qf[2]
-#define QY Qf[3]
-#define S Qf[4]
-#define DPoP Qf[5]
-
-  if (refTrajectoryMode && refTrajectoryPoints!=n)
-    bombElegant("Problem with recorded reference trajectory for CSBEND element---has wrong number of points\n", NULL);
-  if (!Qf)
-    bombElegant("NULL final coordinates pointer ()", NULL);
-  if (!Qi)
-    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord4)", NULL);
-  if (n<1)
-    bombElegant("invalid number of steps (integrate_csbend_ord4)", NULL);
-
-  memcpy(Qf, Qi, sizeof(*Qi)*6);
-
-  dist = 0;
-
-  s /= n;
-  *dz_lost = 0; /* we'll accumulate this value even if the particle isn't lost */
-  for (i=0; i<n; i++) {
-    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
-      return 0;
-    }
-    /* do first drift */
-    dsh = s/2/(2-BETA);
-    if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-      return 0;
-    }
-    f = sqrt(f);
-    if (fabs(QX/f)>1) {
-      return 0;
-    }
-    phi = asin(sin_phi=QX/f);
-    sine = sin(dsh/rho0+phi);
-    if ((cosi = cos(dsh/rho0+phi))==0) {
-      return 0;
-    }
-    tang = sine/cosi;
-    cos_phi = cos(phi);
-    QX = f*sine;
-    Y += QY*(factor=(rho0+X)*cos_phi/f*(tang-sin_phi/cos_phi));
-    dist += factor*(1+DPoP);
-    *dz_lost += dsh;
-    f = cos_phi/cosi;
-    X  = rho0*(f-1) + f*X;
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      return 0;
-    }
-
-    /* do first kick */
-    ds = s/(2-BETA);
-    /* -- calculate the scaled fields */
-    x = X;
-    y = Y;
-
-    computeCSBENDFields(&Fx, &Fy, x, y);
-    
-    /* --do kicks */
-    QX += -ds*(1+X/rho0)*Fy/rho_actual;
-    QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef || isrConstant) {
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
-		       X, Y, (i+1./3)*s, s*n, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, s/3, isrConstant,
-                       distributionBasedRadiation, includeOpeningAngle,
-                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
-    }
-
-    /* do second drift */
-    dsh = s*(1-BETA)/(2-BETA)/2;
-    if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-      return 0;
-    }
-    f = sqrt(f);
-    if (fabs(QX/f)>1) {
-      return 0;
-    }
-    phi = asin(sin_phi=QX/f);
-    sine = sin(dsh/rho0+phi);
-    if ((cosi = cos(dsh/rho0+phi))==0) {
-      return 0;
-    }
-    tang = sine/cosi;
-    cos_phi = cos(phi);
-    QX = f*sine;
-    Y += QY*(factor=(rho0+X)*cos_phi/f*(tang-sin_phi/cos_phi));
-    dist += factor*(1+DPoP);
-    *dz_lost += dsh;
-    f = cos_phi/cosi;
-    X  = rho0*(f-1) + f*X;
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      return 0;
-    }
-    
-    /* do second kick */
-    ds = -s*BETA/(2-BETA);
-    /* -- calculate the scaled fields */
-    x = X;
-    y = Y;
-    computeCSBENDFields(&Fx, &Fy, x, y);
-
-    /* --do kicks */
-    QX += -ds*(1+X/rho0)*Fy/rho_actual;
-    QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef || isrConstant)
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
-		       X, Y, (i+2./3)*s, s*n, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, s/3, isrConstant,
-                       distributionBasedRadiation, includeOpeningAngle,
-                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
-
-    /* do third drift */
-    dsh = s*(1-BETA)/(2-BETA)/2;
-    if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-      return 0;
-    }
-    f = sqrt(f);
-    if (fabs(QX/f)>1) {
-      return 0;
-    }
-    phi = asin(sin_phi=QX/f);
-    sine = sin(dsh/rho0+phi);
-    if ((cosi = cos(dsh/rho0+phi))==0) {
-      return 0;
-    }
-    tang = sine/cosi;
-    cos_phi = cos(phi);
-    QX = f*sine;
-    Y += QY*(factor=(rho0+X)*cos_phi/f*(tang-sin_phi/cos_phi));
-    dist += factor*(1+DPoP);
-    *dz_lost += dsh;
-    f = cos_phi/cosi;
-    X  = rho0*(f-1) + f*X;
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      return 0;
-    }
-    
-    /* do third kick */
-    ds = s/(2-BETA);
-    /* -- calculate the scaled fields */
-    x = X;
-    y = Y;
-    computeCSBENDFields(&Fx, &Fy, x, y);
-
-    /* --do kicks */
-    QX += -ds*(1+X/rho0)*Fy/rho_actual;
-    QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef || isrConstant) 
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
-		       X, Y, (i+1)*s, n*s, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, s/3, isrConstant,
-                       distributionBasedRadiation, includeOpeningAngle,
-                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
-    
-    /* do fourth drift */
-    dsh = s/2/(2-BETA);
-    if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-      return 0;
-    }
-    f = sqrt(f);
-    if (fabs(QX/f)>1) {
-      return 0;
-    }
-    phi = asin(sin_phi=QX/f);
-    sine = sin(dsh/rho0+phi);
-    if ((cosi = cos(dsh/rho0+phi))==0) {
-      return 0;
-    }
-    tang = sine/cosi;
-    cos_phi = cos(phi);
-    QX = f*sine;
-    Y += QY*(factor=(rho0+X)*cos_phi/f*(tang-sin_phi/cos_phi));
-    dist += factor*(1+DPoP);
-    *dz_lost += dsh;
-    f = cos_phi/cosi;
-    X  = rho0*(f-1) + f*X;
-
-    if (refTrajectoryMode==RECORD_TRAJECTORY) {
-      refTrajectoryData[i][0] = X;
-      refTrajectoryData[i][1] = QX;
-      refTrajectoryData[i][2] = Y;
-      refTrajectoryData[i][3] = QY;
-      refTrajectoryData[i][4] = dist - s;
-      X = QX = Y = QY = dist = 0;
-    }
-    if (refTrajectoryMode==SUBTRACT_TRAJECTORY) {
-      X -= refTrajectoryData[i][0];
-      QX -= refTrajectoryData[i][1];
-      Y -= refTrajectoryData[i][2];
-      QY -= refTrajectoryData[i][3];
-      dist -= refTrajectoryData[i][4];
-    }
-  }
-  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG,0.0, i, n)) {
-    *dz_lost = n*s;
-    return 0;
-  }
-
-  Qf[4] += dist;
-  return 1;
-}
 
 
 long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
@@ -1792,7 +1254,7 @@ long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s
   double Fx, Fy, x, y;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
-  APCONTOUR *apContour;
+  //APCONTOUR *apContour;
 
   static double driftFrac2[2] = {
     0.5, 0.5
@@ -1860,14 +1322,16 @@ long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s
   if (!Qf)
     bombElegant("NULL final coordinates pointer ()", NULL);
   if (!Qi)
-    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord4)", NULL);
+    bombElegant("NULL initial coordinates pointer (integrate_csbend_ordn)", NULL);
   if (n<1)
-    bombElegant("invalid number of steps (integrate_csbend_ord4)", NULL);
+    bombElegant("invalid number of steps (integrate_csbend_ordn)", NULL);
 
   memcpy(Qf, Qi, sizeof(*Qi)*6);
 
+  /*
   if (apData)
     apContour = apData->apContour;
+  */
 
   dist = 0;
   s /= n;
@@ -1953,177 +1417,6 @@ long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s
   return 1;
 }
 
-long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
-                           double *dz_lost, MULT_APERTURE_DATA *apData)
-/* The Hamiltonian in this case is approximated as
- * H = Hd + Hf, where Hd is the drift part and Hf is the field part.
- * Hd = Hd1 + Hd2 + Hd1, where
- * Hd1 = -0.5*(1+x/rho0)*(1+delta) 
- * Hd2 = 0.5*(qx^2+qy^2)/(1+delta)
- */
-{
-  long i;
-  double ds, dsh, dist;
-  double Fx, Fy, x, y;
-  
-#define X0 Qi[0]
-#define XP0 Qi[1]
-#define Y0 Qi[2]
-#define YP0 Qi[3]
-#define S0 Qi[4]
-#define DPoP0 Qi[5]
-
-#define X Qf[0]
-#define QX Qf[1]
-#define Y Qf[2]
-#define QY Qf[3]
-#define S Qf[4]
-#define DPoP Qf[5]
-
-  if (refTrajectoryMode && refTrajectoryPoints!=n)
-    bombElegant("Problem with recorded reference trajectory for CSBEND element---has wrong number of points\n", NULL);
-  if (!Qf)
-    bombElegant("NULL final coordinates pointer ()", NULL);
-  if (!Qi)
-    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord4)", NULL);
-  if (n<1)
-    bombElegant("invalid number of steps (integrate_csbend_ord4)", NULL);
-
-  memcpy(Qf, Qi, sizeof(*Qi)*6);
-
-  dist = 0;
-
-  s /= n;
-  *dz_lost = 0; /* we'll accumulate this value even if the particle isn't lost */
-  for (i=0; i<n; i++) {
-    if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
-      return 0;
-    }
-
-    /* do first drift */
-    dsh = s/2/(2-BETA);
-    QX += dsh*(1+DPoP)/(2*rho0);
-    dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-    *dz_lost += dsh;
-    X += QX*dsh/(1+DPoP);
-    Y += QY*dsh/(1+DPoP);
-    QX += dsh*(1+DPoP)/(2*rho0);
-    
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      return 0;
-    }
-
-    /* do first kick */
-    ds = s/(2-BETA);
-    /* -- calculate the scaled fields */
-    x = X;
-    y = Y;
-
-    computeCSBENDFields(&Fx, &Fy, x, y);
-    
-    /* --do kicks */
-    QX += -ds*(1+X/rho0)*Fy/rho_actual;
-    QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef || isrConstant) {
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
-		       X, Y, (i+1./3)*s, s*n, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, s/3, isrConstant,
-                       distributionBasedRadiation, includeOpeningAngle,
-                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
-    }
-
-    /* do second drift */
-    dsh = s*(1-BETA)/(2-BETA)/2;
-    QX += dsh*(1+DPoP)/(2*rho0);
-    dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-    *dz_lost += dsh;
-    X += QX*dsh/(1+DPoP);
-    Y += QY*dsh/(1+DPoP);
-    QX += dsh*(1+DPoP)/(2*rho0);
-
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      return 0;
-    }
-    
-    /* do second kick */
-    ds = -s*BETA/(2-BETA);
-    /* -- calculate the scaled fields */
-    x = X;
-    y = Y;
-    computeCSBENDFields(&Fx, &Fy, x, y);
-
-    /* --do kicks */
-    QX += -ds*(1+X/rho0)*Fy/rho_actual;
-    QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef || isrConstant)
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
-		       X, Y, (i+2./3)*s, s*n, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, s/3, isrConstant,
-                       distributionBasedRadiation, includeOpeningAngle,
-                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
-
-    /* do third drift */
-    dsh = s*(1-BETA)/(2-BETA)/2;
-    QX += dsh*(1+DPoP)/(2*rho0);
-    dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-    *dz_lost += dsh;
-    X += QX*dsh/(1+DPoP);
-    Y += QY*dsh/(1+DPoP);
-    QX += dsh*(1+DPoP)/(2*rho0);
-    if (apData && !checkMultAperture(X, Y, apData)) {
-      return 0;
-    }
-
-    /* do third kick */
-    ds = s/(2-BETA);
-    /* -- calculate the scaled fields */
-    x = X;
-    y = Y;
-    computeCSBENDFields(&Fx, &Fy, x, y);
-
-    /* --do kicks */
-    QX += -ds*(1+X/rho0)*Fy/rho_actual;
-    QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef || isrConstant) 
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
-		       X, Y, (i+1)*s, n*s, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, s/3, isrConstant,
-                       distributionBasedRadiation, includeOpeningAngle,
-                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
-    
-    /* do fourth drift */
-    dsh = s/2/(2-BETA);
-    QX += dsh*(1+DPoP)/(2*rho0);
-    dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-    *dz_lost += dsh;
-    X += QX*dsh/(1+DPoP);
-    Y += QY*dsh/(1+DPoP);
-    QX += dsh*(1+DPoP)/(2*rho0);
-  
-    if (refTrajectoryMode==RECORD_TRAJECTORY) {
-      refTrajectoryData[i][0] = X;
-      refTrajectoryData[i][1] = QX;
-      refTrajectoryData[i][2] = Y;
-      refTrajectoryData[i][3] = QY;
-      refTrajectoryData[i][4] = dist - s;
-      X = QX = Y = QY = dist = 0;
-    }
-    if (refTrajectoryMode==SUBTRACT_TRAJECTORY) {
-      X -= refTrajectoryData[i][0];
-      QX -= refTrajectoryData[i][1];
-      Y -= refTrajectoryData[i][2];
-      QY -= refTrajectoryData[i][3];
-      dist -= refTrajectoryData[i][4];
-    }
-  }
-  *dz_lost = n*s;
-  if ((apData && !checkMultAperture(X, Y, apData)) || insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
-    return 0;
-  }
-
-  Qf[4] += dist;
-  return 1;
-}
 
 long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
                                     double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order)
@@ -2203,9 +1496,9 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
   if (!Qf)
     bombElegant("NULL final coordinates pointer ()", NULL);
   if (!Qi)
-    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord4)", NULL);
+    bombElegant("NULL initial coordinates pointer (integrate_csbend_ordn)", NULL);
   if (n<1)
-    bombElegant("invalid number of steps (integrate_csbend_ord4)", NULL);
+    bombElegant("invalid number of steps (integrate_csbend_ordn)", NULL);
 
   memcpy(Qf, Qi, sizeof(*Qi)*6);
 
@@ -2345,7 +1638,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
-    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start,  z_end, charge, rootname, maxamp, apFileData);
+    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start,  z_end, charge, rootname, maxamp, apContour, apFileData);
 #ifdef GPU_VERIFY     
     startCpuTimer();
     /* Copy the csrWake global struct (it is reset below) */
@@ -2354,7 +1647,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.FdNorm = NULL; /* Reset doesn't deallocate */
     csrWake.StupakovFileActive = 0; /* Reset doesn't close */
 
-    track_through_csbendCSR(part, n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname, maxamp, apFileData);
+    track_through_csbendCSR(part, n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname, maxamp, apContour, apFileData);
     compareGpuCpu(n_part, "track_through_csbendCSR");
 
     /* compare CSR_LAST_WAKE structs */

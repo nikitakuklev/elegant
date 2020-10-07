@@ -200,7 +200,9 @@ long do_tracking(
   long watch_pt_seen, feedbackDriverSeen;
   double sum, x_max, y_max;
   long elliptical;
+#if !SDDS_MPI_IO
   double et1, et2=0;
+#endif
   long is_batch = 0, last_type;
   static long is_ansi_term = -1;
   char s[100];
@@ -385,7 +387,9 @@ long do_tracking(
       beam->n_to_track_total = nToTrack;
   }
 #endif
+#if !SDDS_MPI_IO
   et1 = -2.0;
+#endif
   elliptical = isConcat = 0;
   watch_pt_seen = feedbackDriverSeen = 0;
 
@@ -640,7 +644,9 @@ long do_tracking(
       else
         fputc('\n', stdout);
       fflush(stdout);
+#if !SDDS_MPI_IO
       et1 = et2;
+#endif
 #endif
 #if defined(UNIX) || defined(_WIN32)
 #if !SDDS_MPI_IO
@@ -664,7 +670,9 @@ long do_tracking(
         else
           fputc('\n', stdout);
         fflush(stdout);
+#if !SDDS_MPI_IO
         et1 = et2;
+#endif
       }
 #else
       sprintf(s, "%ld particles present after pass %ld        ", 

@@ -283,7 +283,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
       tfbd->outputInterval = nPasses;
     initializeTransverseFeedbackDriver(tfbd, beamline, nPasses*nBuckets, rootname);
     if (tfbd->nGainFactors && tfbd->nGainFactors!=nBuckets)
-      printWarningForTracking("Number of gain factors not equal to number of bunches", NULL);
+      printWarningForTracking((char*)"Number of gain factors not equal to number of bunches", NULL);
   }
   
   if ((tfbd->pickup->iPlane==5 || tfbd->pickup->iPlane==4) && !tfbd->longitudinal)

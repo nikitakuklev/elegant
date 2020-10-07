@@ -421,11 +421,11 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
 
   for (int iPlane=0; iPlane<2; iPlane++) {
     if (ion_span[iPlane]<=0)
-      bombElegantVA("ion_span must be positive for both planes---%le given for %s plane\n", 
+      bombElegantVA((char*)"ion_span must be positive for both planes---%le given for %s plane\n", 
                     ion_span[iPlane], iPlane?"y":"x");
 
     if (ion_bin_divisor[iPlane]<=0)
-      bombElegantVA("ion_bin_divisor must be positive for both planes---%le given for %s plane\n", 
+      bombElegantVA((char*)"ion_bin_divisor must be positive for both planes---%le given for %s plane\n", 
                     ion_bin_divisor[iPlane], iPlane?"y":"x");
 
   }

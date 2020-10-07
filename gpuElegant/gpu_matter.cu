@@ -92,9 +92,9 @@ extern "C"
       Xo = matter->Xo;
       if (matter->Z>0 || matter->A>0 || rho>0) {
         if (matter->pressure && matter->temperature)
-          printWarningForTracking("Redundant data supplied for MATTER element", "Xo, Z, A, temperature, pressure all specified");
+          printWarningForTracking((char*)"Redundant data supplied for MATTER element", (char*)"Xo, Z, A, temperature, pressure all specified");
         else
-          printWarningForTracking("Redundant data supplied for MATTER element", "Xo, Z, A, rho all specified");
+          printWarningForTracking((char*)"Redundant data supplied for MATTER element", (char*)"Xo, Z, A, rho all specified");
       }
     }
     *Nrad = *L / Xo;
