@@ -4042,7 +4042,7 @@ long imposeApertureData(double **coord, long np, double **accepted,
 void resetApertureData(APERTURE_DATA *apData);
 long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, double **accepted, double z,
                              double Po);
-int pointIsInsideContour(double x0, double y0, double *x, double *y, long n, double *center, double theta);
+int pointIsInsideContour(double x0, double y0, double *x, double *y, int64_t n, double *center, double theta);
 long trackThroughApContour(double **initial, APCONTOUR *apcontour, long np, double **accepted, double z,
                            double Po);
 long imposeApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
