@@ -1982,8 +1982,8 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
         exitElegant(1);
       }
       if (rftmEz0->nzSol!=SDDS_RowCount(&SDDSin)) {
-        fprintf(stderr, (char*)"Error: page %ld of RFTMEZ0 file %s has only %" PRId64 " rows (%ld expected)\n",
-                page, rftmEz0->solenoidFile, SDDS_RowCount(&SDDSin), rftmEz0->nzSol);
+        fprintf(stderr, (char*)"Error: page %ld of RFTMEZ0 file %s has only %ld rows (%ld expected)\n",
+                page, rftmEz0->solenoidFile, (long)SDDS_RowCount(&SDDSin), rftmEz0->nzSol);
         exitElegant(1);
       }
     }
@@ -2179,8 +2179,8 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
       free(z);
     } else {
       if (mapSol->nz!=SDDS_RowCount(&SDDSin)) {
-        fprintf(stderr, (char*)"Error: page %ld of MAPSOLENOID file %s has only %" PRId64"  rows (%ld expected)\n",
-                page, mapSol->inputFile, SDDS_RowCount(&SDDSin), mapSol->nz);
+        fprintf(stderr, (char*)"Error: page %ld of MAPSOLENOID file %s has only %ld  rows (%ld expected)\n",
+                page, mapSol->inputFile, (long)SDDS_RowCount(&SDDSin), mapSol->nz);
         exitElegant(1);
       }
     }
