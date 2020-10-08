@@ -5,7 +5,7 @@
 #include <gpu_base.h>
 #include <gpu_particle_accessor.hcu>
 
-__inline__ __device__ double ipow(double x, long p)
+__inline__ __device__ double ipow64(double x, int64_t p)
 {
   register double hp;
   register long n;
@@ -16,7 +16,7 @@ __inline__ __device__ double ipow(double x, long p)
     }
 
   if (p < 0)
-    return (1. / ipow(x, -p));
+    return (1. / ipow64(x, -p));
 
   switch (p)
     {
@@ -47,7 +47,7 @@ __inline__ __device__ double ipow(double x, long p)
       return (hp * hp);
     default:
       n = p / 2;
-      hp = ipow(x, n);
+      hp = ipow64(x, n);
       switch (p - 2 * n)
         {
         case 0:
@@ -133,7 +133,7 @@ __global__ void gpu_binTransverseKernel(double *d_Itime0, double *d_Itime1,
 
       /* Bin CENTERS are at tmin+ib*dt */
       int ib = (d_time[tid] - tmin) / dt + 0.5;
-      d_pz[tid] = Po * (1 + part[5]) / sqrt(1 + sqr(part[1]) + sqr(part[3]));
+      d_pz[tid] = Po * (1 + part[5]) / sqrt(1 + (part[1] * part[1]) + (part[3] * part[3]));
 
       if (ib < 0)
         {
@@ -150,13 +150,13 @@ __global__ void gpu_binTransverseKernel(double *d_Itime0, double *d_Itime1,
       else if (xPower < 1)
         atomicAdd(posItime0 + ib, 1);
       else
-        atomicAdd(posItime0 + ib, ipow(part[0] - dx, xPower));
+        atomicAdd(posItime0 + ib, ipow64(part[0] - dx, xPower));
       if (yPower == 1)
         atomicAdd(posItime1 + ib, part[2] - dy);
       else if (yPower < 1)
         atomicAdd(posItime1 + ib, 1);
       else
-        atomicAdd(posItime1 + ib, ipow(part[2] - dy, yPower));
+        atomicAdd(posItime1 + ib, ipow64(part[2] - dy, yPower));
     }
 
   // synchronize shared memory
@@ -237,7 +237,7 @@ __global__ void gpu_binTransverseKernel_binDecomp(double *d_Itime0,
       /* Bin CENTERS are at tmin+ib*dt */
       int ib = (d_time[tid] - tmin) / dt + 0.5;
       if (blockIdx.y == 0)
-        d_pz[tid] = Po * (1 + part[5]) / sqrt(1 + sqr(part[1]) + sqr(part[3]));
+        d_pz[tid] = Po * (1 + part[5]) / sqrt(1 + (part[1] * part[1]) + (part[3] * part[3]));
 
       if (ib >= ib_min && ib < ib_max)
         {
@@ -258,13 +258,13 @@ __global__ void gpu_binTransverseKernel_binDecomp(double *d_Itime0,
           else if (xPower < 1)
             atomicAdd(s_blockHistogram_0 + local_ib, 1);
           else
-            atomicAdd(s_blockHistogram_0 + local_ib, ipow(part[0] - dx, xPower));
+            atomicAdd(s_blockHistogram_0 + local_ib, ipow64(part[0] - dx, xPower));
           if (yPower == 1)
             atomicAdd(s_blockHistogram_1 + local_ib, part[2] - dy);
           else if (yPower < 1)
             atomicAdd(s_blockHistogram_1 + local_ib, 1);
           else
-            atomicAdd(s_blockHistogram_1 + local_ib, ipow(part[2] - dy, yPower));
+            atomicAdd(s_blockHistogram_1 + local_ib, ipow64(part[2] - dy, yPower));
         }
     }
   // synchronize shared memory

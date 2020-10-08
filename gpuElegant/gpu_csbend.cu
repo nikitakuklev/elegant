@@ -2864,7 +2864,7 @@ extern "C"
         if (n_partMoreThanOne && !csbend->csrBlock)
           {
             /* prepare more data for CSRDRIFT */
-            long imin, imax;
+            int64_t imin, imax;
             double S55;
 
 #if !USE_MPI
@@ -4023,7 +4023,7 @@ extern "C"
               *yp = yp0 + R43 * y0 + T441 * yp0 * x0 + T431 * x0 * y0 + T432 * xp0 * y0;
             }
 
-            __inline__ __device__ double ipow(double x, long p)
+            __inline__ __device__ double ipow64(double x, int64_t p)
             {
               register double hp;
               register long n;
@@ -4034,7 +4034,7 @@ extern "C"
                 }
 
               if (p < 0)
-                return (1. / ipow(x, -p));
+                return (1. / ipow64(x, -p));
 
               switch (p)
                 {
@@ -4065,7 +4065,7 @@ extern "C"
                   return (hp * hp);
                 default:
                   n = p / 2;
-                  hp = ipow(x, n);
+                  hp = ipow64(x, n);
                   switch (p - 2 * n)
                     {
                     case 0:
@@ -4118,18 +4118,18 @@ extern "C"
                   /* entrance */
                   if (inFringe == -1.)
                     {
-                      dx = inFringe * ipow(sec_edge, 2) * ipow(gap, 2) * k0 / rho / (1 + dp0) + inFringe * ipow(x0, 2) * ipow(tan_edge, 2) / 2 / rho / (1 + dp0) - inFringe * ipow(y0, 2) * ipow(sec_edge, 2) / 2 / rho / (1 + dp0);
-                      dy = -inFringe * x0 * y0 * ipow(tan_edge, 2) / rho / (1 + dp0);
-                      dpx = -1. * ipow(sec_edge, 3) * sin_edge * ipow(gap, 2) * k0 / rho / rho / (1 + dp0) + tan_edge * x0 / rho + ipow(y0, 2) / 2 * (2 * ipow(tan_edge, 3)) / ipow(rho, 2) / (1 + dp0) + ipow(y0, 2) / 2 * (ipow(tan_edge, 1)) / ipow(rho, 2) / (1 + dp0) - inFringe * (x0 * px0 - y0 * py0) * ipow(tan_edge, 2) / rho / (1 + dp0) + k4 * ipow(sin_edge, 2) * ipow(gap, 2) / 2 / ipow(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe + k6 * (y0 * y0 - x0 * x0) / 2 / ipow(cos_edge, 3) / rho * Rhe;
-                      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow(sin_edge, 2)) * gap / (1 + dp0) / ipow(rho, 2) / ipow(cos_edge, 3) + inFringe * (x0 * py0 + y0 * px0) * ipow(tan_edge, 2) / rho / (1 + dp0) + inFringe * y0 * px0 / rho / (1 + dp0) + k3 * ipow(y0, 3) * (2. / 3. / cos_edge - 4. / 3. / ipow(cos_edge, 3)) / (1 + dp0) / rho / rho / gap + k6 * x0 * y0 / ipow(cos_edge, 3) / rho * Rhe;
+                      dx = inFringe * ipow64(sec_edge, 2) * ipow64(gap, 2) * k0 / rho / (1 + dp0) + inFringe * ipow64(x0, 2) * ipow64(tan_edge, 2) / 2 / rho / (1 + dp0) - inFringe * ipow64(y0, 2) * ipow64(sec_edge, 2) / 2 / rho / (1 + dp0);
+                      dy = -inFringe * x0 * y0 * ipow64(tan_edge, 2) / rho / (1 + dp0);
+                      dpx = -1. * ipow64(sec_edge, 3) * sin_edge * ipow64(gap, 2) * k0 / rho / rho / (1 + dp0) + tan_edge * x0 / rho + ipow64(y0, 2) / 2 * (2 * ipow64(tan_edge, 3)) / ipow64(rho, 2) / (1 + dp0) + ipow64(y0, 2) / 2 * (ipow64(tan_edge, 1)) / ipow64(rho, 2) / (1 + dp0) - inFringe * (x0 * px0 - y0 * py0) * ipow64(tan_edge, 2) / rho / (1 + dp0) + k4 * ipow64(sin_edge, 2) * ipow64(gap, 2) / 2 / ipow64(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow64(sin_edge, 1) * ipow64(gap, 1) / ipow64(cos_edge, 3) / rho * Rhe + k6 * (y0 * y0 - x0 * x0) / 2 / ipow64(cos_edge, 3) / rho * Rhe;
+                      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow64(sin_edge, 2)) * gap / (1 + dp0) / ipow64(rho, 2) / ipow64(cos_edge, 3) + inFringe * (x0 * py0 + y0 * px0) * ipow64(tan_edge, 2) / rho / (1 + dp0) + inFringe * y0 * px0 / rho / (1 + dp0) + k3 * ipow64(y0, 3) * (2. / 3. / cos_edge - 4. / 3. / ipow64(cos_edge, 3)) / (1 + dp0) / rho / rho / gap + k6 * x0 * y0 / ipow64(cos_edge, 3) / rho * Rhe;
                     }
                   /* exit */
                   if (inFringe == 1.)
                     {
-                      dx = inFringe * ipow(sec_edge, 2) * ipow(gap, 2) * k0 / rho / (1 + dp0) + inFringe * ipow(x0, 2) * ipow(tan_edge, 2) / 2 / rho / (1 + dp0) - inFringe * ipow(y0, 2) * ipow(sec_edge, 2) / 2 / rho / (1 + dp0);
-                      dy = -inFringe * x0 * y0 * ipow(tan_edge, 2) / rho / (1 + dp0);
-                      dpx = tan_edge * x0 / rho - ipow(y0, 2) / 2 * (1 * ipow(tan_edge, 3)) / ipow(rho, 2) / (1 + dp0) - ipow(x0, 2) / 2 * (1 * ipow(tan_edge, 3)) / ipow(rho, 2) / (1 + dp0) - inFringe * (x0 * px0 - y0 * py0) * ipow(tan_edge, 2) / rho / (1 + dp0) + k4 * ipow(sin_edge, 2) * ipow(gap, 2) / 2 / ipow(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe + k6 * (y0 * y0 - x0 * x0) / 2 / ipow(cos_edge, 3) / rho * Rhe;
-                      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow(sin_edge, 2)) * gap / (1 + dp0) / ipow(rho, 2) / ipow(cos_edge, 3) + inFringe * (x0 * py0 + y0 * px0) * ipow(tan_edge, 2) / rho / (1 + dp0) + inFringe * y0 * px0 / rho / (1 + dp0) + x0 * y0 * ipow(sec_edge, 2) * tan_edge / ipow(rho, 2) / (1 + dp0) + k3 * ipow(y0, 3) * (2. / 3. / cos_edge - 4. / 3. / ipow(cos_edge, 3)) / (1 + dp0) / rho / rho / gap - k5 * y0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe + k6 * x0 * y0 / ipow(cos_edge, 3) / rho * Rhe;
+                      dx = inFringe * ipow64(sec_edge, 2) * ipow64(gap, 2) * k0 / rho / (1 + dp0) + inFringe * ipow64(x0, 2) * ipow64(tan_edge, 2) / 2 / rho / (1 + dp0) - inFringe * ipow64(y0, 2) * ipow64(sec_edge, 2) / 2 / rho / (1 + dp0);
+                      dy = -inFringe * x0 * y0 * ipow64(tan_edge, 2) / rho / (1 + dp0);
+                      dpx = tan_edge * x0 / rho - ipow64(y0, 2) / 2 * (1 * ipow64(tan_edge, 3)) / ipow64(rho, 2) / (1 + dp0) - ipow64(x0, 2) / 2 * (1 * ipow64(tan_edge, 3)) / ipow64(rho, 2) / (1 + dp0) - inFringe * (x0 * px0 - y0 * py0) * ipow64(tan_edge, 2) / rho / (1 + dp0) + k4 * ipow64(sin_edge, 2) * ipow64(gap, 2) / 2 / ipow64(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow64(sin_edge, 1) * ipow64(gap, 1) / ipow64(cos_edge, 3) / rho * Rhe + k6 * (y0 * y0 - x0 * x0) / 2 / ipow64(cos_edge, 3) / rho * Rhe;
+                      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow64(sin_edge, 2)) * gap / (1 + dp0) / ipow64(rho, 2) / ipow64(cos_edge, 3) + inFringe * (x0 * py0 + y0 * px0) * ipow64(tan_edge, 2) / rho / (1 + dp0) + inFringe * y0 * px0 / rho / (1 + dp0) + x0 * y0 * ipow64(sec_edge, 2) * tan_edge / ipow64(rho, 2) / (1 + dp0) + k3 * ipow64(y0, 3) * (2. / 3. / cos_edge - 4. / 3. / ipow64(cos_edge, 3)) / (1 + dp0) / rho / rho / gap - k5 * y0 * ipow64(sin_edge, 1) * ipow64(gap, 1) / ipow64(cos_edge, 3) / rho * Rhe + k6 * x0 * y0 / ipow64(cos_edge, 3) / rho * Rhe;
                     }
                 }
               else
@@ -4139,19 +4139,19 @@ extern "C"
                   /* entrance */
                   if (inFringe == -1.)
                     {
-                      dx = inFringe * ipow(sec_edge, 2) * ipow(gap, 2) * k0 / rho / (1 + dp0);
+                      dx = inFringe * ipow64(sec_edge, 2) * ipow64(gap, 2) * k0 / rho / (1 + dp0);
                       dy = 0;
-                      dpx = -1. * ipow(sec_edge, 3) * sin_edge * ipow(gap, 2) * k0 / rho / rho / (1 + dp0) + tan_edge * x0 / rho + k4 * ipow(sin_edge, 2) * ipow(gap, 2) / 2 / ipow(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe;
-                      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow(sin_edge, 2)) * gap / (1 + dp0) / ipow(rho, 2) / ipow(cos_edge, 3);
+                      dpx = -1. * ipow64(sec_edge, 3) * sin_edge * ipow64(gap, 2) * k0 / rho / rho / (1 + dp0) + tan_edge * x0 / rho + k4 * ipow64(sin_edge, 2) * ipow64(gap, 2) / 2 / ipow64(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow64(sin_edge, 1) * ipow64(gap, 1) / ipow64(cos_edge, 3) / rho * Rhe;
+                      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow64(sin_edge, 2)) * gap / (1 + dp0) / ipow64(rho, 2) / ipow64(cos_edge, 3);
                     }
 
                   /* exit */
                   if (inFringe == 1.)
                     {
-                      dx = inFringe * ipow(sec_edge, 2) * ipow(gap, 2) * k0 / rho / (1 + dp0);
+                      dx = inFringe * ipow64(sec_edge, 2) * ipow64(gap, 2) * k0 / rho / (1 + dp0);
                       dy = 0;
-                      dpx = tan_edge * x0 / rho + k4 * ipow(sin_edge, 2) * ipow(gap, 2) / 2 / ipow(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe;
-                      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow(sin_edge, 2)) * gap / (1 + dp0) / ipow(rho, 2) / ipow(cos_edge, 3) - k5 * y0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe;
+                      dpx = tan_edge * x0 / rho + k4 * ipow64(sin_edge, 2) * ipow64(gap, 2) / 2 / ipow64(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow64(sin_edge, 1) * ipow64(gap, 1) / ipow64(cos_edge, 3) / rho * Rhe;
+                      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow64(sin_edge, 2)) * gap / (1 + dp0) / ipow64(rho, 2) / ipow64(cos_edge, 3) - k5 * y0 * ipow64(sin_edge, 1) * ipow64(gap, 1) / ipow64(cos_edge, 3) / rho * Rhe;
                     }
                 }
 
@@ -4197,10 +4197,10 @@ __device__ void gpu_dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
   sin_edge=sin(edge);
   cos_edge=cos(edge);
 
-  sec2_edge = ipow(sec_edge, 2);
-  cos3_edge = ipow(cos_edge, 3);
-  tan2_edge = ipow(tan_edge, 2);
-  tan3_edge = ipow(tan_edge, 3);
+  sec2_edge = ipow64(sec_edge, 2);
+  cos3_edge = ipow64(cos_edge, 3);
+  tan2_edge = ipow64(tan_edge, 2);
+  tan3_edge = ipow64(tan_edge, 3);
   
   if (inFringe==-1) {
     /* entrance */
@@ -4212,8 +4212,8 @@ __device__ void gpu_dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
     y1 = y0;
     py1 = py0 - tan_edge/rho*y0 + tan_edge/(rho2*(1+dp0))*x0*y0
       + gap*k2*(1+sqr(sin_edge))/(rho2*(1+dp0)*cos3_edge)*y0
-      + 2*k3*(sqr(cos_edge)-2)/(3*gap*rho2*cos3_edge)*ipow(y0,3)
-      + gap*k5*sin_edge*Rhe/(rho*cos3_edge)*y0 + k6*ipow(sec_edge,3)*Rhe/rho*x0*y0;
+      + 2*k3*(sqr(cos_edge)-2)/(3*gap*rho2*cos3_edge)*ipow64(y0,3)
+      + gap*k5*sin_edge*Rhe/(rho*cos3_edge)*y0 + k6*ipow64(sec_edge,3)*Rhe/rho*x0*y0;
 
     t1 = (1 + tan2_edge/(2*rho*(1+dp0))*x1);
     x2 = x1/t1;
@@ -4249,8 +4249,8 @@ __device__ void gpu_dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
     y1 = y0;
     py1 = py0 - tan_edge/rho*y0 + tan3_edge/(rho2*(1+dp0))*x0*y0
       + gap*k2*(1+sqr(sin_edge))/(rho2*(1+dp0)*cos3_edge)*y0
-      + 2*k3*(sqr(cos_edge)-2)/(3*gap*rho2*cos3_edge)*ipow(y0,3)
-      + gap*k5*sin_edge*Rhe/(rho*cos3_edge)*y0 + k6*ipow(sec_edge,3)*Rhe/rho*x0*y0;
+      + 2*k3*(sqr(cos_edge)-2)/(3*gap*rho2*cos3_edge)*ipow64(y0,3)
+      + gap*k5*sin_edge*Rhe/(rho*cos3_edge)*y0 + k6*ipow64(sec_edge,3)*Rhe/rho*x0*y0;
 
     t1 = (1 - tan2_edge/(2*rho*(1+dp0))*x1);
     x2 = x1/t1;
