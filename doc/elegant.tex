@@ -126,7 +126,8 @@ the serial or parallel versions and report issues to the developers.
 
 \subsection{Known Bugs, Problems, and Limitations}
 \begin{itemize}
-\item Floor coordinates are not correct followng a \verb|BRAT| element.
+\item The \verb|centroid| and \verb|sigma| output from \verb|run_setup| is not correct when \verb|BRANCH| elements
+  are used.
 \item The \verb|REFERENCE_CORRECTION| feature of the \verb|CSBEND| element is ignored while performing calculations related
   to the \verb|moments_output| command.
 \item Setting \verb|CHANGE_T=1| on \verb|RFCA| and \verb|RFCW| elements can give invalid results when tracking beams with very 
