@@ -47,7 +47,7 @@ void convert_to_parmela(char *outputfile, LINE_LIST *beamline, long flip_k, doub
         }
 
     fprintf(fp, "run 0 2856 0 %e\n", K_cen=0.511*(sqrt(sqr(pc/0.511)+1)-1) );
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     pc *= PC_CONST;
     while (eptr) {
         switch (eptr->type) {

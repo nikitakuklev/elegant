@@ -83,7 +83,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
         if (!beamline->twiss0)
             beamline->twiss0 = tmalloc(sizeof(*beamline->twiss0));
 
-        eptr = beamline->elem_twiss = &(beamline->elem);
+        eptr = beamline->elem_twiss = beamline->elem;
         n_elem = last_n_elem = beamline->n_elems;
         /* elast = eptr; */
         while (eptr) {
@@ -176,7 +176,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
         count = 0;
         context = NULL;
         betax_L_sum = betay_L_sum = 0;
-        while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
+        while ((context=wfind_element(tune->name[i], &context, beamline->elem))) {
           if (tune->n_exclude) {
             long j, excluded;
             for (j=excluded=0; j<tune->n_exclude; j++) 
@@ -369,7 +369,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
       context = NULL;
       has_wc = has_wildcards(tune->name[i]);
       K1_param = -1;
-      while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
+      while ((context=wfind_element(tune->name[i], &context, beamline->elem))) {
           if (tune->n_exclude) {
             long j, excluded;
             for (j=excluded=0; j<tune->n_exclude; j++) 
@@ -476,7 +476,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     tunes_saved = 0;
     for (i=0; i<tune->n_families; i++) {
       context = NULL;
-      while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
+      while ((context=wfind_element(tune->name[i], &context, beamline->elem))) {
         if (tune->n_exclude) {
           long j, excluded;
           for (j=excluded=0; j<tune->n_exclude; j++) 

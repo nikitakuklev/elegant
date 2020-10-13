@@ -514,7 +514,7 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
   short chargeSeen = 0;
   long iPlane;
   
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   eptrLast = eptr;
   if (eptr->type == T_IONEFFECTS) 
     bombElegant("ION_EFFECTS element cannot be the first element in the beamline", NULL);
@@ -543,7 +543,7 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
     eptr = eptr->succ;
   }
 
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   firstIonEffects = NULL;
   while (eptr) {
     if (eptr->type == T_IONEFFECTS) {

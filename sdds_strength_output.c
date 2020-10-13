@@ -52,7 +52,7 @@ void sdds_strength_output(char *output, LINE_LIST *beamline, char *input)
         }
 
     row = 0;
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     while (eptr) {
         n = -1;
         switch (eptr->type) {

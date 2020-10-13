@@ -49,7 +49,7 @@ void convert_to_mad8(char *outputfile, LINE_LIST *beamline, char *header_file, c
       fclose(fpi);
     }
 
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     count = 0;
     while (eptr) {
       strcpy(name, eptr->name);
@@ -155,7 +155,7 @@ void convert_to_mad8(char *outputfile, LINE_LIST *beamline, char *header_file, c
     }
 
     lcount = 1;
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     s[0] = 0;
     count = 0;
     while (eptr) {

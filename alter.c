@@ -94,13 +94,13 @@ void setup_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       s_start = -DBL_MAX;
       s_end = DBL_MAX;
       if (after && strlen(after)) {
-        if (!(context=find_element(after, &context, &(beamline->elem)))) {
+        if (!(context=find_element(after, &context, beamline->elem))) {
 	  if (printingEnabled)
 	    printf("Element %s not found in beamline.\n", after);
           exitElegant(1);
         }
         s_start = context->end_pos*(1+1e-15);
-        if (find_element(after, &context, &(beamline->elem))) {
+        if (find_element(after, &context, beamline->elem)) {
 	  if (printingEnabled)
 	    printf("Element %s found in beamline more than once.\n", after);
           exitElegant(1);
@@ -112,13 +112,13 @@ void setup_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       }
       context = NULL;
       if (before && strlen(before)) {
-        if (!(context=find_element(before, &context, &(beamline->elem)))) {
+        if (!(context=find_element(before, &context, beamline->elem))) {
 	  if (printingEnabled)
 	    printf("Element %s not found in beamline.\n", before);
           exitElegant(1);
         }
         s_end = context->end_pos*(1-1e-15);
-        if (find_element(before, &context, &(beamline->elem))) {
+        if (find_element(before, &context, beamline->elem)) {
 	  if (printingEnabled)
 	    printf("Element %s found in beamline more than once.\n", before);
           exitElegant(1);
@@ -208,7 +208,7 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
       context = NULL;
       lastType = -1;
       nMatches = 0;
-      while ((eptr=wfind_element(alterSpec[i].name, &context, &(beamline->elem)))) {
+      while ((eptr=wfind_element(alterSpec[i].name, &context, beamline->elem))) {
         if (alterSpec[i].exclude && strlen(alterSpec[i].exclude) && wild_match(eptr->name, alterSpec[i].exclude))
           continue;
         if (alterSpec[i].start_occurence!=0 && alterSpec[i].end_occurence!=0) {

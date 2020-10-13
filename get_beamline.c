@@ -86,7 +86,8 @@ void freeInputObjects()
 
 #define MAX_LINE_LENGTH 128*16384 
 #define MAX_FILE_NESTING 10
-LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long backtrack)
+LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long backtrack, 
+                        CHANGE_START_SPEC *changeStart)
 {
   long type=0, i;
   long iMad;
@@ -415,14 +416,14 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   }
 
   /* these really aren't necessary, since I clear memory upon allocation */
-  lptr->elem_recirc = lptr->elem_twiss = lptr->elast = NULL;
+  lptr->elem_recirc = lptr->elem_twiss = lptr->elast = lptr->ecat = NULL;
   lptr->twiss0 = NULL;
   lptr->matrix = NULL;
 
   if (getSCMULTSpecCount()) {
   	long skip = 0;
   	long nelem = 0;
-  	eptr = &(lptr->elem);
+  	eptr = lptr->elem;
   	while (eptr) {
   		if (eptr->type == T_SCMULT) {					/* the code allow user put scmult explicitly */
   			eptr = eptr->succ;
@@ -446,7 +447,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   if (getAddElemFlag()) {
     long skip = 0;
     long nelem = 0;
-    eptr = &(lptr->elem);
+    eptr = lptr->elem;
     if (getAddStartFlag()) {
       ELEMENT_LIST *eptr2, *next;
       next = eptr->succ;
@@ -488,7 +489,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   if (getDelElemFlag()) {
     long skip = 0;
     long flag;
-    eptr = &(lptr->elem);
+    eptr = lptr->elem;
     while (eptr) {
       flag = replaceElem(eptr->name, eptr->type, &skip, eptr->occurence);
       if (flag == 1) {
@@ -507,7 +508,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   } 
 
   /* go through and remove completely ignored elements */
-  eptr = &(lptr->elem);
+  eptr = lptr->elem;
   while (eptr) {
     if (eptr->ignore==2) {
       if (eptr->pred == NULL) {
@@ -530,8 +531,41 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     fflush(stdout);
   }
 
+  if (changeStart && changeStart->active) {
+    /* change the starting element */
+    ELEMENT_LIST *eptrMiddle, *eptrEnd, *eptrBegin;
+    eptrMiddle = eptrBegin = lptr->elem;
+    while (eptrMiddle) {
+      if (strcmp(eptrMiddle->name, changeStart->elementName)==0) 
+        break;
+      eptrMiddle = eptrMiddle->succ;
+    }
+    if (!eptrMiddle)
+      bombElegantVA("Couldn't find element %s for &change_start\n", changeStart->elementName);
+    if (changeStart->ringMode) {
+      /* If ring mode, put all elements before the new start onto the end of the beamline */
+      /* find the last element */
+      eptrEnd = eptrMiddle;
+      while (eptrEnd->succ)
+        eptrEnd = eptrEnd->succ;
+      /* retarget linked lists */
+      eptrEnd->succ = eptrBegin;
+      eptrBegin->pred = eptrEnd;
+      if (eptrMiddle->pred)
+        eptrMiddle->pred->succ = NULL;
+      eptrMiddle->pred = NULL;
+    } else {
+      if (eptrMiddle->pred) {
+        eptrMiddle->pred->succ = NULL;
+        eptrMiddle->pred = NULL;
+        free_elements(eptrBegin);
+      }
+    }
+    lptr->elem = eptrMiddle;
+  }
+
   /* go through and do some basic initialization for each element */
-  eptr = &(lptr->elem);
+  eptr = lptr->elem;
   totalElements = 0;
   lptr->flags = 0;
   while (eptr) {
@@ -550,7 +584,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   occurence_htab = hcreate(12);
   occurenceCounter = tmalloc(sizeof(*occurenceCounter)*totalElements);
   uniqueElements = 0;
-  eptr = &(lptr->elem);
+  eptr = lptr->elem;
   while (eptr) {
     if (eptr->name!=NULL) {
       if (hcount(occurence_htab)==0 || hfind(occurence_htab, eptr->name, strlen(eptr->name))==FALSE) {
@@ -564,6 +598,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     }
     eptr = eptr->succ;
   }
+  lptr->n_elems = totalElements;
   if (echo) {
     printf("Created occurence hash table for %ld unique elements of %ld total elements\n",
             uniqueElements, totalElements);
@@ -574,8 +609,12 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   }
 
   /* assign occurence numbers */
-  eptr = &(lptr->elem);
+  eptr = lptr->elem;
   while (eptr) {
+#ifdef DEBUG
+    printf("Setting occurence number for %s\n", eptr->name);
+    fflush(stdout);
+#endif
     if (hfind(occurence_htab, eptr->name, strlen(eptr->name))==TRUE) {
       occurencePtr = hstuff(occurence_htab);
       eptr->occurence = (*occurencePtr += 1);
@@ -588,10 +627,10 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 
   if (backtrack) {
     ELEMENT_LIST ecopy;
-    copy_line(&ecopy, &(lptr->elem), lptr->n_elems, 0, NULL, NULL);
-    copy_line(&(lptr->elem), &ecopy, lptr->n_elems, 1, NULL, NULL);
+    copy_line(&ecopy, lptr->elem, lptr->n_elems, 0, NULL, NULL);
+    copy_line(lptr->elem, &ecopy, lptr->n_elems, 1, NULL, NULL);
     /* free_elements(&ecopy); */
-    eptr = &(lptr->elem);
+    eptr = lptr->elem;
     modify_for_backtracking(eptr);
     lptr->flags |= BEAMLINE_BACKTRACKING;
   }
@@ -604,8 +643,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     fflush(stdout);
   }
 
-
-  eptr = &(lptr->elem);
+  eptr = lptr->elem;
   while (eptr) {
     if (eptr->occurence==1 && eptr->type==T_FTABLE)  {
       initializeFTable((FTABLE*)eptr->p_elem);
@@ -638,7 +676,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     fflush(stdout);
   }
 
-  create_load_hash(&(lptr->elem));
+  create_load_hash(lptr->elem);
 
   if (echo) {
     printf("Step 3 done.\n");
@@ -696,13 +734,13 @@ double compute_end_positions(LINE_LIST *lptr)
 
     /* use length data to establish z coordinates at end of each element */
     /* also check for duplicate recirculation elements and set occurence numbers to 0 */
-    eptr = &(lptr->elem);
+    eptr = lptr->elem;
     z = z_recirc = 0;
     theta = 0;
     i_elem = 0;
     recircPresent = 0;
     do {
-      eptr->beg_pos = z;
+        eptr->beg_pos = z;
         if (!(entity_description[eptr->type].flags&HAS_LENGTH))
             l = 0;
         else
@@ -760,7 +798,7 @@ double compute_end_positions(LINE_LIST *lptr)
     /* if ((lptr->flags&BEAMLINE_BACKTRACKING) && z<0) { */
     if ((lptr->flags&BEAMLINE_BACKTRACKING)) {
       printf("Offsetting z coordinates by %le for backtracking\n", -z);
-      eptr = &(lptr->elem);
+      eptr = lptr->elem;
       do {
         eptr->beg_pos -= z;
         eptr->end_pos -= z;
@@ -768,7 +806,7 @@ double compute_end_positions(LINE_LIST *lptr)
     }
     
     /* Compute revolution length, respecting BRANCH elements */
-    eptr = &(lptr->elem);
+    eptr = lptr->elem;
     z = z_recirc = 0;
     theta = 0;
     i_elem = 0;
@@ -978,8 +1016,9 @@ void free_beamlines(LINE_LIST *beamline)
             lptr->name = NULL;
             }
         if (lptr->n_elems) {
-            free_elements((lptr->elem).succ);
+            free_elements(lptr->elem);
             /* should free name etc. for lptr->elem also */
+            lptr->elem = NULL;
             lptr->n_elems = 0;
             lptr->flags = 0;
             }
@@ -1015,7 +1054,7 @@ void delete_matrix_data(LINE_LIST *beamline)
         }
     while (lptr) {
         if (lptr->n_elems) {
-            eptr = &(lptr->elem);
+            eptr = lptr->elem;
             while (eptr) {
                 if (entity_description[eptr->type].flags&HAS_MATRIX && eptr->matrix) {
                     free_matrices(eptr->matrix);
@@ -1162,7 +1201,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     long type;
     long nline=1, nelem=0;
     for (type=1; type<N_TYPES; type++) {
-      eptr = &(beamline->elem);
+      eptr = beamline->elem;
       while (eptr) {
         if ((eptr->occurence == 1) && (eptr->type == type)) {
           parameter = entity_description[eptr->type].parameter;
@@ -1235,7 +1274,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       }
     }
     /* Write beamline sequence now, each line has 40 elements limitation */
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     sprintf(s, "L%04ld: LINE = (", nline);
     while (eptr) {
       nelem++;
@@ -1664,7 +1703,7 @@ void resolveBranchPoints(LINE_LIST *lptr)
     BRANCH *branch;
     ELEMENT_LIST *eptr2;
 
-    eptr = &(lptr->elem);
+    eptr = lptr->elem;
     do {
       if (eptr->type==T_BRANCH) {
         branch = (BRANCH*)eptr->p_elem;

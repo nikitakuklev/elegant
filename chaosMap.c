@@ -170,8 +170,8 @@ long doChaosMap(
   if (forward_backward>0) {
     btBeamline = tmalloc(sizeof(*btBeamline));
     memcpy(btBeamline, beamline, sizeof(*btBeamline));
-    copy_line(&(btBeamline->elem), &(beamline->elem), beamline->n_elems, 1, NULL, NULL); 
-    modify_for_backtracking(&(btBeamline->elem));
+    copy_line(btBeamline->elem, beamline->elem, beamline->n_elems, 1, NULL, NULL); 
+    modify_for_backtracking(btBeamline->elem);
   }
 
 #if USE_MPI

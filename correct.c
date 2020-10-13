@@ -514,12 +514,12 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
     s_start = -DBL_MAX;
     s_end = DBL_MAX;
     if (after && strlen(after)) {
-      if (!(context=find_element(after, &context, &(beamline->elem)))) {
+      if (!(context=find_element(after, &context, beamline->elem))) {
         printf("Element %s not found in beamline.\n", after);
         exitElegant(1);
       }
       s_start = context->end_pos*(1+1e-15);
-      if (find_element(after, &context, &(beamline->elem))) {
+      if (find_element(after, &context, beamline->elem)) {
         printf("Element %s found in beamline more than once.\n", after);
         exitElegant(1);
       }
@@ -530,12 +530,12 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
     }
     context = NULL;
     if (before && strlen(before)) {
-      if (!(context=find_element(before, &context, &(beamline->elem)))) {
+      if (!(context=find_element(before, &context, beamline->elem))) {
         printf("Element %s not found in beamline.\n", before);
         exitElegant(1);
       }
       s_end = context->end_pos*(1-1e-15);
-      if (find_element(before, &context, &(beamline->elem))) {
+      if (find_element(before, &context, beamline->elem)) {
         printf("Element %s found in beamline more than once.\n", before);
         exitElegant(1);
       }
@@ -577,7 +577,7 @@ long add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *ite
 {
   long found = 0;
   ELEMENT_LIST *context;
-  context = &(beamline->elem);
+  context = beamline->elem;
   while (context && (context=next_element_of_type(context, type))) {
     found += add_steer_elem_to_lists(SL, plane, context->name, item, NULL, tweek, limit, 
                                      0, 0, 1, -1, -1, beamline, run, forceQuads, 0);
@@ -634,7 +634,7 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
 
   n_corr_types_start = SL->n_corr_types;
 
-  while ((context=wfind_element(name, &context, &(beamline->elem)))) {
+  while ((context=wfind_element(name, &context, beamline->elem))) {
     if (verbose>1) {
       printf("Checking %s#%ld.%s at s=%le m for plane %c\n", context->name, context->occurence, item, context->end_pos,
              plane==0?'x':(plane==2?'y':'c'));
@@ -907,7 +907,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     if (beamline->elem_recirc)
       changed = zero_correctors(beamline->elem_recirc, run, correct);
     else
-      changed = zero_correctors(&(beamline->elem), run, correct);
+      changed = zero_correctors(beamline->elem, run, correct);
     if (changed && beamline->matrix) {
       free_matrices(beamline->matrix);
       tfree(beamline->matrix);
@@ -920,7 +920,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     if (beamline->elem_recirc)
       sync_correctors(beamline->elem_recirc, run, correct);
     else
-      sync_correctors(&(beamline->elem), run, correct);
+      sync_correctors(beamline->elem, run, correct);
   }
 #endif
   correct->CMx = correct->CMFx;
@@ -998,7 +998,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
             x_failed = 1;
             if (correct->verbose)
               fputs("horizontal trajectory diverged--setting correctors to zero\n", stdout);
-            zero_hcorrectors(&(beamline->elem), run, correct);
+            zero_hcorrectors(beamline->elem, run, correct);
           }
           else
 #endif
@@ -1077,7 +1077,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
               y_failed = 1;
               if (correct->verbose)
                 fputs("vertical trajectory diverged--setting correctors to zero\n", stdout);
-              zero_vcorrectors(&(beamline->elem), run, correct);
+              zero_vcorrectors(beamline->elem, run, correct);
             }
             else
 #endif
@@ -1207,7 +1207,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
             x_failed = 1;
             if (correct->verbose)
               fputs("horizontal orbit diverged--setting correctors to zero\n", stdout);
-            zero_hcorrectors(&(beamline->elem), run, correct);
+            zero_hcorrectors(beamline->elem, run, correct);
           }
           else
 #endif
@@ -1278,7 +1278,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
             y_failed = 1;
             if (correct->verbose)
               fputs("vertical orbit diverged--setting correctors to zero\n", stdout);
-            zero_vcorrectors(&(beamline->elem), run, correct);
+            zero_vcorrectors(beamline->elem, run, correct);
           }
           else
 #endif
@@ -2234,7 +2234,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
     break;
   }
 
-  start = &(beamline->elem);
+  start = beamline->elem;
   if (recircs) {
     /* advance to recirculation point, if there is one */
     while (start) {
@@ -2243,7 +2243,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
       start = start->succ;
     }
     if (!start)
-      start = &(beamline->elem);
+      start = beamline->elem;
   }
   if (*ncor && *nmon) {
     log_exit("find_useable_moni_corr");
@@ -2633,7 +2633,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     if (beamline->elem_twiss)
       M = beamline->matrix = full_matrix(beamline->elem_twiss, run, 1);
     else
-      M = beamline->matrix = full_matrix(&(beamline->elem), run, 1);
+      M = beamline->matrix = full_matrix(beamline->elem, run, 1);
   }
 
   for (i_corr = 0; i_corr<CM->ncor; i_corr++) {
@@ -2813,7 +2813,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
       if (beamline->elem_twiss)
         M = beamline->matrix = full_matrix(beamline->elem_twiss, run, 1);
       else
-        M = beamline->matrix = full_matrix(&(beamline->elem), run, 1);
+        M = beamline->matrix = full_matrix(beamline->elem, run, 1);
     }
     if (!M || !M->R)
       bombElegant("problem calculating full matrix (orbcor_plane)", NULL);

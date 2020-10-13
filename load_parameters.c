@@ -493,8 +493,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         continue;
 
       /* if occurence is available, we can take advantage of hash table */
-      if ((occurence && (!find_element_hash(element[j], occurence[j], &eptr, &(beamline->elem)))) ||
-	  (!occurence && (!find_element_hash(element[j], 1,  &eptr, &(beamline->elem)))))  {
+      if ((occurence && (!find_element_hash(element[j], occurence[j], &eptr, beamline->elem))) ||
+	  (!occurence && (!find_element_hash(element[j], 1,  &eptr, beamline->elem))))  {
 	if (occurence) {
 	  if (missingElementWarningsLeft || !(load_request[i].flags&ALLOW_MISSING_ELEMENTS)) {
 	    if (printingEnabled) {
@@ -789,7 +789,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         }
         load_request[i].element_flags[load_request[i].values] = eptr->flags;
         load_request[i].values++;
-      } while (!occurence && find_element_hash(element[j], numberChanged+1, &eptr, &(beamline->elem)));
+      } while (!occurence && find_element_hash(element[j], numberChanged+1, &eptr, beamline->elem));
       free(element[j]);
       free(parameter[j]);
       if (mode)
@@ -889,7 +889,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
   printf("Saving lattice parameters to %s...", filename);
   fflush(stdout);
 
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   for (iElem=0; iElem<beamline->n_elems; iElem++) {
     /*
       printf("name=%s, divisions=%" PRId32 "   first=%hd\n",
@@ -1006,7 +1006,7 @@ void dumpRfcReferenceData(char *filename, RUN *run, LINE_LIST *beamline)
   printf("Saving RFCA/RFCW timing parameters to %s...", filename);
   fflush(stdout);
 
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   for (iElem=0; iElem<beamline->n_elems; iElem++) {
     if (eptr->type==T_RFCW)
       rfca = &(((RFCW*)(eptr->p_elem))->rfca);

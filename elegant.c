@@ -54,6 +54,7 @@ void printFarewell(FILE *fp);
 void closeBeamlineOutputFiles(LINE_LIST *beamline);
 void setSigmaIndices();
 void process_particle_command(NAMELIST_TEXT *nltext);
+void process_change_start(NAMELIST_TEXT *nltext, CHANGE_START_SPEC *css);
 void processGlobalSettings(NAMELIST_TEXT *nltext);
 void freeInputObjects();
 void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST *beamline, short final, short mustSurvive);
@@ -84,18 +85,18 @@ void showUsageOrGreeting (unsigned long mode)
 #if USE_MPI
  #if HAVE_GPU
   char *USAGE="usage: mpirun -np <number of processes> gpu-Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is gpu-Pelegant 2020.4.0 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is gpu-Pelegant 2020.5Beta1 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #else
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is elegant 2020.4.0 "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 2020.5Beta1 "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #endif
 #else
  #if HAVE_GPU
   char *USAGE="usage: gpu-elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is gpu-elegant 2020.4.0 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is gpu-elegant 2020.5Beta1 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is elegant 2020.4.0, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 2020.5Beta1, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #endif
 #endif
   time_t timeNow;
@@ -183,7 +184,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define SET_REFERENCE_PARTICLE_OUTPUT 69
 #define OBSTRUCTION_DATA 70
 #define SET_BUNCHED_BEAM_MOMENTS 71
-#define N_COMMANDS      72
+#define CHANGE_START 72
+#define N_COMMANDS      73
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -199,7 +201,7 @@ char *command[N_COMMANDS] = {
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
     "tune_footprint", "ion_effects", "elastic_scattering", "inelastic_scattering", "ignore_elements",
-    "set_reference_particle_output", "obstruction_data", "bunched_beam_moments"
+    "set_reference_particle_output", "obstruction_data", "bunched_beam_moments", "change_start",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -275,6 +277,7 @@ char *description[N_COMMANDS] = {
     "set_reference_particle_output    set reference particle coordinates to be matched via optimization",
     "obstruction_data                 set (Z,X) contours of obstructions in the vertical midplane",
     "bunched_beam_moments             defines beam distribution using user-supplied beam moments",
+    "change_start                     modify the beamline to start at a named location",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -378,9 +381,10 @@ char **argv;
   FILE *fpError; 
   char fileName[15];
   char processor_name[MPI_MAX_PROCESSOR_NAME];
-  int namelen;  
+  int namelen; 
 #endif 
 #endif
+  CHANGE_START_SPEC changeStart = {0, NULL, 0};
 
   semaphoreFile[0] = semaphoreFile[1] = semaphoreFile[2] = NULL;
 
@@ -656,7 +660,8 @@ char **argv;
                         &optimize, &chrom_corr_data, &tune_corr_data, &links);
   
   run_setuped = run_controled = error_controled = correction_setuped = ionEffectsSeen = 0;
-  
+  changeStart.active = 0;
+
   beam_type = -1;
   if (configurationFile) {
     inputFileArray[0] = configurationFile;
@@ -695,6 +700,11 @@ char **argv;
         bombElegant("particle command should precede run_setup", NULL);  /* to ensure nothing is inconsistent */
       process_particle_command(&namelist_text);
       break;
+    case CHANGE_START:
+      if (run_setuped)
+        bombElegant("change_start command should preceed run_setup", NULL);
+      process_change_start(&namelist_text, &changeStart);
+      break;
     case RUN_SETUP:
       beam_type = -1;
       initialize_structures(NULL, &run_control, &error_control, &correct, &beam, &output_data,
@@ -706,7 +716,8 @@ char **argv;
       
       run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
         fl_do_tune_correction = do_floor_coordinates = 0;
-      do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = do_find_aperture = do_rf_setup = 0;
+      do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = 
+        do_find_aperture = do_rf_setup = 0;
       linear_chromatic_tracking_setup_done = losses_include_global_coordinates = 0;
 
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -835,7 +846,8 @@ char **argv;
 	  MPE_Describe_state(event1a, event1b, "get_beamline", "blue");
 	MPE_Log_event(event1a, 0, "start get_beamline"); /* record time spent on reading input */ 
 #endif
-      beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice, back_tracking);
+        beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice, back_tracking, &changeStart);
+        changeStart.active = 0;
 #ifdef  USE_MPE
 	      MPE_Log_event(event1b, 0, "end get_beamline");
       }
@@ -843,7 +855,7 @@ char **argv;
       printf("length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
       fflush(stdout);
       lattice = saved_lattice;
-      
+
       if ((final && strlen(final)) || sceffects_inserted)
         beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       
@@ -1255,7 +1267,7 @@ char **argv;
           dumpRfcReferenceData(rfc_reference_output, &run_conditions, beamline);
         /* Reset corrector magnets for before/after tracking mode */
         if (correct.mode!=-1 && commandCode==TRACK && correct.track_before_and_after)
-          zero_correctors(beamline->elem_recirc?beamline->elem_recirc:&(beamline->elem), &run_conditions, &correct);
+          zero_correctors(beamline->elem_recirc?beamline->elem_recirc:beamline->elem, &run_conditions, &correct);
       }
       if (commandCode==TRACK)
         finish_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, 
@@ -2672,7 +2684,7 @@ void closeBeamlineOutputFiles(LINE_LIST *beamline)
   ELEMENT_LIST *eptr;
   CSRCSBEND *CsrCsBend;
   
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   while (eptr) {
     switch (eptr->type) {
     case T_WATCH:
@@ -3122,3 +3134,18 @@ void watchMemory(long *buffer, char *description, long report)
   
 }
 
+void process_change_start(NAMELIST_TEXT *nltext, CHANGE_START_SPEC *css)
+{
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  if (processNamelist(&change_start, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
+  if (echoNamelists) print_namelist(stdout, &change_start);
+
+  if (css->elementName)
+    free(css->elementName);
+
+  css->active = 1;
+  css->elementName = change_start_struct.element_name;
+  css->ringMode = change_start_struct.ring_mode;
+}

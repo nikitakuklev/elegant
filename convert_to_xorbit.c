@@ -54,7 +54,7 @@ void convert_to_xorbit(char *outputfile, LINE_LIST *beamline, long flip_k,
     fputs("INJ      i\n", fp);
 
 
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     make_xorbit_friendly(eptr);
     length = 0;
     while (eptr) {

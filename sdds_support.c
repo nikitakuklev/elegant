@@ -1816,9 +1816,9 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
         }
  
     if (!(beamline->flags&BEAMLINE_CONCAT_DONE))
-        eptr = &(beamline->elem);
+        eptr = beamline->elem;
     else 
-        eptr = &(beamline->ecat);
+        eptr = beamline->ecat;
     name = "_BEG_";
     type_name = "MARK";
     occurence = 1;
@@ -1861,7 +1861,7 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
         else if (beamline->elem_recirc)
             eptr = beamline->elem_recirc;
         else
-            eptr = &(beamline->elem);
+            eptr = beamline->elem;
     }
 
     if (!SDDS_WriteTable(SDDS_table)) {
@@ -1931,9 +1931,9 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   }
 
   if (!(beamline->flags&BEAMLINE_CONCAT_DONE))
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
   else 
-    eptr = &(beamline->ecat);
+    eptr = beamline->ecat;
   name = "_BEG_";
   type_name = "MARK";
   occurence = 1;
@@ -2036,7 +2036,7 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
     else if (beamline->elem_recirc)
       eptr = beamline->elem_recirc;
     else
-      eptr = &(beamline->elem);
+      eptr = beamline->elem;
   }
 
   if (!SDDS_WriteTable(SDDS_table)) {

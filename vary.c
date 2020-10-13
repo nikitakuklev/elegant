@@ -173,7 +173,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
         bombElegant("element name missing in vary_element namelist", NULL);
     str_toupper(name);
     context = NULL;
-    if (!find_element(name, &context, &(beamline->elem))) {
+    if (!find_element(name, &context, beamline->elem)) {
         printf("error: cannot vary element %s--not in beamline\n", name);
         fflush(stdout);
         exitElegant(1);
@@ -585,7 +585,7 @@ void set_element_flags(LINE_LIST *beamline, char **elem_name, long *elem_perturb
                 fflush(stdout);
 	    }
 	}
-        while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
+        while (find_element(elem_name[i_elem], &eptr, beamline->elem)) {
             if (elem_perturb_flags && !(elem_perturb_flags[i_elem]&permit_flags))
                 continue;
             if (overwrite) 
@@ -634,7 +634,7 @@ void reset_parameter_values(char **elem_name, long *param_number, long *type, lo
                 fflush(stdout);
 	    }
 	}
-        while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
+        while (find_element(elem_name[i_elem], &eptr, beamline->elem)) {
             p_elem = eptr->p_elem;
             p_elem0 = eptr->p_elem0;
             switch (data_type) {
@@ -698,7 +698,7 @@ void assert_parameter_values(char **elem_name, long *param_number, long *type, d
                 fflush(stdout);
 	    }
 	}
-        while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
+        while (find_element(elem_name[i_elem], &eptr, beamline->elem)) {
             p_elem = eptr->p_elem;
             switch (data_type) {
                 case IS_DOUBLE:
@@ -738,7 +738,7 @@ long get_parameter_value(double *value, char *elem_name, long param_number, long
 
     eptr = NULL;
     data_type = entity_description[type].parameter[param_number].type;
-    while (find_element(elem_name, &eptr, &(beamline->elem))) {
+    while (find_element(elem_name, &eptr, beamline->elem)) {
         p_elem = eptr->p_elem;
         switch (data_type) {
             case IS_DOUBLE:
@@ -819,7 +819,7 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                 fflush(stdout);
 	    }
 	}
-        while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
+        while (find_element(elem_name[i_elem], &eptr, beamline->elem)) {
             p_elem = eptr->p_elem;
             if (!(elem_perturb_flags[i_elem]&permit_flags))
                 continue;
@@ -943,7 +943,7 @@ long compute_changed_matrices(LINE_LIST *beamline, RUN *run)
   log_entry("compute_changed_matrices");
 
   n_changed = 0;
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   while (eptr) {
     if (eptr->pred)
       Pref_input = eptr->pred->Pref_output;

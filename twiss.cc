@@ -1920,7 +1920,7 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     return 1;
   }
 
-  eptr = beamline->elem_twiss = &(beamline->elem);
+  eptr = beamline->elem_twiss = beamline->elem;
   n_elem = last_n_elem = beamline->n_elems;
   while (eptr) {
     if (eptr->type==T_RECIRC && matched) {
@@ -2068,7 +2068,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   if (!beamline->twiss0)
     beamline->twiss0 = (TWISS*)tmalloc(sizeof(*beamline->twiss0));
 
-  eptr = beamline->elem_twiss = &(beamline->elem);
+  eptr = beamline->elem_twiss = beamline->elem;
   elast = eptr;
   while (eptr) {
     if (eptr->type==T_RECIRC && matched)
@@ -2323,7 +2323,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     beamline->flags |= BEAMLINE_RADINT_DONE+BEAMLINE_RADINT_CURRENT;
   
   if (cavities_are_drifts_if_matched && mustResetRfcaMatrices)
-    reset_rfca_matrices(&(beamline->elem), run->default_order);
+    reset_rfca_matrices(beamline->elem, run->default_order);
   
   log_exit((char*)"compute_twiss_parameters");
 }
@@ -5122,7 +5122,7 @@ void setup_rf_setup(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long d
   rfcaElem = NULL;
 
   if (!rf_setup_struct.output_only) {
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
   
     while (eptr) {
       if (eptr->type!=T_RFCA

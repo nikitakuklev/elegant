@@ -207,7 +207,7 @@ void finish_bunched_beam_setup
   if (!use_moments_output_values && matched_to_cell) {
     unsigned long flags;
     flags = beamline->flags;
-    if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central, 0, 0)))
+    if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central, 0, 0, NULL)))
       bombElegant("unable to find beamline definition for cell", NULL);
     if (control->cell==beamline)
       beamline->flags = flags;
@@ -549,7 +549,7 @@ long new_bunched_beam(
         savedFlags = control->cell->flags;
         M = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, &dummy,
                                    &beta_y, &alpha_y, &eta_y, &etap_y, &dummy, 
-                                   (control->cell->elem_recirc?control->cell->elem_recirc:&(control->cell->elem)), 
+                                   (control->cell->elem_recirc?control->cell->elem_recirc:control->cell->elem), 
                                    NULL, run, &unstable, NULL, NULL);
         control->cell->flags = savedFlags;
         free_matrices(M); free(M); M = NULL;
@@ -989,7 +989,7 @@ void do_track_beam_output(RUN *run, VARY *control,
 
   
   if (run->final && !run->combine_bunch_statistics) {
-    if (!(M = full_matrix(&(beamline->elem), run, 1)))
+    if (!(M = full_matrix(beamline->elem, run, 1)))
       bombElegant("computation of full matrix for final output failed (track_beam)", NULL);
     if (!output)
       bombElegant("output pointer is NULL on attempt to write 'final' file (track_beam)", NULL);
@@ -1161,7 +1161,7 @@ void finish_output(
   if (!beamline)
     bombElegant("null BEAMLINE pointer (finish_output)", NULL);
 
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   while (eptr) {
     if (eptr->type==T_WATCH) {
       WATCH *watch;
@@ -1213,7 +1213,7 @@ void finish_output(
        errcon->n_items,
        optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
        optim->n_variables?optim->n_variables+2:0,
-       0, beam->particle, beam->n_to_track, beam->p0, M=full_matrix(&(beamline->elem), run, 1),
+       0, beam->particle, beam->n_to_track, beam->p0, M=full_matrix(beamline->elem, run, 1),
        finalCharge);
 #else
    if (notSinglePart)
@@ -1226,7 +1226,7 @@ void finish_output(
        errcon->n_items,
        optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
        optim->n_variables?optim->n_variables+2:0,
-       0, beam->particle, beam->n_to_track_total, beam->p0, M=full_matrix(&(beamline->elem), run, 1),
+       0, beam->particle, beam->n_to_track_total, beam->p0, M=full_matrix(beamline->elem, run, 1),
        finalCharge);
 #endif
 

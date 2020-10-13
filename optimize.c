@@ -299,7 +299,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     str_toupper(item);
     if (!no_element) {
       context = NULL;
-      if (!find_element(name, &context, &(beamline->elem))) {
+      if (!find_element(name, &context, beamline->elem)) {
         printf("error: cannot vary element %s--not in beamline\n", name);
         fflush(stdout);
         exitElegant(1);
@@ -513,7 +513,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
         bombElegant("element name missing in optimization_variable namelist", NULL);
     str_toupper(name);
     context = NULL;
-    if (!find_element(name, &context, &(beamline->elem))) {
+    if (!find_element(name, &context, beamline->elem)) {
         printf("error: cannot vary element %s--not in beamline\n", name);
         fflush(stdout);
         exitElegant(1);
@@ -2028,7 +2028,7 @@ double optimization_function(double *value, long *invalid)
   fflush(stdout);
 #endif
   if (beamline->flags&BEAMLINE_CONCAT_DONE)
-    free_elements1(&(beamline->ecat));
+    free_elements1(beamline->ecat);
   beamline->flags &= ~(BEAMLINE_CONCAT_CURRENT+BEAMLINE_CONCAT_DONE+
 		       BEAMLINE_TWISS_CURRENT+BEAMLINE_TWISS_DONE+
 		       BEAMLINE_RADINT_CURRENT+BEAMLINE_RADINT_DONE);
@@ -2373,7 +2373,7 @@ double optimization_function(double *value, long *invalid)
 
   if (!*invalid) {
     output->n_z_points = 0;
-    M = accumulate_matrices(&(beamline->elem), run, NULL,
+    M = accumulate_matrices(beamline->elem, run, NULL,
                             optimization_data->matrix_order<1?1:optimization_data->matrix_order, 0);
 
 #if SDDS_MPI_IO

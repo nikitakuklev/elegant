@@ -173,7 +173,7 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
 
   /* Count the number of elements from the recirc element to the end. */
   /* Also store the pointer to the recirc element. */
-  eptr = eptr0 = &(beamline->elem);
+  eptr = eptr0 = beamline->elem;
   nElements = lastNElements = beamline->n_elems;
   while (eptr) {
     if (eptr->type==T_RECIRC) {

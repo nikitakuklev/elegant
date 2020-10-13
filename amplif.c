@@ -135,7 +135,7 @@ void compute_amplification_factors(
   if (type_code==-1) {
     eptr = NULL;
     iparam = -1;
-    while ((eptr = wfind_element(name, &eptr, &(beamline->elem)))) {
+    while ((eptr = wfind_element(name, &eptr, beamline->elem))) {
       if ((iparam=confirm_parameter(item, eptr->type))>=0)
         break;
     }
@@ -143,7 +143,7 @@ void compute_amplification_factors(
       bombElegant("no element exists of given name with given item as a parameter", NULL);
   }
   else {
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     while (eptr) {
       if (eptr->type==type_code) {
         if ((iparam=confirm_parameter(item, eptr->type))>=0)
@@ -290,10 +290,10 @@ void compute_amplification_factors(
   }
 
   if (!name)
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
   else
     eptr = NULL;
-  while (number_to_do && ((name && (eptr=wfind_element(name, &eptr, &(beamline->elem)))) || (!name && eptr)) &&
+  while (number_to_do && ((name && (eptr=wfind_element(name, &eptr, beamline->elem))) || (!name && eptr)) &&
          !(maximum_z && eptr->end_pos>maximum_z)) {
     if (type_code!=-1 && (eptr->type!=type_code)) {
       if (!name)
@@ -373,7 +373,7 @@ void compute_amplification_factors(
     if (beamline->elem_recirc)
       changed = zero_correctors(beamline->elem_recirc, run, correct);
     else
-      changed = zero_correctors(&(beamline->elem), run, correct);
+      changed = zero_correctors(beamline->elem, run, correct);
     if (changed && beamline->matrix) {
       free_matrices(beamline->matrix);
       tfree(beamline->matrix);

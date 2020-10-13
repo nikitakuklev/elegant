@@ -370,8 +370,8 @@ long do_tracking(
   is_batch = job_mode(getpid())==2?1:0;
 #endif
   
-  eptr = &(beamline->elem);
-  z = z_recirc = last_z = beamline->elem.beg_pos;
+  eptr = beamline->elem;
+  z = z_recirc = last_z = beamline->elem->beg_pos;
 
   i_sums = i_sums_recirc = 0;
   x_max = y_max = 0;
@@ -401,7 +401,7 @@ long do_tracking(
 #endif
   
   check_nan = 1;
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
 
 #ifdef HAVE_GPU
   //gpuBaseInit(coord, nOriginal, accepted, lostBeam->particle, isMaster);
@@ -565,13 +565,13 @@ long do_tracking(
       if (beamline->ecat_recirc && (i_pass || flags&BEGIN_AT_RECIRC))
         eptr = beamline->ecat_recirc;
       else
-        eptr = &(beamline->ecat);
+        eptr = beamline->ecat;
       isConcat = 1;
     }
     else if (beamline->elem_recirc && (i_pass || flags&BEGIN_AT_RECIRC))
       eptr = beamline->elem_recirc;
     else
-      eptr = &(beamline->elem);
+      eptr = beamline->elem;
 
     if (i_pass==0) {
       if (flags&LINEAR_CHROMATIC_MATRIX) {
@@ -1652,7 +1652,7 @@ long do_tracking(
                     if (mhist->lumped) {
                       if (!mhist->initialized && eptr->occurence==1)
                         set_up_mhist(mhist, run, 0); 
-                      eptr0 = &(beamline->elem);
+                      eptr0 = beamline->elem;
                       while (eptr0) {
                         if (eptr0->type == eptr->type && strcmp(eptr0->name, eptr->name)==0)
                           break;
@@ -2060,7 +2060,7 @@ long do_tracking(
 #endif
 	      if (!(flags&TEST_PARTICLES))
 		track_IBS(coord, nToTrack, (IBSCATTER*)eptr->p_elem,
-			  *P_central, &(beamline->elem), charge, i_pass, n_passes, run);
+			  *P_central, beamline->elem, charge, i_pass, n_passes, run);
 	      break;
 	    case T_SCRIPT:
 #if !USE_MPI
@@ -2992,7 +2992,7 @@ long do_tracking(
 #endif
 
   if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     while (eptr) {
       if (eptr->type==T_WATCH) {
         watch = (WATCH*)eptr->p_elem;

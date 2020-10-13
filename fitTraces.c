@@ -817,7 +817,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
   }
   SDDS_SetRowFlags(&SDDSin, 0);
   for (i=0; i<names0; i++) {
-    if (!(elem=find_element(name0[i], NULL, &(beamline->elem)))) {
+    if (!(elem=find_element(name0[i], NULL, beamline->elem))) {
       printf("Element %s not in lattice (fit_traces_readFitParametersFile)\n",
               name0[i]);
       fflush(stdout);
@@ -865,7 +865,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
     exitElegant(1);
   }
   for (i=0; i<ftp->parameters; i++) {
-    if (!(ftp->target[i]=find_element(ftp->elementName[i], NULL, &(beamline->elem)))) {
+    if (!(ftp->target[i]=find_element(ftp->elementName[i], NULL, beamline->elem))) {
       printf("Error: element %s not found in beamline\n", ftp->elementName[i]);
       fflush(stdout);
       exitElegant(1);
@@ -1043,7 +1043,7 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
   }
   for (iBPM=0; iBPM<trace->BPMs; iBPM++) {
       if (!(trace->element[iBPM]=find_element_index
-            (trace->BPMName[iBPM], NULL, &(beamline->elem), trace->latticeIndex+iBPM))
+            (trace->BPMName[iBPM], NULL, beamline->elem, trace->latticeIndex+iBPM))
           || trace->element[iBPM]->type!=T_MONI) {
         printf("Element %s not found or not of type MONI\n", trace->BPMName[iBPM]);
         fflush(stdout);

@@ -107,7 +107,7 @@ void convert_to_cosy(char *outputfile, LINE_LIST *beamline,
     BRho = pCentral*particleMass*c_mks/particleCharge;
 
     /* emit procedures describing elements */
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     while (eptr) {
       while ((ptr=strchr(eptr->name, ':')))
         *ptr = '_';
@@ -226,7 +226,7 @@ void convert_to_cosy(char *outputfile, LINE_LIST *beamline,
 
     /* emit beamline definition */
     fprintf(fp, "  PROCEDURE MACH ;");
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     i = 0;
     while (eptr) {
       if (i%4==0)

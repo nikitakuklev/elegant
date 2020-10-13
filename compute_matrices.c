@@ -376,7 +376,7 @@ long calculate_matrices(
     log_entry("calculate_matrices");
     
     n_elements = 0;
-    member = &(line->elem);
+    member = line->elem;
     line->elem_recirc = NULL;
     line->i_recirc    = 0;
     while (member) {
@@ -1834,7 +1834,7 @@ void reset_special_elements(LINE_LIST *beamline, unsigned long flags)
     }
     if (flags&RESET_INCLUDE_NIELEM)
       includeNiElements = 1;
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     while (eptr) {
         switch (eptr->type) {
           case T_KICKER:

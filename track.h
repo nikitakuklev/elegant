@@ -356,6 +356,11 @@ typedef struct {
     long n_links;
     } ELEMENT_LINKS;
 
+typedef struct {
+  short active;
+  char *elementName;
+  short ringMode;
+} CHANGE_START_SPEC;
 
 /* radiation integrals and related values.  See SLAC 1193. */
 typedef struct {
@@ -400,9 +405,9 @@ typedef struct {
 typedef struct line_list {
     char *name;
     char *definition;
-    ELEMENT_LIST elem;     /* linked list of elements that make up this beamline */
+    ELEMENT_LIST *elem;     /* linked list of elements that make up this beamline */
     long n_elems, ncat_elems;
-    ELEMENT_LIST ecat;     /* linked list of concatenated elements that are equivalent to the beamline */
+    ELEMENT_LIST *ecat;     /* linked list of concatenated elements that are equivalent to the beamline */
     long i_recirc;                /* refers to element index in elem list */
     ELEMENT_LIST *elem_recirc;    /* pointer to element in elem list */
     long icat_recirc;             /* refers to element index in ecat list */
@@ -3609,6 +3614,9 @@ extern void setup_bunched_beam(BEAM *beam, NAMELIST_TEXT *nltext, RUN *run, VARY
                                ERRORVAL *errcon, OPTIM_VARIABLES *optim, OUTPUT_FILES *output, 
                                LINE_LIST *beamline, long n_elements,
                                long save_original);
+extern void setup_bunched_beam_moments(BEAM *beam,NAMELIST_TEXT *nltext, RUN *run,
+                                       VARY *control, ERRORVAL *errcon, OPTIM_VARIABLES *optim, OUTPUT_FILES *output,
+                                       LINE_LIST *beamline, long n_elements, long save_original);
 extern long new_bunched_beam(BEAM *beam, RUN *run, VARY *control, OUTPUT_FILES *output, long flags);
 extern long run_bunched_beam(RUN *run, VARY *control, ERRORVAL *errcon, OPTIM_VARIABLES *optim, 
                              LINE_LIST *beamline, long n_elements,
@@ -3999,7 +4007,8 @@ extern void extend_elem_list(ELEMENT_LIST **eptr);
  
 /* prototypes for get_beamline5.c: */
 extern void show_elem(ELEMENT_LIST *eptr, long type);
-extern LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long backtrack);
+extern LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long backtrack,
+                                 CHANGE_START_SPEC *css);
 double compute_end_positions(LINE_LIST *lptr) ;
 extern void show_elem(ELEMENT_LIST *eptr, long type);
 extern void free_elements(ELEMENT_LIST *elemlist);

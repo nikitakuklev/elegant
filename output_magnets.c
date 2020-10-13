@@ -28,7 +28,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
     log_entry("output_magnets");
 
     /* total_length = 0; */
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
 
     fpm = fopen_e(filename, "w", 0);
 
@@ -39,7 +39,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
     fprintf(fpm, "&column name=s, units=m, type=double &end\n&column name=Profile, type=double &end\n");
     fprintf(fpm, "&data mode=ascii, no_row_counts=1 &end\n");
 
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     fprintf(fpm, "_BEGIN_ MARK 0 0\n");
     while (eptr) {
          fprintf(fpm, "\"%s\" %s %e  0\n", eptr->name, entity_name[eptr->type], end);

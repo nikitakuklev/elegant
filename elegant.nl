@@ -25,6 +25,11 @@
      double tracking_matrix_step_size[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
 #end
 
+#namelist change_start static,struct
+          STRING element_name = NULL;
+          long ring_mode = 0;
+#end
+
 #namelist run_setup static
     STRING lattice = NULL;
     STRING use_beamline = NULL;

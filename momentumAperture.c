@@ -280,7 +280,7 @@ long doMomentumApertureSearch(
 #endif
 
   /* determine how many elements will be tracked */
-  elem = &(beamline->elem);
+  elem = beamline->elem;
   elem0 = NULL;
   nElem = 0;
   elementArray = NULL;

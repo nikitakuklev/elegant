@@ -212,12 +212,12 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
 
     context = NULL;
     if (after && strlen(after)) {
-      if (!(context=find_element(after, &context, &(beamline->elem)))) {
+      if (!(context=find_element(after, &context, beamline->elem))) {
         printf("Element %s not found in beamline.\n", after);
         exitElegant(1);
       }
       sMin = context->end_pos;
-      if (find_element(after, &context, &(beamline->elem))) {
+      if (find_element(after, &context, beamline->elem)) {
         printf("Element %s found in beamline more than once.\n", after);
         exitElegant(1);
       }
@@ -226,12 +226,12 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
     }
     context = NULL;
     if (before && strlen(before)) {
-      if (!(context=find_element(before, &context, &(beamline->elem)))) {
+      if (!(context=find_element(before, &context, beamline->elem))) {
         printf("Element %s not found in beamline.\n", before);
         exitElegant(1);
       }
       sMax = context->end_pos;
-      if (find_element(before, &context, &(beamline->elem))) {
+      if (find_element(before, &context, beamline->elem)) {
         printf("Element %s found in beamline more than once.\n", after);
         exitElegant(1);
       }
@@ -250,7 +250,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             name = expand_ranges(name);
         str_toupper(name);
         firstIndexInGroup = -1;
-        while ((context=wfind_element(name, &context, &(beamline->elem)))) {
+        while ((context=wfind_element(name, &context, beamline->elem))) {
             if (element_type && 
                 !wild_match(entity_name[context->type], element_type))
               continue;
@@ -357,7 +357,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         }
     else {
         str_toupper(name);
-        if (!(context=find_element(name, &context, &(beamline->elem)))) {
+        if (!(context=find_element(name, &context, beamline->elem))) {
             printf("error: cannot add errors to element %s--not in beamline\n", name);
             fflush(stdout);
             exitElegant(1);
@@ -470,7 +470,7 @@ double parameter_value(char *pname, long elem_type, long param, LINE_LIST *beaml
 
     eptr = NULL;
     data_type = entity_description[elem_type].parameter[param].type;
-    if (find_element(pname, &eptr, &(beamline->elem))) {
+    if (find_element(pname, &eptr, beamline->elem)) {
         p_elem = eptr->p_elem;
         switch (data_type) {
             case IS_DOUBLE:

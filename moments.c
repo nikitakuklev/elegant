@@ -307,7 +307,7 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   /* Computations will start at the beginning of the beamline, or at the
    * first recirculation element 
    */
-  eptr = beamline->elem_twiss = &(beamline->elem);
+  eptr = beamline->elem_twiss = beamline->elem;
   n_elem = last_n_elem = beamline->n_elems;
   while (eptr) {
     if (eptr->type==T_RECIRC) {
@@ -419,11 +419,11 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   if (SDDSMomentsInitialized && writeToFile)
     dumpBeamMoments(beamline, n_elem, final_values_only, tune_corrected, run, eNatural);
 
-  if (beamline->elem.sigmaMatrix) {
+  if (beamline->elem->sigmaMatrix) {
     for (i=0; i<6; i++) {
       long j;
       for (j=0; j<6; j++)
-        savedFinalMoments[i][j] = beamline->elem.sigmaMatrix->sigma[sigmaIndex3[i][j]];
+        savedFinalMoments[i][j] = beamline->elem->sigmaMatrix->sigma[sigmaIndex3[i][j]];
     }
   }
 

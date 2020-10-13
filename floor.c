@@ -150,7 +150,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
     n_points = 2;
   last_elem = NULL;
   if (include_vertices || vertices_only) {
-    elem = &(beamline->elem);
+    elem = beamline->elem;
     while (elem) {
       switch (elem->type) {
       case T_RBEN: 
@@ -191,7 +191,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
 
   s = 0;
 
-  elem = &(beamline->elem);
+  elem = beamline->elem;
 
   row_index = 0;
   if (isMaster && !SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
@@ -663,7 +663,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
   MATRIX *Theta, *Phi, *Psi, *W0, *W1, *temp;
   long i;
 
-  elem = &(beamline->elem);
+  elem = beamline->elem;
   /* X = X0; */
   /* Y = Y0; */
   /* Z = Z0; */
@@ -778,7 +778,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
   if (beamline->flags&BEAMLINE_BACKTRACKING && s<0) {
     ELEMENT_LIST *eptr;
     printf("Offseting z coordinates by %le for backtracking\n", -s);
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     do {
       eptr->end_pos -= s;
     } while ((eptr=eptr->succ));

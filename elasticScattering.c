@@ -288,7 +288,7 @@ long runElasticScattering(
     fflush(stdout);
   }
   
-  elem = &(beamline->elem);
+  elem = beamline->elem;
   if (twiss_scaling && !elem->twiss)
     bombElegant("twiss_scaling was invoked but twiss parameters were not computed", NULL);
   betax0 = elem->twiss->betax;

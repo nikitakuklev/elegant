@@ -39,12 +39,12 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
   n_items = rampData->nItems;
   context = NULL;
   if (after && strlen(after)) {
-    if (!(context=find_element(after, &context, &(beamline->elem)))) {
+    if (!(context=find_element(after, &context, beamline->elem))) {
       printf("Element %s not found in beamline.\n", after);
       exitElegant(1);
     }
     sMin = context->end_pos;
-    if (find_element(after, &context, &(beamline->elem))) {
+    if (find_element(after, &context, beamline->elem)) {
       printf("Element %s found in beamline more than once.\n", after);
       exitElegant(1);
     }
@@ -53,12 +53,12 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
   }
   context = NULL;
   if (before && strlen(before)) {
-    if (!(context=find_element(before, &context, &(beamline->elem)))) {
+    if (!(context=find_element(before, &context, beamline->elem))) {
       printf("Element %s not found in beamline.\n", before);
       exitElegant(1);
     }
     sMax = context->end_pos;
-    if (find_element(before, &context, &(beamline->elem))) {
+    if (find_element(before, &context, beamline->elem)) {
       printf("Element %s found in beamline more than once.\n", after);
       exitElegant(1);
     }
@@ -79,7 +79,7 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
   
   str_toupper(name);
   firstIndexInGroup = -1;
-  while ((context=wfind_element(name, &context, &(beamline->elem)))) {
+  while ((context=wfind_element(name, &context, beamline->elem))) {
     if (type && !wild_match(entity_name[context->type], type))
       continue;
     if ((sMin>=0 && context->end_pos<sMin) ||

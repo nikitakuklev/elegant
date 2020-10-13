@@ -319,13 +319,13 @@ void run_matrix_output(
       M1->R[i][i] = 1;
         
     n_elements = n_elem_no_matrix = 0;
-    first_member = member = &(beamline->elem);
+    first_member = member = beamline->elem;
     /* z0 = 0; */
     sfo = start_occurence[i_output];
     if (start_name[i_output]!=NULL) {
       member = NULL;
       while (sfo--)
-	if (!(first_member=find_element(start_name[i_output], &member, &(beamline->elem))))
+	if (!(first_member=find_element(start_name[i_output], &member, beamline->elem)))
 	  bombElegant("can't find specified occurence of given element for matrix output", NULL);
       printf("starting matrix output from element %s at z=%e m\n", first_member->name, first_member->end_pos);
       fflush(stdout);
@@ -338,7 +338,7 @@ void run_matrix_output(
 	/* Need to concantenate the matrix up to this point to find the centroids
 	 * for propagation downstream 
 	 */
-	Mfull = accumulate_matrices(&(beamline->elem), run, NULL, 2, 0);
+	Mfull = accumulate_matrices(beamline->elem, run, NULL, 2, 0);
 	for (i=0; i<6; i++)
 	  M1->C[i] = member->accumMatrix->C[i];
 	free_matrices(Mfull);

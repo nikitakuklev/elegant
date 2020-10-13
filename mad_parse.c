@@ -100,7 +100,7 @@ void fill_line(
         sprintf(lptr->definition, "%s: LINE=%s", lptr->name, ptr+1);
     ptr += 2;
 
-    leptr = &(lptr->elem);
+    leptr = lptr->elem = tmalloc(sizeof(*leptr));
     lptr->n_elems = 0;
     lptr->flags = 0;
 
@@ -499,7 +499,7 @@ long expand_phys(
     if (strcmp(line_list->name, entity)==0) {
       ie = 0;
       for (i=0; i<multiplier; i++) {
-	ie += copy_line(leptr, &(line_list->elem), line_list->n_elems, reverse, entity, editCmd);
+	ie += copy_line(leptr, line_list->elem, line_list->n_elems, reverse, entity, editCmd);
 	for (j=0; j<line_list->n_elems; j++) 
 	  leptr = leptr->succ;
       }

@@ -2,6 +2,9 @@ This element is experimental and should be used with care.
 It may not work well with other features, e.g., orbit correction or twiss parameter output.
 It should work well with tracking.
 
+Use of the \verb|BRANCH| element to change the starting point in the lattice is not ideal.
+It is better to use the \verb|change_start| command.
+
 The element permits switching tracking between two segments of a beamline. This can be done once per run
 or periodically. For the former, the \verb|COUNTER| parameter should be used to specify the pass number (which
 is zero on the first pass) on which to branch.

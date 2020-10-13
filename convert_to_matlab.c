@@ -39,7 +39,7 @@ void convert_to_EmmaMatlab(char *outputfile, LINE_LIST *beamline, char *header_f
         fclose(fpi);
         }
 
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     
     while (eptr) {
       length = angle = k1 = E1 = E2 = slices = 0;

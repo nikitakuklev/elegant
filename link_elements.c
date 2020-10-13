@@ -141,13 +141,13 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     if (exclude && strlen(exclude) && has_wildcards(exclude) && strchr(exclude, '-'))
       exclude = expand_ranges(exclude);
     
-    if (!(t_context=wfind_element(target, &t_context, &(beamline->elem)))) {
+    if (!(t_context=wfind_element(target, &t_context, beamline->elem))) {
       printf("error: cannot make link with target element %s--not in beamline\n", target);
       fflush(stdout);
       exitElegant(1);
     }
     if (source) {
-      if (!(s_context=find_element(source, &s_context, &(beamline->elem)))) {
+      if (!(s_context=find_element(source, &s_context, beamline->elem))) {
         printf("error: cannot make link with source element %s--not in beamline\n", source);
         fflush(stdout);
         exitElegant(1);
@@ -155,7 +155,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     } else {
       strcpy(source_buffer, t_context->name);
       edit_string(source_buffer, source_from_target_edit);
-      if (!(s_context=find_element(source_buffer, &s_context, &(beamline->elem)))) {
+      if (!(s_context=find_element(source_buffer, &s_context, beamline->elem))) {
         printf("error: cannot make link with source element %s--not in beamline\n", source_buffer);
         fflush(stdout);
         exitElegant(1);
@@ -173,7 +173,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         if (!duplic)
           targets++;
       }
-    } while ((t_context=wfind_element(target, &t_context, &(beamline->elem))));
+    } while ((t_context=wfind_element(target, &t_context, beamline->elem)));
     if (!targets)
       bombElegant("cannot make link--no targets found\n", NULL);
       
@@ -182,7 +182,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       n_links = links->n_links;
       target = targetList[iTarget];
       t_context = NULL;
-      t_context = find_element(target, &t_context, &(beamline->elem));
+      t_context = find_element(target, &t_context, beamline->elem);
 
       /* expand the arrays */
       links->target_name     = trealloc(links->target_name, sizeof(*links->target_name)*(n_links+1));
@@ -226,7 +226,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         exitElegant(1);
       }
       n_targets = 1;
-      while ((t_context=find_element(target, &t_context, &(beamline->elem)))) {
+      while ((t_context=find_element(target, &t_context, beamline->elem))) {
         eptr = trealloc(eptr, sizeof(*eptr)*(n_targets+1));
         eptr[n_targets] = t_context;
         n_targets++;
@@ -281,7 +281,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       }
       if (iTarget) {
         s_context = NULL;
-        if (!(s_context=find_element(source_buffer, &s_context, &(beamline->elem)))) {
+        if (!(s_context=find_element(source_buffer, &s_context, beamline->elem))) {
           printf("error: cannot make link with source element %s--not in beamline\n", source);
           fflush(stdout);
           exitElegant(1);
@@ -293,7 +293,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         while (n_sources<n_targets) {
           eptr1 = NULL;
           s_context = NULL;
-          while (find_element(source_buffer, &s_context, &(beamline->elem))) {
+          while (find_element(source_buffer, &s_context, beamline->elem)) {
             if (s_context->occurence==links->target_elem[n_links][n_sources]->occurence) {
               eptr1 = s_context;
               break;
@@ -314,7 +314,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
           dz_min = DBL_MAX;
           eptr1 = NULL;
           s_context = NULL;
-          while (find_element(source_buffer, &s_context, &(beamline->elem))) {
+          while (find_element(source_buffer, &s_context, beamline->elem)) {
             if ((dz = fabs(s_context->end_pos-links->target_elem[n_links][n_sources]->end_pos))<dz_min) {
               eptr1 = s_context;
               dz_min = dz;
@@ -378,7 +378,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
             }
             else
               break;
-          } while (find_element(source_buffer, &s_context, &(beamline->elem)));
+          } while (find_element(source_buffer, &s_context, beamline->elem));
           if (!eptr1) {
             printf("error: no %s element is found before the %ld-th %s element--can't link as requested\n",
                     source_buffer, n_sources, target);
@@ -396,7 +396,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       else if (src_position_code==SRC_POSITION_AFTER) {
         if (links->target_elem[n_links][0]->end_pos>=s_context->end_pos) {
           /* search for first source element after first target element */
-          while (find_element(source_buffer, &s_context, &(beamline->elem))) {
+          while (find_element(source_buffer, &s_context, beamline->elem)) {
             if (links->target_elem[n_links][0]->end_pos<s_context->end_pos)
               break;
           }
@@ -411,7 +411,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         n_sources = 1;
         while (n_sources<n_targets) {
           s_context = links->target_elem[n_links][n_sources-1];
-          while (find_element(source_buffer, &s_context, &(beamline->elem))) {
+          while (find_element(source_buffer, &s_context, beamline->elem)) {
             if (s_context->end_pos>links->target_elem[n_links][n_sources]->end_pos)
               break;
           }
@@ -432,7 +432,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         while (n_sources<n_targets) {
           eptr1 = NULL;
           s_context = NULL;
-          if (find_element(source_buffer, &s_context, &(beamline->elem))) {
+          if (find_element(source_buffer, &s_context, beamline->elem)) {
               eptr1 = s_context;
           }
           if (!eptr1) {

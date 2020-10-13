@@ -116,7 +116,7 @@ long setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 long checkChangeT(LINE_LIST *beamline) {
   ELEMENT_LIST *eptr;
   long change_t = 0;
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   while (eptr && change_t==0) {
     switch (eptr->type) {
     case T_RFCA:
@@ -175,7 +175,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     if (beamline->elem_recirc)
         M = full_matrix(beamline->elem_recirc, run, 1);
     else 
-        M = full_matrix(&(beamline->elem), run, 1);
+        M = full_matrix(beamline->elem, run, 1);
 
     bad_orbit = !find_closed_orbit(clorb, closed_orbit_accuracy, closed_orbit_iterations, beamline, M, 
                                    run, dp, start_from_recirc, fixed_length, 

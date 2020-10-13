@@ -54,7 +54,7 @@ void convert_to_patricia(char *outputfile, LINE_LIST *beamline, long flip_k, dou
     sprintf(output, "%-4s%6d%5d     %20.7e\n", "D000", 1, 0,  0.0);
     do_output(fp, output);
 
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     while (eptr) {
         switch (eptr->type) {
             case T_QUAD:
@@ -161,7 +161,7 @@ void convert_to_patricia(char *outputfile, LINE_LIST *beamline, long flip_k, dou
         eptr = eptr->succ;
         }
 
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     fprintf(fp, "END\n");
     count = 0;
 

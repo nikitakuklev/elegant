@@ -66,7 +66,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
     /* definitions for use with tplot */
     fprintf(fp, "13 5 'MAPR';\n13 2 'BMPR';\n");
 
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     pc *= PC_CONST;
     while (eptr) {
         switch (eptr->type) {

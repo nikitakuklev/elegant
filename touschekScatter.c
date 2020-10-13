@@ -61,7 +61,7 @@ void TouschekEffect(RUN *run,
   double TSCATTER_Start, TSCATTER_End=0, sEndLine=0;
 
   /* Check if there is TScatter element along beamline. */
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   nElement = 0;
   TSCATTER_Start = eptr->end_pos;
   while (eptr) {
@@ -152,7 +152,7 @@ int TouschekRate(LINE_LIST *beamline, long nElement)
   tmNList = (double*)malloc(sizeof(double)*nElement);
   posList = (double*)malloc(sizeof(double)*nElement);
   i = 0;
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
       tmPList[i] = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->deltaP);
@@ -167,7 +167,7 @@ int TouschekRate(LINE_LIST *beamline, long nElement)
   IntLength = 0.;
   rate0 = rate = 0.;
   i=0;
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
       if (IntLength !=0) {
@@ -347,7 +347,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
   long nLost=0;
 
   fiducialParticle = (double**)czarray_2d(sizeof(**fiducialParticle), 1, totalPropertiesPerParticle);
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   beam0 = &Beam0;
   beam = &Beam;
   memset(beam, 0, sizeof(*beam));
@@ -1088,7 +1088,7 @@ long Check_HisInput(char *filename, LINE_LIST *beamline, long nElement, long *pI
 
   i = 0;
   result = -nElement;
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
       while (1) {
@@ -1154,7 +1154,7 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
 
   i = 0;
   result = -nElement;
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
 
   while (eptr) {
     if (eptr->type == T_TSCATTER) {

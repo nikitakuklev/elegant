@@ -348,7 +348,7 @@ long runInelasticScattering(
     fflush(stdout);
   }
   
-  elem = &(beamline->elem);
+  elem = beamline->elem;
 
   /* determine how many elements will be tracked */
   elem0 = NULL;

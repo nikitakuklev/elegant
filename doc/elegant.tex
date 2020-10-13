@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2020.4\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 2020.5\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,78 +35,37 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2020.4}
+\section{Highlights of What's New in Version 2020.5}
 
-Here is a summary of what's changed since release 2020.3.  Historical change logs are collected in Section
+Here is a summary of what's changed since release 2020.4.  Historical change logs are collected in Section
 \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|TAPERAPC| element would mark all particles as lost when the \verb|RSTART| and \verb|REND| parameters
-  had the same value. This was reported by forum user \verb|Cai_Meng|.
-\item The \verb|FMULT| element had a bug that produced {\em very} invalid results with the \verb|FSE| parameter was non-zero,
-  as reported by A. Xiao (APS). Also, the \verb|FSE| and other parameters were not influencing matrix-related computations
-  if changed during a run.
-\item Use of the \verb|XREADOUT| and \verb|YREADOUT| features of the \verb|MONI| element resulted in a message about
-  undefined \verb|rpn| variables.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|load_parameters| command produced incorrect results in multi-step runs (i.e., \verb|n_steps|>1 in
-\verb|run_control|) when a multi-page parameter file was used with multiple differential-mode load instructions
-for the same element. This was reported by V. Sajaev (APS).
-\item The \verb|HKICK|, \verb|VKICK|, and \verb|HVKICK| elements were not responding properly to the \verb|ramp_elements|
-  and \verb|modulate_elements| commands. This was reported by V. Sajaev (APS).
-\item A bug was fixed in \verb|ion_effects| that sometimes caused unphysical sigma values in the bi- and tri-gaussian
-  fits. The bug was found and fixed by J. Calvey (APS).
-\item A bug was fixed that resulted in a crash when \verb|coupled=1| was set for trajectory response matrix output
-  from \verb|correction_matrix_output|.
-\item A bug was fixed that resulted in a crash if a beamline definition contained unbalanced quotation marks.
-  This was reported by X. Huang (APS).
+\item None
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|CCBEND|, \verb|CSBEND|, \verb|FMULT|, \verb|KOCT|, \verb|KSEXT|, and \verb|KQUAD| now support 
-  sixth-order symplectic integrators. The coefficients were provided by Y.P. Sun (APS), who also assisted in testing.
-  The value of the \verb|N_KICKS| parameter may be reduced by a factor of $\sim$5 if the sixth-order integrator
-  is used in place of the fourth-order integrator, with essentially identical results but a $\sim$30\% reduction
-  in run time.
-\item The \verb|APCONTOUR| element has two new parameters: \verb|STICKY| and \verb|CANCEL|. The \verb|STICKY|
-  parameter results in the aperture contour being applied inside subsequent \verb|CCBEND|, \verb|CSBEND|, \verb|CSRCSBEND|,
-  \verb|KQUAD|, \verb|KSEXT|, verb|KOCT|, and \verb|KQUSE| elements, as well as at the end of other downstream
-  elements. This continues until another \verb|APCONTOUR| element asserts a new contour, or uses \verb|CANCEL=1|
-  to cancel the feature.
-  This improvement was inspired by forum user \verb|dondreka|.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added \verb|bpm_centroid| parameter to the \verb|run_setup| command. This provides a facility similar to the 
-  \verb|centroid| parameter, but instead of giving the centroids at all elements, it gives them at the BPMs only.
-  This was requested by X. Huang (APS).
-\item The \verb|moments_output| command now provides additional quantities for optimization at \verb|MARK| locations.
-  See the documentation for the \verb|MARK| element.
-\item The \verb|modulate_elements| command now provides the ability to use the pass number to compute the time,
-  which is helpful in simulations where the time is offset by \verb|CHANGE_T=1| on \verb|RFCA| elements.
-\item Several improvements were made to the \verb|ion_effects| command by J. Calvey (APS).  The \verb|gaussianfit| option was added
-  for the \verb|field_calculation_method| parameter; this provides a gaussian fit to model the ion fields, as an
-  alternative to using gaussian statistics or more complex fitting functions. Also, a new parameter, \verb|ion_output_interval|,
-  was added that allows increasing the interval between logging of ion data.
-\item The \verb|correct| command accepts a new value, \verb|coupled|, for the \verb|method| parameter when 
-  \verb|mode| is \verb|trajectory|. This allows trajectory correction in strongly-coupled transport lines.
-\item The \verb|bunched_beam_moments| command was added. This command is virtually identical to the venerable
-  \verb|bunched_beam| command, but instead of specifying the beam dimensions in terms of emittances, beta functions, etc.,
-  the user provides beam moments (e.g., beam size, divergence, etc.).
+\item Added the \verb|change_start| command, which permits changing the starting location in a lattice.
+  This was inspired by a request from Duan Zhe (IHEP).
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
 
 \begin{itemize}
-\item The \verb|population_log| file produced by \verb|parallel_optimization_setup| erroneously recorded the
-  values of the optimization variables in the wrong in an offset fashion. 
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -1454,6 +1413,34 @@ particles.
 \item \verb|mass_ratio|, \verb|charge_ratio| --- If the particle name is ``custom,'' these parameters specify the
   mass and charge of the particle relative to the electron.  E.g., for an anti-proton, one would use
   a mass ratio of 1836.18 and a charge ratio of 1.
+\end{itemize}
+
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|change_start|}\end{center}
+%\end{latexonly}
+\subsection{change\_particle\label{subsec:changestart}}
+
+\begin{itemize}
+\item type: action command.
+\item function: change the starting point in a lattice
+\item sequence: must precede \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
+\end{itemize}
+
+\begin{verbatim}
+&change_start
+          STRING element_name = NULL;
+          long ring_mode = 0;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|element_name| --- Name of the element where the lattice will start, which implies removing all 
+  elements upstream of the named element. If the element occurs more than once, the first instance is used.
+  The named element will be the first element in the lattice.
+\item \verb|ring_mode| --- If nonzero, the ring structure of the lattice is preserved by moving the elements 
+  upstream of the named element to the end of the lattice.
 \end{itemize}
 
 %\begin{latexonly}
@@ -8071,10 +8058,97 @@ terminal input and terminal output, respectively.
 
 \section{Change Log\label{sect:changeLog}}
 
+\subsection{Highlights of What's New in Version 2020.4}
+
+Here is a summary of what's changed since release 2020.3.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The \verb|TAPERAPC| element would mark all particles as lost when the \verb|RSTART| and \verb|REND| parameters
+  had the same value. This was reported by forum user \verb|Cai_Meng|.
+\item The \verb|FMULT| element had a bug that produced {\em very} invalid results with the \verb|FSE| parameter was non-zero,
+  as reported by A. Xiao (APS). Also, the \verb|FSE| and other parameters were not influencing matrix-related computations
+  if changed during a run.
+\item Use of the \verb|XREADOUT| and \verb|YREADOUT| features of the \verb|MONI| element resulted in a message about
+  undefined \verb|rpn| variables.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The \verb|load_parameters| command produced incorrect results in multi-step runs (i.e., \verb|n_steps|>1 in
+\verb|run_control|) when a multi-page parameter file was used with multiple differential-mode load instructions
+for the same element. This was reported by V. Sajaev (APS).
+\item The \verb|HKICK|, \verb|VKICK|, and \verb|HVKICK| elements were not responding properly to the \verb|ramp_elements|
+  and \verb|modulate_elements| commands. This was reported by V. Sajaev (APS).
+\item A bug was fixed in \verb|ion_effects| that sometimes caused unphysical sigma values in the bi- and tri-gaussian
+  fits. The bug was found and fixed by J. Calvey (APS).
+\item A bug was fixed that resulted in a crash when \verb|coupled=1| was set for trajectory response matrix output
+  from \verb|correction_matrix_output|.
+\item A bug was fixed that resulted in a crash if a beamline definition contained unbalanced quotation marks.
+  This was reported by X. Huang (APS).
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|CCBEND|, \verb|CSBEND|, \verb|FMULT|, \verb|KOCT|, \verb|KSEXT|, and \verb|KQUAD| now support 
+  sixth-order symplectic integrators. The coefficients were provided by Y.P. Sun (APS), who also assisted in testing.
+  The value of the \verb|N_KICKS| parameter may be reduced by a factor of $\sim$5 if the sixth-order integrator
+  is used in place of the fourth-order integrator, with essentially identical results but a $\sim$30\% reduction
+  in run time.
+\item The \verb|APCONTOUR| element has two new parameters: \verb|STICKY| and \verb|CANCEL|. The \verb|STICKY|
+  parameter results in the aperture contour being applied inside subsequent \verb|CCBEND|, \verb|CSBEND|, \verb|CSRCSBEND|,
+  \verb|KQUAD|, \verb|KSEXT|, verb|KOCT|, and \verb|KQUSE| elements, as well as at the end of other downstream
+  elements. This continues until another \verb|APCONTOUR| element asserts a new contour, or uses \verb|CANCEL=1|
+  to cancel the feature.
+  This improvement was inspired by forum user \verb|dondreka|.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item Added \verb|bpm_centroid| parameter to the \verb|run_setup| command. This provides a facility similar to the 
+  \verb|centroid| parameter, but instead of giving the centroids at all elements, it gives them at the BPMs only.
+  This was requested by X. Huang (APS).
+\item The \verb|moments_output| command now provides additional quantities for optimization at \verb|MARK| locations.
+  See the documentation for the \verb|MARK| element.
+\item The \verb|modulate_elements| command now provides the ability to use the pass number to compute the time,
+  which is helpful in simulations where the time is offset by \verb|CHANGE_T=1| on \verb|RFCA| elements.
+\item Several improvements were made to the \verb|ion_effects| command by J. Calvey (APS).  The \verb|gaussianfit| option was added
+  for the \verb|field_calculation_method| parameter; this provides a gaussian fit to model the ion fields, as an
+  alternative to using gaussian statistics or more complex fitting functions. Also, a new parameter, \verb|ion_output_interval|,
+  was added that allows increasing the interval between logging of ion data.
+\item The \verb|correct| command accepts a new value, \verb|coupled|, for the \verb|method| parameter when 
+  \verb|mode| is \verb|trajectory|. This allows trajectory correction in strongly-coupled transport lines.
+\item The \verb|bunched_beam_moments| command was added. This command is virtually identical to the venerable
+  \verb|bunched_beam| command, but instead of specifying the beam dimensions in terms of emittances, beta functions, etc.,
+  the user provides beam moments (e.g., beam size, divergence, etc.).
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item The \verb|population_log| file produced by \verb|parallel_optimization_setup| erroneously recorded the
+  values of the optimization variables in the wrong in an offset fashion. 
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}  Users are encouraged to check results against
+the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
 \subsection{Highlights of What's New in Version 2020.3}
 
-Here is a summary of what's changed since release 2020.2.  Historical change logs are collected in Section
-\ref{sect:changeLog}.
+Here is a summary of what's changed since release 2020.2.
 
 \subsubsection{Bug Fixes for Elements}
 

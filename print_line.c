@@ -24,7 +24,7 @@ void print_line(FILE *fp, LINE_LIST *lptr)
 
     log_entry("print_line");
 
-    eptr = &(lptr->elem);
+    eptr = lptr->elem;
     fprintf(fp, "line name: %s\n", lptr->name);
     fprintf(fp, "line has %ld elements\n", lptr->n_elems);
     

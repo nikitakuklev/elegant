@@ -39,10 +39,10 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
         return;
         }
 
-    elem = &(beamline->elem);
-    ecat = &(beamline->ecat);
+    elem = beamline->elem;
     if (beamline->flags&BEAMLINE_CONCAT_DONE)
-        free_elements1(&(beamline->ecat));
+        free_elements1(beamline->ecat);
+    ecat = beamline->ecat = tmalloc(sizeof(*ecat));
     ecat->pred = NULL;
 
 #if DEBUG
@@ -190,7 +190,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
 #if DEBUG
     printf("concatenated element list:\n");
     fflush(stdout);
-    print_elem_list(stdout, &(beamline->ecat));
+    print_elem_list(stdout, beamline->ecat);
 #endif
 
     beamline->flags |= BEAMLINE_CONCAT_CURRENT+BEAMLINE_CONCAT_DONE;

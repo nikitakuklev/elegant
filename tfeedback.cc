@@ -636,7 +636,7 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
     bombElegant("All filter coefficients are zero for TFBDRIVER", NULL);
   tfbd->filterLength = i+1;
 
-  eptr = &(beamline->elem);
+  eptr = beamline->elem;
   while (eptr) {
     if (eptr->type==T_TFBPICKUP && strcmp(tfbd->ID, ((TFBPICKUP*)eptr->p_elem)->ID)==0) {
       pickupFound = 1;

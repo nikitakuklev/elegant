@@ -98,7 +98,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
         if (!beamline->twiss0)
           beamline->twiss0 = tmalloc(sizeof(*beamline->twiss0));
 
-        eptr = beamline->elem_twiss = &(beamline->elem);
+        eptr = beamline->elem_twiss = beamline->elem;
         /* elast = eptr; */
         while (eptr) {
           if (eptr->type==T_RECIRC)
@@ -356,7 +356,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             beamline->twiss0 = tmalloc(sizeof(*beamline->twiss0));
         if (!beamline->elem_twiss) {
             ELEMENT_LIST *eptr;
-            eptr = beamline->elem_twiss = &(beamline->elem);
+            eptr = beamline->elem_twiss = beamline->elem;
             while (eptr) {
                 if (eptr->type==T_RECIRC)
                     beamline->elem_twiss = beamline->elem_recirc = eptr;

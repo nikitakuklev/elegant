@@ -56,7 +56,7 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
     quad_sign = (flip_k )?(-1):( 1);
     bend_sign = (-1);
 
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     while (eptr) {
         switch (eptr->type) {
             case T_QUAD:
@@ -164,7 +164,7 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
         eptr = eptr->succ;
         }
 
-    eptr = &(beamline->elem);
+    eptr = beamline->elem;
     fprintf(fp, "END\n");
     count = 0;
 
