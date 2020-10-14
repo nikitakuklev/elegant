@@ -99,8 +99,8 @@ __global__ void gpu_binTransverseKernel(double *d_Itime0, double *d_Itime1,
   // contention in atomics
   extern volatile __shared__ double s_data[];
   //[ (sizeof(double))(2* nb_height * nb_pitch) + sizeof(unsigned int)]
-  volatile __shared__ double *s_blockHistogram_0; //[nb_height * nb_pitch];
-  volatile __shared__ double *s_blockHistogram_1; //[nb_height * nb_pitch];
+  volatile double *s_blockHistogram_0; //[nb_height * nb_pitch];
+  volatile double *s_blockHistogram_1; //[nb_height * nb_pitch];
 
   // column each thread indexes into for sub-histogram calculation
   unsigned int nb_lane = threadIdx.x % nb_height;
@@ -108,6 +108,7 @@ __global__ void gpu_binTransverseKernel(double *d_Itime0, double *d_Itime1,
     {
       s_blockHistogram_0 = s_data;
       s_blockHistogram_1 = s_data + nb_height * nb_pitch;
+      //s_blockHistogram_1 = (volatile double*)&s_blockHistogram_0[nb_height * nb_pitch];
     }
   __syncthreads();
 
