@@ -527,15 +527,15 @@ void compareGpuCpu(unsigned int n_part, char *name)
   gpuBase->doh_particles = NULL;
 }
 
-#  define NCOMP 7
+#  define NCOMP 10
 /**
  * Set pointers to stored reduction arrays computed by the CUDA code
  */
 void setGpuReductionArrays(double **pgpu_centroid, double **pgpu_sigma,
                            BEAM_SUMS **pgpu_sums, BEAM_SUMS2 **pgpu_sums2)
 {
-  static double gpu_centroid[NCOMP] = {0., 0., 0., 0., 0., 0., 0.};
-  static double gpu_sigma[NCOMP] = {0., 0., 0., 0., 0., 0., 0.};
+  static double gpu_centroid[NCOMP] = {0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
+  static double gpu_sigma[NCOMP] = {0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
   static BEAM_SUMS gpu_sums;
   static BEAM_SUMS2 gpu_sums2;
 
@@ -563,18 +563,18 @@ void *getGpuBeamSums(void *cpu_beam_sums)
     {
       setGpuReductionArrays(NULL, NULL, NULL, &(gpu_sums->beamSums2));
       /* copy the beam sums */
-      for (i = 0; i < 7; i++)
+      for (i = 0; i < NCOMP; i++)
         {
           gpu_sums->beamSums2->maxabs[i] = sums->beamSums2->maxabs[i];
           gpu_sums->beamSums2->max[i] = sums->beamSums2->max[i];
           gpu_sums->beamSums2->min[i] = sums->beamSums2->min[i];
-          for (j = i; j < 7; j++)
+          for (j = i; j < NCOMP; j++)
             {
               gpu_sums->beamSums2->sigma[i][j] = sums->beamSums2->sigma[i][j];
             }
         }
     }
-  for (i = 0; i < 7; i++)
+  for (i = 0; i < NCOMP; i++)
     {
       gpu_sums->centroid[i] = sums->centroid[i];
     }
@@ -651,13 +651,13 @@ void compareReductionArrays(double *centroid, double *sigma, void *vsums,
   if (sums)
     {
       compareValues(sums->p0, gpu_sums->p0, "p0");
-      for (ii = 0; ii < 7; ii++)
+      for (ii = 0; ii < NCOMP; ii++)
         {
           compareValues(sums->beamSums2->maxabs[ii], gpu_sums->beamSums2->maxabs[ii], "maxabs", ii);
           compareValues(sums->beamSums2->max[ii], gpu_sums->beamSums2->max[ii], "max", ii);
           compareValues(sums->beamSums2->min[ii], gpu_sums->beamSums2->min[ii], "min", ii);
           compareValues(sums->centroid[ii], gpu_sums->centroid[ii], "centroid", ii);
-          for (jj = ii; jj < 7; jj++)
+          for (jj = ii; jj < NCOMP; jj++)
             compareValues(sums->beamSums2->sigma[ii][jj], gpu_sums->beamSums2->sigma[ii][jj],
                           "sigma", ii, jj);
         }

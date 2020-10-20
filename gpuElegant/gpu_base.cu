@@ -168,7 +168,7 @@ extern "C"
     if (coord && nOriginal > 1)
       {
         gpuBase->n_comp = (unsigned int)((coord[1] - coord[0]));
-        if (gpuBase->n_comp != 7)
+        if (gpuBase->n_comp != 10)
           {
             std::cout << "gpuElegant: unknown n_comp=" << gpuBase->n_comp
                       << ", np=" << nOriginal << std::endl;
@@ -177,7 +177,7 @@ extern "C"
       }
     else
       {
-        gpuBase->n_comp = 7;
+        gpuBase->n_comp = 10;
       }
     allocateGpuParticles(&(gpuBase->d_particles));
     if (accepted)
@@ -418,7 +418,7 @@ extern "C"
     gpuErrorHandler(err, "syncWithGpuLossBuffer::cudaMemcpy");
 
     for (long ip = nLeft; ip < nToTrack; ip++)
-      for (int j = 0; j < 7; j++)
+      for (int j = 0; j < 10 /*n_comp*/; j++)
         lossBuffer[ip][j] = tLossBuffer[ip - nLeft + j * particlePitch];
 
     free(tLossBuffer);

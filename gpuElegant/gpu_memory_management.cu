@@ -329,7 +329,7 @@ double getParticleData(unsigned int particleIndex, unsigned int component)
 void fillParticleData(double *h_coord, double *d_particles,
                       unsigned int particlePitch, unsigned int particleIndex)
 {
-  for (unsigned int component = 0; component < 7; component++)
+  for (unsigned int component = 0; component < 10; component++)
     {
       cudaMemcpy(h_coord + component,
                  d_particles + particleIndex + particlePitch * component,
