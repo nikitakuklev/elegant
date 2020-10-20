@@ -2442,7 +2442,9 @@ long do_tracking(
 #endif
       if ((!USE_MPI || !notSinglePart) || (USE_MPI && active)) {
         nLeft = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nLeft, accepted, z, *P_central, 0, 0);
+#ifndef HAVE_GPU /* Obstructions are not implemented in GPU code */
         nLeft = filterParticlesWithObstructions(coord, nLeft, accepted, z, *P_central);
+#endif
 	if (eptr->type!=T_SCRIPT) { /* For the SCRIPT element, the lost particle coordinate will be recorded inside the element */
 	  if (nLeft!=nToTrack)
             recordLostParticles(beam, coord, nLeft, nToTrack, i_pass);
