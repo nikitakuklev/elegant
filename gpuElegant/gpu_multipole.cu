@@ -65,10 +65,10 @@ class gpu_multipole_tracking2_kernel
   double *d_sigmaDelta2;
   curandState_t *state;
   double dx, dy, xkick, ykick, Po, rad_coef, isr_coef;
-  double *KnL;
+  double KnL0, KnL1, KnL2;
   double drift, z_start;
-  long *order;
-  short *skew;
+  long order0, order1, order2;
+  short skew0, skew1, skew2;
   int n_parts, integ_order;
   short expandHamiltonian;
   // Associated MULTIPOLE_DATA is also in constant memory
@@ -87,13 +87,15 @@ class gpu_multipole_tracking2_kernel
  gpu_multipole_tracking2_kernel(unsigned int *d_sortIndex,
                                 double *d_sigmaDelta2, curandState_t *state, double dx, double dy,
                                 double xkick, double ykick, double Po, double rad_coef, double isr_coef,
-                                double *KnL, double drift, double z_start, long *order, short *skew,
+                                double KnL0, double KnL1, double KnL2, double drift, double z_start, 
+                                long order0, long order1, long order2, short skew0, short skew1, short skew2,
                                 int n_parts, int integ_order, int multDataOrders, int edgeMultDataOrders,
                                 int steeringMultDataOrders, int present, double xMax, double xCen,
                                 double yMax, double yCen, int radial, double refTilt, double srGaussianLimit, short expandHamiltonian) : d_sortIndex(d_sortIndex), d_sigmaDelta2(d_sigmaDelta2),
     state(state), dx(dx), dy(dy), xkick(xkick), ykick(ykick), Po(Po),
-    rad_coef(rad_coef), isr_coef(isr_coef), KnL(KnL), drift(drift),
-    z_start(z_start), order(order), skew(skew), n_parts(n_parts),
+    rad_coef(rad_coef), isr_coef(isr_coef), KnL0(KnL0), KnL1(KnL1), KnL2(KnL2), drift(drift),
+    z_start(z_start), order0(order0), order1(order1), order2(order2), 
+    skew0(skew0), skew1(skew1), skew2(skew2), n_parts(n_parts),
     integ_order(integ_order), multDataOrders(multDataOrders),
     edgeMultDataOrders(edgeMultDataOrders),
     steeringMultDataOrders(steeringMultDataOrders), present(present),
@@ -107,8 +109,21 @@ class gpu_multipole_tracking2_kernel
     int particle_lost;
     double dzLoss;
     double *tSigmaDelta2 = NULL;
+    double KnL[3];
+    long order[3];
+    short skew[3];
+    KnL[0] = KnL0;
+    KnL[1] = KnL1;
+    KnL[2] = KnL2;
+    order[0] = order0;
+    order[1] = order1;
+    order[2] = order2;
+    skew[0] = skew0;
+    skew[1] = skew1;
+    skew[2] = skew2;
     if (d_sigmaDelta2)
       tSigmaDelta2 = &d_sigmaDelta2[tid];
+
     particle_lost = !gpu_integrate_kick_multipole_ordn(coord, order, KnL, skew, n_parts,
                                                        drift, integ_order, &dzLoss, tSigmaDelta2, radial, refTilt, srGaussianLimit, expandHamiltonian);
     if (particle_lost)
@@ -167,6 +182,7 @@ class gpu_multipole_tracking2_kernel
 
     double *driftFrac = NULL, *kickFrac = NULL;
     long nSubsteps = 0;
+
     switch (integration_order) {
     case 2:
       nSubsteps = 2;
@@ -280,10 +296,12 @@ class gpu_multipole_tracking2_kernel
             sum_Fx = sum_Fy = 0;
 
             if (!radial) {
-              for (int iOrder=0; iOrder<3; iOrder++)
-                if (KnL[iOrder])
+              for (int iOrder=0; iOrder<3; iOrder++) {
+                if (KnL[iOrder]) {
                   gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
                                                       order[iOrder], KnL[iOrder]/n_parts*kickFrac[step], skew[iOrder]);
+                }
+              }
             } else 
               gpu_applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
                                                      order[0], KnL[0]/n_parts*kickFrac[step], 0);
@@ -875,7 +893,8 @@ extern "C"
 
     n_part = killParticles(n_part, d_sortIndex, accepted,
                            gpu_multipole_tracking2_kernel(d_sortIndex, d_sigmaDelta2, state,
-                                                          dx, dy, xkick, ykick, Po, rad_coef, isr_coef, KnL, drift, z_start, order, skew,
+                                                          dx, dy, xkick, ykick, Po, rad_coef, isr_coef, KnL[0], KnL[1], KnL[2], drift, z_start, 
+                                                          order[0], order[1], order[2], skew[0], skew[1], skew[2],
                                                           n_parts, integ_order, multData ? multData->orders : -1,
                                                           edgeMultData ? edgeMultData->orders : -1,
                                                           steeringMultData ? steeringMultData->orders : -1, apertureData.present,
