@@ -1,0 +1,23 @@
+#!/bin/bash
+
+if [ $# -ne 1 ] ; then
+   echo "usage: runCase <nBunches>"
+   exit 1
+fi
+nb=$1
+
+mpiexec -np 16 Pelegant runTemplate.ele -macro=nb=$nb
+
+root=LCLS_${nb}Bunches
+
+# Process bunch-by-bunch
+
+for watch in $root.beg $root.end ; do 
+    sddsprocess $watch -pipe=out "-define=col,Bunch,particleID 1 - IDSlotsPerBunch / int,type=short" \
+        | sddssort -pipe -column=Bunch \
+        | sddsbreak -pipe -change=Bunch \
+        | sddsanalyzebeam -pipe -correctedOnly \
+        | sddsprocess -pipe=in $watch.proc \
+        "-define=col,Bunch,i_row,type=long"
+done
+

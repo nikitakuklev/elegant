@@ -1,0 +1,54 @@
+
+! *** OPTICS=AD_ACCEL_HE-04JUL20 ***
+
+! Edit "search_path =" in run_setup to point to the locations of your
+! wakefield definition files and input particle distribution files
+
+&run_setup
+ lattice = LCLS2scD_multibunch.lte,
+ use_beamline = MULTIBUNCH,
+ output = %s.out,
+ centroid = %s.cen,
+ sigma = %s.sig,
+ final = %s.fin,
+ parameters = %s.par,
+ magnets = %s.mag,
+ losses=%s.lost,
+ combine_bunch_statistics = 0,
+ default_order = 2,
+ concat_order = 0,
+ print_statistics = 0,
+ random_number_seed = 9876543210,
+ p_central_mev = 3673.96,
+ tracking_updates = 1
+ rootname = LCLS_<nb>Bunches
+&end
+
+!!! Set the total charge to nBunches*1nC
+&alter_elements name=C0, item=TOTAL, value="(1e-9 <nb> *)" &end
+
+!!! Turn off automatic energy profile setting
+&alter_elements name=*, type=RFCW, item=CHANGE_P0, value = 0 &end
+&alter_elements name=*, type=ENERGY, item=MATCH_BEAMLINE, value=0 &end
+
+!!! Set up use of external profile
+&load_parameters
+        filename = run1.enProfile,
+        force_occurence_data = 1
+        change_defined_values = 1
+&end
+
+&run_control
+&end
+
+&sdds_beam !initial beam at BEAM0
+ input = REF_WL4BEG_1k.sdds,
+ n_duplicates= "(<nb> 1 -)"
+ duplicate_stagger[4]=  1.000000e-06,
+ use_bunched_mode= 1,
+&end
+
+&track 
+center_momentum_also= 0
+offset_momentum_also= 0
+&end

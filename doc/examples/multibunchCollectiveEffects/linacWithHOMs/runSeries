@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Run single-bunch case to establish energy profile
+runCase1
+
+# Run several cases with different numbers of bunches
+for nb in 1 3 10 30 ; do 
+    runCase $nb
+done
+
+# Plot various quantities vs bunch number
+sddsplot -column=Bunch,'(Cxp,Cyp,Cdelta)' -groupby=names -separate=names -layout=1,3 -join=x -graph=sym,vary,sub=type \
+    LCLS_?Bunches.end.proc \
+    LCLS_??Bunches.end.proc 

@@ -1,0 +1,34 @@
+
+! *** OPTICS=AD_ACCEL_HE-04JUL20 ***
+
+! Edit "search_path =" in run_setup to point to the locations of your
+! wakefield definition files and input particle distribution files
+
+&run_setup
+ lattice = LCLS2scD_multibunch.lte,
+ use_beamline = MULTIBUNCH,
+ centroid = %s.cen,
+ combine_bunch_statistics = 0,
+ default_order = 2,
+ concat_order = 0,
+ print_statistics = 0,
+ random_number_seed = 9876543210,
+ p_central_mev = 3673.96,
+ tracking_updates = 1
+&end
+
+!!! Set the total charge to nBunches*1nC
+&alter_elements name=C0, item=TOTAL, value=1e-9 &end
+
+&run_control
+&end
+
+&sdds_beam !initial beam at BEAM0
+ input = REF_WL4BEG_1k.sdds,
+ use_bunched_mode= 1,
+&end
+
+&track 
+center_momentum_also= 0
+offset_momentum_also= 0
+&end

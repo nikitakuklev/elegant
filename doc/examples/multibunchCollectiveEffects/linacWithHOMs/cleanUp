@@ -1,0 +1,5 @@
+#!/bin/bash
+
+\rm LCLS_*Bunches*.*
+\rm run1.cen run1.enProfile run1-Modes?.out run1.beg run1.end
+

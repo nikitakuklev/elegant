@@ -10,3 +10,7 @@ ILMatrixFromTracking
 
 linacBunchTrain1
         Example of simulating beam breakup in a linac with a strange bunch pattern.
+
+linacWithHOMs
+        A more sophisticated example of simulating a linac with a bunch train, showing
+        how to run trains of different length.

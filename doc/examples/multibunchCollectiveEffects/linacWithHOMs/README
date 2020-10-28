@@ -1,0 +1,44 @@
+Example of simulating multi-bunch effects of linac with cavity modes with 
+control of the energy profile. Using CHANGE_P0=1 is normal for linacs in
+ELEGANT, but that means elegant adjusts the energy profile for the bunch
+train being simulated. As more bunches are added, there is more beam-loading
+and hence the energy profile changes. This changes the effective strength
+of the quadrupoles, for example, which may not be realistic.
+
+Example by J. England (SLAC) and M. Borland (APS).
+
+LCLS2scD_multibunch.lte
+        Lattice file
+ModesX.sdds
+ModesY.sdds
+ModesZ.sdds
+        Cavity modes
+UMHTR.rmat
+        Matrix for undulator.
+xWake_1.3GHz_OneCavity_dz2um_TESLA2003-09.sdds
+xWake_3.9GHz_OneCavity_dz2um_TESLA2004-01.sdds
+zWake_1.3GHz_OneCavity_dz2um_TESLA2003-09.sdds
+zWake_3.9GHz_OneCavity_dz2um_TESLA2004-01.sdds
+        Wake files.
+
+REF_WL4BEG_1k.sdds
+        Bunch phase space input file.
+
+run1.ele
+runCase1
+        Runs a single bunch to get the reference momentum profile.
+        The script processes the profile to make a parameter file that
+        can be used to force elegant to use the same profile in other
+        simulations.
+
+runTemplate.ele
+runCase
+        Runs a case with a given number of bunches, using the reference
+        momentum profile determined in run1.
+
+runSeries
+        Runs case 1, then a series of cases with different numbers of bunches,
+        then processes and plots some centroid properties vs bunch number.
+
+cleanUp
+        Cleans up run output files.

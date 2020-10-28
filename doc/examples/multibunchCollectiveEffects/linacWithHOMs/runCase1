@@ -1,0 +1,9 @@
+#!/bin/bash
+
+mpiexec -np 16 Pelegant run1.ele 
+root=LCLS_1Bunches
+
+# Create momentum profile parameter file
+sddsprocess run1.cen run1.enProfile -match=col,ElementName=EM \
+    -print=column,ElementParameter,CENTRAL_MOMENTUM \
+    -define=column,ParameterValue,pCentral
