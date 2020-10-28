@@ -958,14 +958,19 @@ void computeFields_rftmEz0(double *E, double *BOverGamma, double *BOverGammaDC,
     sinPhase = sin(tau);
     cosPhase = cos(tau);
     E[2] = (rftmEz0->Ez[iz] + (rftmEz0->Ez[iz+1]-rftmEz0->Ez[iz])/rftmEz0->dZ*Zoffset)*rftmEz0->Ez_peak;
-    ErOverR = -(rftmEz0->dEzdZ[iz] + 
-           (rftmEz0->dEzdZ[iz+1]-rftmEz0->dEzdZ[iz])/rftmEz0->dZ*Zoffset)/2*sinPhase*rftmEz0->Ez_peak;
-    E[0] = ErOverR*X;
-    E[1] = ErOverR*Y;
-    BphiOverRG = E[2]/2/gamma*cosPhase;
-    BOverGamma[0] = -BphiOverRG*Y;
-    BOverGamma[1] = BphiOverRG*X;
-    BOverGamma[2] = 0;
+    if (rftmEz0->radial_order) {
+      ErOverR = -(rftmEz0->dEzdZ[iz] + 
+                  (rftmEz0->dEzdZ[iz+1]-rftmEz0->dEzdZ[iz])/rftmEz0->dZ*Zoffset)/2*sinPhase*rftmEz0->Ez_peak;
+      E[0] = ErOverR*X;
+      E[1] = ErOverR*Y;
+      BphiOverRG = E[2]/2/gamma*cosPhase;
+      BOverGamma[0] = -BphiOverRG*Y;
+      BOverGamma[1] = BphiOverRG*X;
+      BOverGamma[2] = 0;
+    } else {
+      E[0] = E[1] = 0;
+      BOverGamma[0] = BOverGamma[1] = BOverGamma[2] = 0;
+    }
     E[2] *= sinPhase;
   }
 
@@ -1808,8 +1813,8 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
   /* verify input parameters */
   if (!rftmEz0->inputFile || !rftmEz0->zColumn || !rftmEz0->EzColumn)
     bombElegant((char*)"RFTMEZ0 must have INPUTFILE, ZCOLUMN, and EZCOLUMN specified.", NULL);
-  if (rftmEz0->radial_order!=1)
-    bombElegant((char*)"RFTMEZ0 restricted to radial_order=1 at present", NULL);
+  if (rftmEz0->radial_order>1)
+    bombElegant((char*)"RFTMEZ0 restricted to radial_order<=1 at present", NULL);
 
   /* read (z, Ez) data from the file  */
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, rftmEz0->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {
