@@ -1097,6 +1097,7 @@ long track_through_rfcw
   }
 
   rfcw->trwake.charge = 0;
+  rfcw->trwake.bunchedBeamMode = 1;
   rfcw->trwake.xfactor = rfcw->trwake.yfactor = rfcw->trwake.factor = 1;
   rfcw->trwake.n_bins = rfcw->n_bins;
   rfcw->trwake.interpolate = rfcw->interpolate;
@@ -1134,6 +1135,7 @@ long track_through_rfcw
   }
   
   rfcw->wake.charge = 0;
+  rfcw->wake.bunchedBeamMode = 1;
   rfcw->wake.n_bins = rfcw->n_bins;
   rfcw->wake.acausalAllowed = rfcw->wake.i0 = 0;
   rfcw->wake.interpolate = rfcw->interpolate;
