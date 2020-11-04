@@ -6,7 +6,7 @@
 #include "track.h"
 
 typedef struct {
-  double radius;       /* reference radius */
+  short skew;          /* if non-zero, these are skew terms */
   long nz;             /* number of z points */
   double dz;           /* z spacing */
   double zMin, zMax;   /* minimum and maximum z values */
@@ -14,8 +14,8 @@ typedef struct {
   long *m;             /* value of m */
   double nGradients;   /* number of gradient functions per m */
   /* See M. Venturini and A. Dragt, NIM A 427 (1999) 387-392, Eq. 9. */
-  double ***Cmns;      /* generalized gradient: Cnms[im][in][iz] */
-  double ***dCmns_dz;  /* z derivative of generalized gradient */
+  double ***Cmn;       /* generalized gradient: Cnms[im][in][iz] */
+  double ***dCmn_dz;   /* z derivative of generalized gradient */
 } STORED_BGGEXP_DATA;
 
 static STORED_BGGEXP_DATA *storedBGGExpData = NULL;
@@ -24,7 +24,7 @@ static htab *fileHashTable = NULL;
 
 #define BUFSIZE 16834
 
-long addBGGExpData(char *filename)
+long addBGGExpData(char *filename, char *nameFragment, short skew)
 {
   SDDS_DATASET SDDSin;
   TRACKING_CONTEXT tcontext;
@@ -54,10 +54,6 @@ long addBGGExpData(char *filename)
 
   if (SDDS_CheckParameter(&SDDSin, "m", NULL, SDDS_SHORT, stderr)!=SDDS_CHECK_OK) 
     bombElegantVA("Unable to find short-integer parameter \"m\" in file %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);
-  /* 
-  if (SDDS_CheckParameter(&SDDSin, "referenceRadius", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK) 
-    bombElegantVA("Unable to find floating point parameter \"referenceRadius\" with units \"m\" in file %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);
-  */
 
   /* Check presence of z column */
   if (SDDS_CheckColumn(&SDDSin, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK) 
@@ -66,19 +62,20 @@ long addBGGExpData(char *filename)
   /* Check presence of Cnm* columns */
   ic = 0;
   while (1) {
-    snprintf(buffer, BUFSIZE, "Cnm%ld", 2*ic);
+    snprintf(buffer, BUFSIZE, "%s%ld", nameFragment, 2*ic);
     if (SDDS_CheckColumn(&SDDSin, buffer, NULL, SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK)
       break;
     ic ++;
   }
   if (ic==0) 
-    bombElegantVA("Unable to find any floating-point columns Cnm* in file %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);
+    bombElegantVA("Unable to find any floating-point columns %s* in file %s for BGGEXP %s #%ld\n",
+                  nameFragment, filename, tcontext.elementName, tcontext.elementOccurrence);
   nc = ic;
-  printf("Found %ld Cnm* columns\n", nc);
+  printf("Found %ld %s* columns\n", nc, nameFragment);
 
   /* Check for presence of matching dCnmXXX/dz columns */
   for (ic=0; ic<nc; ic++) {
-    snprintf(buffer, BUFSIZE, "dCnm%ld/dz", 2*ic);
+    snprintf(buffer, BUFSIZE, "d%s%ld/dz", nameFragment, 2*ic);
     if (SDDS_CheckColumn(&SDDSin, buffer, NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
       break;
   }
@@ -91,15 +88,16 @@ long addBGGExpData(char *filename)
   storedBGGExpData[nBGGExpDataSets].nm = storedBGGExpData[nBGGExpDataSets].nz = 0;
   storedBGGExpData[nBGGExpDataSets].nGradients = nc;
   storedBGGExpData[nBGGExpDataSets].m = NULL;
-  storedBGGExpData[nBGGExpDataSets].Cmns = NULL;
-  storedBGGExpData[nBGGExpDataSets].dCmns_dz = NULL;
+  storedBGGExpData[nBGGExpDataSets].Cmn = NULL;
+  storedBGGExpData[nBGGExpDataSets].dCmn_dz = NULL;
 
   im = nz = 0;
   storedBGGExpData[nBGGExpDataSets].zMin = DBL_MAX;
   storedBGGExpData[nBGGExpDataSets].zMax = -DBL_MAX;
   while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
-    if (!SDDS_GetParameter(&SDDSin, "m", &m) || m<1)
-      bombElegantVA("Problem with value of m for page %ld of file %s for BGGEXP %s #%ld\n", readCode, filename, tcontext.elementName, tcontext.elementOccurrence);
+    if (!SDDS_GetParameter(&SDDSin, "m", &m) || (m<1 && !skew) || (m<0 && skew))
+      bombElegantVA("Problem with value of m (m<%ld) for page %ld of file %s for BGGEXP %s #%ld\n", 
+                    (skew?0:1), readCode, filename, tcontext.elementName, tcontext.elementOccurrence);
     if (readCode==1) {
       long iz;
       double dz0, dz, *z, zMin, zMax;
@@ -126,24 +124,28 @@ long addBGGExpData(char *filename)
     }
     if (!(storedBGGExpData[nBGGExpDataSets].m = SDDS_Realloc(storedBGGExpData[nBGGExpDataSets].m, 
                                                              sizeof(*storedBGGExpData[nBGGExpDataSets].m)*(im+1))) ||
-        !(storedBGGExpData[nBGGExpDataSets].Cmns = SDDS_Realloc(storedBGGExpData[nBGGExpDataSets].Cmns, 
-                                                          sizeof(*storedBGGExpData[nBGGExpDataSets].Cmns)*(im+1))) ||
-        !(storedBGGExpData[nBGGExpDataSets].dCmns_dz = SDDS_Realloc(storedBGGExpData[nBGGExpDataSets].dCmns_dz, 
-                                                                    sizeof(*storedBGGExpData[nBGGExpDataSets].dCmns_dz)*(im+1))))
+        !(storedBGGExpData[nBGGExpDataSets].Cmn = SDDS_Realloc(storedBGGExpData[nBGGExpDataSets].Cmn, 
+                                                          sizeof(*storedBGGExpData[nBGGExpDataSets].Cmn)*(im+1))) ||
+        !(storedBGGExpData[nBGGExpDataSets].dCmn_dz = SDDS_Realloc(storedBGGExpData[nBGGExpDataSets].dCmn_dz, 
+                                                                    sizeof(*storedBGGExpData[nBGGExpDataSets].dCmn_dz)*(im+1))))
       bombElegantVA("Memory allocation failure (1) loading data from file %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);      
-    storedBGGExpData[nBGGExpDataSets].Cmns[im] = NULL;
-    storedBGGExpData[nBGGExpDataSets].dCmns_dz[im] = NULL;
-    if (!(storedBGGExpData[nBGGExpDataSets].Cmns[im] = malloc(sizeof(*storedBGGExpData[nBGGExpDataSets].Cmns[im])*nc)) ||
-        !(storedBGGExpData[nBGGExpDataSets].dCmns_dz[im] = malloc(sizeof(*storedBGGExpData[nBGGExpDataSets].dCmns_dz[im])*nc)))
+    storedBGGExpData[nBGGExpDataSets].Cmn[im] = NULL;
+    storedBGGExpData[nBGGExpDataSets].dCmn_dz[im] = NULL;
+    if (!(storedBGGExpData[nBGGExpDataSets].Cmn[im] = malloc(sizeof(*storedBGGExpData[nBGGExpDataSets].Cmn[im])*nc)) ||
+        !(storedBGGExpData[nBGGExpDataSets].dCmn_dz[im] = malloc(sizeof(*storedBGGExpData[nBGGExpDataSets].dCmn_dz[im])*nc)))
       bombElegantVA("Memory allocation failure (2) loading data from file %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);      
 
     for (ic=0; ic<nc; ic++) {
-      snprintf(buffer, BUFSIZE, "Cnm%ld", 2*ic);
-      if (!(storedBGGExpData[nBGGExpDataSets].Cmns[im][ic] = SDDS_GetColumnInDoubles(&SDDSin, buffer))) 
+      snprintf(buffer, BUFSIZE, "%s%ld", nameFragment, 2*ic);
+      if (!(storedBGGExpData[nBGGExpDataSets].Cmn[im][ic] = SDDS_GetColumnInDoubles(&SDDSin, buffer)))  {
+        SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
         bombElegantVA("Problem reading column %s from %s for BGGEXP %s #%ld\n", buffer, filename, tcontext.elementName, tcontext.elementOccurrence);
-      snprintf(buffer, BUFSIZE, "dCnm%ld/dz", 2*ic);
-      if (!(storedBGGExpData[nBGGExpDataSets].dCmns_dz[im][ic] = SDDS_GetColumnInDoubles(&SDDSin, buffer))) 
+      }
+      snprintf(buffer, BUFSIZE, "d%s%ld/dz", nameFragment, 2*ic);
+      if (!(storedBGGExpData[nBGGExpDataSets].dCmn_dz[im][ic] = SDDS_GetColumnInDoubles(&SDDSin, buffer))) {
+        SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
         bombElegantVA("Problem reading column %s from %s for BGGEXP %s #%ld\n", buffer, filename, tcontext.elementName, tcontext.elementOccurrence);
+      }
     }
 
     storedBGGExpData[nBGGExpDataSets].m[im] = m;
@@ -166,9 +168,9 @@ long addBGGExpData(char *filename)
 
 long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted, double *sigmaDelta2)
 {
-  long ip, ig, im, iz, irow, m, igLimit;
+  long ip, ig, im, iz, irow, m, igLimit[2], ns, nz;
   /* long izLast; */
-  STORED_BGGEXP_DATA *bggData;
+  STORED_BGGEXP_DATA *bggData[2];
   double ds, dz, x, y, xp, yp, delta, s, r, phi, denom;
   /* double gamma; */
   double step,  length;
@@ -210,10 +212,26 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   if (!bgg->initialized) {
     /* char *outputFile; */
     bgg->initialized = 1;
-    if (!(bgg->filename) || !strlen(bgg->filename)) {
-      bombElegantVA("No filename given for BGGEXP %s #%ld\n", tcontext.elementName, tcontext.elementOccurrence);
+    bgg->dataIndex[0] = bgg->dataIndex[1] = -1;
+    if (bgg->filename && strlen(bgg->filename))
+      bgg->dataIndex[0] = addBGGExpData(bgg->filename, "Cnm", 0);
+    if (bgg->normalFilename && strlen(bgg->normalFilename)) {
+      if (bgg->dataIndex[0]!=-1) 
+        bombElegantVA("Give FILENAME or NORMAL_FILENAME for BGGEXP, not both (element %s)", tcontext.elementName);
+      bgg->dataIndex[0] = addBGGExpData(bgg->normalFilename, "CnmS", 0);
     }
-    bgg->dataIndex = addBGGExpData(bgg->filename);
+    if (bgg->skewFilename && strlen(bgg->skewFilename))
+      bgg->dataIndex[1] = addBGGExpData(bgg->skewFilename, "CnmC", 1);
+
+    if (bgg->dataIndex[0]!=-1 && bgg->dataIndex[1]!=-1) {
+      if (storedBGGExpData[bgg->dataIndex[0]].dz != storedBGGExpData[bgg->dataIndex[1]].dz)
+        bombElegant("Mismatch of z spacing between normal and skew data for BGGEXP %s", tcontext.elementName);
+      if (storedBGGExpData[bgg->dataIndex[0]].zMin != storedBGGExpData[bgg->dataIndex[1]].zMin)
+        bombElegant("Mismatch of minimum z value between normal and skew data for BGGEXP %s", tcontext.elementName);
+      if (storedBGGExpData[bgg->dataIndex[0]].zMax != storedBGGExpData[bgg->dataIndex[1]].zMax)
+        bombElegant("Mismatch of maximum z value between normal and skew data for BGGEXP %s", tcontext.elementName);
+    }
+
 #if !USE_MPI
     if (bgg->particleOutputFile && !bgg->SDDSpo) {
       bgg->SDDSpo = tmalloc(sizeof(*(bgg->SDDSpo)));
@@ -239,12 +257,37 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     }
 #endif
   }
-  bggData = storedBGGExpData+bgg->dataIndex;
+
+  bggData[0] = bggData[1] = NULL;
+  igLimit[0] = igLimit[1] = -1;
+  if (bgg->dataIndex[0]!=-1) {
+    bggData[0] = storedBGGExpData+bgg->dataIndex[0];
+    zMin = bggData[0]->zMin;
+    zMax = bggData[0]->zMax;
+    nz = bggData[0]->nz;
+    dz = bggData[0]->dz;
+    igLimit[0] = bggData[0]->nGradients;
+    if (bgg->maximum2n>=0) {
+      igLimit[0] = bgg->maximum2n/2+1;
+      if (igLimit[0]>bggData[0]->nGradients)
+        igLimit[0] = bggData[0]->nGradients;
+    }
+  }
+  if (bgg->dataIndex[1]!=-1) {
+    bggData[1] = storedBGGExpData+bgg->dataIndex[1];
+    zMin = bggData[1]->zMin;
+    zMax = bggData[1]->zMax;
+    nz = bggData[1]->nz;
+    dz = bggData[1]->dz;
+    igLimit[1] = bggData[1]->nGradients;
+    if (bgg->maximum2n>=0) {
+      igLimit[1] = bgg->maximum2n/2+1;
+      if (igLimit[1]>bggData[1]->nGradients)
+        igLimit[1] = bggData[1]->nGradients;
+    }
+  }
 
   length = bgg->length; 
-  
-  zMin = bggData->zMin;
-  zMax = bggData->zMax;
   
   if (bgg->isBend) {
     xVertex = bgg->xVertex;
@@ -266,12 +309,12 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     */
   }
 
-  step = (zMax-zMin)/(bggData->nz-1);
+  step = (zMax-zMin)/(nz-1);
   /*
-  if (fabs(step/bggData->dz-1)>1e-6) 
+  if (fabs(step/dz-1)>1e-6) 
     bombElegantVA("Length mismatch for BGGEXP %s #%ld: %le vs %le\nlength=%le m, nz=%ld\n",
                   tcontext.elementName, tcontext.elementOccurrence, step, bggData->dz,
-                  bgg->fieldLength, bggData->nz);
+                  bgg->fieldLength, nz);
   */
 
   /* Do misalignments */
@@ -280,16 +323,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   if (bgg->tilt)
     rotateBeamCoordinates(part, np, bgg->tilt);
 
-  igLimit = bggData->nGradients;
-  if (bgg->maximum2n>=0) {
-    igLimit = bgg->maximum2n/2+1;
-    if (igLimit>bggData->nGradients)
-      igLimit = bggData->nGradients;
-  }
-  
   if (bgg->zInterval<=0) 
     bombElegantVA("zInterval %ld is invalid for BGGEXP %s #%ld\n", bgg->zInterval, tcontext.elementName, tcontext.elementOccurrence);
-  /* izLast = bggData->nz-bgg->zInterval; */
+  /* izLast = nz-bgg->zInterval; */
 
   if (bgg->symplectic) {
     long iImpLoop;
@@ -303,12 +339,16 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
     double magnet_s;
 
+    if (!bggData[0])
+      bombElegantVA("No normal data supplied for BGGEXP %s in symplectic mode. Don't know what to do since skew has not been implemented.",
+                    tcontext.elementName);
+
     scaleA = -bgg->strength*particleCharge*particleRelSign/(pCentral*particleMass*c_mks);  /** [factor in parentheses of a = (q/p_0)*A] **/
     /* Element body */
     for (ip=0; ip<np; ip++) {
 #if !USE_MPI
       if (bgg->SDDSpo && np<1000) {
-        if (!SDDS_StartPage(bgg->SDDSpo, bggData->nz+1) ||
+        if (!SDDS_StartPage(bgg->SDDSpo, bggData[0]->nz+1) ||
             !SDDS_SetParameters(bgg->SDDSpo, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                 "particleID", (long)(part[ip][6]), "pCentral", pCentral, NULL)) {
           SDDS_SetError("Problem setting up particle output page for BGGEXP");
@@ -362,7 +402,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       y -= 0.5*step*bgg->zInterval*py*denom;
       s -= 0.5*step*bgg->zInterval*(1.0 + delta)*denom;
      /* Integrate through the magnet */
-      for (iz=irow=0; iz<bggData->nz; iz+=bgg->zInterval) {
+      for (iz=irow=0; iz<bggData[0]->nz; iz+=bgg->zInterval) {
 #if !USE_MPI
         if (bgg->SDDSpo && np<1000 &&
             !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
@@ -370,7 +410,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[1], px*pCentral,
                                bgg->poIndex[2], y,
                                bgg->poIndex[3], py*pCentral,
-                               bgg->poIndex[4], iz*bggData->dz,
+                               bgg->poIndex[4], iz*dz,
                                bgg->poIndex[5], sqrt(sqr(pCentral*(1+delta))-(sqr(px)+sqr(py))*sqr(pCentral)),
                                bgg->poIndex[6], Bx,
                                bgg->poIndex[7], By,
@@ -388,18 +428,18 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         /** Calculate vector potential A and its relevant derivatives from the generalized gradients **/
         Ax = dAx_dx = dAx_dy = Ay = dAy_dx = dAy_dy = dAz_dx = dAz_dy = 0.0;
         /* Compute fields */
-        for (im=0; im<bggData->nm; im++) {
+        for (im=0; im<bggData[0]->nm; im++) {
           double m_1fact, term, sin_mphi, cos_mphi;
-          m = bggData->m[im];
+          m = bggData[0]->m[im];
           if (bgg->mMaximum>0 && m>bgg->mMaximum)
             continue;
           m_1fact = dfactorial(m-1);
           sin_mphi = sin(m*phi);
           cos_mphi = cos(m*phi);
-          for (ig=0; ig<igLimit; ig++) {
+          for (ig=0; ig<igLimit[0]; ig++) {
             term  = ipow(-1, ig)*m_1fact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
-            dGenGrad_s = bggData->dCmns_dz[im][ig][iz];
-            GenGrad_s = bggData->Cmns[im][ig][iz];
+            dGenGrad_s = bggData[0]->dCmn_dz[im][ig][iz];
+            GenGrad_s = bggData[0]->Cmn[im][ig][iz];
             /** Assume skew components Cmnc, dCmnc_dz = 0 **/
             /** Ax += term*( cos_mphi*GenGrad_s -  sin_mphi*GenGrad_c ); **/
             Ax += term*cos_mphi*dGenGrad_s;
@@ -448,18 +488,18 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
  	  sin_phi = sin(phi);
          /** Calculate vector potential A and its relevant derivatives from the generalized gradients **/
           Ax = dAx_dx = dAx_dy = Ay = dAy_dx = dAy_dy = dAz_dx = dAz_dy = 0.0;
-          for (im=0; im<bggData->nm; im++) {
+          for (im=0; im<bggData[0]->nm; im++) {
             double m_1fact, term, sin_mphi, cos_mphi;
-            m = bggData->m[im];
+            m = bggData[0]->m[im];
             if (bgg->mMaximum>0 && m>bgg->mMaximum)
               continue;
             m_1fact = dfactorial(m-1);
             sin_mphi = sin(m*phi);
             cos_mphi = cos(m*phi);
-            for (ig=0; ig<igLimit; ig++) {
+            for (ig=0; ig<igLimit[0]; ig++) {
               term  = ipow(-1, ig)*m_1fact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
-              dGenGrad_s = bggData->dCmns_dz[im][ig][iz];
-              GenGrad_s = bggData->Cmns[im][ig][iz];
+              dGenGrad_s = bggData[0]->dCmn_dz[im][ig][iz];
+              GenGrad_s = bggData[0]->Cmn[im][ig][iz];
               /** Assume skew components Cmnc, dCmnc_dz = 0 **/
               /** Ax += term*( cos_mphi*dGenGrad_s -  sin_mphi*dGenGrad_c ); **/
               Ax += term*cos_mphi*dGenGrad_s;
@@ -511,17 +551,17 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 	  /* compute Bx, By */
 	  Bx = bgg->Bx;
           By = bgg->By;
-          for (im=0; im<bggData->nm; im++) {
+          for (im=0; im<bggData[0]->nm; im++) {
             double mfact, term, sin_mphi, cos_mphi;
-            m = bggData->m[im];
+            m = bggData[0]->m[im];
             if (bgg->mMaximum>0 && m>bgg->mMaximum)
               continue;
             mfact = dfactorial(m);
             sin_mphi = sin(m*phi);
             cos_mphi = cos(m*phi);
-            for (ig=0; ig<igLimit; ig++) {
+            for (ig=0; ig<igLimit[0]; ig++) {
               term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
-              GenGrad_s = bggData->Cmns[im][ig][iz];
+              GenGrad_s = bggData[0]->Cmn[im][ig][iz];
               /** Assume skew components Cmnc = 0 **/
               Bx += term*( (2*ig+m)*cos_phi*sin_mphi - m*sin_phi*cos_mphi )*GenGrad_s;
               By += term*( (2*ig+m)*sin_phi*sin_mphi + m*cos_phi*cos_mphi )*GenGrad_s;
@@ -545,12 +585,12 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           }
         }
 
-        if (iz!=(bggData->nz))
+        if (iz!=(bggData[0]->nz))
           s += step*bgg->zInterval;
 
 #ifdef DEBUG
         fprintf(fpdebug, "%le %le %le %le %le %le %le %le %i\n", 
-                iz*bggData->dz, x, y, px, py, s, dAz_dy, dAz_dx, iImpLoop);
+                iz*dz, x, y, px, py, s, dAz_dy, dAz_dx, iImpLoop);
 #endif
 
       }
@@ -564,11 +604,11 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       s -= 0.5*step*bgg->zInterval*(1.0 + delta)*denom;
       denom = (1.0 + delta)*(1.0 + delta) - px*px - py*py;
       denom = 1.0/sqrt(denom);
-      if (iz<bggData->nz) {
+      if (iz<bggData[0]->nz) {
         /* Drift forward */
-	x += bggData->dz*(bggData->nz-1-(iz-1))*px*denom;
-	y += bggData->dz*(bggData->nz-1-(iz-1))*py*denom;
-	s += bggData->dz*(bggData->nz-1-(iz-1))*(1.0 + delta)*denom;
+	x += dz*(bggData[0]->nz-1-(iz-1))*px*denom;
+	y += dz*(bggData[0]->nz-1-(iz-1))*py*denom;
+	s += dz*(bggData[0]->nz-1-(iz-1))*(1.0 + delta)*denom;
       }
  
 #if !USE_MPI
@@ -578,7 +618,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[1], px*pCentral,
                                bgg->poIndex[2], y,
                                bgg->poIndex[3], py*pCentral,
-                               bgg->poIndex[4], (bggData->nz-1)*bggData->dz,
+                               bgg->poIndex[4], (bggData[0]->nz-1)*dz,
                                bgg->poIndex[5], sqrt(sqr(pCentral*(1+delta))-(sqr(px)+sqr(py))*sqr(pCentral)),
                                bgg->poIndex[6], Bx,
                                bgg->poIndex[7], By,
@@ -627,7 +667,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       part[ip][4] = s + delta_s;
       part[ip][5] = delta;
     }
-  }  else { 
+  } else { 
     /* Non-symplectic */
     double B[3], p[3], Bphi, Br, B2Max, pErr[3];
     double pOrig;
@@ -675,7 +715,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
 #if !USE_MPI
       if (bgg->SDDSpo && np<1000) {
-        if (!SDDS_StartPage(bgg->SDDSpo, bggData->nz+1) ||
+        if (!SDDS_StartPage(bgg->SDDSpo, bggData[0]->nz+1) ||
             !SDDS_SetParameters(bgg->SDDSpo, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                 "particleID", (long)(part[ip][6]), "pCentral", pCentral, NULL)) {
           SDDS_SetError("Problem setting up particle output page for BGGEXP");
@@ -686,7 +726,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
       /* Integrate through the magnet */
       B[0] = B[1] = B[2] = 0;
-      for (iz=irow=0; iz<bggData->nz-1; iz+=bgg->zInterval) {
+      for (iz=irow=0; iz<nz-1; iz+=bgg->zInterval) {
 	denom = sqrt(1 + sqr(xp) + sqr(yp));
 	p[2] = pCentral*(1+delta)/denom;
 	p[0] = xp*p[2];
@@ -699,7 +739,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[1], p[0],
                                bgg->poIndex[2], y,
                                bgg->poIndex[3], p[1],
-                               bgg->poIndex[4], iz*bggData->dz,
+                               bgg->poIndex[4], iz*dz,
                                bgg->poIndex[5], p[2],
                                bgg->poIndex[6], B[0],
                                bgg->poIndex[7], B[1],
@@ -714,27 +754,44 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
         /* Compute fields */
         Br = Bphi = B[2] = 0;
-        for (im=0; im<bggData->nm; im++) {
-          double mfact, term, sin_mphi, cos_mphi;
-          m = bggData->m[im];
-          if (bgg->mMaximum>0 && m>bgg->mMaximum)
-            continue;
-          mfact = dfactorial(m);
-          sin_mphi = sin(m*phi);
-          cos_mphi = cos(m*phi);
-          for (ig=0; ig<igLimit; ig++) {
-            term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-            B[2] += term*bggData->dCmns_dz[im][ig][iz]*r*sin_mphi;
-            term *= bggData->Cmns[im][ig][iz];
-            Br   += term*(2*ig+m)*sin_mphi;
-            Bphi += m*term*cos_mphi;
+        for (ns=0; ns<2; ns++) {
+          /* ns=0 => normal, ns=1 => skew */
+          if (bggData[ns]) {
+            for (im=0; im<bggData[ns]->nm; im++) {
+              double mfact, term, sin_mphi, cos_mphi;
+              m = bggData[ns]->m[im];
+              if (bgg->mMaximum>0 && m>bgg->mMaximum)
+                continue;
+              mfact = dfactorial(m);
+              sin_mphi = sin(m*phi);
+              cos_mphi = cos(m*phi);
+              if (ns==0) {
+                /* normal */
+                for (ig=0; ig<igLimit[ns]; ig++) {
+                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                  B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*sin_mphi;
+                  term *= bggData[ns]->Cmn[im][ig][iz];
+                  Br   += term*(2*ig+m)*sin_mphi;
+                  Bphi += m*term*cos_mphi;
+                }
+              } else {
+                /* skew */
+                for (ig=0; ig<igLimit[ns]; ig++) {
+                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                  B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*cos_mphi;
+                  term *= bggData[ns]->Cmn[im][ig][iz];
+                  Br   += term*(2*ig+m)*cos_mphi;
+                  Bphi -= m*term*sin_mphi;
+                }
+              }
+            }
           }
         }
         B[0] = (bgg->Bx + (Br*cos(phi) - Bphi*sin(phi)))*bgg->strength;
         B[1] = (bgg->By + (Br*sin(phi) + Bphi*cos(phi)))*bgg->strength;
         B[2] *= bgg->strength;
         
-	dz = bggData->dz*bgg->zInterval;
+	dz = dz*bgg->zInterval;
 	preFactorDz = -dz*particleCharge*particleRelSign/(pCentral*particleMass*c_mks*(1.0+delta));
 	preFactorDz =  preFactorDz*sqrt(1.0 + xp*xp + yp*yp);
 	/* Apply prediction step */
@@ -749,27 +806,45 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
         /* Compute fields at next z location */
         Br = Bphi = B[2] = 0;
-        for (im=0; im<bggData->nm; im++) {
-          double mfact, term, sin_mphi, cos_mphi;
-          m = bggData->m[im];
-          if (bgg->mMaximum>0 && m>bgg->mMaximum)
-            continue;
-          mfact = dfactorial(m);
-          sin_mphi = sin(m*phi);
-          cos_mphi = cos(m*phi);
-          for (ig=0; ig<igLimit; ig++) {
-            term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-            B[2] += term*bggData->dCmns_dz[im][ig][iz+1]*r*sin_mphi;
-            term *= bggData->Cmns[im][ig][iz+1];
-            Br   += term*(2*ig+m)*sin_mphi;
-            Bphi += m*term*cos_mphi;
+        Br = Bphi = B[2] = 0;
+        for (ns=0; ns<2; ns++) {
+          /* ns=0 => normal, ns=1 => skew */
+          if (bggData[ns]) {
+            for (im=0; im<bggData[ns]->nm; im++) {
+              double mfact, term, sin_mphi, cos_mphi;
+              m = bggData[ns]->m[im];
+              if (bgg->mMaximum>0 && m>bgg->mMaximum)
+                continue;
+              mfact = dfactorial(m);
+              sin_mphi = sin(m*phi);
+              cos_mphi = cos(m*phi);
+              if (ns==0) {
+                /* normal */
+                for (ig=0; ig<igLimit[ns]; ig++) {
+                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                  B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz+1]*r*sin_mphi;
+                  term *= bggData[ns]->Cmn[im][ig][iz+1];
+                  Br   += term*(2*ig+m)*sin_mphi;
+                  Bphi += m*term*cos_mphi;
+                }
+              } else {
+                /* skew */
+                for (ig=0; ig<igLimit[ns]; ig++) {
+                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                  B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz+1]*r*cos_mphi;
+                  term *= bggData[ns]->Cmn[im][ig][iz+1];
+                  Br   += term*(2*ig+m)*cos_mphi;
+                  Bphi -= m*term*sin_mphi;
+                }
+              }
+            }
           }
         }
         B[0] = (Br*cos(phi) - Bphi*sin(phi))*bgg->strength;
         B[1] = (Br*sin(phi) + Bphi*cos(phi))*bgg->strength;
         B[2] *= bgg->strength;
 
-	dz = bggData->dz*bgg->zInterval;
+	dz = dz*bgg->zInterval;
 	preFactorDz = -dz*particleCharge*particleRelSign/(pCentral*particleMass*c_mks*(1.0+delta));
 	preFactorDz =  preFactorDz*sqrt(1.0 + xpTemp*xpTemp + ypTemp*ypTemp);
 	/* Apply correction step */
@@ -792,7 +867,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         
 #ifdef DEBUG
         fprintf(fpdebug, "%.0f %le %le %le %le %le %le %le %le %le %le\n", 
-                part[ip][6], ds, x, y, iz*bggData->dz, 
+                part[ip][6], ds, x, y, iz*dz, 
                 B[0], B[1], B[2], 
                 p[0], p[1], p[2]);
 #endif
@@ -812,11 +887,11 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 	  delta = deltaTemp;
         }
       }
-      if (iz<bggData->nz-1) {
+      if (iz<nz-1) {
         /* Drift forward */
-        x += xp*bggData->dz*(bggData->nz-(iz-1));
-        y += yp*bggData->dz*(bggData->nz-(iz-1));
-        s += bggData->dz*(bggData->nz-(iz-1))*sqrt(1+sqr(xp)+sqr(yp));
+        x += xp*dz*(nz-(iz-1));
+        y += yp*dz*(nz-(iz-1));
+        s += dz*(nz-(iz-1))*sqrt(1+sqr(xp)+sqr(yp));
       }
       
 #if !USE_MPI
@@ -826,7 +901,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[1], p[0],
                                bgg->poIndex[2], y,
                                bgg->poIndex[3], p[1],
-                               bgg->poIndex[4], (bggData->nz-1)*bggData->dz,
+                               bgg->poIndex[4], (nz-1)*dz,
                                bgg->poIndex[5], p[2],
                                bgg->poIndex[6], B[0],
                                bgg->poIndex[7], B[1],

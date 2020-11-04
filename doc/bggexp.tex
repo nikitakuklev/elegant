@@ -3,7 +3,19 @@ specified in terms of a generalized gradient expansion \cite{Venturini-NIMA427-3
 After reconstructing the field, it simply integrates the equations of motion
 based on the Lorentz force equation in cartesian coordinates.  
 
-The generalized gradients are provided in an SDDS file with the following floating-point columns:
+The generalized gradients are provided in SDDS files.
+In addition to several columns describing the gradients, the file must contain a parameter:
+\begin{itemize}
+\item {\bf m} --- The multipole index, using the convention where $m=1$ is dipole, $m=2$ is quadrupole,
+  etc. N.B.: this convention conforms with \cite{Venturini-NIMA427-387} but is not the usual one used by
+  {\tt elegant}. This should be stored as a short integer.
+  N. B.: for $m=1$, if the system has net bending, the results will not be correct as the required coordinate
+  transformations are not performed.
+\end{itemize}
+
+In the original implementation, which is still supported, only normal field components were included
+In that case, the user should use the \verb|FILENAME| field to provide a file 
+with the following floating-point columns:
 \begin{itemize}
 \item {\bf z} --- Longitudinal coordinate. Units should be ``m''.
 \item {\bf Cnm{\em n}} --- The $n^{th}$ generalized gradient of the $m^{th}$ harmonic, where $n=0,2,4,...$.
@@ -13,18 +25,54 @@ The generalized gradients are provided in an SDDS file with the following floati
   for the $m^{th}$ harmonic, where $n=0,2,4,...$.
   The number of derivatives must match the number of generalized gradients {\bf Cnm{\em n}}.
 \end{itemize}
-In addition, the file must contain a parameter:
-\begin{itemize}
-\item {\bf m} --- The multipole index, using the convention where $m=1$ is dipole, $m=2$ is quadrupole,
-  etc. N.B.: this convention conforms with \cite{Venturini-NIMA427-387} but is not the usual one used by
-  {\tt elegant}. This should be stored as a short integer.
-  N. B.: for $m=1$, if the system has net bending, the results will not be correct as the required coordinate
-  transformations are not performed.
-\end{itemize}
+The field expansion in this case is
+\begin{equation}
+\begin{array}{lcl}
+B_r & = & \sum\limits_{m=1}^\infty \sum\limits_{n=0}^\infty \frac{(-1)^n m! (2n + m)}{4^n n! (n+m)!} r^{2 n + m-1}
+\left\{C_m^{\left[2n\right]}(z) \sin m\phi\right\}  \\
+B_\phi & = & \sum\limits_{m=1}^\infty \sum\limits_{n=0}^\infty \frac{(-1)^n m! m)}{4^n n! (n+m)!} r^{2 n + m-1}
+\left\{C_m^{\left[2n\right]}(z) \cos m\phi\right\} \\
+B_z & = & \sum\limits_{m=0}^\infty \sum\limits_{n=0}^\infty \frac{(-1)^n m!}{4^n n! (n+m)!} r^{2 n + m}
+\left\{C_m^{\left[2n+1\right]}(z) \sin m\phi\right\}
+\end{array}
+\end{equation}
+In version 2020.5 and later, both normal and skew expansions are supported.
 
-The generalized gradient file can be prepared using the script {\tt computeGeneralizedGradients}, which is
-provided with {\tt elegant}. The input file for that script must be organized into many pages, with
-each page giving $B_r(\phi)$ on radius $r=R$ for a single $z$ location. The file must contain two floating-point columns:
+In this case, the user may provide filenames via the \verb|NORMAL_FILENAME| and \verb|SKEW_FILENAME|
+fields.
+In this, case, the files must contain the following floating-point columns:
+\begin{itemize}
+\item {\bf z} --- Longitudinal coordinate. Units should be ``m''.
+\item {\bf CnmS{\em n}} (normal) or {\bf CnmC{\em }} --- The $n^{th}$ generalized gradient of the $m^{th}$ harmonic, where $n=0,2,4,...$.
+  There is no preset limit to the number of generalized gradients. Units are ignored,
+  but should be SI.
+  Note that the ``S'' in the name for the normal components make be confusing. It refers to the fact that these
+  terms appear in the potential with a factor of $\sin m\phi$, whereas the skew terms have $\cos m\phi$ factors
+  (hence the ``C'').
+\item {\bf dCnmS{\em n}/dz} (normal) or {\bf dCnmC{\em n}/dz} (skew) --- The longitudial derivative of the $n^{th}$ generalized gradient, 
+  for the $m^{th}$ harmonic, where $n=0,2,4,...$.
+  The number of derivatives must match the number of generalized gradients {\bf Cnm{\em n}}.
+\end{itemize}
+The field expansion in this case is
+\begin{equation}
+\begin{array}{lcl}
+B_r & = & \sum\limits_{m=1}^\infty \sum\limits_{n=0}^\infty \frac{(-1)^n m! (2n + m)}{4^n n! (n+m)!} r^{2 n + m-1}
+\left\{C_{m,s}^{\left[2n\right]}(z) \sin m\phi + C_{m,c}^{\left[2n\right]}(z) \cos m\phi\right\} +
+\sum\limits_{n=1}^\infty \frac{(-1)^n 2 n}{4^n n! n!} r^{2n-1} C_{0,c}^{\left[2n\right]}(z) \\
+B_\phi & = & \sum\limits_{m=1}^\infty \sum\limits_{n=0}^\infty \frac{(-1)^n m! m)}{4^n n! (n+m)!} r^{2 n + m-1}
+\left\{C_{m,s}^{\left[2n\right]}(z) \cos m\phi - C_{m,c}^{\left[2n\right]}(z) \sin m\phi\right\} \\
+B_z & = & \sum\limits_{m=0}^\infty \sum\limits_{n=0}^\infty \frac{(-1)^n m!}{4^n n! (n+m)!} r^{2 n + m}
+\left\{C_{m,s}^{\left[2n+1\right]}(z) \sin m\phi + C_{m,c}^{\left[2n+1\right]}(z) \cos m\phi\right\}
+\end{array}
+\end{equation}
+Users should note that the skew field sign convention used by \cite{Venturini-NIMA427-387} and \verb|BGGEXP| differs
+from that used in {\tt elegant}.  In particular, to convert a normal field to a skew field while conforming to {\tt elegant}'s
+conventions, one must use $C_{m,s}^{p} \rightarrow -C_{m,c}^{p}$.
+
+A normal-field generalized gradient file (for use with \verb|FILENAME|) can be prepared using the script {\tt
+  computeGeneralizedGradients}, which is provided with {\tt elegant}. The input file for that script must be organized
+into many pages, with each page giving $B_r(\phi)$ on radius $r=R$ for a single $z$ location. The file must contain two
+floating-point columns:
 \begin{itemize}
 \item {\bf phi} --- The angle, in radians. $\phi=0$ corresponds to $x=R$ and $y=0$, while $\phi=\pi/2$ corresponds
   to $x=0$ and $y=R$. It is assumed that $\phi$ runs from $0$ to $2\pi - \Delta \phi$ in steps of $\Delta \phi$.

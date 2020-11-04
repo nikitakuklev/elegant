@@ -3314,7 +3314,11 @@ BGGEXP bggexp_example;
 PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.length), NULL, 0.0, 0, "insertion length"},
     {"LFIELD", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.fieldLength), NULL, -1.0, 0, "expected length of the field map. If negative, use L."},
-    {"FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bggexp_example.filename), NULL, 0.0, 0, "name of file generalized gradient data"},
+    {"FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bggexp_example.filename), NULL, 0.0, 0, "name of file containing generalized gradient data for normal terms, original convention"},
+    {"NORMAL_FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bggexp_example.normalFilename), NULL, 0.0, 0, 
+     "name of file containing generalized gradient data for normal terms, new convention"},
+    {"SKEW_FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bggexp_example.skewFilename), NULL, 0.0, 0,
+     "name of file containing generalized gradient data for skew terms, new convention"},
     {"STRENGTH", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dx), NULL, 0.0, 0, "misalignment"},

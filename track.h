@@ -1108,7 +1108,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHVCOR_PARAMS 17
 #define N_BMAPXYZ_PARAMS 18
 #define N_BRAT_PARAMS 27
-#define N_BGGEXP_PARAMS 25
+#define N_BGGEXP_PARAMS 27
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 14
@@ -3041,7 +3041,9 @@ extern PARAMETER bggexp_param[N_BGGEXP_PARAMS];
 typedef struct {
   double length;          /* for floor coorindates, s coordinate, etc */
   double fieldLength;     /* expected length of the field map */
-  char *filename;         /* filename for generalized gradients vs z */
+  char *filename;         /* filename for (normal) generalized gradients vs z */
+  char *normalFilename;   /* filename for normal-orientation GG vs z */
+  char *skewFilename;     /* filename for skew-orientation GG vs z */
   double strength;        /* multiply fields by a factor */
   double tilt;            /* roll angle */
   double dx, dy, dz;      /* misalignments */
@@ -3059,7 +3061,7 @@ typedef struct {
   double dxExpansion;
   /* these are set by the program when the file is read */
   short initialized;
-  long dataIndex;
+  long dataIndex[2]; /* normal, skew */
   SDDS_DATASET *SDDSpo;
   long poIndex[9];
 } BGGEXP;
