@@ -1452,7 +1452,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	  }
         }
 #if MPI_DEBUG
-	if ((isSlave || !notSinglePart)&& (optimization_data->verbose>1)) {
+	if ((isSlave || !notSinglePart) && (optimization_data->verbose>1)) {
 	  fprintf (stdout, "Minimal value is %.15g after %ld iterations.\n", result, optimization_data->n_restarts+1-startsLeft);
 	  printf("new variable values for iteration %ld\n", optimization_data->n_restarts+1-startsLeft);
 	  fflush(stdout);
@@ -2625,7 +2625,7 @@ double optimization_function(double *value, long *invalid)
 	  if (isnan(result) || isinf(result)) {
 	    *invalid = 1;
 	  } else {
-#if !USE_MPI  /* The information here is from a processor locally, we print the result across all the processors after an iteration */
+	    /* #if !USE_MPI  The information here is from a processor locally, we print the result across all the processors after an iteration */
 	    if (optimization_data->verbose && optimization_data->fp_log) {
 	      fprintf(optimization_data->fp_log, "equation evaluates to %23.15e\n", result);
 	      fflush(optimization_data->fp_log);
@@ -2644,7 +2644,7 @@ double optimization_function(double *value, long *invalid)
 	      }
 	      fprintf(optimization_data->fp_log, "\n\n");
 	    }
-#endif
+	    /* #endif */
 	  }
 	}
       }  /* End of Master only */

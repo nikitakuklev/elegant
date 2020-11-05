@@ -3675,7 +3675,7 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
       for (j=i+1; j<6; j++, k++)
 	rpn_store(sums->beamSums2->sigma[i][j], NULL, fpt->sij_mem[k]);
     rpn_store(Po, NULL, fpt->centroid_mem[6]);
-    rpn_store((double)np, NULL, fpt->centroid_mem[7]);
+    rpn_store((double)sums->n_part, NULL, fpt->centroid_mem[7]);
   }
   freeBeamSums(sums, 1);
 }
