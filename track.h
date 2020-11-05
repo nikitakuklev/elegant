@@ -1106,7 +1106,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 15
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
-#define N_BMAPXYZ_PARAMS 18
+#define N_BMAPXYZ_PARAMS 19
 #define N_BRAT_PARAMS 27
 #define N_BGGEXP_PARAMS 27
 #define N_BRANCH_PARAMS 7
@@ -3003,7 +3003,7 @@ typedef struct {
 typedef struct {
   double length;
   double dxError, dyError, dzError, tilt;
-  double fieldLength, strength, accuracy;
+  double fieldLength, strength, fse, accuracy;
   char *method, *filename;
   short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridExcess, singlePrecision;
   char *particleOutputFile;

@@ -3265,6 +3265,7 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"LFIELD", "M", IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.fieldLength), NULL, -1.0, 0, "expected length of the field map. If negative, determined from field data."},
     {"STRENGTH", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
+    {"FSE", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.fse), NULL, 0.0, 0, "Fractional Strength Error."},
     {"ACCURACY", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
     {"METHOD", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bmapxyz_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
     {"FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bmapxyz_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z) and either (Bx, By, Bz) or (Fx, Fy, Fz)"},
