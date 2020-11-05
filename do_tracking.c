@@ -3597,6 +3597,7 @@ void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX
 void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, double **coord, long np, double Po)
 {
   long i, j, k;
+  long npTotal;
   static double emit[3], sigma[6], centroid[6], beta[3], alpha[3], emitc[3];
   static BEAM_SUMS *sums;
   static char *centroid_name_suffix[8] = {
@@ -3616,6 +3617,11 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
   sums = allocateBeamSums(0, 1);
   zero_beam_sums(sums, 1);
   accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
+#if USE_MPI
+  MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#else
+  npTotal = np;
+#endif
   if (isMaster || !notSinglePart) {
     for (i=0; i<6; i++) {
       centroid[i] = sums->centroid[i];
@@ -3675,7 +3681,7 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
       for (j=i+1; j<6; j++, k++)
 	rpn_store(sums->beamSums2->sigma[i][j], NULL, fpt->sij_mem[k]);
     rpn_store(Po, NULL, fpt->centroid_mem[6]);
-    rpn_store((double)sums->n_part, NULL, fpt->centroid_mem[7]);
+    rpn_store((double)npTotal, NULL, fpt->centroid_mem[7]);
   }
   freeBeamSums(sums, 1);
 }
