@@ -2419,6 +2419,7 @@ double optimization_function(double *value, long *invalid)
           printf("nLostTotal = %ld\n", nLostTotal);
           fflush(stdout);
         */
+        rpn_store(nLostTotal, NULL, nLostMemory);
       } else 
         rpn_store(beam->n_lost, NULL, nLostMemory);
 #else
