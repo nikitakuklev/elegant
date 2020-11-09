@@ -573,7 +573,7 @@ long do_tracking(
     else
       eptr = beamline->elem;
 
-    if (i_pass==0) {
+    if (i_pass==passOffset) {
       if (flags&LINEAR_CHROMATIC_MATRIX) {
         if (!isConcat) {
           printf("Error: in order to use the \"linear chromatic matrix\" for\n");
@@ -615,7 +615,7 @@ long do_tracking(
         zero_beam_sums(*sums_vs_z, *n_z_points+1);
         sums_allocated = 1;
       }
-      else if (!run->combine_bunch_statistics && i_pass==0)
+      else if (!run->combine_bunch_statistics && i_pass==passOffset)
         zero_beam_sums(*sums_vs_z, *n_z_points+1);
     }
 
@@ -713,7 +713,7 @@ long do_tracking(
 #endif
 
     i_elem = 0;
-    if (i_pass==0 && startElem) {
+    if (i_pass==passOffset && startElem) {
       /* start tracking from an interior point in the beamline */
       while (eptr && eptr!=startElem) {
         if (eptr->type==T_MAXAMP) {
@@ -1106,7 +1106,7 @@ long do_tracking(
           BRANCH *branch;
 	  long choice = 0;
           branch = (BRANCH*)(eptr->p_elem);
-	  if (i_pass==0) 
+	  if (i_pass==passOffset) 
 	    branch->privateCounter = branch->counter;
 	  if (flags&TEST_PARTICLES) {
 	    choice = branch->defaultToElse;
@@ -1212,7 +1212,7 @@ long do_tracking(
 	    case -1:
 	      break;
 	    case T_CHARGE:
-	      if ((i_pass==0 && !startElem) || ((CHARGE*)(eptr->p_elem))->allowChangeWhileRunning) {
+	      if ((i_pass==passOffset && !startElem) || ((CHARGE*)(eptr->p_elem))->allowChangeWhileRunning) {
 		if (elementsTracked!=0 && !warnedAboutChargePosition) {
 		  warnedAboutChargePosition = 1;
                   if (eptr->pred && eptr->pred->name) {
@@ -1269,7 +1269,7 @@ long do_tracking(
 	      break;
 	    case T_RECIRC:
 	      /* Recognize and record recirculation point.  */
-	      if (i_pass==0) {
+	      if (i_pass==passOffset) {
 		i_sums_recirc = i_sums-1;
 		z_recirc = last_z;
 	      }
@@ -1486,7 +1486,7 @@ long do_tracking(
 	          watch_pt_seen = 1;
 	          if (!watch->initialized) 
 	            set_up_watch_point(watch, run, eptr->occurence, eptr->pred?eptr->pred->name:NULL, i_pass);
-	          if (i_pass==0 && (n_passes/watch->interval)==0) {
+	          if (i_pass==passOffset && (n_passes/watch->interval)==0) {
                     char buffer[16384];
                     snprintf(buffer, 16384,
                              "Settings n_passes=%ld and INTERVAL=%ld prevent WATCH output to file %s",
@@ -1580,7 +1580,7 @@ long do_tracking(
 	          watch_pt_seen = 1; /* sic */
 	          if (!slicePoint->initialized) 
 	            set_up_slice_point(slicePoint, run, eptr->occurence, eptr->pred?eptr->pred->name:NULL);
-	          if (i_pass==0 && (n_passes/slicePoint->interval)==0) {
+	          if (i_pass==passOffset && (n_passes/slicePoint->interval)==0) {
                     char buffer[16384];
                     snprintf(buffer, 16384, 
                              "Settings n_passes=%ld and INTERVAL=%ld prevent SLICE output to file %s for element %s",
@@ -1609,7 +1609,7 @@ long do_tracking(
 		  watch_pt_seen = 1;   /* yes, this should be here */
 		  if (!histogram->initialized) 
 		    set_up_histogram(histogram, run, eptr->occurence);
-		  if (i_pass==0 && (n_passes/histogram->interval)==0) {
+		  if (i_pass==passOffset && (n_passes/histogram->interval)==0) {
                     char buffer[16384];
                     snprintf(buffer, 16384, 
                              "Settings n_passes=%ld and INTERVAL=%ld prevent SLICE output to file %s for element %s",
@@ -1639,7 +1639,7 @@ long do_tracking(
                 mhist = (MHISTOGRAM*)eptr->p_elem;
                 if (!mhist->disable) {
                   watch_pt_seen = 1;   /* yes, this should be here */
-                  if (i_pass==0 && (n_passes/mhist->interval)==0) {
+                  if (i_pass==passOffset && (n_passes/mhist->interval)==0) {
                     char buffer[16384];
                     snprintf(buffer, 16384, 
                              "Settings n_passes=%ld and INTERVAL=%ld prevent MHISTOGRAM output for element %s",
@@ -2362,7 +2362,7 @@ long do_tracking(
 #endif
       if (eptr->Pref_output_fiducial==0)
         bombElegant("problem with fiducialization. Seek expert help!", NULL);
-      if (i_pass==0 && traj_vs_z) {
+      if (i_pass==passOffset && traj_vs_z) {
         /* collect trajectory data--used mostly by trajectory correction routines */
         /* this is always false
         if (!traj_vs_z[i_traj].centroid) {
@@ -2574,7 +2574,7 @@ long do_tracking(
             cpu_time()/100.0, page_faults(), memoryUsage());
     fflush(stdout);
 #endif
-    if ((!USE_MPI || !notSinglePart) && (i_pass==0 || watch_pt_seen || feedbackDriverSeen)) {
+    if ((!USE_MPI || !notSinglePart) && (i_pass==passOffset || watch_pt_seen || feedbackDriverSeen)) {
       /* if eptr is not NULL, then all particles have been lost */
       /* some work still has to be done, however. */
       while (eptr) {
@@ -2644,7 +2644,7 @@ long do_tracking(
         default:
           break;
         }
-        if (i_pass==0 && traj_vs_z) {
+        if (i_pass==passOffset && traj_vs_z) {
           /* collect trajectory data--used mostly by trajectory correction routines */
           /* This is always false
           if (!traj_vs_z[i_traj].centroid) {
@@ -3618,7 +3618,10 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
   zero_beam_sums(sums, 1);
   accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
 #if USE_MPI
-  MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  if (parallelStatus==trueParallel && partOnMaster && notSinglePart)
+    MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  else
+    npTotal = np;
 #else
   npTotal = np;
 #endif
