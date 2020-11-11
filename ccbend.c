@@ -77,8 +77,8 @@ long track_through_ccbend(
   long n_kicks, integ_order;
   long i_part, i_top;
   double *coef;
-  double fse, tilt, rad_coef, isr_coef, dzLoss=0;
-  double rho0, arcLength, length, angle, yaw, angleSign, extraTilt;
+  double fse, tilt, etilt, rad_coef, isr_coef, dzLoss=0;
+  double rho0, arcLength, length, angle, yaw;
   MULTIPOLE_DATA *multData = NULL, *edge1MultData = NULL, *edge2MultData = NULL;
   long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
@@ -234,20 +234,9 @@ long track_through_ccbend(
   KnL[6] = (1+fse)*ccbend->K6*length/(1-ccbend->KnDelta);
   KnL[7] = (1+fse)*ccbend->K7*length/(1-ccbend->KnDelta);
   KnL[8] = (1+fse)*ccbend->K8*length/(1-ccbend->KnDelta);
-  if (angle<0) {
-    angleSign = -1;
-    for (iTerm=0; iTerm<9; iTerm+=2)
-      KnL[iTerm] *= -1;
-    angle = -angle;
-    rho0 = -rho0;
-    yaw = -ccbend->yaw*(ccbend->edgeFlip?-1:1);
-    rotateBeamCoordinates(particle, n_part, PI);
-    extraTilt = PI;
-  } else {
-    angleSign = 1;
-    extraTilt = 0;
-    yaw = ccbend->yaw*(ccbend->edgeFlip?-1:1);
-  }
+
+  yaw = ccbend->yaw*(ccbend->edgeFlip?-1:1);
+
   if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles ||
       ccbend->edge1_multipoles || ccbend->edge2_multipoles) {
     /* Note that with referenceOrder=0, referenceKnL will always be positive if angle is nonzero */
@@ -320,27 +309,6 @@ long track_through_ccbend(
                                      ccbend->referenceOrder, 0,
                                      ccbend->minMultipoleOrder, ccbend->maxMultipoleOrder
                                      );
-    if (angleSign<0) {
-      long i;
-      for (i=0; i<ccbend->systematicMultipoleData.orders; i++) {
-        if (ccbend->totalMultipoleData.order[i]%2) {
-          ccbend->totalMultipoleData.KnL[i] *= -1;
-          ccbend->totalMultipoleData.JnL[i] *= -1;
-        }
-      }
-      for (i=0; i<ccbend->edge1MultipoleData.orders; i++) {
-        if (ccbend->totalMultipoleData.order[i]%2) {
-          ccbend->edge1MultipoleData.KnL[i] *= -1;
-          ccbend->edge1MultipoleData.JnL[i] *= -1;
-        }
-      }
-      for (i=0; i<ccbend->edge2MultipoleData.orders; i++) {
-        if (ccbend->totalMultipoleData.order[i]%2) {
-          ccbend->edge2MultipoleData.KnL[i] *= -1;
-          ccbend->edge2MultipoleData.JnL[i] *= -1;
-        }
-      }
-    }
     ccbend->totalMultipolesComputed = 1;
   }
   multData = &(ccbend->totalMultipoleData);
@@ -362,12 +330,24 @@ long track_through_ccbend(
   if (!(coef = expansion_coefficients(2)))
     bombTracking("expansion_coefficients(2) returned NULL pointer (track_through_ccbend)");
 
+  etilt = ccbend->etilt;
   tilt = ccbend->tilt;
   dx = ccbend->dx;
   dy = ccbend->dy;
+  if (ccbend->angle<0 && ccbend->dxdySign<0) {
+    dx *= -1;
+    dy *= -1;
+  }
   dz = ccbend->dz*(ccbend->edgeFlip?-1:1);
+  if (tilt) {
+    /* this is needed because the DX and DY offsets will be applied after the particles are
+     * tilted into the magnet reference frame
+     */
+    dx =  ccbend->dx*cos(-tilt) + ccbend->dy*sin(-tilt);
+    dy = -ccbend->dx*sin(-tilt) + ccbend->dy*cos(-tilt);
+  }
 
-  setupMultApertureData(&apertureData, -(tilt+extraTilt), apContour, maxamp, apFileData, z_start+length/2);
+  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start+length/2);
 
   if (iPart<=0) {
     /*
@@ -383,6 +363,8 @@ long track_through_ccbend(
       offsetBeamCoordinates(particle, n_part, dx, dy, dz);
     if (ccbend->optimized)
       offsetBeamCoordinates(particle, n_part, ccbend->dxOffset, 0, 0);
+    if (etilt)
+      rotateBeamCoordinates(particle, n_part, etilt);
     verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, KnL[1]/length, KnL[2]/length, gK[0], ccbend->edgeOrder);
     /*
     printf("input after adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
@@ -434,6 +416,8 @@ long track_through_ccbend(
            particle[0][3], particle[0][4], particle[0][5]);
     */
     verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, KnL[1]/length, KnL[2]/length, gK[1], ccbend->edgeOrder);
+    if (etilt)
+      rotateBeamCoordinates(particle, i_top+1, -etilt);
     if (ccbend->optimized)
       offsetBeamCoordinates(particle, i_top+1, ccbend->xAdjust, 0, 0);
     if (dx || dy || dz)
@@ -454,22 +438,12 @@ long track_through_ccbend(
     xpError = fabs(xpError+particle[0][1]);
   }
 
-  if (angleSign<0)
-    /* note that we use n_part here so lost particles get rotated back as well */
-    rotateBeamCoordinates(particle, n_part, -PI);
-
   if (freeMultData && !multData->copy) {
     if (multData->order)
       free(multData->order);
     if (multData->KnL)
       free(multData->KnL);
     free(multData);
-  }
-
-  if (angleSign<0) {
-    lastRho *= -1;
-    lastX *= -1;
-    lastXp *= -1;
   }
 
 #ifdef DEBUG
@@ -1080,8 +1054,7 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
 
 void switchRbendPlane(double **particle, long n_part, double alpha, double po)
 /* transforms the reference plane to one that is at an angle alpha relative to the
- * initial plane. use alpha>0 at the entrance to an rbend, alpha<0 at the exit.
- * alpha = theta/2, where theta is the total bend angle.
+ * initial plane. use alpha=theta/2, where theta is the total bend angle.
  */
 {
   long i;
