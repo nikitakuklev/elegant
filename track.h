@@ -217,13 +217,13 @@ typedef struct {
   short copy;              /* if non-zero, pointers are copies of another structure and shouldn't be freed or reallocated */
 } MULTIPOLE_DATA ;
 
-/* structure used by taylor series map element */
+/* structure used by polynomial series map element */
 typedef struct {
   long mapInitialized;
   long terms;
-  int32_t *Ix, *Iqx, *Iy, *Iqy, *Icdt, *Idelta;
+  int32_t *Ix, *Iqx, *Iy, *Iqy, *Is, *Idelta;
   double *Coefficient;
-} TAYLORSERIES_DATA ;
+} POLYNOMIALSERIES_DATA ;
 
 /* structure for storing Twiss parameters */
 typedef struct {
@@ -948,7 +948,7 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_LSCDRIFT  89
 #define T_DSCATTER  90
 #define T_LSRMDLTR     91
-#define T_TAYLORSERIES 92
+#define T_POLYNOMIALSERIES 92
 #define T_RFTM110  93
 #define T_CWIGGLER 94
 #define T_EDRIFT 95
@@ -1084,7 +1084,7 @@ extern char *entity_text[N_TYPES];
 #define N_LSCDRIFT_PARAMS  14
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 27
-#define N_TAYLORSERIES_PARAMS 6
+#define N_POLYNOMIALSERIES_PARAMS 6
 #define N_RFTM110_PARAMS 16
 #define N_CWIGGLER_PARAMS 30
 #define N_EDRIFT_PARAMS 1
@@ -3298,8 +3298,8 @@ typedef struct {
   double t0;  /* reference time for arrival at center of device (v=c assumed) */
 } LSRMDLTR;
 
-/* names and storage structure for Taylor-series map physical parameters */
-extern PARAMETER taylorSeries_param[N_TAYLORSERIES_PARAMS];
+/* names and storage structure for Polynomial-series map physical parameters */
+extern PARAMETER polynomialSeries_param[N_POLYNOMIALSERIES_PARAMS];
 
 typedef struct {
   double length;
@@ -3307,8 +3307,8 @@ typedef struct {
   char *filename;
   /* for internal use */
   long elementInitialized;
-  TAYLORSERIES_DATA coord[6];
-} TAYLORSERIES;
+  POLYNOMIALSERIES_DATA coord[6];
+} POLYNOMIALSERIES;
 
 /* names and storage structure for quadrupole+sextupole physical parameters */
 extern PARAMETER kquse_param[N_KQUSE_PARAMS];
@@ -4168,8 +4168,8 @@ void fillPowerArray(double x, double *xpow, long order);
 long findMaximumOrder(long order, long order2, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData, 
                       MULTIPOLE_DATA *multData);
 
-/* prototypes for taylorseries.c: */
-extern long taylorSeries_tracking(double **particle,  long n_part, TAYLORSERIES *taylorSeries,
+/* prototypes for polynomialseries.c: */
+extern long polynomialSeries_tracking(double **particle,  long n_part, POLYNOMIALSERIES *polynomialSeries,
                                 double p_error, double Po, double **accepted, double z_start);
 
 /* prototypes for kickmap.c */

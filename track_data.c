@@ -69,7 +69,7 @@ char *entity_name[N_TYPES] = {
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
-    "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
+    "POLYSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
@@ -174,7 +174,7 @@ char *entity_text[N_TYPES] = {
     "Longitudinal space charge impedance",
     "A scattering element to add random changes to particle coordinates according to a user-supplied distribution function",
     "A non-symplectic numerically integrated planar undulator including optional co-propagating laser beam for laser modulation of the electron beam.",
-    "Tracks through a Taylor series map specified by a file containing coefficients.",
+    "Tracks through a Polynomial series map specified by a file containing coefficients.",
     "Tracks through a TM110-mode (deflecting) rf cavity with all magnetic and electric field components.  NOT RECOMMENDED---See below.",
     "Tracks through a wiggler using canonical integration routines of Y. Wu (Duke University).",
     "Tracks through a drift with no approximations (Exact DRIFT).",
@@ -383,15 +383,15 @@ PARAMETER fmult_param[N_FMULT_PARAMS] = {
     {"SQRT_ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     };
 
-TAYLORSERIES taylorSeries_example;
-/* taylor series physical parameters */
-PARAMETER taylorSeries_param[N_TAYLORSERIES_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 0, (long)((char *)&taylorSeries_example.length), NULL, 0.0, 0, "length"},
-    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&taylorSeries_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&taylorSeries_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&taylorSeries_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 0, (long)((char *)&taylorSeries_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FILENAME", "", IS_STRING, 0, (long)((char *)&taylorSeries_example.filename), NULL, 0.0, 0, "name of file containing talor series map data"},
+POLYNOMIALSERIES polynomialSeries_example;
+/* polynomial series physical parameters */
+PARAMETER polynomialSeries_param[N_POLYNOMIALSERIES_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&polynomialSeries_example.length), NULL, 0.0, 0, "length"},
+    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&polynomialSeries_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&polynomialSeries_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&polynomialSeries_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, 0, (long)((char *)&polynomialSeries_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FILENAME", "", IS_STRING, 0, (long)((char *)&polynomialSeries_example.filename), NULL, 0.0, 0, "name of file containing talor series map data"},
     };
 
 SOLE sole_example;
@@ -3675,7 +3675,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_LSCDRIFT_PARAMS, MAT_LEN_NCAT|MPALGORITHM|GPU_SUPPORT|BACKTRACK,     sizeof(LSCDRIFT),  lscdrift_param    },
     { N_DSCATTER_PARAMS,          0,     sizeof(DSCATTER),    dscatter_param  },
     { N_LSRMDLTR_PARAMS,    MAT_LEN_NCAT|MPALGORITHM, sizeof(LSRMDLTR), lsrMdltr_param },
-    { N_TAYLORSERIES_PARAMS, MAT_LEN_NCAT|IS_MAGNET|NO_DICT_OUTPUT,    sizeof(TAYLORSERIES),  taylorSeries_param  },
+    { N_POLYNOMIALSERIES_PARAMS, MAT_LEN_NCAT|IS_MAGNET, sizeof(POLYNOMIALSERIES),  polynomialSeries_param  },
     {    N_RFTM110_PARAMS,  0|MPALGORITHM,       sizeof(RFTM110),    rftm110_param     }, 
     {   N_CWIGGLER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(CWIGGLER),    cwiggler_param     }, 
     {   N_EDRIFT_PARAMS, MAT_LEN|DIVIDE_OK|GPU_SUPPORT|BACKTRACK, sizeof(EDRIFT),    edrift_param   },

@@ -1771,8 +1771,8 @@ long do_tracking(
 	      nLeft = fmultipole_tracking(coord, nToTrack, (FMULT*)eptr->p_elem, 0.0,
 					  *P_central, accepted, last_z);
 	      break;
-	    case T_TAYLORSERIES:
-	      nLeft = taylorSeries_tracking(coord, nToTrack, (TAYLORSERIES*)eptr->p_elem, 0.0,
+	    case T_POLYNOMIALSERIES:
+	      nLeft = polynomialSeries_tracking(coord, nToTrack, (POLYNOMIALSERIES*)eptr->p_elem, 0.0,
 					    *P_central, accepted, z);
 	      break;
 	    case T_KICKER:

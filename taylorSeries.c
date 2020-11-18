@@ -7,8 +7,8 @@
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
 
-/* routine: taylorSeries() (derived from polynomial_kicks())
- * purpose: apply a taylor series map to coordinates.
+/* routine: polynomialSeries() (derived from polynomial_kicks())
+ * purpose: apply a polynomial series map to coordinates.
  * 
  * Louis Emery 2004
  */
@@ -36,59 +36,59 @@
 #define N_MAPCOORDINATES 6
 /* qx and qy is px/Po and py/Po */
 char *mapCoordinateList[N_MAPCOORDINATES] = {
-  "x", "qx", "y", "qy", "cdt", "delta"
+  "x", "qx", "y", "qy", "s", "delta"
    };
 
-void initialize_taylorSeries(TAYLORSERIES *taylorSeries)
+void initialize_polynomialSeries(POLYNOMIALSERIES *polynomialSeries)
 {
   SDDS_DATASET SDDSin;
   char buffer[1024];
-  TAYLORSERIES_DATA *data;
+  POLYNOMIALSERIES_DATA *data;
   char *Coordinate;
   long readCode, problem, index;
   
-  if (taylorSeries->elementInitialized)
+  if (polynomialSeries->elementInitialized)
     return;
-  if (!taylorSeries->filename)
-    bombElegant("TAYLORSERIES element doesn't have filename", NULL);
-  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, taylorSeries->filename)) {
-    sprintf(buffer, "Problem opening file %s (TAYLORSERIES)\n", taylorSeries->filename);
+  if (!polynomialSeries->filename)
+    bombElegant("POLYNOMIALSERIES element doesn't have filename", NULL);
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, polynomialSeries->filename)) {
+    sprintf(buffer, "Problem opening file %s (POLYNOMIALSERIES)\n", polynomialSeries->filename);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
   }
   if (SDDS_CheckParameter(&SDDSin, "Coordinate", NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK )
-    bombElegant("problems with Coordinate parameter data in TAYLORSERIES input file", NULL);
+    bombElegant("problems with Coordinate parameter data in POLYNOMIALSERIES input file", NULL);
   if (SDDS_CheckColumn(&SDDSin, "Ix", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "Iqx", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "Iy", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "Iqy", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "Icdt", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "Is", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "Idelta", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK )
-    bombElegant("problems with integer power data in TAYLORSERIES input file", NULL);
+    bombElegant("problems with integer power data in POLYNOMIALSERIES input file", NULL);
   if (SDDS_CheckColumn(&SDDSin, "Coefficient", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK )
-    bombElegant("problems with Coefficient data in TAYLORSERIES input file", NULL);
+    bombElegant("problems with Coefficient data in POLYNOMIALSERIES input file", NULL);
   while ((readCode=SDDS_ReadPage(&SDDSin))>0)  {
     /* determine the coordinate that is mapped */
     if (!(SDDS_GetParameter(&SDDSin, "Coordinate", &Coordinate))) {
-      sprintf(buffer, "problem reading Coordinate parameter data for TAYLORSERIES file %s\n", taylorSeries->filename);
+      sprintf(buffer, "problem reading Coordinate parameter data for POLYNOMIALSERIES file %s\n", polynomialSeries->filename);
       SDDS_SetError(buffer);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
     /* index is the index of the map array in element definition */
     if (0>(index = match_string(Coordinate, mapCoordinateList, N_MAPCOORDINATES, 0))) {
-      sprintf(buffer, "invalid Coordinate parameter data for TAYLORSERIES file %s\n", taylorSeries->filename);
+      sprintf(buffer, "invalid Coordinate parameter data for POLYNOMIALSERIES file %s\n", polynomialSeries->filename);
       SDDS_SetError(buffer);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
-    data = &taylorSeries->coord[index];
+    data = &polynomialSeries->coord[index];
     if ((data->terms = SDDS_RowCount(&SDDSin))<=0) {
       /* presently make having zero rows an error 
 	 later we can make the default behavior of 0 rows be
 	 equivalent to unity map. */
-      printf("Warning: no data in TAYLORSERIES file %s\n", taylorSeries->filename);
+      printf("Warning: no data in POLYNOMIALSERIES file %s\n", polynomialSeries->filename);
       fflush(stdout);
       SDDS_Terminate(&SDDSin);
       return;
@@ -98,10 +98,10 @@ void initialize_taylorSeries(TAYLORSERIES *taylorSeries)
 	!(data->Iqx=SDDS_GetColumnInLong(&SDDSin, "Iqx")) ||
 	!(data->Iy=SDDS_GetColumnInLong(&SDDSin, "Iy")) ||
 	!(data->Iqy=SDDS_GetColumnInLong(&SDDSin, "Iqy")) ||
-	!(data->Icdt=SDDS_GetColumnInLong(&SDDSin, "Icdt")) ||
+	!(data->Is=SDDS_GetColumnInLong(&SDDSin, "Is")) ||
 	!(data->Idelta=SDDS_GetColumnInLong(&SDDSin, "Idelta")) ||
 	!(data->Coefficient=SDDS_GetColumnInDoubles(&SDDSin, "Coefficient"))) {
-      sprintf(buffer, "Unable to read data for TAYLORSERIES file %s\n", taylorSeries->filename);
+      sprintf(buffer, "Unable to read data for POLYNOMIALSERIES file %s\n", polynomialSeries->filename);
       SDDS_SetError(buffer);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -111,10 +111,10 @@ void initialize_taylorSeries(TAYLORSERIES *taylorSeries)
   SDDS_Terminate(&SDDSin);
   problem = 0;
   for ( index=0 ; index < 6 ; index++ ) {
-    data = &taylorSeries->coord[index];
+    data = &polynomialSeries->coord[index];
     if (!data->mapInitialized) {
       problem = 1;
-      sprintf(buffer, "problem with finding map for %s for TAYLORSERIES file %s\n", mapCoordinateList[index],taylorSeries->filename);
+      sprintf(buffer, "problem with finding map for %s for POLYNOMIALSERIES file %s\n", mapCoordinateList[index],polynomialSeries->filename);
       SDDS_SetError(buffer);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     }
@@ -122,20 +122,20 @@ void initialize_taylorSeries(TAYLORSERIES *taylorSeries)
   if (problem) {
     exitElegant(1);
   }
-  taylorSeries->elementInitialized = 1;
+  polynomialSeries->elementInitialized = 1;
 }
 
-long taylorSeries_tracking(
+long polynomialSeries_tracking(
     double **particle,  /* initial/final phase-space coordinates */
     long n_part,        /* number of particles */
-    TAYLORSERIES *taylorSeries,       /* taylorSeries element structure */
+    POLYNOMIALSERIES *polynomialSeries,       /* polynomialSeries element structure */
     double p_error,     /* p_nominal/p_central */
     double Po,          /* p_central */
     double **accepted,
     double z_start
     )
 {
-  TAYLORSERIES_DATA data;
+  POLYNOMIALSERIES_DATA data;
   double dx, dy, dz;  /* transverse offsets of the element center */
   long i_part, i_top;
   /* long is_lost=0; */
@@ -147,29 +147,29 @@ long taylorSeries_tracking(
   double p, beta0, outputCoord[6];
   
     if (!particle)
-        bombElegant("particle array is null (taylorSeries)", NULL);
+        bombElegant("particle array is null (polynomialSeries)", NULL);
 
-    if (!taylorSeries)
-        bombElegant("null TAYLORSERIES pointer (taylorSeries)", NULL);
+    if (!polynomialSeries)
+        bombElegant("null POLYNOMIALSERIES pointer (polynomialSeries)", NULL);
 
-    if (!taylorSeries->elementInitialized) 
-      initialize_taylorSeries(taylorSeries);
+    if (!polynomialSeries->elementInitialized) 
+      initialize_polynomialSeries(polynomialSeries);
 
-    cos_tilt = cos(taylorSeries->tilt);
-    sin_tilt = sin(taylorSeries->tilt);
-    dx = taylorSeries->dx;
-    dy = taylorSeries->dy;
-    dz = taylorSeries->dz;
+    cos_tilt = cos(polynomialSeries->tilt);
+    sin_tilt = sin(polynomialSeries->tilt);
+    dx = polynomialSeries->dx;
+    dy = polynomialSeries->dy;
+    dz = polynomialSeries->dz;
 
     i_top = n_part-1;
     for (i_part=0; i_part<=i_top; i_part++) {
         if (!(coord = particle[i_part])) {
-            printf("null coordinate pointer for particle %ld (taylorSeries)", i_part);
+            printf("null coordinate pointer for particle %ld (polynomialSeries)", i_part);
             fflush(stdout);
             abort();
             }
         if (accepted && !accepted[i_part]) {
-            printf("null accepted coordinates pointer for particle %ld (taylorSeries)", i_part);
+            printf("null accepted coordinates pointer for particle %ld (polynomialSeries)", i_part);
             fflush(stdout);
             abort();
             }
@@ -213,17 +213,17 @@ long taylorSeries_tracking(
 	p = Po*(1+dp);
         qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
         qy = (1+dp)*yp/denom;
-	cdt = 0; /* I would imaging that the cdt coordinate doesn't appear in maps */
+	cdt = 0; /* I would imagine that the cdt coordinate doesn't appear in maps */
         beta0 = p/sqrt(sqr(p)+1);
 
         /* apply map */
 	for ( i=0; i < 6; i++ ) {
-	  data = taylorSeries->coord[i];
+	  data = polynomialSeries->coord[i];
 	  outputCoord[i] = 0.0;
 	  for ( j=0; j < data.terms; j++) {
 	    outputCoord[i] += data.Coefficient[j] * ipow(x,data.Ix[j]) * ipow(qx,data.Iqx[j])  
 	      * ipow(y,data.Iy[j]) * ipow(qy,data.Iqy[j]) 
-	      * ipow(cdt,data.Icdt[j]) * ipow(dp,data.Idelta[j]);
+	      * ipow(cdt,data.Is[j]) * ipow(dp,data.Idelta[j]);
 	  }
 	}
 	x = outputCoord[0];
