@@ -208,7 +208,7 @@ long taylorSeries_tracking(
             continue;
             }
 
-	/* convert xp yp (angles) to qx=px/Po and qy=py/Po */
+	/* convert xp yp (angles) to qx=px/pz and qy=py/pz */
 	dp = coord[5];
 	p = Po*(1+dp);
         qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
