@@ -128,9 +128,9 @@ void track_through_rf_deflector(
 
   if (isSlave || !notSinglePart) {
     if (rf_param->dx || rf_param->dy || rf_param->dz)
-      offsetBeamCoordinates(initial, n_particles, rf_param->dx, rf_param->dy, rf_param->dz);
+      offsetBeamCoordinatesForMisalignment(initial, n_particles, rf_param->dx, rf_param->dy, rf_param->dz);
     if (rf_param->tilt)
-      rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
+      rotateBeamCoordinatesForMisalignment(initial, n_particles, rf_param->tilt);
     for (ip=0; ip<n_particles; ip++) {
       x  = initial[ip][0];
       xp = initial[ip][1];
@@ -193,9 +193,9 @@ void track_through_rf_deflector(
 #endif
     }
     if (rf_param->tilt)
-      rotateBeamCoordinates(final, n_particles, -rf_param->tilt);
+      rotateBeamCoordinatesForMisalignment(final, n_particles, -rf_param->tilt);
     if (rf_param->dx || rf_param->dy || rf_param->dz)
-      offsetBeamCoordinates(final, n_particles, -rf_param->dx, -rf_param->dy, -rf_param->dz);
+      offsetBeamCoordinatesForMisalignment(final, n_particles, -rf_param->dx, -rf_param->dy, -rf_param->dz);
   }
   
 }
@@ -283,7 +283,7 @@ void track_through_rftm110_deflector(
   
   if(isSlave || !notSinglePart) {
     if (rf_param->tilt)
-      rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
+      rotateBeamCoordinatesForMisalignment(initial, n_particles, rf_param->tilt);
     for (ip=0; ip<n_particles; ip++) {
       x  = initial[ip][0];
       y  = initial[ip][2];
@@ -337,7 +337,7 @@ void track_through_rftm110_deflector(
       final[ip][6] = initial[ip][6];
     }
     if (rf_param->tilt)
-      rotateBeamCoordinates(initial, n_particles, -rf_param->tilt);
+      rotateBeamCoordinatesForMisalignment(initial, n_particles, -rf_param->tilt);
   }
 }
 
@@ -576,7 +576,7 @@ void track_through_multipole_deflector(
   t_first = rf_param->t_first_particle;
 
   if (rf_param->tilt)
-    rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
+    rotateBeamCoordinatesForMisalignment(initial, n_particles, rf_param->tilt);
 
   for (ip=0; ip<n_particles; ip++) {
     x  = initial[ip][0];
@@ -654,7 +654,7 @@ void track_through_multipole_deflector(
   }
 
   if (rf_param->tilt)
-    rotateBeamCoordinates(initial, n_particles, -rf_param->tilt);
+    rotateBeamCoordinatesForMisalignment(initial, n_particles, -rf_param->tilt);
 }
 
 void set_up_mrfdf(MRFDF *rf_param, double **initial, long n_particles, double pc_central)

@@ -1073,7 +1073,7 @@ void nibend_coord_transform(double *q, double *coord, void *field, long which_en
         /* perform coordinate rotation---centroid offset due to error tilt is 
          * added at the end 
          */
-        rotate_coordinates(coord, nibend->tilt+(nibend->angleSign==-1?PI:0)+nibend->etilt);
+        rotateCoordinatesForMisalignment(coord, nibend->tilt+(nibend->angleSign==-1?PI:0)+nibend->etilt);
         /* transform coord (x, x', y, y', s, dp/p) into q (q0,q1,q2,d/ds(q0,q1,q2),s,dp/p) */
         /* convert slopes to normalized velocities */
         dzds = 1/sqrt(1+sqr(coord[1])+sqr(coord[3]));
@@ -1172,7 +1172,7 @@ void nibend_coord_transform(double *q, double *coord, void *field, long which_en
         coord[4] = q[6] + ds;
         coord[5] = q[7];
         /* rotate back and add centroid offset due to error tilt */
-        rotate_coordinates(coord, -(nibend->tilt+(nibend->angleSign==-1?PI:0)+nibend->etilt));
+        rotateCoordinatesForMisalignment(coord, -(nibend->tilt+(nibend->angleSign==-1?PI:0)+nibend->etilt));
         computeEtiltCentroidOffset(dcoordEtilt, nibend->rho0, nibend->angle, nibend->etilt, 
                                    nibend->tilt+(nibend->angleSign==-1?PI:0));
         for (i=0; i<4; i++)
@@ -1996,9 +1996,9 @@ void bmapxyz_coord_transform(double *q, double *coord, void *field, long which_e
   dqds = q+3;
   if (which_end==-1) {
     if (bmapxyz->dxError || bmapxyz->dyError || bmapxyz->dzError)
-      offsetBeamCoordinates(&coord, 1, bmapxyz->dxError, bmapxyz->dyError, bmapxyz->dzError);
+      offsetBeamCoordinatesForMisalignment(&coord, 1, bmapxyz->dxError, bmapxyz->dyError, bmapxyz->dzError);
     if (bmapxyz->tilt)
-      rotateBeamCoordinates(&coord, 1, bmapxyz->tilt);
+      rotateBeamCoordinatesForMisalignment(&coord, 1, bmapxyz->tilt);
     /* transform coord (x, x', y, y', s, dp/p) into q (q0,q1,q2,d/ds(q0,q1,q2),s,dp/p) */
     /* convert slopes to normalized velocities */
     dqds[0] = dzds = 1/sqrt(1+sqr(coord[1])+sqr(coord[3]));
@@ -2019,9 +2019,9 @@ void bmapxyz_coord_transform(double *q, double *coord, void *field, long which_e
     coord[4] = q[6];
     coord[5] = q[7];
     if (bmapxyz->tilt)
-      rotateBeamCoordinates(&coord, 1, -bmapxyz->tilt);
+      rotateBeamCoordinatesForMisalignment(&coord, 1, -bmapxyz->tilt);
     if (bmapxyz->dxError || bmapxyz->dyError || bmapxyz->dzError)
-      offsetBeamCoordinates(&coord, 1, -bmapxyz->dxError, -bmapxyz->dyError, -bmapxyz->dzError);
+      offsetBeamCoordinatesForMisalignment(&coord, 1, -bmapxyz->dxError, -bmapxyz->dyError, -bmapxyz->dzError);
   }
    
 }

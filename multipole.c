@@ -431,9 +431,9 @@ long fmultipole_tracking(
   }
   
   if (multipole->dx || multipole->dy || multipole->dz)
-    offsetBeamCoordinates(particle, n_part, multipole->dx, multipole->dy, multipole->dz);
+    offsetBeamCoordinatesForMisalignment(particle, n_part, multipole->dx, multipole->dy, multipole->dz);
   if (multipole->tilt)
-    rotateBeamCoordinates(particle, n_part, multipole->tilt);
+    rotateBeamCoordinatesForMisalignment(particle, n_part, multipole->tilt);
 
   i_top = n_part-1;
   multipoleKicksDone += (i_top+1)*multData.orders*n_kicks*4;
@@ -475,9 +475,9 @@ long fmultipole_tracking(
 
   /* Note that we undo misalignments for all particles, including lost particles */
   if (multipole->tilt)
-    rotateBeamCoordinates(particle, n_part, -multipole->tilt);
+    rotateBeamCoordinatesForMisalignment(particle, n_part, -multipole->tilt);
   if (multipole->dx || multipole->dy || multipole->dz)
-    offsetBeamCoordinates(particle, n_part, -multipole->dx, -multipole->dy, -multipole->dz);
+    offsetBeamCoordinatesForMisalignment(particle, n_part, -multipole->dx, -multipole->dy, -multipole->dz);
 
   /* Restore the values so we don't change them permanently */
   for (i_order=0; i_order<multData.orders; i_order++) {
@@ -560,9 +560,9 @@ long multipole_tracking(
         rad_coef = 0;
 
     if (multipole->dx || multipole->dy || multipole->dz)
-      offsetBeamCoordinates(particle, n_part, multipole->dx, multipole->dy, multipole->dz);
+      offsetBeamCoordinatesForMisalignment(particle, n_part, multipole->dx, multipole->dy, multipole->dz);
     if (multipole->tilt)
-      rotateBeamCoordinates(particle, n_part, multipole->tilt);
+      rotateBeamCoordinatesForMisalignment(particle, n_part, multipole->tilt);
 
     i_top = n_part-1;
     multipoleKicksDone += (i_top+1)*n_kicks*4;
@@ -708,9 +708,9 @@ long multipole_tracking(
       }
     
     if (multipole->tilt)
-      rotateBeamCoordinates(particle, n_part, -multipole->tilt);
+      rotateBeamCoordinatesForMisalignment(particle, n_part, -multipole->tilt);
     if (multipole->dx || multipole->dy || multipole->dz)
-      offsetBeamCoordinates(particle, n_part, -multipole->dx, -multipole->dy, -multipole->dz);
+      offsetBeamCoordinatesForMisalignment(particle, n_part, -multipole->dx, -multipole->dy, -multipole->dz);
     
     log_exit("multipole_tracking");
     return(i_top+1);
@@ -1071,9 +1071,9 @@ long multipole_tracking2(
   setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, z_start+drift/2);
   
   if (dx || dy || dz)
-    offsetBeamCoordinates(particle, n_part, dx, dy, dz);
+    offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
   if (tilt)
-    rotateBeamCoordinates(particle, n_part, tilt);
+    rotateBeamCoordinatesForMisalignment(particle, n_part, tilt);
 
   if (doEndDrift) {
     exactDrift(particle, n_part, lEnd);
@@ -1140,9 +1140,9 @@ long multipole_tracking2(
   }
   
   if (tilt)
-    rotateBeamCoordinates(particle, n_part, -tilt);
+    rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
   if (dx || dy || dz)
-    offsetBeamCoordinates(particle, n_part, -dx, -dy, -dz);
+    offsetBeamCoordinatesForMisalignment(particle, n_part, -dx, -dy, -dz);
 
   if (freeMultData && !multData->copy) {
     if (multData->order)

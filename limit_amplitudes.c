@@ -1415,9 +1415,9 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
 
   /* misalignments */
   if (apcontour->dx || apcontour->dy || apcontour->dz)
-    offsetBeamCoordinates(coord, np, apcontour->dx, apcontour->dy, apcontour->dz);
+    offsetBeamCoordinatesForMisalignment(coord, np, apcontour->dx, apcontour->dy, apcontour->dz);
   if (apcontour->tilt)
-    rotateBeamCoordinates(coord, np, apcontour->tilt);
+    rotateBeamCoordinatesForMisalignment(coord, np, apcontour->tilt);
 
   lossCode = 0;
   if (apcontour->invert)
@@ -1464,9 +1464,9 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
 
   /* misalignments */
   if (apcontour->tilt)
-    rotateBeamCoordinates(coord, np, -apcontour->tilt);
+    rotateBeamCoordinatesForMisalignment(coord, np, -apcontour->tilt);
   if (apcontour->dx || apcontour->dy || apcontour->dz)
-    offsetBeamCoordinates(coord, np, -apcontour->dx, -apcontour->dy, -apcontour->dz);
+    offsetBeamCoordinatesForMisalignment(coord, np, -apcontour->dx, -apcontour->dy, -apcontour->dz);
 
   return i_top+1;
 }
@@ -1597,9 +1597,9 @@ long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np
   }
 
   if (taperApE->dx || taperApE->dy)
-    offsetBeamCoordinates(initial, np, taperApE->dx, taperApE->dy, 0);
+    offsetBeamCoordinatesForMisalignment(initial, np, taperApE->dx, taperApE->dy, 0);
   if (taperApE->tilt)
-    rotateBeamCoordinates(initial, np, taperApE->tilt);
+    rotateBeamCoordinatesForMisalignment(initial, np, taperApE->tilt);
 
   itop = np-1;
   for (ip=0; ip<=itop; ip++) {
@@ -1653,9 +1653,9 @@ long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np
   }
 
   if (taperApE->tilt)
-    rotateBeamCoordinates(initial, np, -taperApE->tilt);
+    rotateBeamCoordinatesForMisalignment(initial, np, -taperApE->tilt);
   if (taperApE->dx || taperApE->dy)
-    offsetBeamCoordinates(initial, np, -taperApE->dx, -taperApE->dy, 0);
+    offsetBeamCoordinatesForMisalignment(initial, np, -taperApE->dx, -taperApE->dy, 0);
 
   return itop+1;
 }
@@ -1671,9 +1671,9 @@ long trackThroughTaperApRectangular(double **initial, TAPERAPR *taperApR, long n
     bombElegant("TAPERAPR has negative length, which is not allowed", NULL);
 
   if (taperApR->dx || taperApR->dy)
-    offsetBeamCoordinates(initial, np, taperApR->dx, taperApR->dy, 0);
+    offsetBeamCoordinatesForMisalignment(initial, np, taperApR->dx, taperApR->dy, 0);
   if (taperApR->tilt)
-    rotateBeamCoordinates(initial, np, taperApR->tilt);
+    rotateBeamCoordinatesForMisalignment(initial, np, taperApR->tilt);
 
   itop = np-1;
   for (ip=0; ip<=itop; ip++) {
@@ -1767,9 +1767,9 @@ long trackThroughTaperApRectangular(double **initial, TAPERAPR *taperApR, long n
   }
 
   if (taperApR->tilt)
-    rotateBeamCoordinates(initial, np, -taperApR->tilt);
+    rotateBeamCoordinatesForMisalignment(initial, np, -taperApR->tilt);
   if (taperApR->dx || taperApR->dy)
-    offsetBeamCoordinates(initial, np, -taperApR->dx, -taperApR->dy, 0);
+    offsetBeamCoordinatesForMisalignment(initial, np, -taperApR->dx, -taperApR->dy, 0);
 
   return itop+1;
 }

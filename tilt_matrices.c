@@ -128,7 +128,7 @@ VMATRIX *rotation_matrix(double tilt)
  * to emulate rotation of the upcoming element by the given angle
  */
 
-void rotate_coordinates(double *coord, double angle)
+void rotateCoordinatesForMisalignment(double *coord, double angle)
 {
     static double x, xp, y, yp;
     static double sin_a, cos_a;
@@ -158,11 +158,11 @@ void rotate_coordinates(double *coord, double angle)
     coord[3] = -xp*sin_a + yp*cos_a;
     }
 
-/* The name is a misnomer: we rotate the coordinates of a particle
- * to emulate rotation of the upcoming element by the given angle
+/* We rotate the coordinates of a beam to implement the rotation of the upcoming element by the given angle.
+ * Hence, the particles are rotated by the negative of the angle.
  */
 
-void rotateBeamCoordinates(double **part, long np, double angle)
+void rotateBeamCoordinatesForMisalignment(double **part, long np, double angle)
 {
   double x, xp, y, yp, *coord;
   double sin_a, cos_a;

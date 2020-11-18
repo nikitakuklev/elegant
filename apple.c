@@ -33,7 +33,7 @@ void APPLE_Track(double **coord, long np, double pCentral, APPLE *apple)
     InitializeAPPLE(apple->Input, apple);
   
   if (apple->tilt)
-    rotateBeamCoordinates(coord, np, apple->tilt);
+    rotateBeamCoordinatesForMisalignment(coord, np, apple->tilt);
   if (apple->dx || apple->dy || apple->dz) {
     memset(&malign, 0, sizeof(malign));
     malign.dx = -apple->dx;
@@ -137,7 +137,7 @@ void APPLE_Track(double **coord, long np, double pCentral, APPLE *apple)
     offset_beam(coord, np, &malign, pCentral);
   }
   if (apple->tilt)
-    rotateBeamCoordinates(coord, np, -apple->tilt);
+    rotateBeamCoordinatesForMisalignment(coord, np, -apple->tilt);
   
   return;
 }

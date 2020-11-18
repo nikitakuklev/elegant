@@ -48,7 +48,7 @@ void track_through_space_harmonic_deflector(
   t_first = rf_param->t_first_particle;
 
   if (rf_param->tilt)
-    rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
+    rotateBeamCoordinatesForMisalignment(initial, n_particles, rf_param->tilt);
 
   for (ip=0; ip<n_particles; ip++) {
     x  = initial[ip][0];
@@ -106,7 +106,7 @@ void track_through_space_harmonic_deflector(
   }
 
   if (rf_param->tilt)
-    rotateBeamCoordinates(initial, n_particles, -rf_param->tilt);
+    rotateBeamCoordinatesForMisalignment(initial, n_particles, -rf_param->tilt);
 }
 
 void set_up_shrfdf(SHRFDF *rf_param, double **initial, long n_particles, double pc_central)

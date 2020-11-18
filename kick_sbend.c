@@ -203,7 +203,7 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
 #endif
 
         /* rotate by tilt to get into same frame as bend equations. */
-        rotate_coordinates(dcoord_etilt, tilt);
+        rotateCoordinatesForMisalignment(dcoord_etilt, tilt);
 #ifdef DEBUG
         printf("offsets due to ETILT=%le:  %le %le %le %le %le\n",
             etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],

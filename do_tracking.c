@@ -3774,7 +3774,7 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
   }
 
   if (ilmat && ilmat->tilt) 
-    rotateBeamCoordinates(particle, particles, ilmat->tilt);
+    rotateBeamCoordinatesForMisalignment(particle, particles, ilmat->tilt);
   
   itop = particles-1;
   for (ip=0; ip<particles; ip++) {
@@ -3891,7 +3891,7 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
   }
 
   if (ilmat && ilmat->tilt) 
-    rotateBeamCoordinates(particle, particles, -ilmat->tilt);
+    rotateBeamCoordinatesForMisalignment(particle, particles, -ilmat->tilt);
 
   return particles;
 }
@@ -5172,9 +5172,9 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
     dump_phase_space(&test_output, particle, np, -1, Po, 0, 0);
   
   if (ftable->dx || ftable->dy || ftable->dz)
-    offsetBeamCoordinates(particle, np, ftable->dx, ftable->dy, ftable->dz);
+    offsetBeamCoordinatesForMisalignment(particle, np, ftable->dx, ftable->dy, ftable->dz);
   if (ftable->tilt)
-    rotateBeamCoordinates(particle, np, ftable->tilt);
+    rotateBeamCoordinatesForMisalignment(particle, np, ftable->tilt);
   if (debug) 
       dump_phase_space(&test_output, particle, np, 0, Po, 0, 0);
 
@@ -5275,9 +5275,9 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
   free_czarray_2d((void**)A,3,3);
 
   if (ftable->tilt)
-    rotateBeamCoordinates(particle, np, -ftable->tilt);
+    rotateBeamCoordinatesForMisalignment(particle, np, -ftable->tilt);
   if (ftable->dx || ftable->dy || ftable->dz)
-    offsetBeamCoordinates(particle, np, -ftable->dx, -ftable->dy, -ftable->dz);
+    offsetBeamCoordinatesForMisalignment(particle, np, -ftable->dx, -ftable->dy, -ftable->dz);
   if (debug) 
     dump_phase_space(&test_output, particle, np, nKicks+1, Po, 0, 0);
 

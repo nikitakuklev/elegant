@@ -833,7 +833,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       elem.type = T_KQUAD;
       kquad.length = csbend->length;
       kquad.k1 = csbend->k1;
-      kquad.tilt = csbend->tilt;
+      kquad.tilt = csbend->tilt+csbend->etilt*csbend->etiltSign;
       kquad.dx = csbend->dx;
       kquad.dy = csbend->dy;
       kquad.dz = csbend->dz;
@@ -4529,7 +4529,7 @@ void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle,
     return;
   }
 
-  etilt *=  -1; /* use consistent sign convention with TILT */
+  etilt *= -1; /* consistent sign convention with TILT */
 
   q1a = (1-cos(angle))*rho0*(cos(etilt)-1);
   q2a = 0;
@@ -4561,7 +4561,7 @@ void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle,
 #endif
 
   /* rotate by tilt to get into same frame as bend equations. */
-  rotate_coordinates(dcoord_etilt, tilt);
+  rotateCoordinatesForMisalignment(dcoord_etilt, -tilt);
 #ifdef DEBUG
   printf("offsets due to ETILT=%le:  %le %le %le %le %le\n",
           etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],

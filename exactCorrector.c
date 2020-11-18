@@ -207,9 +207,9 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
     i_top = n_part-1;
 
     if (dx || dy || dz)
-      offsetBeamCoordinates(part, n_part, dx, dy, dz);
+      offsetBeamCoordinatesForMisalignment(part, n_part, dx, dy, dz);
     if (tilt)
-      rotateBeamCoordinates(part, n_part, tilt);
+      rotateBeamCoordinatesForMisalignment(part, n_part, tilt);
 
     /* Apply steering kicks */
     for (i_part=0; i_part<=i_top; i_part++) {
@@ -268,9 +268,9 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
 
     /* Note that we undo misalignments for all particles, including lost particles */
     if (tilt)
-      rotateBeamCoordinates(part, n_part, -tilt);
+      rotateBeamCoordinatesForMisalignment(part, n_part, -tilt);
     if (dx || dy || dz)
-      offsetBeamCoordinates(part, n_part, -dx, -dy, -dz);
+      offsetBeamCoordinatesForMisalignment(part, n_part, -dx, -dy, -dz);
   }
   
   if (sr)

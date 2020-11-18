@@ -95,9 +95,9 @@ void track_through_kicker(
     time_offset += kicker->time_offset;
 
     if (kicker->dx || kicker->dy || kicker->dz)
-      offsetBeamCoordinates(part, np, kicker->dx, kicker->dy, kicker->dz);
+      offsetBeamCoordinatesForMisalignment(part, np, kicker->dx, kicker->dy, kicker->dz);
     if (kicker->tilt)
-      rotateBeamCoordinates(part, np, kicker->tilt);
+      rotateBeamCoordinatesForMisalignment(part, np, kicker->tilt);
 
     sum_amp = 0;
     for (ip=0; ip<np; ip++) {
@@ -242,9 +242,9 @@ void track_through_kicker(
  */
 
     if (kicker->tilt)
-      rotateBeamCoordinates(part, np, -kicker->tilt);
+      rotateBeamCoordinatesForMisalignment(part, np, -kicker->tilt);
     if (kicker->dx || kicker->dy || kicker->dz)
-      offsetBeamCoordinates(part, np, -kicker->dx, -kicker->dy, -kicker->dz);
+      offsetBeamCoordinatesForMisalignment(part, np, -kicker->dx, -kicker->dy, -kicker->dz);
 
     log_exit("track_through_kicker");
     }
@@ -366,9 +366,9 @@ void track_through_mkicker(
     n_parts = 1;
 
   if (kicker->dx || kicker->dy || kicker->dz)
-    offsetBeamCoordinates(part, np, kicker->dx, kicker->dy, kicker->dz);
+    offsetBeamCoordinatesForMisalignment(part, np, kicker->dx, kicker->dy, kicker->dz);
   if (kicker->tilt)
-    rotateBeamCoordinates(part, np, kicker->tilt);
+    rotateBeamCoordinatesForMisalignment(part, np, kicker->tilt);
 
   for (ip=0; ip<np; ip++) {
     strength = kicker->strength;
@@ -411,9 +411,9 @@ void track_through_mkicker(
   }
 
   if (kicker->tilt)
-    rotateBeamCoordinates(part, np, -kicker->tilt);
+    rotateBeamCoordinatesForMisalignment(part, np, -kicker->tilt);
   if (kicker->dx || kicker->dy || kicker->dz)
-    offsetBeamCoordinates(part, np, -kicker->dx, -kicker->dy, -kicker->dz);
+    offsetBeamCoordinatesForMisalignment(part, np, -kicker->dx, -kicker->dy, -kicker->dz);
 }
 
 void set_up_mkicker(MKICKER *kicker)

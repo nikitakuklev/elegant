@@ -125,11 +125,12 @@ void offset_matrix(VMATRIX *M, double dx, double dxp, double dy, double dyp)
     log_exit("offset_matrix");
     }
 
-/* The name is a misnomer: we offset the coordinates of a beam
- * to emulate offsetting of the upcoming element by the values
+/* We offset the coordinates of a beam to implement the mislignment of the upcoming element by (dx, dy, dz).
+ * Hence, the particles are offset by the negative of the given (dx, dy) values, and are drifted an extra
+ * distance dz.
  */
 
-void offsetBeamCoordinates(double **coord, long np, double dx, double dy, double dz)
+void offsetBeamCoordinatesForMisalignment(double **coord, long np, double dx, double dy, double dz)
 {
   long ip;
   double *part;

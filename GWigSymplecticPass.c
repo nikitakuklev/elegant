@@ -197,7 +197,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
     ZwEnd = cwiggler->length;
 
   if (cwiggler->tilt)
-    rotateBeamCoordinates(coord, num_particles, cwiggler->tilt);
+    rotateBeamCoordinatesForMisalignment(coord, num_particles, cwiggler->tilt);
   if (cwiggler->dx || cwiggler->dy || cwiggler->dz) {
     memset(&malign, 0, sizeof(malign));
     malign.dx = -cwiggler->dx;
@@ -306,7 +306,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
     offset_beam(coord, num_particles, &malign, pCentral);
   }
   if (cwiggler->tilt)
-    rotateBeamCoordinates(coord, num_particles, -cwiggler->tilt);
+    rotateBeamCoordinatesForMisalignment(coord, num_particles, -cwiggler->tilt);
   if (sigmaDelta2)
     *sigmaDelta2 /= num_particles;
   if (ZwStart) 

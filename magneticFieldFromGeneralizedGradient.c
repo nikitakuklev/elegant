@@ -319,9 +319,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
   /* Do misalignments */
   if (bgg->dx || bgg->dy || bgg->dz)
-    offsetBeamCoordinates(part, np, bgg->dx, bgg->dy, bgg->dz);
+    offsetBeamCoordinatesForMisalignment(part, np, bgg->dx, bgg->dy, bgg->dz);
   if (bgg->tilt)
-    rotateBeamCoordinates(part, np, bgg->tilt);
+    rotateBeamCoordinatesForMisalignment(part, np, bgg->tilt);
 
   if (bgg->zInterval<=0) 
     bombElegantVA("zInterval %ld is invalid for BGGEXP %s #%ld\n", bgg->zInterval, tcontext.elementName, tcontext.elementOccurrence);
@@ -1078,9 +1078,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
   /* Do misalignments */
   if (bgg->tilt)
-    rotateBeamCoordinates(part, np, -bgg->tilt);
+    rotateBeamCoordinatesForMisalignment(part, np, -bgg->tilt);
   if (bgg->dx || bgg->dy || bgg->dz)
-    offsetBeamCoordinates(part, np, -bgg->dx, -bgg->dy, -bgg->dz);
+    offsetBeamCoordinatesForMisalignment(part, np, -bgg->dx, -bgg->dy, -bgg->dz);
 
 #ifdef DEBUG  
   fflush(fpdebug);

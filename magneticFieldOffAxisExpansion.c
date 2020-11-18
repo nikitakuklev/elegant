@@ -267,9 +267,9 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
 
   /* Do misalignments */
   if (boa->dx || boa->dy || boa->dz)
-    offsetBeamCoordinates(part, np, boa->dx, boa->dy, boa->dz);
+    offsetBeamCoordinatesForMisalignment(part, np, boa->dx, boa->dy, boa->dz);
   if (boa->tilt)
-    rotateBeamCoordinates(part, np, boa->tilt);
+    rotateBeamCoordinatesForMisalignment(part, np, boa->tilt);
 
   /* Non-symplectic integrator by R. Lindberg, taken from BGGEXP code */
   for (ip=0; ip<np; ip++) {
@@ -446,9 +446,9 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
 
   /* Do misalignments */
   if (boa->tilt)
-    rotateBeamCoordinates(part, np, -boa->tilt);
+    rotateBeamCoordinatesForMisalignment(part, np, -boa->tilt);
   if (boa->dx || boa->dy || boa->dz)
-    offsetBeamCoordinates(part, np, -boa->dx, -boa->dy, -boa->dz);
+    offsetBeamCoordinatesForMisalignment(part, np, -boa->dx, -boa->dy, -boa->dz);
 
 #ifdef DEBUG  
   fflush(fpdebug);

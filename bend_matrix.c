@@ -135,7 +135,7 @@ VMATRIX *bend_matrix(
         dcoord[1] = tan(alpha-(PIo2-angle));
         dcoord[2] = q3b;
         dcoord[3] = qp3;
-        rotate_coordinates(dcoord, tilt);
+        rotateCoordinatesForMisalignment(dcoord, tilt);
         M->C[0] += dcoord[0];
         M->C[1] += dcoord[1];
         M->C[2] += dcoord[2];

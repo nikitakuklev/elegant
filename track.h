@@ -4102,7 +4102,7 @@ void resetElementToDefaults(char *p_elem, long type);
 extern void misalign_matrix(VMATRIX *M, double dx, double dy, double dz, double bend_angle);
 extern VMATRIX *misalignment_matrix(MALIGN *malign, long order);
 extern void offset_matrix(VMATRIX *M, double dx, double dxp, double dy, double dyp);
-extern void offsetBeamCoordinates(double **part, long np, double dx, double dy, double dz);
+extern void offsetBeamCoordinatesForMisalignment(double **part, long np, double dx, double dy, double dz);
 
 /* prototypes for matrix7.c: */
 extern void print_matrices(FILE *fp, char *string, VMATRIX *M);
@@ -4223,8 +4223,8 @@ VMATRIX *quadPartialFringeMatrix(VMATRIX *M, double K1, long inFringe, double *f
 extern void tilt_matrices0(VMATRIX *M, double tilt);
 extern void tilt_matrices(VMATRIX *M, double tilt);
 extern VMATRIX *rotation_matrix(double tilt);
-extern void rotate_coordinates(double *coord, double angle);
-extern void rotateBeamCoordinates(double **part, long np, double angle);
+extern void rotateCoordinatesForMisalignment(double *coord, double angle);
+extern void rotateBeamCoordinatesForMisalignment(double **part, long np, double angle);
 void pitch_matrices(VMATRIX *M, double pitch);
 void yaw_matrices(VMATRIX *M, double yaw);
 

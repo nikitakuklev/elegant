@@ -70,9 +70,9 @@ long trackUndulatorKickMap(
   eomc = particleCharge/particleMass/c_mks; 
 
   if (map->dx || map->dy || map->dz)
-    offsetBeamCoordinates(particle, nParticles, map->dx, map->dy, map->dz);
+    offsetBeamCoordinatesForMisalignment(particle, nParticles, map->dx, map->dy, map->dz);
   if (map->tilt)
-    rotateBeamCoordinates(particle, nParticles, map->tilt);
+    rotateBeamCoordinatesForMisalignment(particle, nParticles, map->tilt);
   
   iTop = nParticles-1;
   dist = 0;
@@ -197,9 +197,9 @@ long trackUndulatorKickMap(
   
 
   if (map->tilt)
-    rotateBeamCoordinates(particle, nParticles, -map->tilt);
+    rotateBeamCoordinatesForMisalignment(particle, nParticles, -map->tilt);
   if (map->dx || map->dy || map->dz)
-    offsetBeamCoordinates(particle, nParticles, -map->dx, -map->dy, -map->dz);
+    offsetBeamCoordinatesForMisalignment(particle, nParticles, -map->dx, -map->dy, -map->dz);
 
   return iTop+1;
 }

@@ -144,7 +144,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
         }
 
         if (wakeData->tilt)
-          rotateBeamCoordinates(part, np, wakeData->tilt);
+          rotateBeamCoordinatesForMisalignment(part, np, wakeData->tilt);
         
         n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
                                                  wakeData->dx, wakeData->dy,
@@ -240,7 +240,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
         }
         
         if (wakeData->tilt)
-          rotateBeamCoordinates(part, np, -wakeData->tilt);
+          rotateBeamCoordinatesForMisalignment(part, np, -wakeData->tilt);
 
         if (nBuckets!=1) {
 #ifdef DEBUG

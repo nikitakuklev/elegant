@@ -77,8 +77,8 @@ long track_through_ccbend(
   long n_kicks, integ_order;
   long i_part, i_top;
   double *coef;
-  double fse, tilt, etilt, rad_coef, isr_coef, dzLoss=0;
-  double rho0, arcLength, length, angle, yaw;
+  double fse, etilt, tilt, rad_coef, isr_coef, dzLoss=0;
+  double rho0, arcLength, length, angle, yaw, angleSign, extraTilt;
   MULTIPOLE_DATA *multData = NULL, *edge1MultData = NULL, *edge2MultData = NULL;
   long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
@@ -182,8 +182,8 @@ long track_through_ccbend(
 	if (ccbend->verbose) {
 	  printf("CCBEND %s#%ld optimized: FSE=%le, dx=%le, accuracy=%le\n",
 		 eptr?eptr->name:"?", eptr?eptr->occurence:-1, ccbend->fseOffset, ccbend->dxOffset, acc);
-          printf("length = %18.12le, lengthCorrection = %21.12le\n",
-                 ccbend->length, ccbend->lengthCorrection);
+          printf("length = %18.12le, angle = %18.12le, K1 = %18.12le\nK2 = %18.12le, yaw = %18.12le, lengthCorrection = %21.12le\n",
+                 ccbend->length, ccbend->angle, ccbend->K1, ccbend->K2, ccbend->yaw, ccbend->lengthCorrection);
           printf("xMin = %le, xMax = %le, xAve = %le, xFinal = %le, xpError = %le\n", 
                  xMin, xMax, xAve, xFinal, xpError);
 	  fflush(stdout);
@@ -224,8 +224,10 @@ long track_through_ccbend(
     length = 2*rho0*sin(angle/2);
     KnL[0] = (1+fse+ccbend->fseDipole)/rho0*length - ccbend->xKick;
   }
-  else
+  else {
+    /* TODO: Use KQUAD as substitute */
     bombTracking("Can't have zero ANGLE for CCBEND.");
+  }
   KnL[1] = (1+fse+ccbend->fseQuadrupole)*ccbend->K1*length/(1-ccbend->KnDelta);
   KnL[2] = (1+fse)*ccbend->K2*length/(1-ccbend->KnDelta);
   KnL[3] = (1+fse)*ccbend->K3*length/(1-ccbend->KnDelta);
@@ -234,9 +236,19 @@ long track_through_ccbend(
   KnL[6] = (1+fse)*ccbend->K6*length/(1-ccbend->KnDelta);
   KnL[7] = (1+fse)*ccbend->K7*length/(1-ccbend->KnDelta);
   KnL[8] = (1+fse)*ccbend->K8*length/(1-ccbend->KnDelta);
-
-  yaw = ccbend->yaw*(ccbend->edgeFlip?-1:1);
-
+  if (angle<0) {
+    angleSign = -1;
+    for (iTerm=0; iTerm<9; iTerm+=2)
+      KnL[iTerm] *= -1;
+    angle = -angle;
+    rho0 = -rho0;
+    yaw = -ccbend->yaw*(ccbend->edgeFlip?-1:1);
+    extraTilt = PI;
+  } else {
+    angleSign = 1;
+    extraTilt = 0;
+    yaw = ccbend->yaw*(ccbend->edgeFlip?-1:1);
+  }
   if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles ||
       ccbend->edge1_multipoles || ccbend->edge2_multipoles) {
     /* Note that with referenceOrder=0, referenceKnL will always be positive if angle is nonzero */
@@ -309,6 +321,27 @@ long track_through_ccbend(
                                      ccbend->referenceOrder, 0,
                                      ccbend->minMultipoleOrder, ccbend->maxMultipoleOrder
                                      );
+    if (angleSign<0) {
+      long i;
+      for (i=0; i<ccbend->systematicMultipoleData.orders; i++) {
+        if (ccbend->totalMultipoleData.order[i]%2) {
+          ccbend->totalMultipoleData.KnL[i] *= -1;
+          ccbend->totalMultipoleData.JnL[i] *= -1;
+        }
+      }
+      for (i=0; i<ccbend->edge1MultipoleData.orders; i++) {
+        if (ccbend->totalMultipoleData.order[i]%2) {
+          ccbend->edge1MultipoleData.KnL[i] *= -1;
+          ccbend->edge1MultipoleData.JnL[i] *= -1;
+        }
+      }
+      for (i=0; i<ccbend->edge2MultipoleData.orders; i++) {
+        if (ccbend->totalMultipoleData.order[i]%2) {
+          ccbend->edge2MultipoleData.KnL[i] *= -1;
+          ccbend->edge2MultipoleData.JnL[i] *= -1;
+        }
+      }
+    }
     ccbend->totalMultipolesComputed = 1;
   }
   multData = &(ccbend->totalMultipoleData);
@@ -330,21 +363,18 @@ long track_through_ccbend(
   if (!(coef = expansion_coefficients(2)))
     bombTracking("expansion_coefficients(2) returned NULL pointer (track_through_ccbend)");
 
+  tilt = ccbend->tilt + extraTilt;
   etilt = ccbend->etilt;
-  tilt = ccbend->tilt;
   dx = ccbend->dx;
   dy = ccbend->dy;
-  if (ccbend->angle<0 && ccbend->dxdySign<0) {
-    dx *= -1;
-    dy *= -1;
-  }
   dz = ccbend->dz*(ccbend->edgeFlip?-1:1);
+
   if (tilt) {
     /* this is needed because the DX and DY offsets will be applied after the particles are
      * tilted into the magnet reference frame
      */
-    dx =  ccbend->dx*cos(-tilt) + ccbend->dy*sin(-tilt);
-    dy = -ccbend->dx*sin(-tilt) + ccbend->dy*cos(-tilt);
+    dx =  ccbend->dx*cos(tilt) + ccbend->dy*sin(tilt);
+    dy = -ccbend->dx*sin(tilt) + ccbend->dy*cos(tilt);
   }
 
   setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start+length/2);
@@ -355,16 +385,16 @@ long track_through_ccbend(
            particle[0][0], particle[0][1], particle[0][2],
            particle[0][3], particle[0][4], particle[0][5]);
     */
-    xpError = particle[0][1];
     if (tilt)
-      rotateBeamCoordinates(particle, n_part, tilt);
+      rotateBeamCoordinatesForMisalignment(particle, n_part, tilt);
+    xpError = particle[0][1]; /* save initial x' value of the possible reference particle */
     switchRbendPlane(particle, n_part, angle/2-yaw, Po);
     if (dx || dy || dz)
-      offsetBeamCoordinates(particle, n_part, dx, dy, dz);
+      offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
     if (ccbend->optimized)
-      offsetBeamCoordinates(particle, n_part, ccbend->dxOffset, 0, 0);
+      offsetBeamCoordinatesForMisalignment(particle, n_part, ccbend->dxOffset, 0, 0);
     if (etilt)
-      rotateBeamCoordinates(particle, n_part, etilt);
+      rotateBeamCoordinatesForMisalignment(particle, n_part, etilt);
     verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, KnL[1]/length, KnL[2]/length, gK[0], ccbend->edgeOrder);
     /*
     printf("input after adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
@@ -417,14 +447,16 @@ long track_through_ccbend(
     */
     verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, KnL[1]/length, KnL[2]/length, gK[1], ccbend->edgeOrder);
     if (etilt)
-      rotateBeamCoordinates(particle, i_top+1, -etilt);
+      rotateBeamCoordinatesForMisalignment(particle, n_part, -etilt);
     if (ccbend->optimized)
-      offsetBeamCoordinates(particle, i_top+1, ccbend->xAdjust, 0, 0);
+      offsetBeamCoordinatesForMisalignment(particle, i_top+1, ccbend->xAdjust, 0, 0);
     if (dx || dy || dz)
-      offsetBeamCoordinates(particle, i_top+1, -dx, -dy, -dz);
+      offsetBeamCoordinatesForMisalignment(particle, i_top+1, -dx, -dy, -dz);
     switchRbendPlane(particle, i_top+1, angle/2+yaw, Po);
+    xpError = fabs(xpError+particle[0][1]);
     if (tilt)
-      rotateBeamCoordinates(particle, i_top+1, -tilt);
+      /* use n_part here so lost particles get rotated back */
+      rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
     if (ccbend->optimized) {
       for (i_part=0; i_part<=i_top; i_part++)
         particle[i_part][4] += ccbend->lengthCorrection;
@@ -435,7 +467,16 @@ long track_through_ccbend(
            particle[0][3], particle[0][4], particle[0][5]);
     fflush(stdout);
     */
-    xpError = fabs(xpError+particle[0][1]);
+  } else if (iFinalSlice>0) {
+    if (tilt)
+      /* use n_part here so lost particles get rotated back */
+      rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
+  }
+
+  if (angleSign<0) {
+    lastRho *= -1;
+    lastX *= -1;
+    lastXp *= -1;
   }
 
   if (freeMultData && !multData->copy) {
@@ -1276,7 +1317,7 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
   static FILE *fpcr = NULL;
   if (fpcr==NULL) {
     fpcr = fopen("ccbend-RI.sdds", "w");
-    fprintf(fpcr, "SDDS1\n&column name=s type=double units=m &end\n");
+    fprintf(fpcr, "SDDS1\n&column name=Slice type=short &end\n&column name=s type=double units=m &end\n");
     fprintf(fpcr, "&column name=betax type=double units=m &end\n");
     fprintf(fpcr, "&column name=etax type=double units=m &end\n");
     fprintf(fpcr, "&column name=etaxp type=double &end\n");
@@ -1285,7 +1326,7 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
     fprintf(fpcr, "&data mode=ascii no_row_counts=1 &end\n");
   }
   s0 = elem->end_pos - ccbend->length;
-  fprintf(fpcr, "%le %le %le %le %le %s\n", s0, beta0, eta0, etap0, alpha0, elem->name);
+  fprintf(fpcr, "0 %le %le %le %le %le %s\n", s0, beta0, eta0, etap0, alpha0, elem->name);
 #endif
   
   if (ccbend->tilt)
@@ -1314,7 +1355,7 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
     etap2 = Cp*eta0 + Sp*etap0 + M->R[1][5];
 #ifdef DEBUG
     s0 += ds;
-    fprintf(fpcr, "%le %le %le %le %le %s\n", s0, beta2, eta2, etap2, alpha2, elem->name);
+    fprintf(fpcr, "%ld %le %le %le %le %le %s\n", iSlice, s0, beta2, eta2, etap2, alpha2, elem->name);
 #endif
 
     /* Compute contributions to radiation integrals in this slice.
