@@ -755,7 +755,7 @@ extern "C"
     for (iOrder=0; iOrder<3; iOrder++)
       {
         if (KnL[iOrder] && !expansion_coefficients(order[iOrder]))
-          bombTracking("expansion_coefficients() returned null pointer (multipole_tracking)");
+          bombTracking("expansion_coefficients() returned null pointer (multipole_tracking2)");
       }
 
     i_top = n_part - 1;
@@ -784,9 +784,9 @@ extern "C"
     unsigned int *d_sortIndex = gpuBase->d_tempu_alpha;
 
     if (dx || dy || dz)
-      gpu_offsetBeamCoordinates(n_part, dx, dy, dz);
+      gpu_offsetBeamCoordinatesForMisalignment(n_part, dx, dy, dz);
     if (tilt)
-      gpu_rotateBeamCoordinates(n_part, tilt);
+      gpu_rotateBeamCoordinatesForMisalignment(n_part, tilt);
 
     if (doEndDrift)
       {
@@ -926,9 +926,9 @@ extern "C"
       }
 
     if (tilt)
-      gpu_rotateBeamCoordinates(n_part, -tilt);
+      gpu_rotateBeamCoordinatesForMisalignment(n_part, -tilt);
     if (dx || dy || dz)
-      gpu_offsetBeamCoordinates(n_part, -dx, -dy, -dz);
+      gpu_offsetBeamCoordinatesForMisalignment(n_part, -dx, -dy, -dz);
 
     if (freeMultData && !multData->copy)
       {

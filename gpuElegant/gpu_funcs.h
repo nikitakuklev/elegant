@@ -4,10 +4,10 @@
  */
 
 /* from tilt_matrices.c */
-void gpu_rotateBeamCoordinates(long np, double angle);
+void gpu_rotateBeamCoordinatesForMisalignment(long np, double angle);
 
 /* from malign_mat.c */
-void gpu_offsetBeamCoordinates(long np, double dx, double dy, double dz);
+void gpu_offsetBeamCoordinatesForMisalignment(long np, double dx, double dy, double dz);
 
 #ifdef __cplusplus
 extern "C" {

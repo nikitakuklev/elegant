@@ -29,11 +29,11 @@ class gpu_rotateBeamCoordinates_kernel
   }
 };
 
-/* The name is a misnomer: we rotate the coordinates of a particle
- * to emulate rotation of the upcoming element by the given angle
+/* We rotate the coordinates of a beam to implement the rotation of the upcoming element by the given angle.
+ * Hence, the particles are rotated by the negative of the angle.
  */
 
-void gpu_rotateBeamCoordinates(long np, double angle)
+void gpu_rotateBeamCoordinatesForMisalignment(long np, double angle)
 {
   double sin_a, cos_a;
 
@@ -85,11 +85,12 @@ class gpu_offsetBeamCoordinates_kernel
   }
 };
 
-/* The name is a misnomer: we offset the coordinates of a beam
- * to emulate offsetting of the upcoming element by the values
+/* We offset the coordinates of a beam to implement the mislignment of the upcoming element by (dx, dy, dz).
+ * Hence, the particles are offset by the negative of the given (dx, dy) values, and are drifted an extra
+ * distance dz.
  */
 
-void gpu_offsetBeamCoordinates(long np, double dx, double dy, double dz)
+void gpu_offsetBeamCoordinatesForMisalignment(long np, double dx, double dy, double dz)
 {
   gpuDriver(np, gpu_offsetBeamCoordinates_kernel(dx, dy, dz));
 }

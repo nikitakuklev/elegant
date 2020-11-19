@@ -207,7 +207,7 @@ extern "C"
                   }
 
                 if (wakeData->tilt)
-                  gpu_rotateBeamCoordinates(np, wakeData->tilt);
+                  gpu_rotateBeamCoordinatesForMisalignment(np, wakeData->tilt);
 
                 n_binned = gpu_binTransverseDistribution(d_posItime[0], d_posItime[1],
                                                          nb, d_particles + offset, particlePitch, np, d_time, tmin, dt, Po,
@@ -333,7 +333,7 @@ extern "C"
                   }
 
                 if (wakeData->tilt)
-                  gpu_rotateBeamCoordinates(np, -wakeData->tilt);
+                  gpu_rotateBeamCoordinatesForMisalignment(np, -wakeData->tilt);
               }
             /* No copy back with gpu code as we set offset */
             offset += np; // for next iteration

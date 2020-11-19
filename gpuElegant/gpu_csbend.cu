@@ -794,7 +794,7 @@ extern "C"
             elem.type = T_KQUAD;
             kquad.length = csbend->length;
             kquad.k1 = csbend->k1;
-            kquad.tilt = csbend->tilt;
+            kquad.tilt = csbend->tilt+csbend->etilt*csbend->etiltSign;
             kquad.dx = csbend->dx;
             kquad.dy = csbend->dy;
             kquad.dz = csbend->dz;
