@@ -3307,7 +3307,9 @@ typedef struct {
   char *filename;
   /* for internal use */
   long elementInitialized;
-  POLYNOMIALSERIES_DATA coord[6];
+  POLYNOMIALSERIES_DATA coord[6]; /* polynomial in (x, qx, y, qy, s, delta) to give ith coordinate */
+  int32_t maxExponent[6]; /* maximum exponent of each input coordinate over all polynomials */
+  double *power[6]; /* array of powers of the ith input coordinate */
 } POLYNOMIALSERIES;
 
 /* names and storage structure for quadrupole+sextupole physical parameters */

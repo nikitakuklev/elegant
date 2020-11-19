@@ -60,6 +60,9 @@ Here is a summary of what's changed since release 2020.4.  Historical change log
 \item The \verb|BMAPXYZ| element now has a \verb|FSE| (Fractional Strength Error) parameter.
 \item The \verb|RADIAL_ORDER| parameter of \verb|RFTMEZ0| can now be set to 0 to turn off radial dependence of
   fields.
+\item The \verb|POLYSERIES| element was released, which allows transforming the beam using a set of arbitrary polynomials
+  in the canonical coordinates.  This existed in the code but was not documented.
+  It was developed by L. Emery (APS).
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -238,6 +241,22 @@ quantities are commonly referred to as (x, xp, y, yp, s, dp) in the
 namelists, accelerator element parameters, and output files.  (``dp''
 is admittedly confusing---it is supposed to remind the user of ${\rm
 \Delta P/P_o}$.  Sometimes this quantity is referred to as ``delta.'')
+
+In some elements, {\tt elegant} uses canonical coordinates in place of the
+slopes. These are defined as
+\begin{equation}
+\begin{array}{lcl}
+q_x & = & \frac{x^\prime (1 + \delta)}{\sqrt{1 + x^{\prime 2} + y^{\prime 2}}} \\
+q_y & = & \frac{y^\prime (1 + \delta)}{\sqrt{1 + x^{\prime 2} + y^{\prime 2}}} 
+\end{array}.
+\end{equation}
+The inverse relationship is
+\begin{equation}
+\begin{array}{lcl}
+x^\prime & = & \frac{q_x}{\sqrt{(1+\delta)^2 - q_x^2 - q_y^2}} \\
+y^\prime & = & \frac{q_y}{\sqrt{(1+\delta)^2 - q_x^2 - q_y^2}}
+\end{array}.
+\end{equation}
 
 Tracking may be performed using matrices (of selectable order),
 canonical kick elements, numerically integrated elements, or any

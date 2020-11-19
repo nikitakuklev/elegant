@@ -39,6 +39,16 @@ char *mapCoordinateList[N_MAPCOORDINATES] = {
   "x", "qx", "y", "qy", "s", "delta"
    };
 
+int32_t maxInt32InArray(int32_t *array, int32_t n)
+{
+  int32_t i, max = INT32_MIN;
+  for (i=0; i<n; i++) {
+    if (array[i]>max)
+      max = array[i];
+  }
+  return max;
+}
+
 void initialize_polynomialSeries(POLYNOMIALSERIES *polynomialSeries)
 {
   SDDS_DATASET SDDSin;
@@ -46,7 +56,8 @@ void initialize_polynomialSeries(POLYNOMIALSERIES *polynomialSeries)
   POLYNOMIALSERIES_DATA *data;
   char *Coordinate;
   long readCode, problem, index;
-  
+  int32_t max1;
+
   if (polynomialSeries->elementInitialized)
     return;
   if (!polynomialSeries->filename)
@@ -109,6 +120,8 @@ void initialize_polynomialSeries(POLYNOMIALSERIES *polynomialSeries)
     data->mapInitialized = 1;
   }
   SDDS_Terminate(&SDDSin);
+  for (index=0; index<6; index++) 
+    polynomialSeries->maxExponent[index] = INT32_MIN;
   problem = 0;
   for ( index=0 ; index < 6 ; index++ ) {
     data = &polynomialSeries->coord[index];
@@ -117,11 +130,27 @@ void initialize_polynomialSeries(POLYNOMIALSERIES *polynomialSeries)
       sprintf(buffer, "problem with finding map for %s for POLYNOMIALSERIES file %s\n", mapCoordinateList[index],polynomialSeries->filename);
       SDDS_SetError(buffer);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+    } else {
+      if ((max1 = maxInt32InArray(data->Ix, data->terms)) > polynomialSeries->maxExponent[0])
+        polynomialSeries->maxExponent[0] = max1;
+      if ((max1 = maxInt32InArray(data->Iqx, data->terms)) > polynomialSeries->maxExponent[1])
+        polynomialSeries->maxExponent[1] = max1;
+      if ((max1 = maxInt32InArray(data->Iy, data->terms)) > polynomialSeries->maxExponent[2])
+        polynomialSeries->maxExponent[2] = max1;
+      if ((max1 = maxInt32InArray(data->Iqy, data->terms)) > polynomialSeries->maxExponent[3])
+        polynomialSeries->maxExponent[3] = max1;
+      if ((max1 = maxInt32InArray(data->Is, data->terms)) > polynomialSeries->maxExponent[4])
+        polynomialSeries->maxExponent[4] = max1;
+      if ((max1 = maxInt32InArray(data->Idelta, data->terms)) > polynomialSeries->maxExponent[5])
+        polynomialSeries->maxExponent[5] = max1;
     }
   }
   if (problem) {
     exitElegant(1);
   }
+  /* Allocate buffers to use in storing powers of input coordinates for reuse */
+  for (index=0; index<6; index++)
+    polynomialSeries->power[index] = calloc(polynomialSeries->maxExponent[index]+1, sizeof(double));
   polynomialSeries->elementInitialized = 1;
 }
 
@@ -145,7 +174,8 @@ long polynomialSeries_tracking(
   double qx, qy, denom, cdt, dp;
   long i, j;
   double p, beta0, outputCoord[6];
-  
+  double inputCoord[6];
+
     if (!particle)
         bombElegant("particle array is null (polynomialSeries)", NULL);
 
@@ -216,14 +246,33 @@ long polynomialSeries_tracking(
 	cdt = 0; /* I would imagine that the cdt coordinate doesn't appear in maps */
         beta0 = p/sqrt(sqr(p)+1);
 
+        /* compute required powers of each input coordinate */
+        /* avoids multiple calls to ipow() 
+         */
+        inputCoord[0] = x;
+        inputCoord[1] = qx;
+        inputCoord[2] = y;
+        inputCoord[3] = qy;
+        inputCoord[4] = cdt;
+        inputCoord[5] = dp;
+        for (i=0; i<6; i++) {
+          polynomialSeries->power[i][0] = 1;
+          for (j=1; j<=polynomialSeries->maxExponent[i]; j++)
+            polynomialSeries->power[i][j] = polynomialSeries->power[i][j-1]*inputCoord[i];
+        }
+            
         /* apply map */
 	for ( i=0; i < 6; i++ ) {
 	  data = polynomialSeries->coord[i];
 	  outputCoord[i] = 0.0;
 	  for ( j=0; j < data.terms; j++) {
-	    outputCoord[i] += data.Coefficient[j] * ipow(x,data.Ix[j]) * ipow(qx,data.Iqx[j])  
-	      * ipow(y,data.Iy[j]) * ipow(qy,data.Iqy[j]) 
-	      * ipow(cdt,data.Is[j]) * ipow(dp,data.Idelta[j]);
+	    outputCoord[i] += data.Coefficient[j] * 
+              polynomialSeries->power[0][data.Ix[j]] * 
+              polynomialSeries->power[1][data.Iqx[j]] * 
+              polynomialSeries->power[2][data.Iy[j]] * 
+              polynomialSeries->power[3][data.Iqy[j]] * 
+              polynomialSeries->power[4][data.Is[j]] * 
+              polynomialSeries->power[5][data.Idelta[j]];
 	  }
 	}
 	x = outputCoord[0];
