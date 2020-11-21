@@ -178,6 +178,7 @@ typedef struct {
 
 typedef struct {
   double *Z, *X;
+  double Y;
   long points;
 } OBSTRUCTION_DATASET;
 
@@ -185,9 +186,13 @@ typedef struct {
   short initialized;
   long periods, superperiodicity;
   double center[2]; /* Z, X */
-  double yLimit[2]; /* low, high limits */
-  OBSTRUCTION_DATASET *data;
-  long nDataSets;
+  double YLimit[2]; /* low, high limits */
+  double YSpacing;  /* if multiple planes of data are used */
+  double *YValue;   /* for each plane */
+  double YMax, YMin;
+  long nY, iY0;
+  OBSTRUCTION_DATASET **data;
+  long *nDataSets;
 } OBSTRUCTION_DATASETS;
 
 /* Variable-order transport matrix structure */

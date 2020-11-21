@@ -3,7 +3,8 @@
 //#include "math.h"
 //#include "stdio.h"
 
-OBSTRUCTION_DATASETS obstructionDataSets = {0, 0, 0, {0.0, 0.0}, {-10.0, 10.0}, NULL, 0};
+OBSTRUCTION_DATASETS obstructionDataSets = {0, 0, 0, {0.0, 0.0}, {-10.0, 10.0}, 
+                                            0.0, NULL, 0.0, 0.0, 0, 0, NULL, NULL};
 
 static long obstructionsInForce = 1;
 void setObstructionsMode(long state) 
@@ -15,8 +16,9 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
 {
   SDDS_DATASET SDDSin;
   char s[16384];
-  long code;
-  
+  long code, nY, iY, nTotal;
+  double Y;
+
 #include "obstructionData.h"
 
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -26,9 +28,9 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   if (echoNamelists) print_namelist(stdout, &obstruction_data);
 
   resetObstructionData(&obstructionDataSets);
-  obstructionDataSets.yLimit[0] = yLimit[0];
-  obstructionDataSets.yLimit[1] = yLimit[1];
-
+  obstructionDataSets.YLimit[0] = y_limit[0];
+  obstructionDataSets.YLimit[1] = y_limit[1];
+  
   if (disable)
     return;
   
@@ -54,9 +56,16 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
     fflush(stdout);
     exitElegant(1);
   }
-
+  if ((obstructionDataSets.YSpacing=y_spacing)>0 && !check_sdds_parameter(&SDDSin, "Y", "m")) {
+    printf("Parameter Y has wrong type or units, or is not present in %s. Required when y_spacing>0.\n",
+            input);
+    fflush(stdout);
+    exitElegant(1);
+  }
   obstructionDataSets.periods = periods;
 
+  nTotal = 0;
+  nY = 0;
   while ((code=SDDS_ReadPage(&SDDSin))>0) {
     if (code==1) {
       int32_t superperiodicity;
@@ -71,29 +80,134 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
       printf("ZCenter = %le, XCenter = %le, Superperiodicity = %ld\n", 
 	     obstructionDataSets.center[0], obstructionDataSets.center[1], obstructionDataSets.superperiodicity);
     }
-    obstructionDataSets.data = SDDS_Realloc(obstructionDataSets.data,
-                                            sizeof(*(obstructionDataSets.data))*(obstructionDataSets.nDataSets+1));;
-    if ((obstructionDataSets.data[obstructionDataSets.nDataSets].points=SDDS_RowCount(&SDDSin))<3) {
+    Y = 0;
+    iY = 0;
+    if (obstructionDataSets.YSpacing) {
+      if (!SDDS_GetParameterAsDouble(&SDDSin, "Y", &Y)) {
+	sprintf(s, "Problem getting Y data from page %ld of obstruction input file %s", code, input);
+	SDDS_SetError(s);
+	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+      iY = Y/obstructionDataSets.YSpacing  + SIGN(Y)*0.5;
+      if (fabs(iY - Y/obstructionDataSets.YSpacing)>1e-6) {
+        bombElegantVA
+          ("Problem with Y data (%le) from page %ld of obstruction input file %s: not close to multiple of declared spacing %le\n", 
+           Y, code, input, obstructionDataSets.YSpacing);
+      }
+      if (nY==0) {
+        obstructionDataSets.YValue = SDDS_Realloc(obstructionDataSets.YValue,
+                                                  (nY+1)*sizeof(double));
+        obstructionDataSets.nDataSets = SDDS_Realloc(obstructionDataSets.nDataSets,
+                                                     (nY+1)*sizeof(long));
+        obstructionDataSets.data = SDDS_Realloc(obstructionDataSets.data, (nY+1)*sizeof(*(obstructionDataSets.data)));
+        iY = 0;
+        nY = 1;
+        obstructionDataSets.YValue[iY] = Y;
+        obstructionDataSets.nDataSets[iY] = 0;
+        obstructionDataSets.data[iY] = NULL;
+      } else {
+        for (iY=0; iY<nY; iY++)
+          if (Y==obstructionDataSets.YValue[iY]) 
+            break;
+        if (iY==nY) {
+          obstructionDataSets.YValue = SDDS_Realloc(obstructionDataSets.YValue,
+                                                    (nY+1)*sizeof(double));
+          obstructionDataSets.nDataSets = SDDS_Realloc(obstructionDataSets.nDataSets,
+                                                       (nY+1)*sizeof(long));
+          obstructionDataSets.data = SDDS_Realloc(obstructionDataSets.data, (nY+1)*sizeof(*(obstructionDataSets.data)));
+          nY++;
+          obstructionDataSets.YValue[iY] = Y;
+          obstructionDataSets.nDataSets[iY] = 0;
+          obstructionDataSets.data[iY] = NULL;
+        }
+      }
+    } else {
+      if (nY==0) {
+        obstructionDataSets.YValue = SDDS_Realloc(obstructionDataSets.YValue,
+                                                  (nY+1)*sizeof(double));
+        obstructionDataSets.nDataSets = SDDS_Realloc(obstructionDataSets.nDataSets,
+                                                     (nY+1)*sizeof(long));
+        obstructionDataSets.data = SDDS_Realloc(obstructionDataSets.data, (nY+1)*sizeof(*(obstructionDataSets.data)));
+        nY = 1;
+        obstructionDataSets.YValue[iY] = Y;
+        obstructionDataSets.nDataSets[iY] = 0;
+        obstructionDataSets.data[iY] = NULL;
+      }
+      iY = 0;
+    }
+
+    obstructionDataSets.data[iY] = SDDS_Realloc(obstructionDataSets.data[iY],
+                                                sizeof(**(obstructionDataSets.data))*(obstructionDataSets.nDataSets[iY]+1));
+    if ((obstructionDataSets.data[iY][obstructionDataSets.nDataSets[iY]].points=SDDS_RowCount(&SDDSin))<3) {
       printf("Obstruction input file %s has fewer than 3 rows on page %ld", input, code);
       fflush(stdout);
       exitElegant(1);
     }
-    if (!(obstructionDataSets.data[obstructionDataSets.nDataSets].Z = SDDS_GetColumnInDoubles(&SDDSin, "Z")) ||
-        !(obstructionDataSets.data[obstructionDataSets.nDataSets].X = SDDS_GetColumnInDoubles(&SDDSin, "X"))) {
+    if (!(obstructionDataSets.data[iY][obstructionDataSets.nDataSets[iY]].Z = SDDS_GetColumnInDoubles(&SDDSin, "Z")) ||
+        !(obstructionDataSets.data[iY][obstructionDataSets.nDataSets[iY]].X = SDDS_GetColumnInDoubles(&SDDSin, "X"))) {
       sprintf(s, "Problem getting data from page %ld of obstruction input file %s", code, input);
       SDDS_SetError(s);
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
-    obstructionDataSets.nDataSets += 1;
+
+    obstructionDataSets.nDataSets[iY] += 1;
+    nTotal++;
   }
-  if (code==0 || obstructionDataSets.nDataSets<1) {
+  if (code==0 || nTotal<1) {
     sprintf(s, "Problem reading obstruction  input file %s---seems to be empty", input);
     SDDS_SetError(s);
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
-  printf("%ld datasets read from obstruction file %s\n", obstructionDataSets.nDataSets, input);
+  printf("%ld datasets read from obstruction file %s\n", nTotal, input);
+  obstructionDataSets.nY = nY;
+  if (obstructionDataSets.YSpacing>0) {
+    printf("Found %ld y planes\n", nY);
+    obstructionDataSets.iY0 = -1;
+    find_min_max(&obstructionDataSets.YMin, &obstructionDataSets.YMax, obstructionDataSets.YValue, nY);
+    for (iY=0; iY<nY; iY++) {
+      printf("Plane %ld: Y = %le\n", iY, obstructionDataSets.YValue[iY]);
+      if (obstructionDataSets.YValue[iY]==0)
+        obstructionDataSets.iY0 = iY;
+    }
+    if (obstructionDataSets.iY0==-1)
+      bombElegantVA("Didn't find Y=0 data for file %s\n", input);
+    if (nY>1) {
+      for (iY=1; iY<nY; iY++) {
+        double dY;
+        if (obstructionDataSets.YValue[iY]<=obstructionDataSets.YValue[iY-1])
+          bombElegantVA("Data for y planes is not in increasing order. Use sddssort -parameter=Y %s to fix this.\n", 
+                        input);
+        dY = obstructionDataSets.YValue[iY] - obstructionDataSets.YValue[iY-1];
+        if (fabs(dY/obstructionDataSets.YSpacing-1)>1e-5)
+          bombElegantVA("Data for y planes is missing some planes with %le spacing.\n", obstructionDataSets.YSpacing);
+      }
+    }
+  }
 
   obstructionDataSets.initialized = 1;
+
+  /*
+  if (1) {
+    long i, j, k;
+    FILE *fp;
+    fp = fopen("obstruction.check", "w");
+    fprintf(fp, "SDDS1\n&column name=Z type=double units=m &end\n");
+    fprintf(fp, "&column name=X type=double units=m &end\n");
+    fprintf(fp, "&parameter name=Y type=double units=m &end\n");
+    fprintf(fp, "&data mode=ascii &end\n");
+    for (i=0; i<obstructionDataSets.nY; i++) {
+      for (j=0; j<obstructionDataSets.nDataSets[i]; j++) {
+        fprintf(fp, "%le\n%ld\n", obstructionDataSets.YValue[i], obstructionDataSets.data[i][j].points);
+        for (k=0; k<obstructionDataSets.data[i][j].points; k++) {
+          fprintf(fp, "%le %le\n",
+                  obstructionDataSets.data[i][j].Z[k],
+                  obstructionDataSets.data[i][j].X[k]);
+        }
+      }
+    }
+    fclose(fp);
+  }
+  */
 
   return;
 }
@@ -187,17 +301,32 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   fprintf(fpObs, "%le %le %ld\n", Z, X, (long)part[6]); 
   */
 
-  if (obstructionDataSets.yLimit[0]<obstructionDataSets.yLimit[1] && 
-      (Y<obstructionDataSets.yLimit[0] || Y>obstructionDataSets.yLimit[1]))
+  if (obstructionDataSets.YLimit[0]<obstructionDataSets.YLimit[1] && 
+      (Y<obstructionDataSets.YLimit[0] || Y>obstructionDataSets.YLimit[1]))
     lost = 2;
   else {
+    long iY = 0;
     lost = 0;
-    for (iperiod=0; iperiod<obstructionDataSets.periods && !lost; iperiod++) {
-      for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
+    if (obstructionDataSets.YSpacing>0) {
+      /* round toward the midplane (Y=0) */
+      if (Y<=obstructionDataSets.YMin)
+        iY = 0;
+      else if (Y>=obstructionDataSets.YMax) 
+        iY = obstructionDataSets.nY-1;
+      else {
+        iY = ((long)(Y/obstructionDataSets.YSpacing)) + obstructionDataSets.iY0;
+        if (iY<0 || iY>=obstructionDataSets.nY)
+          bombElegantVA("Failed to find valid iY value for Y=%le, YMin=%le, YMax=%ld, dY=%le, iY0=%ld\n",
+                        Y, obstructionDataSets.YMin, obstructionDataSets.YMax, obstructionDataSets.YSpacing,
+                        obstructionDataSets.iY0);
+      }
+    }
+    for (ic=0; ic<obstructionDataSets.nDataSets[iY] && !lost; ic++) {
+      for (iperiod=0; iperiod<obstructionDataSets.periods; iperiod++) {
 	if (pointIsInsideContour(Z, X, 
-				 obstructionDataSets.data[ic].Z, 
-				 obstructionDataSets.data[ic].X, 
-				 obstructionDataSets.data[ic].points,
+				 obstructionDataSets.data[iY][ic].Z, 
+				 obstructionDataSets.data[iY][ic].X, 
+				 obstructionDataSets.data[iY][ic].points,
 				 obstructionDataSets.center,
 				 (iperiod*PIx2)/obstructionDataSets.superperiodicity)) {
 	  lost = 1;
@@ -320,17 +449,33 @@ long insideObstruction_XYZ
       fprintf(fp, "%21.15e %21.15e %21.15e\n", Z1, X1, thetai);
   */
 
-  if (obstructionDataSets.yLimit[0]<obstructionDataSets.yLimit[1] && 
-      (Y1<obstructionDataSets.yLimit[0] || Y1>obstructionDataSets.yLimit[1]))
+  if (obstructionDataSets.YLimit[0]<obstructionDataSets.YLimit[1] && 
+      (Y1<obstructionDataSets.YLimit[0] || Y1>obstructionDataSets.YLimit[1]))
     lost = 1;
   else {
+    long iY = 0;
+    lost = 0;
+    if (obstructionDataSets.YSpacing>0) {
+      /* round toward the midplane (Y=0) */
+      if (Y<=obstructionDataSets.YMin)
+        iY = 0;
+      else if (Y>=obstructionDataSets.YMax) 
+        iY = obstructionDataSets.nY-1;
+      else {
+        iY = ((long)(Y/obstructionDataSets.YSpacing)) + obstructionDataSets.iY0;
+        if (iY<0 || iY>=obstructionDataSets.nY)
+          bombElegantVA("Failed to find valid iY value for Y=%le, YMin=%le, YMax=%ld, dY=%le, iY0=%ld\n",
+                        Y, obstructionDataSets.YMin, obstructionDataSets.YMax, obstructionDataSets.YSpacing,
+                        obstructionDataSets.iY0);
+      }
+    }
     lost = 0;
     for (iperiod=0; iperiod<obstructionDataSets.periods && !lost; iperiod++) {
-      for (ic=0; ic<obstructionDataSets.nDataSets; ic++) {
+      for (ic=0; ic<obstructionDataSets.nDataSets[iY]; ic++) {
 	if (pointIsInsideContour(Z1, X1, 
-				 obstructionDataSets.data[ic].Z, 
-				 obstructionDataSets.data[ic].X, 
-				 obstructionDataSets.data[ic].points,
+				 obstructionDataSets.data[iY][ic].Z, 
+				 obstructionDataSets.data[iY][ic].X, 
+				 obstructionDataSets.data[iY][ic].points,
 				 obstructionDataSets.center, 
 				 (iperiod*PIx2)/obstructionDataSets.superperiodicity)) {
 	  lost = 1;
@@ -372,18 +517,25 @@ long filterParticlesWithObstructions(double **coord, long np, double **accepted,
 
 void resetObstructionData(OBSTRUCTION_DATASETS *obsData)
 {
-  long i;
+  long i, j;
   if (obsData->initialized) {
-    for (i=0; i<obsData->nDataSets; i++)  {
-      free(obsData->data[i].X);
-      free(obsData->data[i].Z);
+    for (j=0; j<obsData->nY; j++) {
+      for (i=0; i<obsData->nDataSets[j]; i++)  {
+        free(obsData->data[j][i].X);
+        free(obsData->data[j][i].Z);
+      }
+      free(obsData->data[j]);
+      obsData->data[j] = NULL;
     }
     free(obsData->data);
-    obsData->data = NULL;
+    free(obsData->YValue);
     obsData->initialized = 0;
-    obsData->yLimit[0] = -10;
-    obsData->yLimit[1] = 10;
+    obsData->YLimit[0] = -10;
+    obsData->YLimit[1] = 10;
   }
+  obstructionDataSets.YValue = NULL;
+  obstructionDataSets.nY = 0;
+  obstructionDataSets.YSpacing = 0;
 }
 
 

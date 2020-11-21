@@ -4,7 +4,8 @@
           STRING input = NULL;
           long periods = 1;
           long disable = 0;
-	  double yLimit[2] = {-10,10};
+          double y_spacing = 0;
+	  double y_limit[2] = {-10,10};
 #end
 
         
