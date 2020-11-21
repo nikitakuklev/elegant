@@ -69,6 +69,7 @@ Here is a summary of what's changed since release 2020.4.  Historical change log
 \begin{itemize}
 \item Added the \verb|change_start| command, which permits changing the starting location in a lattice.
   This was inspired by a request from Duan Zhe (IHEP).
+\item The \verb|obstruction_data| command now supports multiple vertical planes of data.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -3781,6 +3782,8 @@ Also, if it is desirable for the output from \verb|Pelegant| to have exactly the
           STRING input = NULL;
           long periods = 1;
           long disable = 0;
+          double y_spacing = 0;
+          double y_limit[2] = {-10, 10};
 &end
 \end{verbatim}
 
@@ -3801,6 +3804,13 @@ Also, if it is desirable for the output from \verb|Pelegant| to have exactly the
 \item \verb|periods| --- Obstructions represented by the provided data are to be repeated in a 
   periodic fashion the number of times given. It is assumed that the system is a storage ring.
 \item \verb|disable| --- If nonzero, then the command is ignored.
+\item \verb|y_spacing| --- If nonzero, then the input file is expected to have data for multiple vertical planes,
+  instead of the default $y=0$ midplane. The plane for each page is identified by the parameter \verb|Y| in the
+  input file. The data must be sorted in increasing order of \verb|Y|, which can be accomplished using \verb|sddssort|, e.g.,
+\begin{verbatim}
+sddssort input.sdds -parameter=Y
+\end{verbatim}
+\item \verb|y_limit| --- Allows specifying maximum limits on the vertical coordinate, beyond which particles are lost.
 \end{itemize}
 
 %\begin{latexonly}
