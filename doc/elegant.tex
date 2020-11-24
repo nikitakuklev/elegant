@@ -45,6 +45,10 @@ Here is a summary of what's changed since release 2020.4.  Historical change log
 \begin{itemize}
 \item The \verb|SCATTER| element had a bug in the implementation of the \verb|ENDONPASS| parameter, which was being
   ignored if the value was \verb|0|.
+\item The \verb|CCBEND| element had several misalignment-related issues. Most significantly, the \verb|ETILT| parameter was ignored.
+  In addition, the sense of \verb|DX| and \verb|DY| was inverted when when the \verb|ANGLE| was negative. 
+  As a result of these fixes, misalignment effects from \verb|CCBEND| will change. Setting \verb|ETILT=0| and
+  \verb|DX_DY_SIGN=-1| will cause the code to revert to the old behavior.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -55,14 +59,16 @@ Here is a summary of what's changed since release 2020.4.  Historical change log
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|BGGEXP| element now supports both normal and skew components. R. Lindberg (APS) contributed to this
-  development.
+\item The \verb|BGGEXP| element now supports both normal and skew components. R. Lindberg (APS) implemented most of the
+  code for this. 
 \item The \verb|BMAPXYZ| element now has a \verb|FSE| (Fractional Strength Error) parameter.
 \item The \verb|RADIAL_ORDER| parameter of \verb|RFTMEZ0| can now be set to 0 to turn off radial dependence of
   fields.
 \item The \verb|POLYSERIES| element was released, which allows transforming the beam using a set of arbitrary polynomials
   in the canonical coordinates.  This existed in the code but was not documented.
-  It was developed by L. Emery (APS).
+  It was developed by L. Emery (APS) and inspired by work of Y. P. Sun (APS).
+\item The \verb|ETILT_SIGN| parameter for \verb|CSBEND|, \verb|CSRCSBEND|, \verb|RBEN|, and \verb|SBEN| now defaults
+  to \verb|1|. The previous default of \verb|-1|, for backward compatibility, is potentially confusing.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -90,7 +96,9 @@ the serial or parallel versions and report issues to the developers.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item None.
+\item The \verb|computeRGGGE| program was added, allowing computation of a generalized gradient expansion for
+  use with \verb|BGGEXP| based on field data on a rectangular boundary. The code was developed by R. Lindberg and
+  R. Soliday (APS).
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
