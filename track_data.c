@@ -966,7 +966,7 @@ MKICKER mkicker_example;
 /* multipole kicker physical parameters */
 PARAMETER mkicker_param[N_MKICKER_PARAMS] = {
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&mkicker_example.length), NULL, 0.0, 0, "length"},
-    {"STRENGTH", "", IS_DOUBLE, 0, (long)((char *)&mkicker_example.strength), NULL, 0.0, 0, "geometric strength in 1/m^order"},
+    {"STRENGTH", "", IS_DOUBLE, 0, (long)((char *)&mkicker_example.strength), NULL, 0.0, 0, "geometric strength in 1/m^(order+1)"},
     {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&mkicker_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkicker_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkicker_example.dy), NULL, 0.0, 0, "misalignment"},
