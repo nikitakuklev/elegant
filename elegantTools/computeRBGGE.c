@@ -2,7 +2,7 @@
 #include "SDDS.h"
 #include "scan.h"
 #include "fftpackC.h"
-
+#define DEBUG 1
 #define TWOPI 6.28318530717958647692528676656
 
 typedef struct COMPLEX
@@ -157,7 +157,7 @@ int main(int argc, char **argv)
       fprintf(stderr, "%s\n", USAGE);
       return (1);
     }
-  /*
+#ifdef DEBUG
     fprintf(stderr, "topFile=%s\n", topFile);
     fprintf(stderr, "bottomFile=%s\n", bottomFile);
     fprintf(stderr, "leftFile=%s\n", leftFile);
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "multipoles=%ld\n", multipoles);
     fprintf(stderr, "normalOutputFile=%s\n", normalOutputFile);
     fprintf(stderr, "skewOutputFile=%s\n", skewOutputFile);
-  */
+#endif
   if (normalOutputFile != NULL)
     {
       if (computeGGderiv(topFile, bottomFile, leftFile, rightFile, normalOutputFile, derivatives, multipoles))
@@ -257,6 +257,10 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "Unexpected row count\n");
       return (1);
     }
+#ifdef DEBUG
+  fprintf(stderr, "Top file %s, Nx=%ld, Nfft=%ld, dx=%le, dz=%le\n",
+          topFile, (long)*Nx, (long)*Nfft, *dx, *dz);
+#endif
 
   *ByTop = calloc(*Nx, sizeof(COMPLEX *));
   for (ix = 0; ix < *Nx; ix++)
@@ -345,6 +349,10 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "Unexpected row count\n");
       return (1);
     }
+#ifdef DEBUG
+  fprintf(stderr, "Bottom file %s, Nx=%ld, Nfft=%ld, dx=%le, dz=%le\n",
+          bottomFile, (long)*Nx, (long)*Nfft, *dx, *dz);
+#endif
 
   if (tmpNx != *Nx)
     {
@@ -462,6 +470,10 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "dz values differ in the input files\n");
       return (1);
     }
+#ifdef DEBUG
+  fprintf(stderr, "Left file %s, Ny=%ld, Nfft=%ld, dx=%le, dz=%le\n",
+          leftFile, (long)*Ny, (long)*Nfft, *dx, *dz);
+#endif
 
   *BxLeft = calloc(*Ny, sizeof(COMPLEX *));
   for (iy = 0; iy < *Ny; iy++)
@@ -549,6 +561,10 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "Unexpected row count\n");
       return (1);
     }
+#ifdef DEBUG
+  fprintf(stderr, "Right file %s, Ny=%ld, Nfft=%ld, dx=%le, dz=%le\n",
+          rightFile, (long)*Ny, (long)*Nfft, *dx, *dz);
+#endif
 
   if (tmpNy != *Ny)
     {
@@ -637,7 +653,9 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
 
   xMax = dx * 0.5 * (double)(Nx - 1);
   yMax = dy * 0.5 * (double)(Ny - 1);
-  printf("xMax = %e, yMax=%e\n", xMax, yMax);
+#ifdef DEBUG
+  fprintf(stderr, "xMax = %e, yMax=%e\n", xMax, yMax);
+#endif
   x = calloc(Nx, sizeof(double));
   for (ix = 0; ix < Nx; ix++)
     x[ix] = -xMax + dx * (double)ix;
@@ -754,7 +772,9 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
   for (n = 0; n < Nderiv; n++)
     derivGG[n] = calloc(Nfft, sizeof(COMPLEX));
 
-  printf("Printing results...\n");
+#ifdef DEBUG
+  fprintf(stderr, "Printing results...\n");
+#endif
 
   if (SDDS_InitializeOutput(&SDDSOutput, SDDS_BINARY, 1, NULL, "computeRBGGE normal output", outputFile) != 1)
     {
