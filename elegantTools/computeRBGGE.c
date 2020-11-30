@@ -77,7 +77,7 @@ int main(int argc, char **argv)
             case SET_TOP_BY:
               if (scanned[i_arg].n_items != 2)
                 {
-                  fprintf(stderr, "invalid -topBy syntax\n%s\n", USAGE);
+                  fprintf(stderr, "invalid -top syntax\n%s\n", USAGE);
                   return (1);
                 }
               topFile = scanned[i_arg].list[1];
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
             case SET_BOTTOM_BY:
               if (scanned[i_arg].n_items != 2)
                 {
-                  fprintf(stderr, "invalid -bottomBy syntax\n%s\n", USAGE);
+                  fprintf(stderr, "invalid -bottom syntax\n%s\n", USAGE);
                   return (1);
                 }
               bottomFile = scanned[i_arg].list[1];
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
             case SET_LEFT_BX:
               if (scanned[i_arg].n_items != 2)
                 {
-                  fprintf(stderr, "invalid -leftBx syntax\n%s\n", USAGE);
+                  fprintf(stderr, "invalid -left syntax\n%s\n", USAGE);
                   return (1);
                 }
               leftFile = scanned[i_arg].list[1];
@@ -101,7 +101,7 @@ int main(int argc, char **argv)
             case SET_RIGHT_BX:
               if (scanned[i_arg].n_items != 2)
                 {
-                  fprintf(stderr, "invalid -rightBx syntax\n%s\n", USAGE);
+                  fprintf(stderr, "invalid -right syntax\n%s\n", USAGE);
                   return (1);
                 }
               rightFile = scanned[i_arg].list[1];
