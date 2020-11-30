@@ -1053,6 +1053,7 @@ long do_tracking(
       log_exit("do_tracking.2.2.1");
       if (eptr->p_elem || eptr->matrix) {
         if ((run->print_statistics>0 || (run->print_statistics<0 && (-run->print_statistics)<=(i_pass+1))) && !(flags&TEST_PARTICLES)) {
+          char buffer[16384];
 #if USE_MPI
 	  if (!partOnMaster && notSinglePart) {
 	    if (isMaster) nToTrack = 0; 
@@ -1060,7 +1061,7 @@ long do_tracking(
               MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	  }
 #endif
-          printf("Starting %s#%ld at s=%le to %le m, pass %ld, %ld particles, memory %ld kB\n", 
+          snprintf(buffer, 16384, "Starting %s#%ld at s=%le to %le m, pass %ld, %ld particles, memory %ld kB\n", 
                  eptr->name, eptr->occurence, 
                  last_z, eptr->end_pos, i_pass, 
 #if USE_MPI
@@ -1070,7 +1071,8 @@ long do_tracking(
 #endif
                   memoryUsage()
                   );
-	fflush(stdout);
+          printMessageAndTime(stdout, buffer);
+          fflush(stdout);
 	}
         /* show_dE = 0; */
         nLeft = nToTrack;  /* in case it isn't set by the element tracking */
