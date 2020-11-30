@@ -3,6 +3,8 @@
 #include "scan.h"
 #include "fftpackC.h"
 #define DEBUG 1
+//#define OLDFFT 1
+
 #define TWOPI 6.28318530717958647692528676656
 
 typedef struct COMPLEX
@@ -1826,6 +1828,7 @@ COMPLEX calcGGallSidesBz(COMPLEX *beta, double k, double *lambda, double yMax, i
   return (genGrad);
 }
 
+#ifndef OLDFFT
 void FFT(COMPLEX *field, int32_t isign, int32_t npts)
 {
   double *real_imag;
@@ -1837,7 +1840,14 @@ void FFT(COMPLEX *field, int32_t isign, int32_t npts)
       real_imag[2 * i] = field[i].re;
       real_imag[2 * i + 1] = field[i].im;
     }
-  complexFFT(real_imag, npts, 0);
+  if (isign == -1)
+    {
+      complexFFT(real_imag, npts, INVERSE_FFT);
+    }
+  else
+    {
+      complexFFT(real_imag, npts, 0);
+    }
   for (i = 0; i < npts; i++)
     {
       field[i].re = real_imag[2 * i];
@@ -1845,7 +1855,84 @@ void FFT(COMPLEX *field, int32_t isign, int32_t npts)
     }
   free(real_imag);
 }
+#else
+void FFT(COMPLEX *field, int32_t isign, int32_t npts)
+{
+  unsigned long mmax, m, hn, j, istep, i;
+  double wtemp, wr, wpr, wpi, wi, theta, flt_isign;
+  /* must be double to preserve accuracy */
+  COMPLEX tempz;
 
+  COMPLEX *fft;
+  double tempr, tempi;
+
+  fft = calloc(npts, sizeof(COMPLEX));
+
+  hn = npts / 2;
+
+  /* copy over */
+  for (i = 0; i < npts; i++)
+    fft[i] = field[i];
+
+  /* Fourier Transform isign = -1, inverse isign = 1 */
+
+  flt_isign = (double)(isign);
+  /* first, sort into bit-reversed order */
+  for (j = 0, i = 0; i < npts; i++) /* increment in regular order */
+    {
+      if (j > i) /* swap i and j = bit-reversal(i) once, if distinct */
+        {
+          tempz = fft[i];
+          fft[i] = fft[j];
+          fft[j] = tempz;
+        }
+      for (m = hn; ((j >= m) && (m >= 1)); m >>= 1)
+        /* find bit-reversal of next i */
+        {
+          j -= m;
+        }
+      j += m;
+    }
+
+  /* next, apply Danielson-Lanczos algorithm */
+  for (mmax = 1; (npts > mmax); mmax = istep)
+    /* loop through log_base2(N) times */
+    {
+      istep = mmax << 1; /* = 2*mmax */
+      /* initialize trig functions */
+      theta = (flt_isign) * (PI / ((double)(mmax)));
+      wtemp = sin(0.5 * theta);
+      wpr = -2.0 * wtemp * wtemp;
+      wpi = sin(theta);
+      wr = 1.0;
+      wi = 0.0;
+      for (m = 0; m < mmax; m += 1)
+        {
+          for (i = m; i < npts; i += istep)
+            {
+              j = i + mmax;
+              tempr = wr * fft[j].re - wi * fft[j].im;
+              tempi = wr * fft[j].im + wi * fft[j].re;
+              fft[j].re = fft[i].re - tempr;
+              fft[j].im = fft[i].im - tempi;
+              fft[i].re += tempr;
+              fft[i].im += tempi;
+            }
+          /* update trig functions via recurrence relations */
+          wr = wr + (wtemp = wr) * wpr - wi * wpi;
+          wi = wi + wi * wpr + wtemp * wpi;
+        }
+    }
+
+  /* copy */
+  for (i = 0; i < npts; i++)
+    {
+      field[i] = fft[i];
+
+    }
+  free(fft);
+}
+#endif
 
 unsigned long IntCeilingPowerOf2(unsigned long i)
 {
