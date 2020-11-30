@@ -59,8 +59,8 @@ Here is a summary of what's changed since release 2020.4.  Historical change log
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|BGGEXP| element now supports both normal and skew components. R. Lindberg (APS) implemented most of the
-  code for this. 
+\item The \verb|BGGEXP| element now supports both normal and skew components. R. Lindberg (APS) implemented the
+  symplectic integrator option for this.
 \item The \verb|BMAPXYZ| element now has a \verb|FSE| (Fractional Strength Error) parameter.
 \item The \verb|RADIAL_ORDER| parameter of \verb|RFTMEZ0| can now be set to 0 to turn off radial dependence of
   fields.
@@ -68,7 +68,7 @@ Here is a summary of what's changed since release 2020.4.  Historical change log
   in the canonical coordinates.  This existed in the code but was not documented.
   It was developed by L. Emery (APS) and inspired by work of Y. P. Sun (APS).
 \item The \verb|ETILT_SIGN| parameter for \verb|CSBEND|, \verb|CSRCSBEND|, \verb|RBEN|, and \verb|SBEN| now defaults
-  to \verb|1|. The previous default of \verb|-1|, for backward compatibility, is potentially confusing.
+  to \verb|1|. The previous default of \verb|-1|, for backward compatibility, was potentially confusing.
 \end{itemize}
 
 \subsection{New and Modified Commands}
