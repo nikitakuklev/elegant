@@ -1,6 +1,7 @@
 #include "mdb.h"
 #include "SDDS.h"
 #include "scan.h"
+#include "fftpackC.h"
 
 #define TWOPI 6.28318530717958647692528676656
 
@@ -28,27 +29,27 @@ void FFT(COMPLEX *field, int32_t isign, int32_t npts);
 unsigned long IntCeilingPowerOf2(unsigned long i);
 
 int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *outputFile, long derivatives, long multipoles);
-int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *topFileBz, char *bottomFileBz, char *leftFileBz, char *rightFileBz, char *outputFile, long derivatives, long multipoles);
+int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *outputFile, long derivatives, long multipoles);
+
+int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile, char *rightFile,
+                   int32_t *Nx, int32_t *Ny, int32_t *Nfft,
+                   double *dx, double *dy, double *dz,
+                   COMPLEX ***ByTop, COMPLEX ***ByBottom, COMPLEX ***BxRight, COMPLEX ***BxLeft);
 
 #define SET_TOP_BY 0
 #define SET_BOTTOM_BY 1
 #define SET_LEFT_BX 2
 #define SET_RIGHT_BX 3
-#define SET_TOP_BZ 4
-#define SET_BOTTOM_BZ 5
-#define SET_LEFT_BZ 6
-#define SET_RIGHT_BZ 7
-#define SET_NORMAL 8
-#define SET_SKEW 9
-#define SET_DERIVATIVES 10
-#define SET_MULTIPOLES 11
-#define N_OPTIONS 12
+#define SET_NORMAL 4
+#define SET_SKEW 5
+#define SET_DERIVATIVES 6
+#define SET_MULTIPOLES 7
+#define N_OPTIONS 8
 
 char *option[N_OPTIONS] = {
-  "topBy", "bottomBy", "leftBx", "rightBx", "topBz", "bottomBz", "leftBz", "rightBz", "normal", "skew", "derivatives", "multipoles"};
+  "top", "bottom", "left", "right", "normal", "skew", "derivatives", "multipoles"};
 
-#define USAGE "computeRBGGE -topBy=<filename> -bottomBy=<filename> -leftBx=<filename> -rightBx=<filename>\n\
-             [-topBz=<filename>] [-bottomBz=<filename>] [-leftBz=<filename>] [-rightBz=<filename>]\n\
+#define USAGE "computeRBGGE -top=<filename> -bottom=<filename> -left=<filename> -right=<filename>\n\
              -normal=<output> -skew=<output> -derivatives=<number> -multipoles=<number>\n\
 Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg"
 
@@ -58,7 +59,6 @@ int main(int argc, char **argv)
   long i_arg;
   long multipoles = 0, derivatives = 7;
   char *topFile = NULL, *bottomFile = NULL, *leftFile = NULL, *rightFile = NULL;
-  char *topFileBz = NULL, *bottomFileBz = NULL, *leftFileBz = NULL, *rightFileBz = NULL;
   char *normalOutputFile = NULL, *skewOutputFile = NULL;
 
   argc = scanargs(&scanned, argc, argv);
@@ -105,38 +105,6 @@ int main(int argc, char **argv)
                   return (1);
                 }
               rightFile = scanned[i_arg].list[1];
-              break;
-            case SET_TOP_BZ:
-              if (scanned[i_arg].n_items != 2)
-                {
-                  fprintf(stderr, "invalid -topBz syntax\n%s\n", USAGE);
-                  return (1);
-                }
-              topFileBz = scanned[i_arg].list[1];
-              break;
-            case SET_BOTTOM_BZ:
-              if (scanned[i_arg].n_items != 2)
-                {
-                  fprintf(stderr, "invalid -bottomBz syntax\n%s\n", USAGE);
-                  return (1);
-                }
-              bottomFileBz = scanned[i_arg].list[1];
-              break;
-            case SET_LEFT_BZ:
-              if (scanned[i_arg].n_items != 2)
-                {
-                  fprintf(stderr, "invalid -leftBz syntax\n%s\n", USAGE);
-                  return (1);
-                }
-              leftFileBz = scanned[i_arg].list[1];
-              break;
-            case SET_RIGHT_BZ:
-              if (scanned[i_arg].n_items != 2)
-                {
-                  fprintf(stderr, "invalid -rightBz syntax\n%s\n", USAGE);
-                  return (1);
-                }
-              rightFileBz = scanned[i_arg].list[1];
               break;
             case SET_NORMAL:
               if (scanned[i_arg].n_items != 2)
@@ -189,11 +157,6 @@ int main(int argc, char **argv)
       fprintf(stderr, "%s\n", USAGE);
       return (1);
     }
-  if ((skewOutputFile != NULL) && ((topFileBz == NULL) || (bottomFileBz == NULL) || (leftFileBz == NULL) || (rightFileBz == NULL)))
-    {
-      fprintf(stderr, "Bz files must be specified when using the skew output.\n%s\n", USAGE);
-      return (1);
-    }
   /*
     fprintf(stderr, "topFile=%s\n", topFile);
     fprintf(stderr, "bottomFile=%s\n", bottomFile);
@@ -211,7 +174,7 @@ int main(int argc, char **argv)
     }
   if (skewOutputFile != NULL)
     {
-      computeGGcos(topFile, bottomFile, leftFile, rightFile, topFileBz, bottomFileBz, leftFileBz, rightFileBz, skewOutputFile, derivatives, multipoles);
+      computeGGcos(topFile, bottomFile, leftFile, rightFile, skewOutputFile, derivatives, multipoles);
     }
   return (0);
 }
@@ -219,15 +182,10 @@ int main(int argc, char **argv)
 int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile, char *rightFile,
                    int32_t *Nx, int32_t *Ny, int32_t *Nfft,
                    double *dx, double *dy, double *dz,
-                   COMPLEX ***ByTop, COMPLEX ***ByBottom, COMPLEX ***BxRight, COMPLEX ***BxLeft);
-
-int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile, char *rightFile,
-                   int32_t *Nx, int32_t *Ny, int32_t *Nfft,
-                   double *dx, double *dy, double *dz,
                    COMPLEX ***ByTop, COMPLEX ***ByBottom, COMPLEX ***BxRight, COMPLEX ***BxLeft)
 {
   SDDS_DATASET SDDSInput;
-  double *cvalues;
+  double *cvalues, *xvalues, *yvalues, *zvalues;
   int32_t rows, ik, ix, iy, n;
   int32_t tmpNx, tmpNy, tmpNfft;
   double tmpdx, tmpdy, tmpdz;
@@ -241,17 +199,15 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
     }
   if (BzMode)
     {
-      sprintf(name, "BzTop");
+      sprintf(name, "Bz");
     }
   else
     {
-      sprintf(name, "ByTop");
+      sprintf(name, "By");
     }
   if ((SDDS_CheckColumn(&SDDSInput, name, NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "Nx", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "Nfft", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "dx", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "dz", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+      (SDDS_CheckColumn(&SDDSInput, "x", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -261,22 +217,21 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "Unable to read SDDS page\n");
       return (1);
     }
-  if ((SDDS_GetParameterAsLong(&SDDSInput, "Nx", Nx) == NULL) ||
-      (SDDS_GetParameterAsLong(&SDDSInput, "Nfft", Nfft) == NULL) ||
-      (SDDS_GetParameterAsDouble(&SDDSInput, "dx", dx) == NULL) ||
-      (SDDS_GetParameterAsDouble(&SDDSInput, "dz", dz) == NULL))
+  rows = SDDS_RowCount(&SDDSInput);
+  cvalues = SDDS_GetColumnInDoubles(&SDDSInput, name);
+  if (cvalues == NULL)
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
-  rows = SDDS_RowCount(&SDDSInput);
-  if (rows != *Nx * *Nfft)
+  xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
+  if (xvalues == NULL)
     {
-      fprintf(stderr, "Unexpected row count\n");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
-  cvalues = SDDS_GetColumnInDoubles(&SDDSInput, name);
-  if (cvalues == NULL)
+  zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
+  if (zvalues == NULL)
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -284,6 +239,22 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
   if (SDDS_Terminate(&SDDSInput) != 1)
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  for (ix = 1; ix < rows; ix++)
+    {
+      if (zvalues[ix-1] != zvalues[ix])
+        {
+          *Nx = ix;
+          *Nfft = rows / ix;
+          *dx = (xvalues[ix-1] - xvalues[0]) / (ix - 1);
+          *dz = (zvalues[rows-1] - zvalues[0]) / (*Nfft - 1);
+          break;
+        }
+    }
+  if (rows != *Nx * *Nfft)
+    {
+      fprintf(stderr, "Unexpected row count\n");
       return (1);
     }
 
@@ -302,6 +273,8 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
         }
     }
   free(cvalues);
+  free(xvalues);
+  free(zvalues);
   tmpNx = *Nx;
   tmpNfft = *Nfft;
   tmpdx = *dx;
@@ -314,17 +287,15 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
     }
   if (BzMode)
     {
-      sprintf(name, "BzBottom");
+      sprintf(name, "Bz");
     }
   else
     {
-      sprintf(name, "ByBottom");
+      sprintf(name, "By");
     }
   if ((SDDS_CheckColumn(&SDDSInput, name, NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "Nx", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "Nfft", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "dx", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "dz", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+      (SDDS_CheckColumn(&SDDSInput, "x", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -334,14 +305,47 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "Unable to read SDDS page\n");
       return (1);
     }
-  if ((SDDS_GetParameterAsLong(&SDDSInput, "Nx", Nx) == NULL) ||
-      (SDDS_GetParameterAsLong(&SDDSInput, "Nfft", Nfft) == NULL) ||
-      (SDDS_GetParameterAsDouble(&SDDSInput, "dx", dx) == NULL) ||
-      (SDDS_GetParameterAsDouble(&SDDSInput, "dz", dz) == NULL))
+  rows = SDDS_RowCount(&SDDSInput);
+  cvalues = SDDS_GetColumnInDoubles(&SDDSInput, name);
+  if (cvalues == NULL)
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
+  xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
+  if (xvalues == NULL)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
+  if (zvalues == NULL)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  if (SDDS_Terminate(&SDDSInput) != 1)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  for (ix = 1; ix < rows; ix++)
+    {
+      if (zvalues[ix-1] != zvalues[ix])
+        {
+          *Nx = ix;
+          *Nfft = rows / ix;
+          *dx = (xvalues[ix-1] - xvalues[0]) / (ix - 1);
+          *dz = (zvalues[rows-1] - zvalues[0]) / (*Nfft - 1);
+          break;
+        }
+    }
+  if (rows != *Nx * *Nfft)
+    {
+      fprintf(stderr, "Unexpected row count\n");
+      return (1);
+    }
+
   if (tmpNx != *Nx)
     {
       fprintf(stderr, "Nx values differ in the input files\n");
@@ -362,23 +366,6 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "dz values differ in the input files\n");
       return (1);
     }
-  rows = SDDS_RowCount(&SDDSInput);
-  if (rows != *Nx * *Nfft)
-    {
-      fprintf(stderr, "Unexpected row count\n");
-      return (1);
-    }
-  cvalues = SDDS_GetColumnInDoubles(&SDDSInput, name);
-  if (cvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if (SDDS_Terminate(&SDDSInput) != 1)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
 
   *ByBottom = calloc(*Nx, sizeof(COMPLEX *));
   for (ix = 0; ix < *Nx; ix++)
@@ -395,6 +382,8 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
         }
     }
   free(cvalues);
+  free(xvalues);
+  free(zvalues);
 
   /* Read in Bx from the left face */
   if (SDDS_InitializeInput(&SDDSInput, leftFile) != 1)
@@ -404,17 +393,15 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
     }
   if (BzMode)
     {
-      sprintf(name, "BzLeft");
+      sprintf(name, "Bz");
     }
   else
     {
-      sprintf(name, "BxLeft");
+      sprintf(name, "Bx");
     }
   if ((SDDS_CheckColumn(&SDDSInput, name, NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "Ny", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "Nfft", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "dy", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "dz", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+      (SDDS_CheckColumn(&SDDSInput, "y", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -424,14 +411,47 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "Unable to read SDDS page\n");
       return (1);
     }
-  if ((SDDS_GetParameterAsLong(&SDDSInput, "Ny", Ny) == NULL) ||
-      (SDDS_GetParameterAsLong(&SDDSInput, "Nfft", Nfft) == NULL) ||
-      (SDDS_GetParameterAsDouble(&SDDSInput, "dy", dy) == NULL) ||
-      (SDDS_GetParameterAsDouble(&SDDSInput, "dz", dz) == NULL))
+  rows = SDDS_RowCount(&SDDSInput);
+  cvalues = SDDS_GetColumnInDoubles(&SDDSInput, name);
+  if (cvalues == NULL)
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
+  yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
+  if (yvalues == NULL)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
+  if (zvalues == NULL)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  if (SDDS_Terminate(&SDDSInput) != 1)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  for (iy = 1; iy < rows; iy++)
+    {
+      if (zvalues[iy-1] != zvalues[iy])
+        {
+          *Ny = iy;
+          *Nfft = rows / iy;
+          *dy = (yvalues[iy-1] - yvalues[0]) / (iy - 1);
+          *dz = (zvalues[rows-1] - zvalues[0]) / (*Nfft - 1);
+          break;
+        }
+    }
+  if (rows != *Ny * *Nfft)
+    {
+      fprintf(stderr, "Unexpected row count\n");
+      return (1);
+    }
+
   if (tmpNfft != *Nfft)
     {
       fprintf(stderr, "Nfft values differ in the input files\n");
@@ -440,23 +460,6 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
   if ((tmpdz + 1e-9 < *dz) || (tmpdz - 1e-9 > *dz))
     {
       fprintf(stderr, "dz values differ in the input files\n");
-      return (1);
-    }
-  rows = SDDS_RowCount(&SDDSInput);
-  if (rows != *Ny * *Nfft)
-    {
-      fprintf(stderr, "Unexpected row count\n");
-      return (1);
-    }
-  cvalues = SDDS_GetColumnInDoubles(&SDDSInput, name);
-  if (cvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if (SDDS_Terminate(&SDDSInput) != 1)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
 
@@ -475,6 +478,8 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
         }
     }
   free(cvalues);
+  free(yvalues);
+  free(zvalues);
   tmpNy = *Ny;
   tmpdy = *dy;
 
@@ -486,17 +491,15 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
     }
   if (BzMode)
     {
-      sprintf(name, "BzRight");
+      sprintf(name, "Bz");
     }
   else
     {
-      sprintf(name, "BxRight");
+      sprintf(name, "Bx");
     }
   if ((SDDS_CheckColumn(&SDDSInput, name, NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "Ny", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "Nfft", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "dy", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckParameter(&SDDSInput, "dz", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+      (SDDS_CheckColumn(&SDDSInput, "y", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -506,14 +509,47 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "Unable to read SDDS page\n");
       return (1);
     }
-  if ((SDDS_GetParameterAsLong(&SDDSInput, "Ny", Ny) == NULL) ||
-      (SDDS_GetParameterAsLong(&SDDSInput, "Nfft", Nfft) == NULL) ||
-      (SDDS_GetParameterAsDouble(&SDDSInput, "dy", dy) == NULL) ||
-      (SDDS_GetParameterAsDouble(&SDDSInput, "dz", dz) == NULL))
+  rows = SDDS_RowCount(&SDDSInput);
+  cvalues = SDDS_GetColumnInDoubles(&SDDSInput, name);
+  if (cvalues == NULL)
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
+  yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
+  if (xvalues == NULL)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
+  if (zvalues == NULL)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  if (SDDS_Terminate(&SDDSInput) != 1)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  for (iy = 1; iy < rows; iy++)
+    {
+      if (zvalues[iy-1] != zvalues[iy])
+        {
+          *Ny = iy;
+          *Nfft = rows / iy;
+          *dy = (yvalues[iy-1] - yvalues[0]) / (iy - 1);
+          *dz = (zvalues[rows-1] - zvalues[0]) / (*Nfft - 1);
+          break;
+        }
+    }
+  if (rows != *Ny * *Nfft)
+    {
+      fprintf(stderr, "Unexpected row count\n");
+      return (1);
+    }
+
   if (tmpNy != *Ny)
     {
       fprintf(stderr, "Ny values differ in the input files\n");
@@ -534,23 +570,6 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "dz values differ in the input files\n");
       return (1);
     }
-  rows = SDDS_RowCount(&SDDSInput);
-  if (rows != *Ny * *Nfft)
-    {
-      fprintf(stderr, "Unexpected row count\n");
-      return (1);
-    }
-  cvalues = SDDS_GetColumnInDoubles(&SDDSInput, name);
-  if (cvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if (SDDS_Terminate(&SDDSInput) != 1)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
 
   *BxRight = calloc(*Ny, sizeof(COMPLEX *));
   for (iy = 0; iy < *Ny; iy++)
@@ -567,6 +586,8 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
         }
     }
   free(cvalues);
+  free(yvalues);
+  free(zvalues);
 
   return (0);
 }
@@ -844,7 +865,7 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
   return (0);
 }
 
-int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *topFileBz, char *bottomFileBz, char *leftFileBz, char *rightFileBz, char *outputFile, long derivatives, long multipoles)
+int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *outputFile, long derivatives, long multipoles)
 {
   COMPLEX **ByTop, **ByBottom, **BxRight, **BxLeft;
   COMPLEX **BzTop, **BzBottom, **BzRight, **BzLeft;
@@ -1005,7 +1026,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
     }
 
   /* Get Bz on the boundary */
-  if (ReadInputFiles(1, topFileBz, bottomFileBz, leftFileBz, rightFileBz, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &BzTop, &BzBottom, &BzRight, &BzLeft) != 0)
+  if (ReadInputFiles(1, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &BzTop, &BzBottom, &BzRight, &BzLeft) != 0)
     {
       return (1);
     }
@@ -1787,80 +1808,24 @@ COMPLEX calcGGallSidesBz(COMPLEX *beta, double k, double *lambda, double yMax, i
 
 void FFT(COMPLEX *field, int32_t isign, int32_t npts)
 {
-  unsigned long mmax, m, hn, j, istep, i;
-  double wtemp, wr, wpr, wpi, wi, theta, flt_isign;
-  /* must be double to preserve accuracy */
-  COMPLEX tempz;
+  double *real_imag;
+  int32_t i;
 
-  COMPLEX *fft;
-  double tempr, tempi;
-
-  fft = calloc(npts, sizeof(COMPLEX));
-
-  hn = npts / 2;
-
-  /* copy over */
-  for (i = 0; i < npts; i++)
-    fft[i] = field[i];
-
-  /* Fourier Transform isign = -1, inverse isign = 1 */
-
-  flt_isign = (double)(isign);
-  /* first, sort into bit-reversed order */
-  for (j = 0, i = 0; i < npts; i++) /* increment in regular order */
-    {
-      if (j > i) /* swap i and j = bit-reversal(i) once, if distinct */
-        {
-          tempz = fft[i];
-          fft[i] = fft[j];
-          fft[j] = tempz;
-        }
-      for (m = hn; ((j >= m) && (m >= 1)); m >>= 1)
-        /* find bit-reversal of next i */
-        {
-          j -= m;
-        }
-      j += m;
-    }
-
-  /* next, apply Danielson-Lanczos algorithm */
-  for (mmax = 1; (npts > mmax); mmax = istep)
-    /* loop through log_base2(N) times */
-    {
-      istep = mmax << 1; /* = 2*mmax */
-      /* initialize trig functions */
-      theta = (flt_isign) * (PI / ((double)(mmax)));
-      wtemp = sin(0.5 * theta);
-      wpr = -2.0 * wtemp * wtemp;
-      wpi = sin(theta);
-      wr = 1.0;
-      wi = 0.0;
-      for (m = 0; m < mmax; m += 1)
-        {
-          for (i = m; i < npts; i += istep)
-            {
-              j = i + mmax;
-              tempr = wr * fft[j].re - wi * fft[j].im;
-              tempi = wr * fft[j].im + wi * fft[j].re;
-              fft[j].re = fft[i].re - tempr;
-              fft[j].im = fft[i].im - tempi;
-              fft[i].re += tempr;
-              fft[i].im += tempi;
-            }
-          /* update trig functions via recurrence relations */
-          wr = wr + (wtemp = wr) * wpr - wi * wpi;
-          wi = wi + wi * wpr + wtemp * wpi;
-        }
-    }
-
-  /* copy */
+  real_imag = tmalloc(sizeof(double) * (2 * npts + 2));
   for (i = 0; i < npts; i++)
     {
-      field[i] = fft[i];
+      real_imag[2 * i] = field[i].re;
+      real_imag[2 * i + 1] = field[i].im;
     }
-
-  free(fft);
+  complexFFT(real_imag, npts, 0);
+  for (i = 0; i < npts; i++)
+    {
+      field[i].re = real_imag[2 * i];
+      field[i].im = real_imag[2 * i + 1];
+    }
+  free(real_imag);
 }
+
 
 unsigned long IntCeilingPowerOf2(unsigned long i)
 {
