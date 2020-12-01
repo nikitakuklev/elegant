@@ -634,15 +634,15 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
       }
       continue;
     }
-    ds = clorb[nElems].centroid[4] - beamline->revolution_length;
+    ds = clorb[nElems-(beamline->elem_recirc && start_from_recirc ? beamline->i_recirc : 0)].centroid[4] - beamline->revolution_length;
 #ifdef DEBUG
     printf("ds = %le\n", ds);
     fprintf(fpdeb, "%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n",
 	    iterationsDone,
-	    clorb[nElems].centroid[0],
-	    clorb[nElems].centroid[1],
-	    clorb[nElems].centroid[2],
-	    clorb[nElems].centroid[3],
+	    clorb[nElems-(beamline->elem_recirc && start_from_recirc ? beamline->i_recirc : 0)].centroid[0],
+	    clorb[nElems-(beamline->elem_recirc && start_from_recirc ? beamline->i_recirc : 0)].centroid[1],
+	    clorb[nElems-(beamline->elem_recirc && start_from_recirc ? beamline->i_recirc : 0)].centroid[2],
+	    clorb[nElems-(beamline->elem_recirc && start_from_recirc ? beamline->i_recirc : 0)].centroid[3],
 	    ds, dp);
     fflush(fpdeb);
 #endif
@@ -654,7 +654,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
 	printf("%10.3e ", clorb[0].centroid[i]);
       printf("\n");
       for (i=0; i<6; i++)
-	printf("%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
+	printf("%10.3e ", clorb[nElems-(beamline->elem_recirc && start_from_recirc ? beamline->i_recirc : 0)].centroid[i]-(i==4?beamline->revolution_length:0));
       printf("\n");
 #endif
     if (error<clorb_acc && iterationsDone>1) {
@@ -667,7 +667,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
     last_dp = dp;
     if (iterationsDone==0) {
       for (i=0; i<6; i++) 
-	orbit0[i] = clorb[nElems].centroid[i];
+	orbit0[i] = clorb[nElems-(beamline->elem_recirc && start_from_recirc ? beamline->i_recirc : 0)].centroid[i];
       orbit0[4] = ds;
       if (deviation)
 	deviation[4] = ds;
@@ -679,7 +679,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
 	  orbit0[i] = orbit1[i];
       }
       for (i=0; i<6; i++) 
-	orbit1[i] = clorb[nElems].centroid[i];
+	orbit1[i] = clorb[nElems-(beamline->elem_recirc && start_from_recirc ? beamline->i_recirc : 0)].centroid[i];
       orbit1[4] = ds;
       if (orbit1[4]!=orbit0[4]) {
         dp += -(orbit1[5] - orbit0[5])/(orbit1[4]-orbit0[4])*orbit1[4]*iterationFactor;
@@ -706,7 +706,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
     printf("%10.3e ", clorb[0].centroid[i]);
   printf("\n");
   for (i=0; i<6; i++)
-    printf("%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
+    printf("%10.3e ", clorb[nElems-(beamline->elem_recirc && start_from_recirc ? beamline->i_recirc : 0)].centroid[i]-(i==4?beamline->revolution_length:0));
   printf("\n");
   
   return 0;

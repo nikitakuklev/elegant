@@ -1363,18 +1363,23 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 #endif
 
   if (CM->nmon<CM->ncor) {
-    printf("*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
-    printf("*** Correction may be unstable (use SV controls).\n");
-    fflush(stdout);
+    if (coord==0)
+      printWarning("Trajectory correction may be unstable (consider use of SV controls).", "More correctors than monitors for x plane.");
+    else
+      printWarning("Trajectory correction may be unstable (consider use of SV controls).", "More correctors than monitors for y plane.");
   }
   if (CM->ncor==0) {
-    printf("Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
-    fflush(stdout);
+    if (coord==0) 
+      printWarning("No trajectory correction done for x plane.", "No correctors for x plane.");
+    else
+      printWarning("No trajectory correction done for y plane.", "No correctors for y plane.");
     return;
   }
   if (CM->nmon==0) {
-    printf("Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
-    fflush(stdout);
+    if (coord==0)
+      printWarning("No trajectory correction done for x plane.", "No monitors for x plane.");
+    else
+      printWarning("No trajectory correction done for y plane.", "No monitors for y plane.");
     CM->ncor = 0;
     return;
   }
@@ -1597,9 +1602,10 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   }
 
   if (CM->nmon<CM->ncor) {
-    printf("*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
-    printf("*** Correction may be unstable (use SV controls)\n");
-    fflush(stdout);
+    if (coord==0)
+      printWarning("More correctors than monitors for x plane.", "Correction may be unstable (consider use of SV controls).");
+    else
+      printWarning("More correctors than monitors for y plane.", "Correction may be unstable (consider use of SV controls).");
   }
   for (iteration=0; iteration<=n_iterations; iteration++) {
     if (!CM->posi[iteration])
@@ -2274,8 +2280,10 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
         moni = moni->succ;
       }
       if (!moni)  {
-        printf("Warning: no monitor found following %s#%ld at s=%le\n",
-               corr->name, corr->occurence, corr->end_pos);
+        char buffer[16384];
+        snprintf(buffer, 16384, "No monitor found following %s#%ld at s=%le\n",
+                 corr->name, corr->occurence, corr->end_pos);
+        printWarning("Correctors without following monitors are ignored for trajectory correction.", buffer);
         continue;   /* ignore correctors with no monitors following */
       }
     }
@@ -2298,18 +2306,19 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
           if (!((*kick_coef)[*ncor] = compute_kick_coefficient(corr, planeToInclude[iplane], corr->type, 
                                                                SL->corr_tweek[index], corr->name, 
                                                                SL->corr_param[index], run))) {
+            char buffer[16834];
             if (plane!=4) {
-              printf("warning: changing %s.%s does not directly kick the beam--use for steering may result in a crash!\n",
+              snprintf(buffer, 16384, "Changing %s.%s does not directly kick the beam.",
                      corr->name, SL->corr_param[index]);
-              fflush(stdout);
+              printWarning(buffer, "Use for steering may result in a crash.");
             } else {
               if (!((*kick_coef)[*ncor] 
                     = compute_kick_coefficient(corr, planeToInclude[iplane]==0?2:0, corr->type, 
                                                SL->corr_tweek[index], corr->name, 
                                                SL->corr_param[index], run))) {
-                printf("warning: changing %s.%s does not directly kick the beam--use for steering may result in a crash!\n",
-                       corr->name, SL->corr_param[index]);
-                fflush(stdout);
+                snprintf(buffer, 16384, "Changing %s.%s does not directly kick the beam.",
+                         corr->name, SL->corr_param[index]);
+                printWarning(buffer, "Use for steering may result in a crash.");
               }
             }
           }
@@ -2431,18 +2440,22 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
 #endif
 
   if (CM->nmon<CM->ncor) {
-    printf("*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
-    printf("*** Correction may be unstable (use SV controls).\n");
-    fflush(stdout);
+    if (coord==0)
+      printWarning("Orbit correction may be unstable (consider use of SV controls).", "More correctors than monitors for x plane.");
+    else
+      printWarning("Orbit correction may be unstable (consider use of SV controls).", "More correctors than monitors for y plane.");
   }
   if (CM->ncor==0) {
-    printf("Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
-    fflush(stdout);
-    return;
+    if (coord==0) 
+      printWarning("No orbit correction done for x plane.", "No correctors for x plane.");
+    else
+      printWarning("No orbit correction done for y plane.", "No correctors for y plane.");
   }
   if (CM->nmon==0) {
-    printf("Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
-    fflush(stdout);
+    if (coord==0)
+      printWarning("No orbit correction done for x plane.", "No monitors for x plane.");
+    else
+      printWarning("No orbit correction done for y plane.", "No monitors for y plane.");
     CM->ncor = 0;
     return;
   }
@@ -2595,17 +2608,20 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 			 &CM->kick_coef, &CM->sl_index, &CM->pegged, &CM->weight, coord, SL, run, beamline, 1);
 
   if (CM->ncor==0) {
-    printf("Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
-    fflush(stdout);
-    return;
+    if (coord==0) 
+      printWarning("No orbit correction done for x plane.", "No correctors for x plane.");
+    else
+      printWarning("No orbit correction done for y plane.", "No correctors for y plane.");
   }
 
   for (i_corr=0; i_corr<CM->ncor; i_corr++) 
     CM->kick_coef[i_corr] = 1;
 
   if (CM->nmon==0) {
-    printf("Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
-    fflush(stdout);
+    if (coord==0)
+      printWarning("No orbit correction done for x plane.", "No monitors for x plane.");
+    else
+      printWarning("No orbit correction done for y plane.", "No monitors for y plane.");
     CM->ncor = 0;
     return;
   }
@@ -2797,9 +2813,10 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
   }
 
   if (CM->nmon<CM->ncor) {
-    printf("*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
-    printf("*** Correction may be unstable (use SV controls)\n");
-    fflush(stdout);
+    if (coord==0)
+      printWarning("Orbit correction may be unstable (consider use of SV controls).", "More correctors than monitors for x plane.");
+    else
+      printWarning("Orbit correction may be unstable (consider use of SV controls).", "More correctors than monitors for y plane.");
   }
 
   Qo = matrix_get(CM->nmon, 1);   /* Vector of BPM errors */
@@ -3631,19 +3648,17 @@ void compute_coupled_trajcor_matrices
   }
 #endif
 
-  if (CM->nmon<CM->ncor) {
-    printf("*** Warning: more correctors than monitors for coupled correction.\n");
-    printf("*** Correction may be unstable (use SV controls).\n");
-    fflush(stdout);
-  }
+  if (CM->nmon<CM->ncor)
+    printWarning("Coupled trajectory correction may be unstable (consider use of SV controls).",
+                  "More correctors than monitors.");
   if (CM->ncor==0) {
-    printf("Warning: no correctors for coupled correction.  No correction done.\n");
-    fflush(stdout);
+    printWarning("Coupled trajectory correction not performed.",
+                 "No correctors for coupled correction.");
     return;
   }
   if (CM->nmon==0) {
-    printf("Warning: no monitors for coupled correction. No correction done.\n");
-    fflush(stdout);
+    printWarning("Coupled trajectory correction not performed.",
+                 "No monitors for coupled correction.");
     CM->ncor = 0;
     return;
   }
@@ -3828,9 +3843,8 @@ long global_coupled_trajcor
   }
 
   if (CM->nmon<CM->ncor) {
-    printf("*** Warning: more correctors than monitors for coupled trajectory correction.\n");
-    printf("*** Correction may be unstable (use SV controls)\n");
-    fflush(stdout);
+    printWarning("Coupled trajectory correction may be unstable (consider use of SV controls).",
+                  "More correctors than monitors.");
   }
   for (iteration=0; iteration<=n_iterations; iteration++) {
     if (!CM->posi[iteration])
