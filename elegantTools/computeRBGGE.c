@@ -36,7 +36,8 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
 int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile, char *rightFile,
                    int32_t *Nx, int32_t *Ny, int32_t *Nfft,
                    double *dx, double *dy, double *dz,
-                   COMPLEX ***ByTop, COMPLEX ***ByBottom, COMPLEX ***BxRight, COMPLEX ***BxLeft);
+                   COMPLEX ***ByTop, COMPLEX ***ByBottom, COMPLEX ***BxRight, COMPLEX ***BxLeft,
+                   double *xCenter, double *yCenter);
 
 #define SET_TOP_BY 0
 #define SET_BOTTOM_BY 1
@@ -211,13 +212,15 @@ int main(int argc, char **argv)
 int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile, char *rightFile,
                    int32_t *Nx, int32_t *Ny, int32_t *Nfft,
                    double *dx, double *dy, double *dz,
-                   COMPLEX ***ByTop, COMPLEX ***ByBottom, COMPLEX ***BxRight, COMPLEX ***BxLeft)
+                   COMPLEX ***ByTop, COMPLEX ***ByBottom, COMPLEX ***BxRight, COMPLEX ***BxLeft,
+                   double *xCenter, double *yCenter)
 {
   SDDS_DATASET SDDSInput;
   double *cvalues, *xvalues, *yvalues, *zvalues;
   int32_t rows, ik, ix, iy, n;
   int32_t tmpNx, tmpNy, tmpNfft;
   double tmpdx, tmpdy, tmpdz;
+  double xmintop, xminbottom, yminleft, yminright, xleft, xright, ytop, ybottom, xmaxtop, ymaxleft;
   char name[20];
 
   /* Read in By from the top face */
@@ -236,6 +239,7 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
     }
   if ((SDDS_CheckColumn(&SDDSInput, name, NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (SDDS_CheckColumn(&SDDSInput, "x", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "y", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -259,6 +263,12 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
+  yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
+  if (yvalues == NULL)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
   zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
   if (zvalues == NULL)
     {
@@ -274,6 +284,9 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
       return (1);
   }
+  xmintop = xvalues[0];
+  xmaxtop = xvalues[rows-1];
+  ytop = yvalues[0];
   for (ix = 1; ix < rows; ix++)
     {
       if (zvalues[ix-1] != zvalues[ix])
@@ -311,6 +324,7 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
     }
   free(cvalues);
   free(xvalues);
+  free(yvalues);
   free(zvalues);
   tmpNx = *Nx;
   tmpNfft = *Nfft;
@@ -332,6 +346,7 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
     }
   if ((SDDS_CheckColumn(&SDDSInput, name, NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (SDDS_CheckColumn(&SDDSInput, "x", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "y", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -355,6 +370,12 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
+  yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
+  if (yvalues == NULL)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
   zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
   if (zvalues == NULL)
     {
@@ -370,6 +391,8 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
       return (1);
   }
+  xminbottom = xvalues[0];
+  ybottom = yvalues[0];
   for (ix = 1; ix < rows; ix++)
     {
       if (zvalues[ix-1] != zvalues[ix])
@@ -428,6 +451,7 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
     }
   free(cvalues);
   free(xvalues);
+  free(yvalues);
   free(zvalues);
 
   /* Read in Bx from the left face */
@@ -445,6 +469,7 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       sprintf(name, "Bx");
     }
   if ((SDDS_CheckColumn(&SDDSInput, name, NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "x", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (SDDS_CheckColumn(&SDDSInput, "y", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
@@ -459,6 +484,12 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
   rows = SDDS_RowCount(&SDDSInput);
   cvalues = SDDS_GetColumnInDoubles(&SDDSInput, name);
   if (cvalues == NULL)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
+  if (xvalues == NULL)
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -484,6 +515,9 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
       return (1);
   }
+  yminleft = yvalues[0];
+  ymaxleft = yvalues[rows-1];
+  xleft = xvalues[0];
   for (iy = 1; iy < rows; iy++)
     {
       if (zvalues[iy-1] != zvalues[iy])
@@ -531,6 +565,7 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
         }
     }
   free(cvalues);
+  free(xvalues);
   free(yvalues);
   free(zvalues);
   tmpNy = *Ny;
@@ -551,6 +586,7 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       sprintf(name, "Bx");
     }
   if ((SDDS_CheckColumn(&SDDSInput, name, NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "x", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (SDDS_CheckColumn(&SDDSInput, "y", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
@@ -569,8 +605,14 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
-  yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
+  xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
   if (xvalues == NULL)
+    {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
+  if (yvalues == NULL)
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -590,6 +632,8 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
       return (1);
   }
+  yminright = yvalues[0];
+  xright = xvalues[0];
   for (iy = 1; iy < rows; iy++)
     {
       if (zvalues[iy-1] != zvalues[iy])
@@ -647,9 +691,58 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
         }
     }
   free(cvalues);
+  free(xvalues);
   free(yvalues);
   free(zvalues);
 
+  if (xmintop != xminbottom)
+    {
+      fprintf(stderr, "Error: x range differs in top and bottom files\n");
+      return (1);
+    }
+  if (yminleft != yminright)
+    {
+      fprintf(stderr, "Error: y range differs in left and right files\n");
+      return (1);
+    }
+  if (xleft <= xright)
+    {
+      fprintf(stderr, "Error: x values in left file less than x values in right file\n");
+      return (1);
+    }
+  if (ytop <= ybottom)
+    {
+      fprintf(stderr, "Error: y values in top file less than x values in bottom file\n");
+      return (1);
+    }
+  if (xmintop != xright)
+    {
+      fprintf(stderr, "Error: x values in right file don't match min x values in top and bottom files\n");
+      return (1);
+    }
+  if (yminleft != ybottom)
+    {
+      fprintf(stderr, "Error: y values in bottom file don't match min y values in left and right files\n");
+      return (1);
+    }
+  if (xmaxtop != xleft)
+    {
+      fprintf(stderr, "Error: x values in left file don't match max x values in top and bottom files\n");
+      return (1);
+    }
+  if (ymaxleft != ytop)
+    {
+      fprintf(stderr, "Error: y values in top file don't match max y values in left and right files\n");
+      return (1);
+    }
+  if (xCenter != NULL)
+    {
+      *xCenter = (xleft + xright) * .5;
+    }
+  if (yCenter != NULL)
+    {
+      *yCenter = (ytop + ybottom) * .5;
+    }
   return (0);
 }
 
@@ -665,7 +758,7 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
 
   double *lambda, *tau, *k, *x, *y;
 
-  double xMax, yMax;
+  double xMax, yMax, xCenter, yCenter;
   double dx, dy, dz, dk, invNfft;
 
   int32_t n, ir, ix, Nx, iy, Ny, ik, Nfft, Nz;
@@ -680,7 +773,7 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
   Ngrad = multipoles;
   Nderiv = 2 * derivatives - 1;
 
-  if (ReadInputFiles(0, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &ByTop, &ByBottom, &BxRight, &BxLeft) != 0)
+  if (ReadInputFiles(0, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &ByTop, &ByBottom, &BxRight, &BxLeft, &xCenter, &yCenter) != 0)
     {
       return (1);
     }
@@ -834,6 +927,10 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
       return (1);
     }
   if ((SDDS_DefineSimpleParameter(&SDDSOutput, "m", NULL, SDDS_LONG) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "xCenter", NULL, SDDS_DOUBLE) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "yCenter", NULL, SDDS_DOUBLE) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "xMax", NULL, SDDS_DOUBLE) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "yMax", NULL, SDDS_DOUBLE) != 1) ||
       (SDDS_DefineSimpleColumn(&SDDSOutput, "z", NULL, SDDS_DOUBLE) != 1))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -884,8 +981,13 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
         }
-      if (SDDS_SetParameters(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "m", 
-                             (int32_t)(fundamental?fundamental*(2*ir+1):ir), NULL) != 1)
+      if (SDDS_SetParameters(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, 
+                             "m", (int32_t)(fundamental?fundamental*(2*ir+1):ir), 
+                             "xCenter", xCenter,
+                             "yCenter", yCenter,
+                             "xMax", xMax,
+                             "yMax", yMax,
+                             NULL) != 1)
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
@@ -952,7 +1054,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
 
   double *lambda, *tau, *k, *x, *y;
 
-  double xMax, yMax;
+  double xMax, yMax, xCenter, yCenter;
   double dx, dy, dz, dk, invNfft;
 
   int32_t n, ir, ix, Nx, iy, Ny, ik, Nfft, Nz;
@@ -968,7 +1070,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
   Ngrad = multipoles;
   Nderiv = 2 * derivatives - 1;
 
-  if (ReadInputFiles(0, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &ByTop, &ByBottom, &BxRight, &BxLeft) != 0)
+  if (ReadInputFiles(0, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &ByTop, &ByBottom, &BxRight, &BxLeft, &xCenter, &yCenter) != 0)
     {
       return (1);
     }
@@ -988,7 +1090,9 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
 
   xMax = dx * 0.5 * (double)(Nx - 1);
   yMax = dy * 0.5 * (double)(Ny - 1);
+#ifdef DEBUG
   printf("xMax = %e, yMax=%e\n", xMax, yMax);
+#endif
   x = calloc(Nx, sizeof(double));
   for (ix = 0; ix < Nx; ix++)
     x[ix] = -xMax + dx * (double)ix;
@@ -1103,7 +1207,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
     }
 
   /* Get Bz on the boundary */
-  if (ReadInputFiles(1, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &BzTop, &BzBottom, &BzRight, &BzLeft) != 0)
+  if (ReadInputFiles(1, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &BzTop, &BzBottom, &BzRight, &BzLeft, NULL, NULL) != 0)
     {
       return (1);
     }
@@ -1186,7 +1290,9 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
   for (n = 0; n < Nderiv; n++)
     derivGG[n] = calloc(Nfft, sizeof(COMPLEX));
 
+#ifdef DEBUG
   printf("Printing results...\n");
+#endif
 
   if (SDDS_InitializeOutput(&SDDSOutput, SDDS_BINARY, 1, NULL, "computeRBGGE skew output", outputFile) != 1)
     {
@@ -1194,6 +1300,10 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
       return (1);
     }
   if ((SDDS_DefineSimpleParameter(&SDDSOutput, "m", NULL, SDDS_LONG) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "xCenter", NULL, SDDS_DOUBLE) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "yCenter", NULL, SDDS_DOUBLE) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "xMax", NULL, SDDS_DOUBLE) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "yMax", NULL, SDDS_DOUBLE) != 1) ||
       (SDDS_DefineSimpleColumn(&SDDSOutput, "z", NULL, SDDS_DOUBLE) != 1))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -1256,8 +1366,13 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
         }
-      if (SDDS_SetParameters(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "m", 
-                             (fundamental?fundamental*(2*ir+1):ir), NULL) != 1)
+      if (SDDS_SetParameters(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, 
+                             "m", (fundamental?fundamental*(2*ir+1):ir), 
+                             "xCenter", xCenter,
+                             "yCenter", yCenter,
+                             "xMax", xMax,
+                             "yMax", yMax,
+                             NULL) != 1)
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
