@@ -3,7 +3,7 @@
 #include "scan.h"
 #include "fftpackC.h"
 #define DEBUG 1
-#define OLDFFT 1
+//#define OLDFFT 1
 
 #define TWOPI 6.28318530717958647692528676656
 
@@ -251,6 +251,10 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
+  if ((zvalues[0] != zvalues[1]) || (xvalues[0] == xvalues[1])) {
+      fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
+      return (1);
+  }
   for (ix = 1; ix < rows; ix++)
     {
       if (zvalues[ix-1] != zvalues[ix])
@@ -278,9 +282,9 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       (*ByTop)[ix] = calloc(*Nfft, sizeof(COMPLEX));
     }
   n = 0;
-  for (ix = 0; ix < *Nx; ix++)
+  for (ik = 0; ik < *Nfft; ik++)
     {
-      for (ik = 0; ik < *Nfft; ik++)
+      for (ix = 0; ix < *Nx; ix++)
         {
           (*ByTop)[ix][ik].re = cvalues[n];
           n++;
@@ -343,6 +347,10 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
+  if ((zvalues[0] != zvalues[1]) || (xvalues[0] == xvalues[1])) {
+      fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
+      return (1);
+  }
   for (ix = 1; ix < rows; ix++)
     {
       if (zvalues[ix-1] != zvalues[ix])
@@ -391,9 +399,9 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       (*ByBottom)[ix] = calloc(*Nfft, sizeof(COMPLEX));
     }
   n = 0;
-  for (ix = 0; ix < *Nx; ix++)
+  for (ik = 0; ik < *Nfft; ik++)
     {
-      for (ik = 0; ik < *Nfft; ik++)
+      for (ix = 0; ix < *Nx; ix++)
         {
           (*ByBottom)[ix][ik].re = cvalues[n];
           n++;
@@ -453,6 +461,10 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
+  if ((zvalues[0] != zvalues[1]) || (yvalues[0] == yvalues[1])) {
+      fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
+      return (1);
+  }
   for (iy = 1; iy < rows; iy++)
     {
       if (zvalues[iy-1] != zvalues[iy])
@@ -491,9 +503,9 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       (*BxLeft)[iy] = calloc(*Nfft, sizeof(COMPLEX));
     }
   n = 0;
-  for (iy = 0; iy < *Ny; iy++)
+  for (ik = 0; ik < *Nfft; ik++)
     {
-      for (ik = 0; ik < *Nfft; ik++)
+      for (iy = 0; iy < *Ny; iy++)
         {
           (*BxLeft)[iy][ik].re = cvalues[n];
           n++;
@@ -555,6 +567,10 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
+  if ((zvalues[0] != zvalues[1]) || (yvalues[0] == yvalues[1])) {
+      fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
+      return (1);
+  }
   for (iy = 1; iy < rows; iy++)
     {
       if (zvalues[iy-1] != zvalues[iy])
@@ -603,9 +619,9 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
       (*BxRight)[iy] = calloc(*Nfft, sizeof(COMPLEX));
     }
   n = 0;
-  for (iy = 0; iy < *Ny; iy++)
+  for (ik = 0; ik < *Nfft; ik++)
     {
-      for (ik = 0; ik < *Nfft; ik++)
+      for (iy = 0; iy < *Ny; iy++)
         {
           (*BxRight)[iy][ik].re = cvalues[n];
           n++;
@@ -1883,9 +1899,9 @@ void FFT(COMPLEX *field, int32_t isign, int32_t npts)
         }
     }
 #ifdef DEBUG
-  fprintf(fpfft, "%ld\n", npts);
+  fprintf(fpfft, "%" PRId32 "\n", npts);
   for (i=0; i<npts; i++)
-    fprintf(fpfft, "%ld %le %le\n", i, field[i].re, field[i].im);
+    fprintf(fpfft, "%" PRId32 " %le %le\n", i, field[i].re, field[i].im);
 #endif
   free(real_imag);
 }
