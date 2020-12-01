@@ -30,8 +30,8 @@ COMPLEX calcGGallSidesBz(COMPLEX *beta, double k, double *lambda, double yMax, i
 void FFT(COMPLEX *field, int32_t isign, int32_t npts);
 unsigned long IntCeilingPowerOf2(unsigned long i);
 
-int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *outputFile, long derivatives, long multipoles);
-int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *outputFile, long derivatives, long multipoles);
+int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *outputFile, long derivatives, long multipoles, long fundamental);
+int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *outputFile, long derivatives, long multipoles, long fundamental);
 
 int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile, char *rightFile,
                    int32_t *Nx, int32_t *Ny, int32_t *Nfft,
@@ -46,20 +46,30 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
 #define SET_SKEW 5
 #define SET_DERIVATIVES 6
 #define SET_MULTIPOLES 7
-#define N_OPTIONS 8
+#define SET_FUNDAMENTAL 8
+#define N_OPTIONS 9
 
 char *option[N_OPTIONS] = {
-  "top", "bottom", "left", "right", "normal", "skew", "derivatives", "multipoles"};
+  "top", "bottom", "left", "right", "normal", "skew", "derivatives", "multipoles", "fundamental"};
 
 #define USAGE "computeRBGGE -top=<filename> -bottom=<filename> -left=<filename> -right=<filename>\n\
-             -normal=<output> -skew=<output> -derivatives=<number> -multipoles=<number>\n\
-Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg"
+             -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]\n\
+-top         (x, y, z, Bx, By, Bz) map for top plane (y=constant, y>0).\n\
+-bottom      (x, y, z, Bx, By, Bz) map for bottom plane (y=constant, y<0).\n\
+-right       (x, y, z, Bx, By, Bz) map for right plane (x=constant, x<0).\n\
+-left        (x, y, z, Bx, By, Bz) map for left plane (x=constant, x>0).\n\
+-normal      Output file for normal-component generalized gradients.\n\
+-skew        Output file for skew-component generalized gradients.\n\
+-derivatives Number of derivatives vs z desired in output. Default: 7\n\
+-multipoles  Number of multipoles desired in output. Default: 8\n\
+-fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\n\
+Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Soliday, and Michael Borland."
 
 int main(int argc, char **argv)
 {
   SCANNED_ARG *scanned;
   long i_arg;
-  long multipoles = 0, derivatives = 7;
+  long multipoles = 8, derivatives = 7, fundamental=0;
   char *topFile = NULL, *bottomFile = NULL, *leftFile = NULL, *rightFile = NULL;
   char *normalOutputFile = NULL, *skewOutputFile = NULL;
 
@@ -150,6 +160,15 @@ int main(int argc, char **argv)
                   return (1);
                 }
               break;
+            case SET_FUNDAMENTAL:
+              if (scanned[i_arg].n_items != 2 ||
+                  sscanf(scanned[i_arg].list[1], "%ld", &fundamental) != 1 ||
+                  fundamental < 0)
+                {
+                  fprintf(stderr, "invalid -fundamental syntax\n%s\n", USAGE);
+                  return (1);
+                }
+              break;
             default:
               fprintf(stderr, "unknown option given\n%s\n", USAGE);
               return (1);
@@ -179,12 +198,12 @@ int main(int argc, char **argv)
 #endif
   if (normalOutputFile != NULL)
     {
-      if (computeGGderiv(topFile, bottomFile, leftFile, rightFile, normalOutputFile, derivatives, multipoles))
+      if (computeGGderiv(topFile, bottomFile, leftFile, rightFile, normalOutputFile, derivatives, multipoles, fundamental))
         return 1;
     }
   if (skewOutputFile != NULL)
     {
-      computeGGcos(topFile, bottomFile, leftFile, rightFile, skewOutputFile, derivatives, multipoles);
+      computeGGcos(topFile, bottomFile, leftFile, rightFile, skewOutputFile, derivatives, multipoles, fundamental);
     }
   return (0);
 }
@@ -634,7 +653,7 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
   return (0);
 }
 
-int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *outputFile, long derivatives, long multipoles)
+int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *outputFile, long derivatives, long multipoles, long fundamental)
 {
   COMPLEX **ByTop, **ByBottom, **BxRight, **BxLeft;
 
@@ -773,22 +792,27 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
     genGradr_k[ir] = calloc(Nfft, sizeof(COMPLEX));
   for (ir = 0; ir < Ngrad; ir++)
     {
+      long ir1;
+      if (fundamental)
+        ir1 = fundamental*(2*ir+1);
+      else
+        ir1 = ir + 1;
       ik = 0;
       /* top and bottom need care for k->0 */
-      genGradT = calcGGtopbottomk0A(betaTop[ik], lambda, yMax, ir + 1, Ncoeff);
-      genGradB = calcGGtopbottomk0A(betaBottom[ik], lambda, yMax, ir + 1, Ncoeff);
+      genGradT = calcGGtopbottomk0A(betaTop[ik], lambda, yMax, ir1, Ncoeff);
+      genGradB = calcGGtopbottomk0A(betaBottom[ik], lambda, yMax, ir1, Ncoeff);
 
-      genGradR = calcGGrightA(betaRight[ik], k[ik], tau, xMax, ir + 1, Ncoeff);
-      genGradL = calcGGleftA(betaLeft[ik], k[ik], tau, xMax, ir + 1, Ncoeff);
+      genGradR = calcGGrightA(betaRight[ik], k[ik], tau, xMax, ir1, Ncoeff);
+      genGradL = calcGGleftA(betaLeft[ik], k[ik], tau, xMax, ir1, Ncoeff);
 
       genGradr_k[ir][ik].re = genGradT.re - genGradB.re + genGradR.re + genGradL.re;
       genGradr_k[ir][ik].im = genGradT.im - genGradB.im + genGradR.im + genGradL.im;
       for (ik = 1; ik < Nfft; ik++)
         {
-          genGradT = calcGGtopbottomA(betaTop[ik], k[ik], lambda, yMax, ir + 1, Ncoeff);
-          genGradB = calcGGtopbottomA(betaBottom[ik], k[ik], lambda, yMax, ir + 1, Ncoeff);
-          genGradR = calcGGrightA(betaRight[ik], k[ik], tau, xMax, ir + 1, Ncoeff);
-          genGradL = calcGGleftA(betaLeft[ik], k[ik], tau, xMax, ir + 1, Ncoeff);
+          genGradT = calcGGtopbottomA(betaTop[ik], k[ik], lambda, yMax, ir1, Ncoeff);
+          genGradB = calcGGtopbottomA(betaBottom[ik], k[ik], lambda, yMax, ir1, Ncoeff);
+          genGradR = calcGGrightA(betaRight[ik], k[ik], tau, xMax, ir1, Ncoeff);
+          genGradL = calcGGleftA(betaLeft[ik], k[ik], tau, xMax, ir1, Ncoeff);
 
           genGradr_k[ir][ik].re = genGradT.re - genGradB.re + genGradR.re + genGradL.re;
           genGradr_k[ir][ik].im = genGradT.im - genGradB.im + genGradR.im + genGradL.im;
@@ -860,7 +884,8 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
         }
-      if (SDDS_SetParameters(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "m", (int32_t)(ir + 1), NULL) != 1)
+      if (SDDS_SetParameters(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "m", 
+                             (int32_t)(fundamental?fundamental*(2*ir+1):ir), NULL) != 1)
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
@@ -913,7 +938,8 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
   return (0);
 }
 
-int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *outputFile, long derivatives, long multipoles)
+int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFile, char *outputFile, long derivatives, long multipoles,
+                 long fundamental)
 {
   COMPLEX **ByTop, **ByBottom, **BxRight, **BxLeft;
   COMPLEX **BzTop, **BzBottom, **BzRight, **BzLeft;
@@ -1230,7 +1256,8 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
         }
-      if (SDDS_SetParameters(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "m", ir, NULL) != 1)
+      if (SDDS_SetParameters(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "m", 
+                             (fundamental?fundamental*(2*ir+1):ir), NULL) != 1)
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
