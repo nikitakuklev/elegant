@@ -3,7 +3,7 @@
 #include "scan.h"
 #include "fftpackC.h"
 #define DEBUG 1
-//#define OLDFFT 1
+#define OLDFFT 1
 
 #define TWOPI 6.28318530717958647692528676656
 
@@ -62,6 +62,14 @@ int main(int argc, char **argv)
   long multipoles = 0, derivatives = 7;
   char *topFile = NULL, *bottomFile = NULL, *leftFile = NULL, *rightFile = NULL;
   char *normalOutputFile = NULL, *skewOutputFile = NULL;
+
+#ifdef DEBUG
+#ifdef OLDFFT
+  fprintf(stderr, "Using old FFT\n");
+#else
+  fprintf(stderr, "Using new FFT\n");
+#endif
+#endif
 
   argc = scanargs(&scanned, argc, argv);
   if (argc < 2 || argc > (2 + N_OPTIONS))
@@ -1838,6 +1846,17 @@ void FFT(COMPLEX *field, int32_t isign, int32_t npts)
 {
   double *real_imag;
   int32_t i;
+#ifdef DEBUG
+  static FILE *fpfft = NULL;
+  if (!fpfft) {
+    fpfft = fopen("computeRBGGE.fft", "w");
+    fprintf(fpfft, "SDDS1\n");
+    fprintf(fpfft, "&column name=i type=long &end\n");
+    fprintf(fpfft, "&column name=Real type=double &end\n");
+    fprintf(fpfft, "&column name=Imag type=double &end\n");
+    fprintf(fpfft, "&data mode=ascii &end\n");
+  }
+#endif
 
   real_imag = tmalloc(sizeof(double) * (2 * npts + 2));
   for (i = 0; i < npts; i++)
@@ -1847,17 +1866,27 @@ void FFT(COMPLEX *field, int32_t isign, int32_t npts)
     }
   if (isign == -1)
     {
-      complexFFT(real_imag, npts, INVERSE_FFT);
+      complexFFT(real_imag, npts, 0);
+      for (i = 0; i < npts; i++)
+        {
+          field[i].re = npts*real_imag[2 * i];
+          field[i].im = npts*real_imag[2 * i + 1];
+        }
     }
   else
     {
-      complexFFT(real_imag, npts, 0);
+      complexFFT(real_imag, npts, INVERSE_FFT);
+      for (i = 0; i < npts; i++)
+        {
+          field[i].re = real_imag[2 * i];
+          field[i].im = real_imag[2 * i + 1];
+        }
     }
-  for (i = 0; i < npts; i++)
-    {
-      field[i].re = real_imag[2 * i];
-      field[i].im = real_imag[2 * i + 1];
-    }
+#ifdef DEBUG
+  fprintf(fpfft, "%ld\n", npts);
+  for (i=0; i<npts; i++)
+    fprintf(fpfft, "%ld %le %le\n", i, field[i].re, field[i].im);
+#endif
   free(real_imag);
 }
 #else
@@ -1870,6 +1899,18 @@ void FFT(COMPLEX *field, int32_t isign, int32_t npts)
 
   COMPLEX *fft;
   double tempr, tempi;
+
+#ifdef DEBUG
+  static FILE *fpfft = NULL;
+  if (!fpfft) {
+    fpfft = fopen("computeRBGGE.fft", "w");
+    fprintf(fpfft, "SDDS1\n");
+    fprintf(fpfft, "&column name=i type=long &end\n");
+    fprintf(fpfft, "&column name=Real type=double &end\n");
+    fprintf(fpfft, "&column name=Imag type=double &end\n");
+    fprintf(fpfft, "&data mode=ascii &end\n");
+  }
+#endif
 
   fft = calloc(npts, sizeof(COMPLEX));
 
@@ -1936,6 +1977,12 @@ void FFT(COMPLEX *field, int32_t isign, int32_t npts)
 
     }
   free(fft);
+
+#ifdef DEBUG
+  fprintf(fpfft, "%ld\n", npts);
+  for (i=0; i<npts; i++)
+    fprintf(fpfft, "%ld %le %le\n", i, field[i].re, field[i].im);
+#endif
 }
 #endif
 
