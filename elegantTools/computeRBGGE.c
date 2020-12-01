@@ -658,6 +658,7 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
   SDDS_DATASET SDDSOutput;
   char name[20];
 
+  Ngrad = multipoles;
   Nderiv = 2 * derivatives - 1;
 
   if (ReadInputFiles(0, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &ByTop, &ByBottom, &BxRight, &BxLeft) != 0)
@@ -938,6 +939,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
 
   char name[20];
 
+  Ngrad = multipoles;
   Nderiv = 2 * derivatives - 1;
 
   if (ReadInputFiles(0, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &ByTop, &ByBottom, &BxRight, &BxLeft) != 0)
