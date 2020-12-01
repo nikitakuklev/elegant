@@ -625,7 +625,7 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
   double xMax, yMax;
   double dx, dy, dz, dk, invNfft;
 
-  int32_t n, ir, ix, Nx, iy, Ny, ik, Nfft, Nz = 3600;
+  int32_t n, ir, ix, Nx, iy, Ny, ik, Nfft, Nz;
 
   int32_t Ngrad = 8;
   int32_t Nderiv = 7;
@@ -640,7 +640,8 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
     {
       return (1);
     }
-
+  Nz = Nfft;
+  
   dk = TWOPI / (dz * (double)Nfft);
   for (ix = 0; ix < Nx; ix++)
     {
@@ -903,7 +904,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
   double xMax, yMax;
   double dx, dy, dz, dk, invNfft;
 
-  int32_t n, ir, ix, Nx, iy, Ny, ik, Nfft, Nz = 3600;
+  int32_t n, ir, ix, Nx, iy, Ny, ik, Nfft, Nz;
 
   int32_t Ngrad = 8;
   int32_t Nderiv = 7;
@@ -919,6 +920,8 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
     {
       return (1);
     }
+  Nz = Nfft;
+
   dk = TWOPI / (dz * (double)Nfft);
   for (ix = 0; ix < Nx; ix++)
     {
@@ -1052,6 +1055,8 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
     {
       return (1);
     }
+  Nz = Nfft;
+
   for (ix = 0; ix < Nx; ix++)
     {
       FFT(BzTop[ix], -1, Nfft);
