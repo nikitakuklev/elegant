@@ -2,7 +2,7 @@
 #include "SDDS.h"
 #include "scan.h"
 #include "fftpackC.h"
-#define DEBUG 1
+//#define DEBUG 1
 //#define OLDFFT 1
 
 #define TWOPI 6.28318530717958647692528676656
