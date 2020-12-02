@@ -9,7 +9,7 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage "usage: computeGeneralizedGradients -input <filename> -output <rootname> -mainHarmonic <number> -nHarmonics <number> \[-allHarmonics 1] \nHarmonic 2 is quadrupole, 3 is octupole, etc.\nNormally, only allowed harmonics of the main harmonic are used, assuming that the main harmonic is the only designed-in harmonic.\nTo use all higher harmonics, use the -allHarmonics option.\n"
+set usage "usage: computeGeneralizedGradients -input <filename> -output <rootname> -mainHarmonic <number> -nHarmonics <number> \[-allHarmonics 1] \nHarmonic 2 is quadrupole, 3 is sextupole, etc.\nNormally, only allowed harmonics of the main harmonic are used, assuming that the main harmonic is the only designed-in harmonic.\nTo use all higher harmonics, use the -allHarmonics option.\n"
 set args $argv
 set input ""
 set output ""
