@@ -205,8 +205,12 @@ VMATRIX *computeMatricesFromTracking(
   for (i=0; i<6; i++)
     if (n_fits[i])
       C[i] /= n_fits[i];
-  if (best_fit.coefficient) free(best_fit.coefficient);
-  if (best_fit.coefficient_error) free(best_fit.coefficient_error);
+  if (best_fit.coefficient) {
+    free(best_fit.coefficient);
+  }
+  if (best_fit.coefficient_error) {
+    free(best_fit.coefficient_error);
+  }
   best_fit.coefficient = best_fit.coefficient_error = NULL;
 
 #if DEBUG1
@@ -236,7 +240,9 @@ VMATRIX *computeMatricesFromTracking(
   for (i=5; i>=0; i--)
     for (j=5; j>=0; j--) {
       free(saved_fit[i][j].coefficient);
+      saved_fit[i][j].coefficient = NULL;
       free(saved_fit[i][j].coefficient_error);
+      saved_fit[i][j].coefficient_error = NULL;
     }
   free_zarray_2d((void**)saved_fit, 6, 6);
 
@@ -498,10 +504,22 @@ VMATRIX *computeMatricesFromTracking(
       }
     }
   }
-  if (best_fit1.coefficient) free(best_fit1.coefficient);
-  if (best_fit2.coefficient) free(best_fit2.coefficient);
-  if (best_fit1.coefficient_error) free(best_fit1.coefficient_error);
-  if (best_fit2.coefficient_error) free(best_fit2.coefficient_error);
+  if (best_fit1.coefficient) {
+    free(best_fit1.coefficient);
+    best_fit1.coefficient = NULL;
+  }
+  if (best_fit2.coefficient) {
+    free(best_fit2.coefficient);
+    best_fit2.coefficient = NULL;
+  }
+  if (best_fit1.coefficient_error) {
+    free(best_fit1.coefficient_error);
+    best_fit1.coefficient_error = NULL;
+  }
+  if (best_fit2.coefficient_error) {
+    free(best_fit2.coefficient_error);
+    best_fit2.coefficient_error = NULL;
+  }
 
   /* Subtract Tijk, Qijkk and Qijjk terms (for j>k) from final vectors. */
   for (i=5; i>=0; i--) {
@@ -735,7 +753,7 @@ int findBestFit(FIT *best_fit, double **set_i, double **set_f, double **set_erro
   }
   if (best_fit->coefficient_error) {
     free(best_fit->coefficient_error);
-    best_fit->coefficient = NULL;
+    best_fit->coefficient_error = NULL;
   }
   best_fit->order_of_fit = 0;
 
@@ -774,8 +792,10 @@ int findBestFit(FIT *best_fit, double **set_i, double **set_f, double **set_erro
     if (fit.chi_squared<best_fit->chi_squared) {
       best_fit->chi_squared = fit.chi_squared;
       if (best_fit->coefficient!=NULL) {
-	free(best_fit->coefficient);
-	free(best_fit->coefficient_error);
+        free(best_fit->coefficient);
+        best_fit->coefficient = NULL;
+        free(best_fit->coefficient_error);
+        best_fit->coefficient_error = NULL;
       }
       best_fit->coefficient       = fit.coefficient;
       best_fit->coefficient_error = fit.coefficient_error;
@@ -791,7 +811,9 @@ int findBestFit(FIT *best_fit, double **set_i, double **set_f, double **set_erro
   free(ydata);
   free(sigmay);
   free(fit.coefficient);
+  fit.coefficient = NULL;
   free(fit.coefficient_error);
+  fit.coefficient_error = NULL;
 
   if (best_fit->order_of_fit==-1)
     return 0;
