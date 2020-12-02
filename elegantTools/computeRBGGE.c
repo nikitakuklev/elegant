@@ -982,7 +982,7 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
           return (1);
         }
       if (SDDS_SetParameters(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, 
-                             "m", (int32_t)(fundamental?fundamental*(2*ir+1):ir), 
+                             "m", (int32_t)(fundamental?fundamental*(2*ir+1):ir+1), 
                              "xCenter", xCenter,
                              "yCenter", yCenter,
                              "xMax", xMax,
