@@ -1184,22 +1184,27 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
   /* calculate skew gradients C_ir for ir != 0 */
   for (ir = 1; ir < Ngrad; ir++)
     {
+      long ir1;
+      if (fundamental)
+        ir1 = fundamental*(2*ir+1); /* Is this right ? */
+      else
+        ir1 = ir;
       ik = 0;
       /* top and bottom need care for k->0 */
-      genGradT = calcGGtopbottomk0B(betaTop[ik], lambda, yMax, ir, Ncoeff);
-      genGradB = calcGGtopbottomk0B(betaBottom[ik], lambda, yMax, ir, Ncoeff);
+      genGradT = calcGGtopbottomk0B(betaTop[ik], lambda, yMax, ir1, Ncoeff);
+      genGradB = calcGGtopbottomk0B(betaBottom[ik], lambda, yMax, ir1, Ncoeff);
 
-      genGradR = calcGGrightk0(betaRight[ik], tau, xMax, ir, Ncoeff);
-      genGradL = calcGGleftk0(betaLeft[ik], tau, xMax, ir, Ncoeff);
+      genGradR = calcGGrightk0(betaRight[ik], tau, xMax, ir1, Ncoeff);
+      genGradL = calcGGleftk0(betaLeft[ik], tau, xMax, ir1, Ncoeff);
 
       genGradr_k[ir][ik].re = genGradT.re + genGradB.re + genGradR.re + genGradL.re;
       genGradr_k[ir][ik].im = genGradT.im + genGradB.im + genGradR.im + genGradL.im;
       for (ik = 1; ik < Nfft; ik++)
         {
-          genGradT = calcGGtopbottomB(betaTop[ik], k[ik], lambda, yMax, ir, Ncoeff);
-          genGradB = calcGGtopbottomB(betaBottom[ik], k[ik], lambda, yMax, ir, Ncoeff);
-          genGradR = calcGGrightB(betaRight[ik], k[ik], tau, xMax, ir, Ncoeff);
-          genGradL = calcGGleftB(betaLeft[ik], k[ik], tau, xMax, ir, Ncoeff);
+          genGradT = calcGGtopbottomB(betaTop[ik], k[ik], lambda, yMax, ir1, Ncoeff);
+          genGradB = calcGGtopbottomB(betaBottom[ik], k[ik], lambda, yMax, ir1, Ncoeff);
+          genGradR = calcGGrightB(betaRight[ik], k[ik], tau, xMax, ir1, Ncoeff);
+          genGradL = calcGGleftB(betaLeft[ik], k[ik], tau, xMax, ir1, Ncoeff);
 
           genGradr_k[ir][ik].re = genGradT.re + genGradB.re + genGradR.re + genGradL.re;
           genGradr_k[ir][ik].im = genGradT.im + genGradB.im + genGradR.im + genGradL.im;
@@ -1367,7 +1372,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
           return (1);
         }
       if (SDDS_SetParameters(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, 
-                             "m", (fundamental?fundamental*(2*ir+1):ir), 
+                             "m", (fundamental?fundamental*(2*ir+1):ir), /* Is this right? */
                              "xCenter", xCenter,
                              "yCenter", yCenter,
                              "xMax", xMax,
