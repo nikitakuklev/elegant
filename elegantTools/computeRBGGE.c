@@ -37,7 +37,7 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
                    int32_t *Nx, int32_t *Ny, int32_t *Nfft,
                    double *dx, double *dy, double *dz,
                    COMPLEX ***ByTop, COMPLEX ***ByBottom, COMPLEX ***BxRight, COMPLEX ***BxLeft,
-                   double *xCenter, double *yCenter);
+                   double *xCenter, double *yCenter, double *zStart);
 
 #define SET_TOP_BY 0
 #define SET_BOTTOM_BY 1
@@ -213,7 +213,7 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
                    int32_t *Nx, int32_t *Ny, int32_t *Nfft,
                    double *dx, double *dy, double *dz,
                    COMPLEX ***ByTop, COMPLEX ***ByBottom, COMPLEX ***BxRight, COMPLEX ***BxLeft,
-                   double *xCenter, double *yCenter)
+                   double *xCenter, double *yCenter, double *zStart)
 {
   SDDS_DATASET SDDSInput;
   double *cvalues, *xvalues, *yvalues, *zvalues;
@@ -287,6 +287,7 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
   xmintop = xvalues[0];
   xmaxtop = xvalues[rows-1];
   ytop = yvalues[0];
+  find_min_max(zStart, NULL, zvalues, rows);
   for (ix = 1; ix < rows; ix++)
     {
       if (zvalues[ix-1] != zvalues[ix])
@@ -758,7 +759,7 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
 
   double *lambda, *tau, *k, *x, *y;
 
-  double xMax, yMax, xCenter, yCenter;
+  double xMax, yMax, xCenter, yCenter, zStart;
   double dx, dy, dz, dk, invNfft;
 
   int32_t n, ir, ix, Nx, iy, Ny, ik, Nfft, Nz;
@@ -773,7 +774,7 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
   Ngrad = multipoles;
   Nderiv = 2 * derivatives - 1;
 
-  if (ReadInputFiles(0, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &ByTop, &ByBottom, &BxRight, &BxLeft, &xCenter, &yCenter) != 0)
+  if (ReadInputFiles(0, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &ByTop, &ByBottom, &BxRight, &BxLeft, &xCenter, &yCenter, &zStart) != 0)
     {
       return (1);
     }
@@ -995,7 +996,7 @@ int computeGGderiv(char *topFile, char *bottomFile, char *leftFile, char *rightF
       for (ik = 0; ik < Nz; ik++)
         {
           if (SDDS_SetRowValues(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, ik,
-                                "z", dz * (double)ik,
+                                "z", zStart + dz * (double)ik,
                                 "CnmS0", genGradr_k[ir][ik].re * invNfft,
                                 NULL) != 1)
             {
@@ -1054,7 +1055,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
 
   double *lambda, *tau, *k, *x, *y;
 
-  double xMax, yMax, xCenter, yCenter;
+  double xMax, yMax, xCenter, yCenter, zStart;
   double dx, dy, dz, dk, invNfft;
 
   int32_t n, ir, ix, Nx, iy, Ny, ik, Nfft, Nz;
@@ -1070,7 +1071,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
   Ngrad = multipoles;
   Nderiv = 2 * derivatives - 1;
 
-  if (ReadInputFiles(0, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &ByTop, &ByBottom, &BxRight, &BxLeft, &xCenter, &yCenter) != 0)
+  if (ReadInputFiles(0, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &ByTop, &ByBottom, &BxRight, &BxLeft, &xCenter, &yCenter, &zStart) != 0)
     {
       return (1);
     }
@@ -1212,7 +1213,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
     }
 
   /* Get Bz on the boundary */
-  if (ReadInputFiles(1, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &BzTop, &BzBottom, &BzRight, &BzLeft, NULL, NULL) != 0)
+  if (ReadInputFiles(1, topFile, bottomFile, leftFile, rightFile, &Nx, &Ny, &Nfft, &dx, &dy, &dz, &BzTop, &BzBottom, &BzRight, &BzLeft, NULL, NULL, NULL) != 0)
     {
       return (1);
     }
@@ -1387,7 +1388,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
           if (ir == 0)
             {
               if (SDDS_SetRowValues(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, ik,
-                                    "z", dz * (double)ik,
+                                    "z", zStart + dz * (double)ik,
                                     "CnmC0", 0.0,
                                     NULL) != 1)
                 {
@@ -1398,7 +1399,7 @@ int computeGGcos(char *topFile, char *bottomFile, char *leftFile, char *rightFil
           else
             {
               if (SDDS_SetRowValues(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, ik,
-                                    "z", dz * (double)ik,
+                                    "z", zStart + dz * (double)ik,
                                     "CnmC0", genGradr_k[ir][ik].re * invNfft,
                                     NULL) != 1)
                 {
