@@ -454,7 +454,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[1], px*pCentral,
                                bgg->poIndex[2], y,
                                bgg->poIndex[3], py*pCentral,
-                               bgg->poIndex[4], iz*dz,
+                               bgg->poIndex[4], (iz-1)*dz,
                                bgg->poIndex[5], sqrt(sqr(pCentral*(1+delta))-(sqr(px)+sqr(py))*sqr(pCentral)),
                                bgg->poIndex[6], Bx,
                                bgg->poIndex[7], By,
@@ -687,7 +687,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 		cos_mphi = cos(m*phi);
 		if (ns==0) {
 		  /* normal */
-		  for (ig=1; ig<igLimit[ns]; ig++) {
+		  for (ig=0; ig<igLimit[ns]; ig++) {
 		    term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
 		    Bx += term*( (2*ig+m)*cos_phi*sin_mphi - m*sin_phi*cos_mphi )*bggData[ns]->Cmn[im][ig][iz];
 		    By += term*( (2*ig+m)*sin_phi*sin_mphi + m*cos_phi*cos_mphi )*bggData[ns]->Cmn[im][ig][iz];
