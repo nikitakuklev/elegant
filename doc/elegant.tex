@@ -96,9 +96,9 @@ the serial or parallel versions and report issues to the developers.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The \verb|computeRGGGE| program was added, allowing computation of a generalized gradient expansion for
-  use with \verb|BGGEXP| based on field data on a rectangular boundary. The code was developed by R. Lindberg and
-  R. Soliday (APS).
+\item The \verb|computeRBGGE| program was added, allowing computation of a generalized gradient expansion\cite{Venturini-NIMA427-387} for
+  use with \verb|BGGEXP| based on field data on a rectangular boundary \cite{Mitchell-2007}. The code was developed by R. Lindberg (APS)
+  with help from R. Soliday (APS) and M. Borland (APS).
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -6166,7 +6166,10 @@ up-to-date than these manual pages.
   parameter output, using a user-supplied, s-dependent gas pressure.
   (Program by M. Borland.)
 \item {\tt computeCoherentFraction} --- Computes the coherent fraction for undulator radiation.
-\item {\tt computeGeneralizedGradients} --- Computes generalized gradients for use with the \verb|BGGEXP| element.
+\item {\tt computeGeneralizedGradients} --- Computes generalized gradients from data on a circular cylinder
+  for use with the \verb|BGGEXP| element.
+\item {\tt computeRBGGE} --- Computed generalized gradients from data on a rectangular boundary 
+  for use with the \verb|BGGEXP| element.
 \item {\tt computeSCTuneSpread} --- Compute space charge tune spread.
 \item {\tt coreEmittance} --- Computes the slice emittance for the beam core (e.g., 80\% of the beam).
   (Program by X. Dong.)
@@ -6483,6 +6486,45 @@ Finally, a parameter \verb|R| must exist that gives the radius in meters for the
 \end{itemize}
 
 \item {\bf authors:} M. Borland, R. Lindberg (ANL/APS).
+\end{itemize}
+
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|computeRBGGE|}\end{center}
+%\end{latexonly}
+\subsection{computeRBGGE}
+
+\begin{itemize}
+\item {\bf description:}  Compute generalized gradients \cite{Venturini-NIMA427-387} from data on a rectangular
+boundary \cite{Mitchell-2007} for use with {\tt elegant}'s \verb|BGGEXP| element.
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+computeRBGGE -yminus={\em filename} -yplus={\em filename} -xminus={\em filename} -xplus={\em filename}
+    -normal={\em outputFilename} [-skew={\em outputFilename}]
+    [-derivatives={\em number}] [-multipoles={\em number}] [-fundamental={\em number}]
+}\end{flushleft}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt yplus} --- File containing \verb|x|, \verb|y|, \verb|z|, and \verb|By|, 
+  map stored in columns for positive-y plane. If skew components are desired, file must also supply \verb|Bz|.
+\item {\tt yminus} --- File containing \verb|x|, \verb|y|, \verb|z|, and \verb|By|, 
+  map stored in columns for negative-y plane. If skew components are desired, file must also supply \verb|Bz|.
+\item {\tt xminus} ---  File containing \verb|x|, \verb|y|, \verb|z|, and \verb|Bx|, 
+  map stored in columns for negative-y plane. If skew components are desired, file must also supply \verb|Bz|.
+\item {\tt xplus} ---  File containing \verb|x|, \verb|y|, \verb|z|, and \verb|Bx|, 
+  map stored in columns for positive-y plane. If skew components are desired, file must also supply \verb|Bz|.
+\item {\tt normal} ---  Output file for normal-component generalized gradients. Supply to \verb|NORMAL_FILENAME|
+  parameter of \verb|BGGEXP|.
+\item {\tt skew} ---  Output file for skew-component generalized gradients. Supply to \verb|SKEW_FILENAME|
+  parameter of \verb|BGGEXP|.
+\item {\tt derivatives} --- Number of derivatives vs z desired in output. Default: 7
+\item {\tt multipoles} ---  Number of multipoles desired in output. Default: 8
+\item {\tt fundamental} --- Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.
+\end{itemize}
+
+\item {\bf authors:} R. Lindberg, R. Soliday, M. Borland (ANL/APS).
 \end{itemize}
 
 %\begin{latexonly}
@@ -10200,6 +10242,9 @@ Y.-P. Sun and C.-Y. Yao, ``Tracking With Space Harmonics in ELEGANT Code,'' Proc
 \bibitem{Li-arxiv-1912.00121}
   Y. Li {\em et al.}, ``Fast dynamic aperture optimization with reversal integration,''
   arXiv:1912.00121, 30 November 2019.
+
+\bibitem{Mitchell-2007}
+  C. E. Mitchell, ``Calculation of Realistic charged-particle transfer maps.'' Ph.D. thesis, University of Maryland, College Park, 2007. http://www.physics.umd.edu/dsat/
 
 \end{thebibliography}
 
