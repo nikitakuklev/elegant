@@ -3341,7 +3341,7 @@ PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"ZENTRY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.zEntry), NULL, 0.0, 0, "For dipoles: z position of reference entry point in coordinate system of the fields."},
     {"XEXIT", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.xExit), NULL, 0.0, 0, "For dipoles: x position of reference exit point in coordinate system of the fields."},
     {"ZEXIT", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.zExit), NULL, 0.0, 0, "For dipoles: z position of reference exit point in coordinate system of the fields."},
-    {"DXEXPANSION", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dxExpansion), NULL, 0.0, 0, "x position of expansion relative to coordinate system of the fields."},
+    {"DXEXPANSION", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dxExpansion), NULL, 0.0, 0, "x position of the generalized gradient expansion relative to the reference trajectory."},
 };  
 
 IONEFFECTS ionEffects_example;

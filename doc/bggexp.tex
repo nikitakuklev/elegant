@@ -6,22 +6,24 @@ based on the Lorentz force equation in cartesian coordinates.
 The generalized gradients are provided in SDDS files.
 In addition to several columns describing the gradients, the file must contain a parameter:
 \begin{itemize}
-\item {\bf m} --- The multipole index, using the convention where $m=1$ is dipole, $m=2$ is quadrupole,
+\item \verb|m| --- The multipole index, using the convention where $m=1$ is dipole, $m=2$ is quadrupole,
   etc. N.B.: this convention conforms with \cite{Venturini-NIMA427-387} but is not the usual one used by
   {\tt elegant}. This should be stored as a short integer.
   N. B.: for $m=1$, if the system has net bending, the results will not be correct as the required coordinate
   transformations are not performed.
 \end{itemize}
+The files may also include optional parameters \verb|xCenter| and \verb|yCenter| giving the center of the expansion
+in meters.
 
 In the original implementation, which is still supported, only normal field components were included
 In that case, the user should use the \verb|FILENAME| field to provide a file 
 with the following floating-point columns:
 \begin{itemize}
-\item {\bf z} --- Longitudinal coordinate. Units should be ``m''.
-\item {\bf Cnm{\em n}} --- The $n^{th}$ generalized gradient of the $m^{th}$ harmonic, where $n=0,2,4,...$.
+\item \verb|z| --- Longitudinal coordinate. Units should be ``m''.
+\item \verb|Cnm|{\em n} --- The $n^{th}$ generalized gradient of the $m^{th}$ harmonic, where $n=0,2,4,...$.
   There is no preset limit to the number of generalized gradients. Units are ignored,
   but should be SI.
-\item {\bf dCnm{\em n}/dz} --- The longitudial derivative of the $n^{th}$ generalized gradient, 
+\item \verb|dCnm|{\em n}\verb|/dz| --- The longitudial derivative of the $n^{th}$ generalized gradient, 
   for the $m^{th}$ harmonic, where $n=0,2,4,...$.
   The number of derivatives must match the number of generalized gradients {\bf Cnm{\em n}}.
 \end{itemize}
@@ -36,22 +38,27 @@ B_z & = & \sum\limits_{m=0}^\infty \sum\limits_{n=0}^\infty \frac{(-1)^n m!}{4^n
 \left\{C_m^{\left[2n+1\right]}(z) \sin m\phi\right\}
 \end{array}
 \end{equation}
-In version 2020.5 and later, both normal and skew expansions are supported.
+where it is understood that the expansion is about the {\tt xCenter} and {\tt yCenter} values, if given.
 
+Note that there is potential confusion between the {\tt xCenter} parameter in the input files
+and the \verb|DXEXPANSION| parameter in the element definition. 
+These provide similar functionality and only one is needed.
+Both give the position of the horizontal center of the expansion relative to the magnetic field coordinate system.
+
+In version 2020.5 and later, both normal and skew expansions are supported.
 In this case, the user may provide filenames via the \verb|NORMAL_FILENAME| and \verb|SKEW_FILENAME|
 fields.
 In this, case, the files must contain the following floating-point columns:
 \begin{itemize}
-\item {\bf z} --- Longitudinal coordinate. Units should be ``m''.
-\item {\bf CnmS{\em n}} (normal) or {\bf CnmC{\em }} --- The $n^{th}$ generalized gradient of the $m^{th}$ harmonic, where $n=0,2,4,...$.
-  There is no preset limit to the number of generalized gradients. Units are ignored,
-  but should be SI.
-  Note that the ``S'' in the name for the normal components make be confusing. It refers to the fact that these
-  terms appear in the potential with a factor of $\sin m\phi$, whereas the skew terms have $\cos m\phi$ factors
-  (hence the ``C'').
-\item {\bf dCnmS{\em n}/dz} (normal) or {\bf dCnmC{\em n}/dz} (skew) --- The longitudial derivative of the $n^{th}$ generalized gradient, 
-  for the $m^{th}$ harmonic, where $n=0,2,4,...$.
-  The number of derivatives must match the number of generalized gradients {\bf Cnm{\em n}}.
+\item {\tt z} --- Longitudinal coordinate. Units should be ``m''.
+\item {\tt CnmS}{\em n} (normal) or {\tt CnmC}{\em n} (skew) --- The $n^{th}$ generalized gradient of the $m^{th}$
+  harmonic, where $n=0,2,4,...$.  There is no preset limit to the number of generalized gradients. Units are ignored,
+  but should be SI.  Note that the ``S'' in the name for the normal components make be confusing. It refers to the fact
+  that these terms appear in the potential with a factor of $\sin m\phi$, whereas the skew terms have $\cos m\phi$
+  factors (hence the ``C'').
+\item {\tt dCnmS}{\em n}{\tt /dz} (normal) or {\tt dCnmC}{\em n}{\tt /dz} (skew) --- The longitudial derivative of the
+  $n^{th}$ generalized gradient, for the $m^{th}$ harmonic, where $n=0,2,4,...$.  The number of derivatives must match
+  the number of generalized gradients {\bf Cnm{\em n}}.
 \end{itemize}
 The field expansion in this case is
 \begin{equation}
@@ -65,6 +72,7 @@ B_z & = & \sum\limits_{m=0}^\infty \sum\limits_{n=0}^\infty \frac{(-1)^n m!}{4^n
 \left\{C_{m,s}^{\left[2n+1\right]}(z) \sin m\phi + C_{m,c}^{\left[2n+1\right]}(z) \cos m\phi\right\}
 \end{array}
 \end{equation}
+where it is understood that the expansion is about the {\tt xCenter} and {\tt yCenter} values, if given.
 Users should note that the skew field sign convention used by \cite{Venturini-NIMA427-387} and \verb|BGGEXP| differs
 from that used in {\tt elegant}.  In particular, to convert a normal field to a skew field while conforming to {\tt elegant}'s
 conventions, one must use $C_{m,s}^{p} \rightarrow -C_{m,c}^{p}$.

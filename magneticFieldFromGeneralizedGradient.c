@@ -9,6 +9,8 @@ typedef struct {
   short skew;          /* if non-zero, these are skew terms */
   long nz;             /* number of z points */
   double dz;           /* z spacing */
+  double xCenter, yCenter; /* center of the expansion in magnet coordinate system */
+  double xMax, yMax;   /* half-aperture of the field expansion in expansion coordinate system */
   double zMin, zMax;   /* minimum and maximum z values */
   long nm;             /* number of values of m (angular harmonic) */
   long *m;             /* value of m */
@@ -30,7 +32,8 @@ long addBGGExpData(char *filename, char *nameFragment, short skew)
   TRACKING_CONTEXT tcontext;
   char buffer[BUFSIZE];
   long im, ic, nc, readCode, nz;
-  short m;
+  int32_t m;
+  short xCenterPresent, yCenterPresent, xMaxPresent, yMaxPresent;
   long *nstore;
   
   if (!fileHashTable)
@@ -52,8 +55,20 @@ long addBGGExpData(char *filename, char *nameFragment, short skew)
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, filename))
     bombElegantVA("Unable to read file %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);
 
-  if (SDDS_CheckParameter(&SDDSin, "m", NULL, SDDS_SHORT, stderr)!=SDDS_CHECK_OK) 
-    bombElegantVA("Unable to find short-integer parameter \"m\" in file %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);
+  if (SDDS_CheckParameter(&SDDSin, "m", NULL, SDDS_ANY_INTEGER_TYPE, stderr)!=SDDS_CHECK_OK) 
+    bombElegantVA("Unable to find integer parameter \"m\" in file %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);
+
+  xCenterPresent = yCenterPresent = 0;
+  if (SDDS_CheckParameter(&SDDSin, "xCenter", "m", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK)
+    xCenterPresent = 1;
+  if (SDDS_CheckParameter(&SDDSin, "yCenter", "m", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK)
+    yCenterPresent = 1;
+
+  xMaxPresent = yMaxPresent = 0;
+  if (SDDS_CheckParameter(&SDDSin, "xMax", "m", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK)
+    xMaxPresent = 1;
+  if (SDDS_CheckParameter(&SDDSin, "yMax", "m", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK)
+    yMaxPresent = 1;
 
   /* Check presence of z column */
   if (SDDS_CheckColumn(&SDDSin, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK) 
@@ -94,13 +109,23 @@ long addBGGExpData(char *filename, char *nameFragment, short skew)
   im = nz = 0;
   storedBGGExpData[nBGGExpDataSets].zMin = DBL_MAX;
   storedBGGExpData[nBGGExpDataSets].zMax = -DBL_MAX;
+  storedBGGExpData[nBGGExpDataSets].xCenter = storedBGGExpData[nBGGExpDataSets].yCenter = 0;
+  storedBGGExpData[nBGGExpDataSets].xMax = storedBGGExpData[nBGGExpDataSets].yMax = -1;
   while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
-    if (!SDDS_GetParameter(&SDDSin, "m", &m) || (m<1 && !skew) || (m<0 && skew))
+    if (!SDDS_GetParameterAsLong(&SDDSin, "m", &m) || (m<1 && !skew) || (m<0 && skew))
       bombElegantVA("Problem with value of m (m<%ld) for page %ld of file %s for BGGEXP %s #%ld\n", 
                     (skew?0:1), readCode, filename, tcontext.elementName, tcontext.elementOccurrence);
     if (readCode==1) {
       long iz;
       double dz0, dz, *z, zMin, zMax;
+      if ((xCenterPresent && !SDDS_GetParameterAsDouble(&SDDSin, "xCenter", &(storedBGGExpData[nBGGExpDataSets].xCenter))) ||
+          (yCenterPresent && !SDDS_GetParameterAsDouble(&SDDSin, "yCenter", &(storedBGGExpData[nBGGExpDataSets].yCenter))))
+        bombElegantVA("Problem getting xCenter or yCenter values from file %s for BGGEXP %s #%ld\n",
+                      filename, tcontext.elementName, tcontext.elementOccurrence);
+      if ((xMaxPresent && !SDDS_GetParameterAsDouble(&SDDSin, "xMax", &(storedBGGExpData[nBGGExpDataSets].xMax))) ||
+          (yMaxPresent && !SDDS_GetParameterAsDouble(&SDDSin, "yMax", &(storedBGGExpData[nBGGExpDataSets].yMax))))
+        bombElegantVA("Problem getting xMax or yMax values from file %s for BGGEXP %s #%ld\n",
+                      filename, tcontext.elementName, tcontext.elementOccurrence);
       if ((nz = SDDS_RowCount(&SDDSin))<=1)
         bombElegantVA("Too few z values in file %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);
       if (!(z=SDDS_GetColumnInDoubles(&SDDSin, "z")))
@@ -177,6 +202,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   TRACKING_CONTEXT tcontext;
   double radCoef=0, isrCoef=0;
   double zMin, zMax, xVertex, zVertex, xEntry, zEntry, xExit, zExit;
+  short isLost;
 
 #ifdef DEBUG
   static FILE *fpdebug = NULL;
@@ -224,12 +250,20 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       bgg->dataIndex[1] = addBGGExpData(bgg->skewFilename, "CnmC", 1);
 
     if (bgg->dataIndex[0]!=-1 && bgg->dataIndex[1]!=-1) {
+      if (storedBGGExpData[bgg->dataIndex[0]].xCenter != storedBGGExpData[bgg->dataIndex[1]].xCenter)
+        bombElegantVA("Mismatch of xCenter between normal and skew data for BGGEXP %s", tcontext.elementName);
+      if (storedBGGExpData[bgg->dataIndex[0]].yCenter != storedBGGExpData[bgg->dataIndex[1]].yCenter)
+        bombElegantVA("Mismatch of yCenter between normal and skew data for BGGEXP %s", tcontext.elementName);
+      if (storedBGGExpData[bgg->dataIndex[0]].xMax != storedBGGExpData[bgg->dataIndex[1]].xMax)
+        bombElegantVA("Mismatch of xMax between normal and skew data for BGGEXP %s", tcontext.elementName);
+      if (storedBGGExpData[bgg->dataIndex[0]].yMax != storedBGGExpData[bgg->dataIndex[1]].yMax)
+        bombElegantVA("Mismatch of yCenter between normal and skew data for BGGEXP %s", tcontext.elementName);
       if (storedBGGExpData[bgg->dataIndex[0]].dz != storedBGGExpData[bgg->dataIndex[1]].dz)
-        bombElegant("Mismatch of z spacing between normal and skew data for BGGEXP %s", tcontext.elementName);
+        bombElegantVA("Mismatch of z spacing between normal and skew data for BGGEXP %s", tcontext.elementName);
       if (storedBGGExpData[bgg->dataIndex[0]].zMin != storedBGGExpData[bgg->dataIndex[1]].zMin)
-        bombElegant("Mismatch of minimum z value between normal and skew data for BGGEXP %s", tcontext.elementName);
+        bombElegantVA("Mismatch of minimum z value between normal and skew data for BGGEXP %s", tcontext.elementName);
       if (storedBGGExpData[bgg->dataIndex[0]].zMax != storedBGGExpData[bgg->dataIndex[1]].zMax)
-        bombElegant("Mismatch of maximum z value between normal and skew data for BGGEXP %s", tcontext.elementName);
+        bombElegantVA("Mismatch of maximum z value between normal and skew data for BGGEXP %s", tcontext.elementName);
     }
 
 #if !USE_MPI
@@ -250,6 +284,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           (bgg->poIndex[6]=SDDS_DefineColumn(bgg->SDDSpo, "Bx", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           (bgg->poIndex[7]=SDDS_DefineColumn(bgg->SDDSpo, "By", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           (bgg->poIndex[8]=SDDS_DefineColumn(bgg->SDDSpo, "Bz", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (bgg->poIndex[9]=SDDS_DefineColumn(bgg->SDDSpo, "particleID", NULL, NULL, NULL, NULL, SDDS_LONG, 0))<0 ||
           !SDDS_WriteLayout(bgg->SDDSpo)) {
         SDDS_SetError("Problem setting up particle output file for BGGEXP");
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -355,6 +390,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         }
       }
 #endif
+      isLost = 0;
 
       /* Transform to canonical coordinates */
       delta = part[ip][5];
@@ -385,7 +421,16 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       px = px*cos_phi + sin_phi/denom;
       delta_s = (1 + delta)*magnet_s*denom;
 
-      x += xEntry + bgg->dxExpansion; /* Shift x according to entrance point & map shift */
+      x += xEntry - bgg->dxExpansion; /* Shift x according to entrance point & map shift */
+
+      /* Shift according to central point of the expansion, if given in input file */
+      if (bggData[0] && (bggData[0]->xCenter || bggData[0]->yCenter)) {
+        x -= bggData[0]->xCenter;
+        y -= bggData[0]->yCenter;
+      } else if (bggData[1] && (bggData[1]->xCenter || bggData[1]->yCenter)) { 
+        x -= bggData[1]->xCenter;
+        y -= bggData[1]->yCenter;
+      }
 
       /* Drift backward from entrance plane to beginning of field map */
       denom = (1.0 + delta)*(1.0 + delta) - px*px - py*py;
@@ -429,6 +474,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         for (ns=0; ns<2; ns++) {
           /* ns=0 => normal, ns=1 => skew */
           if (bggData[ns]) {
+            if ((bggData[ns]->xMax>0 && fabs(x)>bggData[ns]->xMax) &&
+                (bggData[ns]->yMax>0 && fabs(y)>bggData[ns]->yMax))
+              isLost = 1;
             for (im=0; im<bggData[ns]->nm; im++) {
               double mfact, term, rDeriv, phiDeriv, sin_m1phi, cos_m1phi, sin_mphi, cos_mphi;
               m = bggData[ns]->m[im];
@@ -734,7 +782,17 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       x -= (zMax - zExit)*px*denom;
       y -= (zMax - zExit)*py*denom;
       s -= (zMax - zExit)*(1.0 + delta)*denom;
-      x -= xExit + bgg->dxExpansion;  /* Shift x according to exit point & map shift */
+
+      /* Shift according to central point of the expansion, if given in input file */
+      if (bggData[0] && (bggData[0]->xCenter || bggData[0]->yCenter)) {
+        x += bggData[0]->xCenter;
+        y += bggData[0]->yCenter;
+      } else if (bggData[1] && (bggData[1]->xCenter || bggData[1]->yCenter)) { 
+        x += bggData[1]->xCenter;
+        y += bggData[1]->yCenter;
+      }
+
+      x -= xExit - bgg->dxExpansion;  /* Shift x according to exit point & map shift */
 
       /* Compute transformation from magnet grid -> accelerator coordinates if bending magnet */
       if (bgg->isBend) {
@@ -763,6 +821,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       part[ip][3] = py*denom;
       part[ip][4] = s + delta_s;
       part[ip][5] = delta;
+      if (isLost) {
+        /* TODO: do something about lost particles */
+      }
     }
   } else { 
     /* Non-symplectic */
@@ -794,7 +855,16 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         phi = magnet_s = 0;
       }
 
-      x += xEntry + bgg->dxExpansion; /* Shift x according to entrance point & map shift */
+      x += xEntry - bgg->dxExpansion; /* Shift x according to entrance point & map shift */
+
+      /* Shift according to central point of the expansion, if given in input file */
+      if (bggData[0] && (bggData[0]->xCenter || bggData[0]->yCenter)) {
+        x -= bggData[0]->xCenter;
+        y -= bggData[0]->yCenter;
+      } else if (bggData[1] && (bggData[1]->xCenter || bggData[1]->yCenter)) { 
+        x -= bggData[1]->xCenter;
+        y -= bggData[1]->yCenter;
+      }
 
       /* Drift backward from entrance plane to beginning of field map */
       x -= (zEntry - zMin)*xp;
@@ -823,6 +893,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
       /* Integrate through the magnet */
       B[0] = B[1] = B[2] = 0;
+      isLost = 0;
       for (iz=irow=0; iz<nz-1; iz+=bgg->zInterval) {
 	denom = sqrt(1 + sqr(xp) + sqr(yp));
 	p[2] = pCentral*(1+delta)/denom;
@@ -854,6 +925,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         for (ns=0; ns<2; ns++) {
           /* ns=0 => normal, ns=1 => skew */
           if (bggData[ns]) {
+            if ((bggData[ns]->xMax>0 && fabs(x)>bggData[ns]->xMax) &&
+                (bggData[ns]->yMax>0 && fabs(y)>bggData[ns]->yMax))
+              isLost = 1;
             for (im=0; im<bggData[ns]->nm; im++) {
               double mfact, term, sin_mphi, cos_mphi;
               m = bggData[ns]->m[im];
@@ -1033,7 +1107,17 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       x -= (zMax - zExit)*xp;
       y -= (zMax - zExit)*yp;
       s -= (zMax - zExit)*sqrt(1.0 + xp*xp + yp*yp);
-      x -= xExit + bgg->dxExpansion;  /* Shift x according to exit point & map shift */
+
+      /* Shift according to central point of the expansion, if given in input file */
+      if (bggData[0] && (bggData[0]->xCenter || bggData[0]->yCenter)) {
+        x += bggData[0]->xCenter;
+        y += bggData[0]->yCenter;
+      } else if (bggData[1] && (bggData[1]->xCenter || bggData[1]->yCenter)) { 
+        x += bggData[1]->xCenter;
+        y += bggData[1]->yCenter;
+      }
+
+      x -= xExit - bgg->dxExpansion;  /* Shift x according to exit point & map shift */
      
       /* Compute transformation from magnet grid -> accelerator coordinates if bending magnet */
       if (bgg->isBend) {
@@ -1053,6 +1137,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       part[ip][2] = y;
       part[ip][3] = yp; /*  p[1]/p[2]; */
       part[ip][4] = s;
+      if (isLost) {
+        /* TODO: do something about lost particles */
+      }
       /*
       printf("P: %le -> %le, change = %le, B2Max = %le\n",
              pOrig,
@@ -1076,7 +1163,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   if (sigmaDelta2 && np)
     *sigmaDelta2 /= np;
 
-  /* Do misalignments */
+  /* Undo misalignments */
   if (bgg->tilt)
     rotateBeamCoordinatesForMisalignment(part, np, -bgg->tilt);
   if (bgg->dx || bgg->dy || bgg->dz)
