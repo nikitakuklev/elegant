@@ -39,10 +39,10 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
                    COMPLEX ***ByTop, COMPLEX ***ByBottom, COMPLEX ***BxRight, COMPLEX ***BxLeft,
                    double *xCenter, double *yCenter, double *zStart);
 
-#define SET_TOP_BY 0
-#define SET_BOTTOM_BY 1
-#define SET_LEFT_BX 2
-#define SET_RIGHT_BX 3
+#define SET_YMINUS 0
+#define SET_YPLUS 1
+#define SET_XMINUS 2
+#define SET_XPLUS 3
 #define SET_NORMAL 4
 #define SET_SKEW 5
 #define SET_DERIVATIVES 6
@@ -51,14 +51,14 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
 #define N_OPTIONS 9
 
 char *option[N_OPTIONS] = {
-  "top", "bottom", "left", "right", "normal", "skew", "derivatives", "multipoles", "fundamental"};
+  "yminus", "yplus", "xminus", "xplus", "normal", "skew", "derivatives", "multipoles", "fundamental"};
 
-#define USAGE "computeRBGGE -top=<filename> -bottom=<filename> -left=<filename> -right=<filename>\n\
+#define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
              -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]\n\
--top         (x, y, z, Bx, By, Bz) map for top plane (y=constant, y>0).\n\
--bottom      (x, y, z, Bx, By, Bz) map for bottom plane (y=constant, y<0).\n\
--right       (x, y, z, Bx, By, Bz) map for right plane (x=constant, x<0).\n\
--left        (x, y, z, Bx, By, Bz) map for left plane (x=constant, x>0).\n\
+-yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
+-yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
+-xminus      (x, y, z, Bx, By, Bz) map for negative-x plane.\n\
+-xplus       (x, y, z, Bx, By, Bz) map for positive-x plane.\n\
 -normal      Output file for normal-component generalized gradients.\n\
 -skew        Output file for skew-component generalized gradients.\n\
 -derivatives Number of derivatives vs z desired in output. Default: 7\n\
@@ -95,15 +95,15 @@ int main(int argc, char **argv)
           /* process options here */
           switch (match_string(scanned[i_arg].list[0], option, N_OPTIONS, 0))
             {
-            case SET_TOP_BY:
+            case SET_YPLUS:
               if (scanned[i_arg].n_items != 2)
                 {
-                  fprintf(stderr, "invalid -top syntax\n%s\n", USAGE);
+                  fprintf(stderr, "invalid -yplus syntax\n%s\n", USAGE);
                   return (1);
                 }
               topFile = scanned[i_arg].list[1];
               break;
-            case SET_BOTTOM_BY:
+            case SET_YMINUS:
               if (scanned[i_arg].n_items != 2)
                 {
                   fprintf(stderr, "invalid -bottom syntax\n%s\n", USAGE);
@@ -111,7 +111,7 @@ int main(int argc, char **argv)
                 }
               bottomFile = scanned[i_arg].list[1];
               break;
-            case SET_LEFT_BX:
+            case SET_XMINUS:
               if (scanned[i_arg].n_items != 2)
                 {
                   fprintf(stderr, "invalid -left syntax\n%s\n", USAGE);
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
                 }
               leftFile = scanned[i_arg].list[1];
               break;
-            case SET_RIGHT_BX:
+            case SET_XPLUS:
               if (scanned[i_arg].n_items != 2)
                 {
                   fprintf(stderr, "invalid -right syntax\n%s\n", USAGE);
@@ -698,44 +698,45 @@ int ReadInputFiles(long BzMode, char *topFile, char *bottomFile, char *leftFile,
 
   if (xmintop != xminbottom)
     {
-      fprintf(stderr, "Error: x range differs in top and bottom files\n");
+      fprintf(stderr, "Error: x range differs in yplus and yminus files\n");
       return (1);
     }
   if (yminleft != yminright)
     {
-      fprintf(stderr, "Error: y range differs in left and right files\n");
+      fprintf(stderr, "Error: y range differs in xminus and xplus files\n");
       return (1);
     }
-  if (xleft <= xright)
+  if (xleft >= xright)
     {
-      fprintf(stderr, "Error: x values in left file less than x values in right file\n");
+      fprintf(stderr, "Error: x values in xminus file less than x values in xplus file\n");
       return (1);
     }
   if (ytop <= ybottom)
     {
-      fprintf(stderr, "Error: y values in top file less than x values in bottom file\n");
+      fprintf(stderr, "Error: y values in yplus file less than x values in yminus file\n");
       return (1);
     }
-  if (xmintop != xright)
+  if (xmintop != xleft)
     {
-      fprintf(stderr, "Error: x values in right file don't match min x values in top and bottom files\n");
+      fprintf(stderr, "Error: x values in xminus file don't match min x values in yplus and yminus files\n");
       return (1);
     }
   if (yminleft != ybottom)
     {
-      fprintf(stderr, "Error: y values in bottom file don't match min y values in left and right files\n");
+      fprintf(stderr, "Error: y values in yminus file don't match min y values in xminus and xplus files\n");
       return (1);
     }
-  if (xmaxtop != xleft)
+  if (xmaxtop != xright)
     {
-      fprintf(stderr, "Error: x values in left file don't match max x values in top and bottom files\n");
+      fprintf(stderr, "Error: x values in xplus file don't match max x values in yplus and yminus files\n");
       return (1);
     }
   if (ymaxleft != ytop)
     {
-      fprintf(stderr, "Error: y values in top file don't match max y values in left and right files\n");
+      fprintf(stderr, "Error: y values in yplus file don't match max y values in xminus and xplus files\n");
       return (1);
     }
+
   if (xCenter != NULL)
     {
       *xCenter = (xleft + xright) * .5;
