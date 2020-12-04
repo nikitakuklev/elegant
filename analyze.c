@@ -475,7 +475,7 @@ void do_transport_analysis(
         for (i=0; i<4; i++)
             data[CLORB_ETA_OFFSET+i] = 0;
 
-    data[SYMPLECTICITY_OFFSET] = checkSymplecticity(M);
+    data[SYMPLECTICITY_OFFSET] = checkSymplecticity(M, canonical_variables);
 
     index = N_ANALYSIS_COLUMNS;
     for (i=0; i<control->n_elements_to_vary; i++, index++)

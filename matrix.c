@@ -935,7 +935,7 @@ long reverse_matrix(VMATRIX *Mr, VMATRIX *M)
   return 1;
 }
 
-double checkSymplecticity(VMATRIX *Mv)
+double checkSymplecticity(VMATRIX *Mv, short canonical)
 {
   static MATRIX *U = NULL, *Mtmp = NULL, *R = NULL, *Rt = NULL;
   double deltaMax, delta;
@@ -946,12 +946,17 @@ double checkSymplecticity(VMATRIX *Mv)
     m_alloc(&Mtmp, 6, 6);
     m_alloc(&R, 6, 6);
     m_alloc(&Rt, 6, 6);
-    /* Note that the 5,4 and 4,5 elements have a minus sign because
-     * elegant uses s rather than -s as the coordinate
-     */
     m_zero(U);
-    U->a[0][1] = U->a[2][3] = U->a[5][4] = 1;
-    U->a[1][0] = U->a[3][2] = U->a[4][5] = -1;
+    if (!canonical) {
+      /* Note that the 5,4 and 4,5 elements have a minus sign because
+       * elegant uses s rather than -s as the coordinate
+       */
+      U->a[0][1] = U->a[2][3] = U->a[5][4] = 1;
+      U->a[1][0] = U->a[3][2] = U->a[4][5] = -1;
+    } else {
+      U->a[0][1] = U->a[2][3] = U->a[4][5] = 1;
+      U->a[1][0] = U->a[3][2] = U->a[5][4] = -1;
+    }
   }
 
   for (i=0; i<6; i++)

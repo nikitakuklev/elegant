@@ -672,8 +672,8 @@ void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, VMATRIX *M0, long ord
   if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i_element, 
 			 IC_S, elem->end_pos, IC_ELEMENT, elem->name, IC_OCCURENCE, elem->occurence,
 			 IC_TYPE, entity_name[elem->type], 
-                         IC_SYMPLECTICITY1, M0?checkSymplecticity(M0):(double)0.0,
-                         IC_SYMPLECTICITY1_FULL, checkSymplecticity(M),
+                         IC_SYMPLECTICITY1, M0?checkSymplecticity(M0, 0):(double)0.0,
+                         IC_SYMPLECTICITY1_FULL, checkSymplecticity(M, 0),
                          -1)) {
     SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices, 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
