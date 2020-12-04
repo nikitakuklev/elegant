@@ -295,6 +295,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
   bggData[0] = bggData[1] = NULL;
   igLimit[0] = igLimit[1] = -1;
+  zMin = zMax = dz = 0;
+  nz = 0;
   if (bgg->dataIndex[0]!=-1) {
     bggData[0] = storedBGGExpData+bgg->dataIndex[0];
     zMin = bggData[0]->zMin;
