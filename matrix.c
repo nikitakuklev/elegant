@@ -934,3 +934,43 @@ long reverse_matrix(VMATRIX *Mr, VMATRIX *M)
 
   return 1;
 }
+
+double checkSymplecticity(VMATRIX *Mv)
+{
+  static MATRIX *U = NULL, *Mtmp = NULL, *R = NULL, *Rt = NULL;
+  double deltaMax, delta;
+  long i, j;
+
+  if (!U) {
+    m_alloc(&U, 6, 6);
+    m_alloc(&Mtmp, 6, 6);
+    m_alloc(&R, 6, 6);
+    m_alloc(&Rt, 6, 6);
+    /* Note that the 5,4 and 4,5 elements have a minus sign because
+     * elegant uses s rather than -s as the coordinate
+     */
+    m_zero(U);
+    U->a[0][1] = U->a[2][3] = U->a[5][4] = 1;
+    U->a[1][0] = U->a[3][2] = U->a[4][5] = -1;
+  }
+
+  for (i=0; i<6; i++)
+    for (j=0; j<6; j++)
+      R->a[i][j] = Mv->R[i][j];
+  
+  /* Need R*U*Transpose(R) */
+  m_trans(Rt, R);
+  m_mult(Mtmp, R, U);
+  m_mult(R, Mtmp, Rt);
+
+  deltaMax = -DBL_MAX;
+  for (i=0; i<6 ; i++)
+    for (j=0; j<6; j++) {
+      if ((delta = fabs(R->a[i][j] - U->a[i][j]))>deltaMax)
+        deltaMax = delta;
+    }
+  
+  return deltaMax;
+}
+
+      

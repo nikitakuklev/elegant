@@ -41,13 +41,17 @@ static char **mathematicaMatrixName = NULL;
 #define IC_ELEMENT 1
 #define IC_OCCURENCE 2
 #define IC_TYPE 3
-#define N_COLUMNS 4
+#define IC_SYMPLECTICITY1 4
+#define IC_SYMPLECTICITY1_FULL 5
+#define N_COLUMNS 6
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
   {"s", "&column name=s, units=m, type=double, description=\"Distance\" &end"},
   {"ElementName", "&column name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
   {"ElementOccurence", 
    "&column name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
   {"ElementType", "&column name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
+  {"Symplecticity1", "&column name=Symplecticity1, type=double, description=\"Symplecticity check for this element's first-order matrix\" &end"},
+  {"SymplecticityFull1", "&column name=SymplecticityFull1, type=double, description=\"Symplecticity check for the concatenated first-order matrix\" &end"},
 } ;
 
 #define IP_STEP 0
@@ -57,7 +61,7 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 } ;
 
 
-void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, long order,
+void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, VMATRIX *M1, long order,
 		       ELEMENT_LIST *elem, long i_element, long n_elements);
 
 void setup_matrix_output(
@@ -376,7 +380,7 @@ void run_matrix_output(
       start_elem.name = "_BEG_";
       start_elem.type = T_MARK;
       start_elem.occurence = 1;
-      SDDS_set_matrices(SDDS_matrix+i_output, M1, SDDS_order[i_output], &start_elem, 0, n_SDDS_output);
+      SDDS_set_matrices(SDDS_matrix+i_output, M1, NULL, SDDS_order[i_output], &start_elem, 0, n_SDDS_output);
     }
     i_SDDS_output = 1;
     member = first_member;
@@ -436,7 +440,7 @@ void run_matrix_output(
           for (i=0; i<6; i++)
             M1->C[i] -= M2->C[i];
         }
-	SDDS_set_matrices(SDDS_matrix+i_output, M1, SDDS_order[i_output], member,
+	SDDS_set_matrices(SDDS_matrix+i_output, M1, member->matrix, SDDS_order[i_output], member,
 			  i_SDDS_output++, n_SDDS_output);
         if (individualMatrices[i_output])
           copy_doubles(M1->C, Ccopy, 6);
@@ -647,12 +651,12 @@ void finish_matrix_output()
   n_outputs = 0;
 }
 
-void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, long order,
+void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, VMATRIX *M0, long order,
 		       ELEMENT_LIST *elem, long i_element, long n_elements
 		       )
 {
   register long i, j, k, l, index;
-
+  
   log_entry("SDDS_set_matrices");
 
   if (!M || !(M->C) || !(M->R) || (order>1 && !(M->T)) || (order>2 && !(M->Q)))
@@ -667,16 +671,19 @@ void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, long order,
             
   if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i_element, 
 			 IC_S, elem->end_pos, IC_ELEMENT, elem->name, IC_OCCURENCE, elem->occurence,
-			 IC_TYPE, entity_name[elem->type], -1)) {
-    SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices)");
+			 IC_TYPE, entity_name[elem->type], 
+                         IC_SYMPLECTICITY1, M0?checkSymplecticity(M0):(double)0.0,
+                         IC_SYMPLECTICITY1_FULL, checkSymplecticity(M),
+                         -1)) {
+    SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices, 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
-  index = IC_TYPE+1;
+  index = N_COLUMNS;
   for (i=0; i<6; i++)
     if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i_element, 
 			   index++, M->C[i], -1)) {
-      SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices)");
+      SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices, 2)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
 
@@ -684,7 +691,7 @@ void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, long order,
     for (j=0; j<6; j++)
       if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i_element, 
 			     index++, M->R[i][j], -1)) {
-	SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices)");
+	SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices, 3)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
  
@@ -694,7 +701,7 @@ void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, long order,
 	for (k=0; k<=j; k++)
 	  if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i_element,
 				 index++, M->T[i][j][k], -1)) {
-	    SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices)");
+	    SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices, 4)");
 	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	  }
 
@@ -705,7 +712,7 @@ void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, long order,
 	  for (l=0; l<=k; l++)
 	    if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i_element,
 				   index++, M->Q[i][j][k][l], -1)) {
-	      SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices)");
+	      SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices, 5)");
 	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	    }
 

@@ -4133,6 +4133,7 @@ extern void random_matrices(VMATRIX *M, double C0, double R0, double T0, double 
 extern void copy_matrices(VMATRIX *M1, VMATRIX *M0);
 extern long check_matrix(VMATRIX *M, char *comment);
 extern long reverse_matrix(VMATRIX *Mr, VMATRIX *M);
+extern double checkSymplecticity(VMATRIX *Mv);
 
 /* prototypes for motion4.c: */
 extern long motion(double **part, long n_part, void *field, long field_type, double *P_central, double *dgamma,
