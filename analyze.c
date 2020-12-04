@@ -19,12 +19,19 @@
 #include "matlib.h"
 
 #define X_BETA_OFFSET 0
+/* betax, alphax, nux, dbetax/ddelta, dalphax/ddelta, xix */
 #define Y_BETA_OFFSET X_BETA_OFFSET+6
 #define DETR_OFFSET Y_BETA_OFFSET+6
+/* betay, alphay, nuy, dbetay/ddelta, dalphay/ddelta, xiy */
 #define X_ETA_OFFSET DETR_OFFSET+1
+/* etax, etaxp */
 #define Y_ETA_OFFSET X_ETA_OFFSET+2
+/* etay, etayp */
 #define CLORB_ETA_OFFSET Y_ETA_OFFSET+2
-#define N_ANALYSIS_COLUMNS CLORB_ETA_OFFSET+4
+/* etax, etaxp, etay, etayp including closed orbit */
+#define SYMPLECTICITY_OFFSET CLORB_ETA_OFFSET+4
+/* symplecticity1 */
+#define N_ANALYSIS_COLUMNS SYMPLECTICITY_OFFSET+1
 
 long addMatrixOutputColumns(SDDS_DATASET *SDDSout, long output_order);
 long compareElements(ELEMENT_LIST *e1, ELEMENT_LIST *e2) ;
@@ -51,6 +58,7 @@ SDDS_DEFINITION analysis_column[N_ANALYSIS_COLUMNS] = {
     {"cetapx", "&column name=cetapx, symbol=\"$gc$r$bxc$n$a'$n\", type=double &end"},
     {"cetay", "&column name=cetay, units=m, symbol=\"$gc$r$byc$n\", type=double &end"},
     {"cetapy", "&column name=cetapy, symbol=\"$gc$r$byc$n$a'$n\", type=double &end"},
+  {"Symplecticity1", "&column name=Symplecticity1, type=double, description=\"Symplecticity check for this element's first-order matrix\" &end"},
     } ;
 
 #define IP_STEP 0
@@ -466,6 +474,8 @@ void do_transport_analysis(
     else
         for (i=0; i<4; i++)
             data[CLORB_ETA_OFFSET+i] = 0;
+
+    data[SYMPLECTICITY_OFFSET] = checkSymplecticity(M);
 
     index = N_ANALYSIS_COLUMNS;
     for (i=0; i<control->n_elements_to_vary; i++, index++)
