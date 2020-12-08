@@ -73,15 +73,16 @@ set input0 $input
 for {set iteration 1} {$iteration<=$iterations} {incr iteration} {
     # Compute moments and response matrix with input errors
     catch {exec elegant $srcDir/etayCPCorrTemplate.ele -macro=pCentralMeV=$energy,rootname=${rootname}-original,inputParameters=$input,hcPattern=$hcPattern,vcPattern=$vcPattern,lattice=$lattice,beamline=$beamline,bpmPattern=$bpmPattern,order=$order > ${rootname}-original.log} result
-    puts $fdo "Compute moments with input errors: $result"
+    puts $fdo "Computed moments with input errors: $result"
     flush $fdo
     if [file exists ${rootname}-original.failed] {
         return -code error "correction failed"
     }
     if $iteration==1 {
         # Want to keep the actual original values for later review
-        file copy -force $rootname-original.mom $rootname-original.mom0
-        file copy -force $rootname-original.twi $rootname-original.twi0
+	foreach exten {mom twi hvrm vhrm} {
+	    file copy -force $rootname-original.${exten} $rootname-original.${exten}0
+	}
     }
     # Create error vector
     # This code needs to closely follow that in makeSkewResponseCP to get the order the same
@@ -120,7 +121,7 @@ for {set iteration 1} {$iteration<=$iterations} {incr iteration} {
              "-scan=column,ElementOccurence,ElementTag,%ld,edit=Z#,type=long" \
              -print=col,ElementParameter,K1 "-define=col,ParameterValue,Error $fraction * chs" \
              -print=col,ParameterMode,differential} result
-    puts $fdo "Multiply with inverse matrix: $result"
+    puts $fdo "Multiplied with inverse matrix: $result"
     flush $fdo
 
     set tmpInput [APSTmpDir]/[APSTmpString]
@@ -135,7 +136,7 @@ for {set iteration 1} {$iteration<=$iterations} {incr iteration} {
 file copy -force $input $rootname-correction.param
 file copy -force $rootname-original.mom0 $rootname-original.mom
 file copy -force $rootname-original.twi0 $rootname-original.twi
-file delete -force $rootname-original.mom0 $rootname-original.twi0
+file delete -force $rootname-original.mom0 $rootname-original.twi0 $rootname-original.hvrm0  $rootname-original.vhrm0 
 
 # In the next step, we evaluate the correction.
 catch {exec elegant $srcDir/couplingCorrTemplate1.ele \

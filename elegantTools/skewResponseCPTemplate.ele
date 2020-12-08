@@ -25,8 +25,8 @@
         filename = %s.twi0
 &end
 
-&steering_element name = <hcPattern>, element_type = HKICK, item = KICK, tweek = 1e-6, plane = "h" &end
-&steering_element name = <vcPattern>, element_type = VKICK, item = KICK, tweek = 1e-6, plane = "v" &end
+&steering_element name = <hcPattern>, element_type = *HKICK, item = KICK, tweek = 1e-6, plane = "h" &end
+&steering_element name = <vcPattern>, element_type = *VKICK, item = KICK, tweek = 1e-6, plane = "v" &end
 
 &correct
     mode = "orbit", method = "global",
@@ -72,8 +72,8 @@
 	radiation_integrals = 1
 &end
 
-&steering_element name = <hcPattern>, element_type = HKICK, item = KICK, tweek = 1e-6, plane = "h" &end
-&steering_element name = <vcPattern>, element_type = VKICK, item = KICK, tweek = 1e-6, plane = "v" &end
+&steering_element name = <hcPattern>, element_type = *HKICK, item = KICK, tweek = 1e-6, plane = "h" &end
+&steering_element name = <vcPattern>, element_type = *VKICK, item = KICK, tweek = 1e-6, plane = "v" &end
 
 &correct
     mode = "orbit", method = "global",

@@ -60,8 +60,8 @@
 &end
 
 
-&steering_element name = <hcPattern>, element_type = HKICK, item = KICK, tweek = 1e-6, plane = "h" &end
-&steering_element name = <vcPattern>, element_type = VKICK, item = KICK, tweek = 1e-6, plane = "v" &end
+&steering_element name = <hcPattern>, element_type = *HKICK, item = KICK, tweek = 1e-6, plane = "h" &end
+&steering_element name = <vcPattern>, element_type = *VKICK, item = KICK, tweek = 1e-6, plane = "v" &end
 
 &correct
     mode = "orbit", method = "global",
