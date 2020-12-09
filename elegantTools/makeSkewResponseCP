@@ -12,7 +12,7 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage {usage: makeSkewResponseCP -rootname <string> -lattice <filename> -input <parameterFile> -beamline <string> -skewPattern <string> -bpmPattern <string> -hcPattern <string> -vcPattern <string> -tweek <value> -order {1|2} -svalues <numberToKeep> -verbosity <integer>(1) -energy <MeV>}
+set usage {usage: makeSkewResponseCP -rootname <string> -lattice <filename> -input <parameterFile> -beamline <string> -skewPattern <string> -bpmPattern <string> -hcPattern <string> -vcPattern <string> -tweek <value> -order {1|2} -svalues <numberToKeep> -verbosity <integer>(1) -energy <MeV> -etayWeight <value> [-submitCommand <command>]}
 set lattice ""
 set rootname ""
 set input ""
@@ -26,10 +26,12 @@ set order 2
 set srcDir $OAGGlobal(OAGAppConfigDataDirectory)/elegant
 set svalues 10000
 set queue 1
+set submitCommand csub
 set verbosity 1
 set energy 7e3
+set etayWeight 1
 set args $argv
-if {[APSStrictParseArguments {input lattice beamline rootname skewPattern bpmPattern hcPattern vcPattern tweek srcDir order svalues queue verbosity energy}] || \
+if {[APSStrictParseArguments {input lattice beamline rootname skewPattern bpmPattern hcPattern vcPattern tweek srcDir order svalues queue verbosity energy etayWeight submitCommand}] || \
     ![string length $lattice] || ![string length $rootname]} {
     return -code error "$usage"
 }
@@ -51,7 +53,7 @@ APSAddToTempFileList ${rootname}0.done ${rootname}0.twi
 set hasCsub 0
 if $queue {
     set hasCsub 1
-    catch {exec csub} result
+    catch {eval exec $submitCommand} result
     if [string match "*no such file*" $result] {
         puts stderr "No csub detected: using serial mode"
         set hasCsub 0
@@ -73,7 +75,7 @@ foreach skew [exec sddsprocess ${rootname}0.twi -pipe=out -match=col,ElementName
     exec chmod +x ${rootname}-job$index.csh
     APSAddToTempFileList ${rootname}-job$index.csh
     if $hasCsub {
-        catch {exec csub -noEmail 1 ${rootname}-job$index.csh} result
+        catch {eval exec $submitCommand ${rootname}-job$index.csh} result
         if $verbosity { puts stderr "$result" }
     } else {
         if $verbosity {puts stderr "Running $rootname-job$index"}
@@ -169,9 +171,16 @@ eval exec sddsxref $respList -pipe=out \
 
 eval file delete -force $respList
 
+set n1 [exec sddsprocess ${rootname}.qsResp -pipe=out -match=col,ElementTag=*_*_*_* | sdds2stream -pipe -rows=bare]
+
+exec sddsconvert ${rootname}.qsResp -pipe=out -retain=col,ElementTag \
+    | sddsprocess -pipe=in ${rootname}.weight \
+    "-define=col,Weight,i_row $n1 < ? 1 : $etayWeight $" 
+
 # Invert the matrix
 
 exec sddspseudoinverse ${rootname}.qsResp -pipe=out -sFile=${rootname}.qsSval -largestSingularValues=$svalues \
+    -weight=${rootname}.weight,name=ElementTag,value=Weight \
     | sddsprocess -pipe=in ${rootname}.qsInv \
     "-print=parameter,skewPattern,$skewPattern" \
     "-print=parameter,bpmPattern,$bpmPattern" \

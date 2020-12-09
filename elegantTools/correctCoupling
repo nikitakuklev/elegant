@@ -69,6 +69,8 @@ flush $fdo
 # First, perform SVD correction of vertical dispersion and cross-plane matrix
 # We perform several iterations with fractional correction
 
+set deleteList ""
+
 set input0 $input
 for {set iteration 1} {$iteration<=$iterations} {incr iteration} {
     # Compute moments and response matrix with input errors
@@ -131,12 +133,20 @@ for {set iteration 1} {$iteration<=$iterations} {incr iteration} {
     exec sddscombine $input $rootname-correction.param -merge -overwrite $tmpInput
     set input $tmpInput
     file copy -force $input $rootname.lastInput
+    if $iteration>1 {
+        # For convenience in debugging during run
+	foreach exten {mom twi hvrm vhrm} {
+	    file copy -force $rootname-original.${exten} $rootname-original.${exten}$iteration
+	    lappend deleteList $rootname-original.${exten}$iteration
+	}
+    }
 }
 # Copy the true original results to convenient names
 file copy -force $input $rootname-correction.param
 file copy -force $rootname-original.mom0 $rootname-original.mom
 file copy -force $rootname-original.twi0 $rootname-original.twi
 file delete -force $rootname-original.mom0 $rootname-original.twi0 $rootname-original.hvrm0  $rootname-original.vhrm0 
+eval file delete $deleteList
 
 # In the next step, we evaluate the correction.
 catch {exec elegant $srcDir/couplingCorrTemplate1.ele \

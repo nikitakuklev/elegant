@@ -32,6 +32,10 @@
     mode = "orbit", method = "global",
     verbose = 0, n_iterations = 0, n_xy_cycles = 1,
     fixed_length = 1
+    fixed_length_matrix = 1
+    closed_orbit_accuracy = 1e-9
+    closed_orbit_iterations = 500
+    closed_orbit_iteration_fraction = 0.5
 &end
 
 &correction_matrix_output
