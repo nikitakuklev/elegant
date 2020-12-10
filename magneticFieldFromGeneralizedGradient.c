@@ -461,6 +461,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[6], Bx,
                                bgg->poIndex[7], By,
                                bgg->poIndex[8], Bz,
+                               bgg->poIndex[9], (long)part[ip][particleIDIndex],
                                -1)) {
           SDDS_SetError("Problem setting particle output data for BGGEXP");
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -770,6 +771,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[6], Bx,
                                bgg->poIndex[7], By,
                                bgg->poIndex[8], Bz,
+                               bgg->poIndex[9], (long)part[ip][particleIDIndex],
                                -1) ||
             !SDDS_WritePage(bgg->SDDSpo)) {
           SDDS_SetError("Problem setting particle output data for BGGEXP");
@@ -914,6 +916,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[6], B[0],
                                bgg->poIndex[7], B[1],
                                bgg->poIndex[8], B[2],
+                               bgg->poIndex[9], (long)part[ip][particleIDIndex],
                                -1)) {
           SDDS_SetError("Problem setting particle output data for BGGEXP");
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -1097,6 +1100,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[6], B[0],
                                bgg->poIndex[7], B[1],
                                bgg->poIndex[8], B[2],
+                               bgg->poIndex[9], (long)part[ip][particleIDIndex],
                                -1) ||
             !SDDS_WritePage(bgg->SDDSpo)) {
           SDDS_SetError("Problem setting particle output data for BGGEXP");

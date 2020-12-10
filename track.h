@@ -3068,7 +3068,7 @@ typedef struct {
   short initialized;
   long dataIndex[2]; /* normal, skew */
   SDDS_DATASET *SDDSpo;
-  long poIndex[9];
+  long poIndex[10];
 } BGGEXP;
 
 /* magnetic field from on-axis data */
