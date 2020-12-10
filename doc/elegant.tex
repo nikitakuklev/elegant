@@ -6507,14 +6507,15 @@ computeRBGGE -yminus={\em filename} -yplus={\em filename} -xminus={\em filename}
 
 \item {\bf switches:}
 \begin{itemize}
-\item {\tt yplus} --- File containing \verb|x|, \verb|y|, \verb|z|, and \verb|By|, 
+\item {\tt yplus} --- SDDS file containing \verb|x|, \verb|y|, \verb|z|, and \verb|By|, 
   map stored in columns for positive-y plane. If skew components are desired, file must also supply \verb|Bz|.
-\item {\tt yminus} --- File containing \verb|x|, \verb|y|, \verb|z|, and \verb|By|, 
+  Units are meter and Tesla.
+\item {\tt yminus} --- SDDS file containing \verb|x|, \verb|y|, \verb|z|, and \verb|By|, 
   map stored in columns for negative-y plane. If skew components are desired, file must also supply \verb|Bz|.
-\item {\tt xminus} ---  File containing \verb|x|, \verb|y|, \verb|z|, and \verb|Bx|, 
-  map stored in columns for negative-y plane. If skew components are desired, file must also supply \verb|Bz|.
-\item {\tt xplus} ---  File containing \verb|x|, \verb|y|, \verb|z|, and \verb|Bx|, 
-  map stored in columns for positive-y plane. If skew components are desired, file must also supply \verb|Bz|.
+\item {\tt xplus} ---  SDDS file containing \verb|x|, \verb|y|, \verb|z|, and \verb|Bx|, 
+  map stored in columns for positive-x plane. If skew components are desired, file must also supply \verb|Bz|.
+\item {\tt xminus} ---  SDDS file containing \verb|x|, \verb|y|, \verb|z|, and \verb|Bx|, 
+  map stored in columns for negative-x plane. If skew components are desired, file must also supply \verb|Bz|.
 \item {\tt normal} ---  Output file for normal-component generalized gradients. Supply to \verb|NORMAL_FILENAME|
   parameter of \verb|BGGEXP|.
 \item {\tt skew} ---  Output file for skew-component generalized gradients. Supply to \verb|SKEW_FILENAME|
