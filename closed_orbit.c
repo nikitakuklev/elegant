@@ -449,7 +449,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
           goodCount = -10;
           if (change_fraction<0.01) {
             char buffer[16384];
-            snprintf(buffer, 16834, 
+            snprintf(buffer, 16384, 
                      "accuracy requirement: %e, previous error: %e, current error: %e", 
                      clorb_acc, last_error, error);
             printWarning("closed_orbit: closed orbit diverging, iteration stopped", buffer);

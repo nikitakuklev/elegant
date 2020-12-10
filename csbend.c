@@ -2657,7 +2657,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
   if (n_partMoreThanOne && !csbend->csrBlock) {
     /* prepare more data for CSRDRIFT */
-    long imin, imax;
+    int64_t imin, imax;
     double S55;
 
 #if !USE_MPI    

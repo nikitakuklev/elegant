@@ -68,25 +68,25 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   nY = 0;
   while ((code=SDDS_ReadPage(&SDDSin))>0) {
     if (code==1) {
-      int32_t superperiodicity;
+      int32_t superperiodicity=0;
       if (!SDDS_GetParameterAsDouble(&SDDSin, "ZCenter", &obstructionDataSets.center[0]) ||
-	  !SDDS_GetParameterAsDouble(&SDDSin, "XCenter", &obstructionDataSets.center[1]) ||
-	  !SDDS_GetParameterAsLong(&SDDSin, "Superperiodicity", &superperiodicity)) {
-	sprintf(s, "Problem getting data from page %ld of obstruction input file %s", code, input);
-	SDDS_SetError(s);
-	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	        !SDDS_GetParameterAsDouble(&SDDSin, "XCenter", &obstructionDataSets.center[1]) ||
+	        !SDDS_GetParameterAsLong(&SDDSin, "Superperiodicity", &superperiodicity)) {
+	            sprintf(s, "Problem getting data from page %ld of obstruction input file %s", code, input);
+            	SDDS_SetError(s);
+	            SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
       obstructionDataSets.superperiodicity = superperiodicity;
       printf("ZCenter = %le, XCenter = %le, Superperiodicity = %ld\n", 
-	     obstructionDataSets.center[0], obstructionDataSets.center[1], obstructionDataSets.superperiodicity);
+	        obstructionDataSets.center[0], obstructionDataSets.center[1], obstructionDataSets.superperiodicity);
     }
     Y = 0;
     iY = 0;
     if (obstructionDataSets.YSpacing) {
       if (!SDDS_GetParameterAsDouble(&SDDSin, "Y", &Y)) {
-	sprintf(s, "Problem getting Y data from page %ld of obstruction input file %s", code, input);
-	SDDS_SetError(s);
-	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	        sprintf(s, "Problem getting Y data from page %ld of obstruction input file %s", code, input);
+	        SDDS_SetError(s);
+	        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
       iY = Y/obstructionDataSets.YSpacing  + SIGN(Y)*0.5;
       if (fabs(iY - Y/obstructionDataSets.YSpacing)>1e-6) {

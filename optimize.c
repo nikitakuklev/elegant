@@ -1535,7 +1535,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           variables->step[i] = variables->orig_step[i];
         }
         if (optimization_data->restart_worst_term_factor!=1 && optimization_data->terms>1) {
-          long imax, imin, iworst;
+          int64_t imax, imin, iworst;
           double *savedTermValue;
 	  /* double newResult; */
           if (!(savedTermValue = malloc(sizeof(*savedTermValue)*optimization_data->terms)))

@@ -100,13 +100,13 @@ void quadFringe(double **coord, long np, double K1,
 
     dx = dpx = dy = dpy = ds = 0;
     
-    if (fabs(higherOrder)>1) {
+    if (abs(higherOrder)>1) {
       double xpow[9], ypow[9], apow[4];
       long i;
       xpow[0] = ypow[0] = 1;
       apow[0] = 1;
 
-      if (fabs(higherOrder)>2) {
+      if (abs(higherOrder)>2) {
         for (i=1; i<9; i++) {
           xpow[i] = xpow[i-1]*x;
           ypow[i] = ypow[i-1]*y;
