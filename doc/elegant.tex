@@ -60,6 +60,10 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
 \begin{itemize}
 \item The \verb|parameters| output of the \verb|run_setup| command now includes string quantities in the
   \verb|ParameterValueString| column. Numerical quantities are stored in the \verb|ParameterValue| column, as before.
+\item The \verb|run_setup| command has a new parameter \verb|suppress_parameter_defaults|. If set to a nonzero value,
+  the data stored in the \verb|parameters| output file will not contain data that match the default values.
+  This can result in much smaller files and faster loading, with the downside that future changes to the
+  defaults would impact the ability to reproduce a run using a saved parameter file.
 \item The \verb|load_parameters| command now makes consistent use of the \verb|ParameterValueString| column
   in any input files. If the \verb|ParameterValue| column is present, it is used for numerical quantities, 
   while the \verb|ParameterValueString| column is used for string quantities only.
@@ -4816,6 +4820,7 @@ in \verb|run_setup|.
     STRING magnets = NULL;
     STRING semaphore_file = NULL;
     STRING parameters = NULL;
+    long suppress_parameter_defaults = 0;
     STRING rfc_reference_output = NULL;
     long combine_bunch_statistics = 0;
     long wrap_around = 1;
@@ -4877,8 +4882,11 @@ errors occured.  If the file exists, it is deleted.  This file can be
 used to record the fact that the run completed without error.
 \item \verb|parameters| --- The (incomplete) name of an SDDS file into
 which parameters of accelerator elements are written.
-N.B.: this file does not contain any non-numerical parameters of the lattice.
-Hence, it is not a complete description of the settings of the lattice.
+\item \verb|suppress_parameter_defaults| --- If non-zero, then the \verb|parameters| output file
+  will not contain rows for parameters whose values are identical to the then-current default values.
+  This can result in significantly smaller parameter files and faster loading.
+  The downside is that future changes to defaults would possible result in difficulty reproducing a
+  result from a saved parameter file.
 \item \verb|rfc_reference_output| --- The (incomplete) name of an SDDS file into
 which the internally-determined reference times for \verb|RFCA| and \verb|RFCW| 
 elements are written. This file can be loaded with \verb|load_parameters| to

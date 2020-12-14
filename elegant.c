@@ -1262,7 +1262,7 @@ char **argv;
 	  break;
         }
         if (parameters)
-          dumpLatticeParameters(parameters, &run_conditions, beamline);
+          dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
         if (rfc_reference_output)
           dumpRfcReferenceData(rfc_reference_output, &run_conditions, beamline);
         /* Reset corrector magnets for before/after tracking mode */
@@ -1415,7 +1415,7 @@ char **argv;
                     do_chromatic_correction, &correct, correct.mode, &tune_corr_data, 
                     fl_do_tune_correction, do_find_aperture, do_response_output);
         if (parameters)
-          dumpLatticeParameters(parameters, &run_conditions, beamline);
+          dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
       }
       if (parameters)
         finishLatticeParametersFile();
@@ -1632,7 +1632,7 @@ char **argv;
         if (do_moments_output)
           runMomentsOutput(&run_conditions, beamline, starting_coord, 1, 1);
         if (parameters)
-          dumpLatticeParameters(parameters, &run_conditions, beamline);
+          dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
         switch (commandCode) {
         case FIND_APERTURE:
           do_aperture_search(&run_conditions, &run_control, starting_coord,
@@ -1763,7 +1763,7 @@ char **argv;
     case AMPLIF_FACTORS:
       beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       if (parameters)
-        dumpLatticeParameters(parameters, &run_conditions, beamline);
+          dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
       compute_amplification_factors(&namelist_text, &run_conditions, &correct, do_closed_orbit, beamline);
       break;
     case PRINT_DICTIONARY:
@@ -1814,7 +1814,7 @@ char **argv;
 #if 0
       do_fit_trace_data(&namelist_text, &run_conditions, beamline);
       if (parameters) {
-        dumpLatticeParameters(parameters, &run_conditions, beamline);
+        dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
         finishLatticeParametersFile();
       }
       /* reassert defaults for namelist run_setup */

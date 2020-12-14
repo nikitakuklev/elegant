@@ -888,7 +888,7 @@ void finish_load_parameters()
 
 static long dumpingLatticeParameters = 0;
 static SDDS_DATASET SDDS_dumpLattice;
-void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
+void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline, long suppressDefaults)
 {
   SDDS_DATASET *SDDSout;
   long iElem, iParam;
@@ -951,15 +951,30 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
           value *= eptr->divisions;
         if (parameter[iParam].flags&HAS_LENGTH && run->backtrack && iParam==0)
           value *= -1; /* don't want to save internal negative length values */
+        if (suppressDefaults && value==parameter[iParam].number)
+          doSave = 0;
         break;
       case IS_LONG:
         value = *(long*)(eptr->p_elem+parameter[iParam].offset);
+        if (suppressDefaults && value==parameter[iParam].integer)
+          doSave = 0;
         break;
       case IS_SHORT:
         value = *(short*)(eptr->p_elem+parameter[iParam].offset);
+        if (suppressDefaults && value==parameter[iParam].integer)
+          doSave = 0;
         break;
       case IS_STRING:
         string_value = *(char**)(eptr->p_elem+parameter[iParam].offset);
+        if (suppressDefaults) {
+          if (!string_value) {
+            if (!parameter[iParam].string)
+              doSave = 0;
+          } else {
+            if (parameter[iParam].string && strcmp(string_value, parameter[iParam].string)==0)
+              doSave = 0;
+          }
+        }
         break;
       default:
         value = 0;

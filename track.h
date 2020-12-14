@@ -4556,7 +4556,7 @@ extern void setup_sdds_beam(BEAM *beam,NAMELIST_TEXT *nltext,RUN *run, VARY *con
                             long save_original);
 extern long new_sdds_beam(BEAM *beam,RUN *run,VARY *control,OUTPUT_FILES *output,long flags);
 void terminate_sdds_beam(void);
-extern void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline);
+extern void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline, long suppressDefaults);
 extern void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 extern void compute_offsets(void);
 extern void convert_to_xorbit(char *outputfile, LINE_LIST *beamline, long flip_k, 

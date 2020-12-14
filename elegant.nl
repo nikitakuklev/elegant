@@ -45,6 +45,7 @@
     STRING magnets = NULL;
     STRING semaphore_file = NULL;
     STRING parameters = NULL;
+    long suppress_parameter_defaults = 0;
     STRING rfc_reference_output = NULL;
     long combine_bunch_statistics = 0;
     long wrap_around = 1;
