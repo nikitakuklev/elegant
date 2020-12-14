@@ -31,6 +31,8 @@ typedef struct {
 #define COMMAND_FLAG_USE_FIRST          0x0008UL
 #define ALLOW_MISSING_ELEMENTS          0x0010UL
 #define ALLOW_MISSING_PARAMETERS        0x0020UL
+#define NUMERICAL_DATA_PRESENT          0x0040UL
+#define STRING_DATA_PRESENT             0x0080UL
     char **includeNamePattern, **includeItemPattern, **includeTypePattern;
     long includeNamePatterns, includeItemPatterns, includeTypePatterns;
     char **excludeNamePattern, **excludeItemPattern, **excludeTypePattern;
@@ -38,7 +40,6 @@ typedef struct {
     char *editNameCommand;
     long skip_pages;         /* if >0, pages are skipped, used as counter */
     long last_code;          /* return code from SDDS_ReadTable */
-    short string_data;       /* if non-zero, indicates data stored as strings */   
     double *starting_value;  /* only for numerical data */
     char *use_start;         /* if nonzero, starting_value will be used to restore to initial state */
     void **reset_address;
@@ -193,28 +194,35 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
     }
     exitElegant(1);
   }
-  load_request[load_requests].string_data = 0;
+
   if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Value_ColumnName))>=0) {
     if (SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_DOUBLE) {
       if (printingEnabled) {
-	printf("Column \"%s\" is not in file %s or is not of double-precision type.\n", 
+	printf("Column \"%s\" in file %s is not of double-precision type.\n", 
 		Value_ColumnName, load_request[load_requests].filename);
 	fflush(stdout);
       }
       exitElegant(1);
     } 
-  } else {
-    if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, ValueString_ColumnName))<0 ||
-        SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
+    load_request[load_requests].flags |= NUMERICAL_DATA_PRESENT;
+  }
+  if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, ValueString_ColumnName))>=0) {
+    if (SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
       if (printingEnabled) {
-	printf("Column \"%s\" is not in file %s or is not of string type.\n",
-		ValueString_ColumnName, load_request[load_requests].filename);
-	fflush(stdout);
+        printf("Column \"%s\" is in file %s not of string type.\n",
+               ValueString_ColumnName, load_request[load_requests].filename);
+        fflush(stdout);
       }
       exitElegant(1);
     }
-    load_request[load_requests].string_data = 1;
+    load_request[load_requests].flags |= STRING_DATA_PRESENT;
   }
+  if ((load_request[load_requests].flags&NUMERICAL_DATA_PRESENT) &&
+      (load_request[load_requests].flags&STRING_DATA_PRESENT)) {
+    printf("Both numerical and string data columns present in file %s. Will use the latter for actual string quantities only.\n",
+           load_request[load_requests].filename);
+  }
+      
   if ((include_type_pattern || exclude_type_pattern) &&
       ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, ElementType_ColumnName))<0 ||
        SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING)) {
@@ -406,9 +414,9 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     }
     valueString = NULL;
     value = NULL;
-    if ((!load_request[i].string_data  &&
+    if ((load_request[i].flags&NUMERICAL_DATA_PRESENT  &&
          !(value    =(double*)SDDS_GetColumn(&load_request[i].table, Value_ColumnName))) ||
-        (load_request[i].string_data &&
+        (load_request[i].flags&STRING_DATA_PRESENT &&
          !(valueString = (char **)SDDS_GetColumn(&load_request[i].table, ValueString_ColumnName)))) {
       if (printingEnabled) {
 	printf("Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
@@ -581,9 +589,15 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         printf("Working on row %ld of file\n", j);
       
       if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
-        change_defined_parameter(element[j], param, eptr->type, value?value[j]:0, 
-                                 valueString?valueString[j]:NULL, 
-                                 mode_flags+(verbose?LOAD_FLAG_VERBOSE:0));
+        if (load_request[i].flags&NUMERICAL_DATA_PRESENT &&
+            entity_description[eptr->type].parameter[param].type!=IS_STRING)
+          change_defined_parameter(element[j], param, eptr->type, 
+                                   value?value[j]:0, NULL, mode_flags+(verbose?LOAD_FLAG_VERBOSE:0));
+        else 
+          change_defined_parameter(element[j], param, eptr->type, 
+                                   value?value[j]:0, 
+                                   valueString?valueString[i]:NULL, 
+                                   mode_flags+(verbose?LOAD_FLAG_VERBOSE:0));
       }
       numberChanged = 0;
       do {
@@ -614,7 +628,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         load_request[i].use_start[load_request[i].values] = !inHash; /* don't use start value if it is already recorded */
         switch (entity_description[eptr->type].parameter[param].type) {
         case IS_DOUBLE:
-          if (valueString) {
+          if (valueString && !value) {
             if (!sscanf(valueString[j], "%lf", &newValue)) {
 	      if (printingEnabled) {
 		printf("Error: unable to scan double from \"%s\"\n", valueString[j]);
@@ -661,7 +675,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           break;
         case IS_LONG:
         case IS_SHORT:
-          if (valueString) {
+          if (valueString && !value) {
             if (!sscanf(valueString[j], "%lf", &newValue)) {
 	      if (printingEnabled) {
 		printf("Error: unable to scan double from \"%s\"\n", valueString[j]);
@@ -738,35 +752,54 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 	  }
           break;
         case IS_STRING:
+          if (!valueString) {
+            printf("Error: attempt to change %s.%s #%" PRId32 ", which is a string value, but no ParameterValueString column given in file %s\n", 
+                   eptr->name,
+                   entity_description[eptr->type].parameter[param].name, numberChanged,
+                   load_request[i].filename);
+            exit(1);
+          }
           load_request[i].value_type[load_request[i].values] = IS_STRING;
           if (verbose && printingEnabled) {
             printf("Changing %s.%s #%" PRId32 "  from %s to ",
                     eptr->name,
                     entity_description[eptr->type].parameter[param].name, numberChanged,
-                    *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+                   *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset))?
+                   *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)):
+                   "NULL"
+                   );
             fflush(stdout);
 	  }
-          if (!SDDS_CopyString((char**)(p_elem+entity_description[eptr->type].parameter[param].offset),
-                               valueString[j])) {
-	    if (printingEnabled) {
-	      printf("Error (do_load_parameters): unable to copy value string\n");
-	      fflush(stdout);
-	    }
-	    exitElegant(1);
-          }
+          if (strlen(valueString[j])) {
+            if (!SDDS_CopyString((char**)(p_elem+entity_description[eptr->type].parameter[param].offset),
+                                 valueString[j])) {
+              if (printingEnabled) {
+                printf("Error (do_load_parameters): unable to copy value string\n");
+                fflush(stdout);
+              }
+              exitElegant(1);
+            }
+          } else
+            *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)) = NULL;
 	  if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
-	    if (!SDDS_CopyString((char**)(p_elem0+entity_description[eptr->type].parameter[param].offset),
-				 valueString[j])) {
-	      if (printingEnabled) {
-		printf("Error (do_load_parameters): unable to copy value string\n");
-		fflush(stdout);
-	      }
-	      exitElegant(1);
-	    }
-	  }
+            if (strlen(valueString[j])) {
+              if (!SDDS_CopyString((char**)(p_elem0+entity_description[eptr->type].parameter[param].offset),
+                                   valueString[j])) {
+                if (printingEnabled) {
+                  printf("Error (do_load_parameters): unable to copy value string\n");
+                  fflush(stdout);
+                }
+                exitElegant(1);
+              }
+            } else 
+              *((char**)(p_elem0+entity_description[eptr->type].parameter[param].offset)) = NULL;
+          }
           if (verbose && printingEnabled) {
             printf("%s\n", 
-                    *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+                   *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset))?
+                   *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)):
+                   "NULL"
+                   );
             fflush(stdout);
 	  }
           break;
@@ -863,16 +896,18 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
   PARAMETER *parameter;
   long row, maxRows, doSave;
   double value=0.0;
-  static long iElementName, iElementParameter, iParameterValue, iElementType, iOccurence, iElementGroup;
+  char *string_value = NULL;
+  static long iElementName, iElementParameter, iParameterValue, iElementType, iOccurence, iElementGroup, iParameterValueString;
   
   SDDSout = &SDDS_dumpLattice;
   if (!dumpingLatticeParameters) {
     if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 0, NULL, NULL, filename) ||
-        (iElementName=SDDS_DefineColumn(SDDSout, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
-        (iElementParameter=SDDS_DefineColumn(SDDSout, "ElementParameter", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
-        (iParameterValue=SDDS_DefineColumn(SDDSout, "ParameterValue", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-        (iElementType=SDDS_DefineColumn(SDDSout, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
-        (iOccurence=SDDS_DefineColumn(SDDSout, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, 0))<0 ||
+        (iElementName=SDDS_DefineColumn(SDDSout, Element_ColumnName, NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
+        (iElementParameter=SDDS_DefineColumn(SDDSout, Parameter_ColumnName, NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
+        (iParameterValue=SDDS_DefineColumn(SDDSout, Value_ColumnName, NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (iParameterValueString=SDDS_DefineColumn(SDDSout, ValueString_ColumnName, NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
+        (iElementType=SDDS_DefineColumn(SDDSout, ElementType_ColumnName, NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
+        (iOccurence=SDDS_DefineColumn(SDDSout, Occurence_ColumnName, NULL, NULL, NULL, NULL, SDDS_LONG, 0))<0 ||
         (iElementGroup=SDDS_DefineColumn(SDDSout, "ElementGroup", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
         !SDDS_WriteLayout(SDDSout)) {
       printf("Problem setting up parameter output file\n");
@@ -905,6 +940,8 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
     if (!(eptr->name))
       SDDS_Bomb("element name is NULL (dumpLatticeParameters)");
     for (iParam=0; iParam<entity_description[eptr->type].n_params; iParam++) {
+      value = 0;
+      string_value = NULL;
       doSave = 1;
       switch (parameter[iParam].type) {
       case IS_DOUBLE: 
@@ -921,8 +958,12 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
       case IS_SHORT:
         value = *(short*)(eptr->p_elem+parameter[iParam].offset);
         break;
+      case IS_STRING:
+        string_value = *(char**)(eptr->p_elem+parameter[iParam].offset);
+        break;
       default:
         value = 0;
+        string_value = NULL;
         doSave = 0;
         break;
       }
@@ -946,6 +987,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
                                iElementName, eptr->name,
                                iElementParameter, parameter[iParam].name,
                                iParameterValue, value, 
+                               iParameterValueString, string_value?string_value:"",
                                iElementType, entity_name[eptr->type],
                                iElementGroup, eptr->group?eptr->group:"",
                                -1)) {

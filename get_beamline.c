@@ -1176,7 +1176,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
             break;
           case IS_STRING:
             ptr = *(char**)(eptr->p_elem+parameter[j].offset);
-            if (ptr &&
+            if (ptr && strlen(ptr) &&
                 (!suppress_defaults || !parameter[j].string || strcmp(ptr, parameter[j].string)!=0)) {
               sprintf(t, "%s=\"%s\"", parameter[j].name, ptr);
               strcat(s, t);
@@ -1538,18 +1538,23 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
       }
       break;
     case IS_STRING:
+      if (!valueString)
+        return;
       if (mode&LOAD_FLAG_VERBOSE)
         printf("Changing definition %s.%s from %s to %s\n",
                 elem_name, entity_description[elem_type].parameter[param].name,
                 *((char**)(p_elem+entity_description[elem_type].parameter[param].offset)),
                 valueString);
       fflush(stdout);
-      if (!SDDS_CopyString(((char**)(p_elem+entity_description[elem_type].parameter[param].offset)), 
-                           valueString)) {
-        printf("Error (change_defined_parameter): unable to copy string parameter value\n");
-        fflush(stdout);
-        exitElegant(1);
-      }
+      if (strlen(valueString)) {
+        if (!SDDS_CopyString(((char**)(p_elem+entity_description[elem_type].parameter[param].offset)), 
+                             valueString)) {
+          printf("Error (change_defined_parameter): unable to copy string parameter value\n");
+          fflush(stdout);
+          exitElegant(1);
+        }
+      } else 
+        *((char**)(p_elem+entity_description[elem_type].parameter[param].offset)) = NULL;
       break;
     default:
       bombElegant("unknown/invalid variable quantity", NULL);

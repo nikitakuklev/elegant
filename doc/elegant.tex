@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2020.5\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 2021.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,47 +35,36 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2020.5}
+\section{Highlights of What's New in Version 2021.0}
 
-Here is a summary of what's changed since release 2020.4.  Historical change logs are collected in Section
+Here is a summary of what's changed since release 2020.5.  Historical change logs are collected in Section
 \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|SCATTER| element had a bug in the implementation of the \verb|ENDONPASS| parameter, which was being
-  ignored if the value was \verb|0|.
-\item The \verb|CCBEND| element had several misalignment-related issues. Most significantly, the \verb|ETILT| parameter was ignored.
-  In addition, the sense of \verb|DX| and \verb|DY| was inverted when when the \verb|ANGLE| was negative. 
-  As a result of these fixes, misalignment effects from \verb|CCBEND| will change. Setting \verb|ETILT=0| and
-  \verb|DX_DY_SIGN=-1| will cause the code to revert to the old behavior.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Frequency map analysis would crash in some circumstances when there was a \verb|CHARGE| in the beamline.
-  This bug was reported by G. Penn (LBNL).
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|BGGEXP| element now supports both normal and skew components. R. Lindberg (APS) implemented the
-  symplectic integrator option for this.
-\item The \verb|BMAPXYZ| element now has a \verb|FSE| (Fractional Strength Error) parameter.
-\item The \verb|RADIAL_ORDER| parameter of \verb|RFTMEZ0| can now be set to 0 to turn off radial dependence of
-  fields.
-\item The \verb|POLYSERIES| element was released, which allows transforming the beam using a set of arbitrary polynomials
-  in the canonical coordinates.  This existed in the code but was not documented.
-  It was developed by L. Emery (APS) and inspired by work of Y. P. Sun (APS).
-\item The \verb|ETILT_SIGN| parameter for \verb|CSBEND|, \verb|CSRCSBEND|, \verb|RBEN|, and \verb|SBEN| now defaults
-  to \verb|1|. The previous default of \verb|-1|, for backward compatibility, was potentially confusing.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added the \verb|change_start| command, which permits changing the starting location in a lattice.
-  This was inspired by a request from Duan Zhe (IHEP).
-\item The \verb|obstruction_data| command now supports multiple vertical planes of data.
+\item The \verb|parameters| output of the \verb|run_setup| command now includes string quantities in the
+  \verb|ParameterValueString| column. Numerical quantities are stored in the \verb|ParameterValue| column, as before.
+\item The \verb|load_parameters| command now makes consistent use of the \verb|ParameterValueString| column
+  in any input files. If the \verb|ParameterValue| column is present, it is used for numerical quantities, 
+  while the \verb|ParameterValueString| column is used for string quantities only.
+  If only \verb|ParameterValueString| is present, \verb|elegant| will attempt to scan the string values as
+  needed for numerical values; this is not the preferred approach as it will degrade performance.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -8146,6 +8135,72 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 2020.5}
+
+Here is a summary of what's changed since release 2020.4.  Historical change logs are collected in Section
+\ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The \verb|SCATTER| element had a bug in the implementation of the \verb|ENDONPASS| parameter, which was being
+  ignored if the value was \verb|0|.
+\item The \verb|CCBEND| element had several misalignment-related issues. Most significantly, the \verb|ETILT| parameter was ignored.
+  In addition, the sense of \verb|DX| and \verb|DY| was inverted when when the \verb|ANGLE| was negative. 
+  As a result of these fixes, misalignment effects from \verb|CCBEND| will change. Setting \verb|ETILT=0| and
+  \verb|DX_DY_SIGN=-1| will cause the code to revert to the old behavior.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item Frequency map analysis would crash in some circumstances when there was a \verb|CHARGE| in the beamline.
+  This bug was reported by G. Penn (LBNL).
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|BGGEXP| element now supports both normal and skew components. R. Lindberg (APS) implemented the
+  symplectic integrator option for this.
+\item The \verb|BMAPXYZ| element now has a \verb|FSE| (Fractional Strength Error) parameter.
+\item The \verb|RADIAL_ORDER| parameter of \verb|RFTMEZ0| can now be set to 0 to turn off radial dependence of
+  fields.
+\item The \verb|POLYSERIES| element was released, which allows transforming the beam using a set of arbitrary polynomials
+  in the canonical coordinates.  This existed in the code but was not documented.
+  It was developed by L. Emery (APS) and inspired by work of Y. P. Sun (APS).
+\item The \verb|ETILT_SIGN| parameter for \verb|CSBEND|, \verb|CSRCSBEND|, \verb|RBEN|, and \verb|SBEN| now defaults
+  to \verb|1|. The previous default of \verb|-1|, for backward compatibility, was potentially confusing.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item Added the \verb|change_start| command, which permits changing the starting location in a lattice.
+  This was inspired by a request from Duan Zhe (IHEP).
+\item The \verb|obstruction_data| command now supports multiple vertical planes of data.
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}  Users are encouraged to check results against
+the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The \verb|computeRBGGE| program was added, allowing computation of a generalized gradient expansion\cite{Venturini-NIMA427-387} for
+  use with \verb|BGGEXP| based on field data on a rectangular boundary \cite{Mitchell-2007}. The code was developed by R. Lindberg (APS)
+  with help from R. Soliday (APS) and M. Borland (APS).
+\end{itemize}
 
 \subsection{Highlights of What's New in Version 2020.4}
 
