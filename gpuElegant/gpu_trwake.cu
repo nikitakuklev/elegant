@@ -64,7 +64,7 @@ class gpuApplyTransverseWakeKicks
         else
           Vinterp = factor * d_Vtime[ib];
         if (exponent)
-          Vinterp *= pow(particle[offset - 1], exponent);
+          Vinterp *= pow(particle[offset - 1], 1. * exponent);
         if (Vinterp)
           particle[offset] += Vinterp / (1e6 * particleMassMV * particleRelSign) / d_pz[ip];
       } //ib<=nb

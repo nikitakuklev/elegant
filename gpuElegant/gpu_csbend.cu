@@ -22,7 +22,7 @@
 #ifdef sqr
 #  undef sqr
 #endif
-#define sqr(x) pow(x, 2)
+#define sqr(x) pow(x, 2.0)
 
 #define expansionOrderMax 10
 #define xOrderMax2 expansionOrderMax *expansionOrderMax
@@ -868,12 +868,12 @@ extern "C"
      * the central particle.
      */
     if (csbend->synch_rad)
-      rad_coef = sqr(particleCharge) * pow(Po, 3) * sqr(1 + fse) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass * sqr(rho0));
+      rad_coef = sqr(particleCharge) * pow(Po, 3.0) * sqr(1 + fse) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass * sqr(rho0));
     else
       rad_coef = 0;
     /* isrConstant is the RMS increase in dP/P per meter due to incoherent SR.  */
-    isrConstant = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5) *
-                                        137.0359895 / pow(fabs(rho_actual), 3));
+    isrConstant = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5.0) *
+                                        137.0359895 / pow(fabs(rho_actual), 3.0));
     if (!csbend->isr || (csbend->isr1Particle == 0 && n_part == 1))
       /* Minus sign here indicates that we accumulate ISR into sigmaDelta^2 but don't apply it to particles. */
       isrConstant *= -1;
@@ -884,7 +884,7 @@ extern "C"
         meanPhotonsPerRadian0 = 5.0 / (2.0 * sqrt(3)) * Po / 137.0359895;
         meanPhotonsPerMeter0 = (5 * c_mks * Po * particleMass * particleRadius) / (2 * sqrt(3) * hbar_mks * rho_actual);
         /* Critical energy normalized to reference energy, Sands 5.9 */
-        normalizedCriticalEnergy0 = 3.0 / 2 * hbar_mks * c_mks * pow(Po, 3) / fabs(rho_actual) / (Po * particleMass * sqr(c_mks));
+        normalizedCriticalEnergy0 = 3.0 / 2 * hbar_mks * c_mks * pow(Po, 3.0) / fabs(rho_actual) / (Po * particleMass * sqr(c_mks));
         /* fprintf(stderr, "Mean photons per radian expected: %le   ECritical/E: %le\n", 
            meanPhotonsPerRadian0, normalizedCriticalEnergy0);
         */
@@ -2106,13 +2106,13 @@ extern "C"
      * the central particle.
      */
     if (csbend->synch_rad)
-      rad_coef = sqr(particleCharge) * pow(Po, 3) * sqr(1 + fse) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass * sqr(rho0));
+      rad_coef = sqr(particleCharge) * pow(Po, 3.0) * sqr(1 + fse) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass * sqr(rho0));
     else
       rad_coef = 0;
     /* isrConstant is the RMS increase in dP/P per meter due to incoherent SR.  */
     if (csbend->isr && (n_part > 1 || !csbend->isr1Particle))
-      isrConstant = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5) *
-                                          137.0359895 / pow(fabs(rho_actual), 3));
+      isrConstant = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5.0) *
+                                          137.0359895 / pow(fabs(rho_actual), 3.0));
     else
       isrConstant = 0;
 
@@ -2531,7 +2531,7 @@ extern "C"
                   }
 
                 phiBend += angle / csbend->n_kicks;
-                slippageLength = fabs(rho0 * pow(phiBend, 3) / 24.0);
+                slippageLength = fabs(rho0 * pow(phiBend, 3.0) / 24.0);
                 slippageLength13 = pow(slippageLength, 1. / 3.);
                 diSlippage = slippageLength / dct;
                 diSlippage4 = 4 * slippageLength / dct;
@@ -2559,10 +2559,10 @@ extern "C"
                             a = sqrt(xmu * xmu + 1.0);
                             b = a + xmu;
                             if (xmu < 1e-3)
-                              chik[iBin] = frac * const1 + 0.50 * sqr(xmu) - (7.0 / 54.0) * pow(4, 4) + (140.0 / 2187.0) * pow(xmu, 6);
+                              chik[iBin] = frac * const1 + 0.50 * sqr(xmu) - (7.0 / 54.0) * pow(4, 4.0) + (140.0 / 2187.0) * pow(xmu, 6.0);
                             else
                               chik[iBin] = frac * (3.0 * (-2.0 * xmu * pow(b, 1.0 / 3.0) + pow(b, 2.0 / 3.0) + pow(b, 4.0 / 3.0)) +
-                                                   log(pow((1 - pow(b, 2.0 / 3.0)) / xmu, 2) / (1 + pow(b, 2.0 / 3.0) + pow(b, 4.0 / 3.0))));
+                                                   log(pow((1 - pow(b, 2.0 / 3.0)) / xmu, 2.0) / (1 + pow(b, 2.0 / 3.0) + pow(b, 4.0 / 3.0))));
                           }
                         const2 = (16.0 / 27.0) * (particleCharge / (4 * PI * epsilon_o)) / (gamma2 * dct);
                         grnk[0] = const2 * (chik[1] - chik[0]);
@@ -3368,7 +3368,7 @@ extern "C"
                   bombElegant("invalid wavelength_mode for CSR DRIFT.  Use sigmaz or peak-to-peak", NULL);
                   break;
                 }
-              criticalWavelength = 4.19 / pow(csrWake.Po, 3) * csrWake.rho;
+              criticalWavelength = 4.19 / pow(csrWake.Po, 3.) * csrWake.rho;
               if (!particleIsElectron)
                 bombElegant("CSRDRIFT spread mode is not supported for particles other than electrons", NULL);
               thetaRad = 0.5463e-3 / (csrWake.Po * 0.511e-3) / pow(criticalWavelength / wavelength, 1. / 3.);
@@ -3690,7 +3690,7 @@ extern "C"
                 zOutput += dz;
 
                 x = zTravel / csrWake.rho;
-                dsMax = csrWake.rho / 24 * pow(csrWake.bendingAngle, 3) * (csrWake.bendingAngle + 4 * x) / (csrWake.bendingAngle + x);
+                dsMax = csrWake.rho / 24 * pow(csrWake.bendingAngle, 3.) * (csrWake.bendingAngle + 4 * x) / (csrWake.bendingAngle + x);
                 /* propagate particles forward, converting s to c*t=s/beta */
                 if (isSlave || !notSinglePart)
                   {
@@ -3881,7 +3881,7 @@ extern "C"
                             csrWake.StupakovOutput = compose_filename(csrWake.StupakovOutput, rootname);
                           }
                         x = zTravel / csrWake.rho;
-                        dsMax = csrWake.rho / 24 * pow(csrWake.bendingAngle, 3) * (csrWake.bendingAngle + 4 * x) / (csrWake.bendingAngle + x);
+                        dsMax = csrWake.rho / 24 * pow(csrWake.bendingAngle, 3.) * (csrWake.bendingAngle + 4 * x) / (csrWake.bendingAngle + x);
                         phi0 = SolveForPhiStupakov(x, 0.0, csrWake.bendingAngle);
                         phi1 = SolveForPhiStupakov(x, dsMax / csrWake.rho * 0.999, csrWake.bendingAngle);
 

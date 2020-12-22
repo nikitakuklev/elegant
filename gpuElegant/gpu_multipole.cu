@@ -524,8 +524,8 @@ extern "C"
         ykick = kquad->ykick * kquad->yKickCalibration;
         integ_order = kquad->integration_order;
         if (kquad->synch_rad)
-          rad_coef = sqr(particleCharge) * pow(Po, 3) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
-        isr_coef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5) * 137.0359895);
+          rad_coef = sqr(particleCharge) * pow(Po, 3.) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
+        isr_coef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5.) * 137.0359895);
         if (!kquad->isr || (kquad->isr1Particle == 0 && n_part == 1))
           /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
           isr_coef *= -1;
@@ -600,8 +600,8 @@ extern "C"
             skew[2] = 1;
           }
         if (ksext->synch_rad)
-          rad_coef = sqr(particleCharge) * pow(Po, 3) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
-        isr_coef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5) * 137.0359895);
+          rad_coef = sqr(particleCharge) * pow(Po, 3.) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
+        isr_coef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5.) * 137.0359895);
         if (!ksext->isr || (ksext->isr1Particle == 0 && n_part == 1))
           /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
           isr_coef *= -1;
@@ -653,7 +653,7 @@ extern "C"
         order[0] = 3;
         if (koct->bore)
           /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) * (1+FSE) */
-          KnL[0] = 6 * koct->B / pow(koct->bore, 3) * (particleCharge / (particleMass * c_mks * Po)) * koct->length * (1 + koct->fse);
+          KnL[0] = 6 * koct->B / pow(koct->bore, 3.) * (particleCharge / (particleMass * c_mks * Po)) * koct->length * (1 + koct->fse);
         else
           KnL[0] = koct->k3 * koct->length * (1 + koct->fse);
         drift = koct->length;
@@ -663,8 +663,8 @@ extern "C"
         dz = koct->dz;
         integ_order = koct->integration_order;
         if (koct->synch_rad)
-          rad_coef = sqr(particleCharge) * pow(Po, 3) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
-        isr_coef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5) * 137.0359895);
+          rad_coef = sqr(particleCharge) * pow(Po, 3.) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
+        isr_coef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5.) * 137.0359895);
         if (!koct->isr || (koct->isr1Particle == 0 && n_part == 1))
           /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
           isr_coef *= -1;
@@ -717,8 +717,8 @@ extern "C"
         dz = kquse->dz;
         integ_order = kquse->integration_order;
         if (kquse->synch_rad)
-          rad_coef = sqr(particleCharge) * pow(Po, 3) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
-        isr_coef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5) * 137.0359895);
+          rad_coef = sqr(particleCharge) * pow(Po, 3.) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
+        isr_coef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5.) * 137.0359895);
         if (!kquse->isr || (kquse->isr1Particle == 0 && n_part == 1))
           /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
           isr_coef *= -1;
@@ -960,9 +960,9 @@ __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
   for (i = sum_Fx = sum_Fy = 0; i <= order; i++)
     {
       if (ODD(i))
-        sum_Fx += d_coef[expansionOrderMax * order + i] * pow(x, order - i) * pow(y, i);
+        sum_Fx += d_coef[expansionOrderMax * order + i] * pow(x, 1. * order - i) * pow(y, 1. * i);
       else
-        sum_Fy += d_coef[expansionOrderMax * order + i] * pow(x, order - i) * pow(y, i);
+        sum_Fy += d_coef[expansionOrderMax * order + i] * pow(x, 1. * order - i) * pow(y, 1. * i);
     }
   if (skew)
     {
@@ -992,13 +992,13 @@ __device__ void gpu_applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
     {
       if (y == 0)
         return;
-      xypow = pow(y, order);
+      xypow = pow(y, 1. * order);
       i = order;
       ratio = 0;
     }
   else
     {
-      xypow = pow(x, order);
+      xypow = pow(x, 1. * order);
       ratio = y / x;
       i = 0;
     }

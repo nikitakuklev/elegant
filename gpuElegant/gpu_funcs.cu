@@ -233,17 +233,17 @@ class gpuAddCorrectorRadiationKick
 
     dp = particle[5];
     p = Po * (1 + dp);
-    beta0 = p / sqrt(pow(p, 2) + 1);
-    deltaFactor = pow(1 + dp, 2);
+    beta0 = p / sqrt(pow(p, 2.) + 1);
+    deltaFactor = pow(1 + dp, 2.);
     dp -= radCoef * deltaFactor * F2 * length;
     if (isr)
       dp += isrCoef * deltaFactor * pow(F2, 0.75) * sqrt(length) * d_gauss_rn[ind];
     p = Po * (1 + dp);
-    beta1 = p / sqrt(pow(p, 2) + 1);
+    beta1 = p / sqrt(pow(p, 2.) + 1);
     particle[5] = dp;
     particle[4] = beta1 * particle[4] / beta0;
     if (do_reduce)
-      return pow(isrCoef * deltaFactor, 2) * pow(F2, 1.5) * length;
+      return pow(isrCoef * deltaFactor, 2.) * pow(F2, 1.5) * length;
     else
       return 0;
   }
@@ -341,8 +341,8 @@ extern "C"
       return;
     if (disableISR)
       isr = 0;
-    radCoef = sqr(particleCharge) * pow(Po, 3) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
-    isrCoef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5) * 137.0359895);
+    radCoef = sqr(particleCharge) * pow(Po, 3.) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
+    isrCoef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow(Po, 5.) * 137.0359895);
 
     F2 = sqr(kick / length);
 

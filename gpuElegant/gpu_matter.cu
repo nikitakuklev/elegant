@@ -106,7 +106,7 @@ extern "C"
           bombElegant("MATTER element is too thin or requests special features---provide Z, A, and rho (or pressure and temperature) for single-scattering calculation.", NULL);
         K1 = 4 * matter->Z * (matter->Z + 1) * sqr(particleRadius / (beta * Po));
         *K2 = sqr(pow(matter->Z, 1. / 3.) * ALPHA / Po);
-        sigmaTotal = K1 * pow(PI, 3) / (sqr(*K2) + (*K2) * SQR_PI);
+        sigmaTotal = K1 * pow(PI, 3.) / (sqr(*K2) + (*K2) * SQR_PI);
         probScatter = rho / (AMU * matter->A) * (*L) * sigmaTotal;
         /* printf("K1=%le, K2=%le, mean expected number of scatters is %le\n", K1, K2, probScatter); */
         probBSScatter = 0;
