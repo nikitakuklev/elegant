@@ -50,14 +50,14 @@ long swarmMin(
   static gsl_vector *local_best=NULL, *random_vector=NULL;
   static long initialized = 0;
   static double *Input=NULL;	
-  static char *agent_off = NULL;
+  static char *agent_invalid = NULL;
 
   if (!initialized) {
     if (myid < remaining_populations)
       local_populations ++;
 
-    if (!agent_off)
-      agent_off = calloc(local_populations, sizeof(*agent_off));
+    if (!agent_invalid)
+      agent_invalid = calloc(local_populations, sizeof(*agent_invalid));
 
     if (!coord_matrix)
       coord_matrix = gsl_matrix_alloc (local_populations, dimensions);
@@ -120,23 +120,27 @@ long swarmMin(
       for (j=0; j<dimensions; j++)
 	gsl_matrix_set (global_best_coord, i, j, xGuess[j]);
     }  
+    /* Finds difference between global best and coordinates of all particles */
     gsl_matrix_sub (global_best_coord, coord_matrix);
+    /* multiply this difference by a random value chosen for each particle */
     for (i=0; i<local_populations; i++) {
       local_rand = random_2(0)*phi_g;
       for (j=0; j<dimensions; j++)
 	gsl_matrix_set (global_best_coord, i, j, local_rand*gsl_matrix_get(global_best_coord, i, j));
     }
+    /* add differences to local best */
     gsl_matrix_add (tmp_coord_matrix, global_best_coord);
-    /*gsl_matrix_scale (tmp_coord_matrix, 2.0); */ 
+    /* add scaled velocity to differences */
     gsl_matrix_scale (velocity_matrix, w_max-(w_max-w_min)*n_iterations/max_iterations); 
     gsl_matrix_add (velocity_matrix, tmp_coord_matrix);
+    /* add all this to the particle coordinates */
     gsl_matrix_add (coord_matrix, velocity_matrix);
     /* gsl_matrix_memcpy (coord_matrix, velocity_matrix); */
   }
 
   /* Evaluates the populations */
   for (i=0; i<local_populations; i++) {
-    if (agent_off[i])
+    if (agent_invalid[i])
       continue;
     for (j=0; j<dimensions; j++) {
       Input[j] = gsl_matrix_get (coord_matrix, i, j);
@@ -151,7 +155,7 @@ long swarmMin(
 #endif
     result = func (Input, &isInvalid);
     if (isInvalid) {
-      agent_off[i] = 1;
+      agent_invalid[i] = 1;
       result = sqrt(DBL_MAX);
     }
 #if MPI_DEBUG
@@ -177,6 +181,15 @@ long swarmMin(
       xGuess[j] = gsl_matrix_get (local_best_coord, best_index, j);
     
     *yReturn = best_result;
+
+    /* If agent had invalid, result replace with best */
+    for (i=0; i<local_populations; i++) {
+      if (agent_invalid[i]) {
+        for (j=0; j<dimensions; j++) 
+          gsl_matrix_set(coord_matrix, i, j, gsl_matrix_get(local_best_coord, best_index, j));
+        agent_invalid[i] = 0;
+      }
+    }
 
 #if MPI_DEBUG
     printf ("Result=%lf\n", result);
