@@ -39,7 +39,7 @@ long swarmMin(
   long local_populations = populationSize/n_processors;
   long remaining_populations = populationSize - n_processors*local_populations;
   long i, j, isInvalid;
-  static long best_index;
+  static long best_index = -1;
   static double best_result=DBL_MAX;
   double local_rand, result, xLow, xHigh;
   //double xDiff;
@@ -50,10 +50,14 @@ long swarmMin(
   static gsl_vector *local_best=NULL, *random_vector=NULL;
   static long initialized = 0;
   static double *Input=NULL;	
-  
+  static char *agent_off = NULL;
+
   if (!initialized) {
     if (myid < remaining_populations)
       local_populations ++;
+
+    if (!agent_off)
+      agent_off = calloc(local_populations, sizeof(*agent_off));
 
     if (!coord_matrix)
       coord_matrix = gsl_matrix_alloc (local_populations, dimensions);
@@ -132,6 +136,8 @@ long swarmMin(
 
   /* Evaluates the populations */
   for (i=0; i<local_populations; i++) {
+    if (agent_off[i])
+      continue;
     for (j=0; j<dimensions; j++) {
       Input[j] = gsl_matrix_get (coord_matrix, i, j);
     }
@@ -145,8 +151,8 @@ long swarmMin(
 #endif
     result = func (Input, &isInvalid);
     if (isInvalid) {
-      printf("Run aborted by invalid function value in PSO\n");
-      MPI_Abort(MPI_COMM_WORLD, 1);
+      agent_off[i] = 1;
+      result = sqrt(DBL_MAX);
     }
 #if MPI_DEBUG
     fprintf (stdout, "on %d, result=%lg\n", myid, result);
@@ -158,22 +164,24 @@ long swarmMin(
     
     if ((result < gsl_vector_get (local_best, i)) || !initialized) { /* Updates the best result for this agent */
       gsl_vector_set(local_best, i, result);
-	
+      
       for (j=0; j<dimensions; j++)
-	gsl_matrix_set(local_best_coord, i, j, Input[j]);
+        gsl_matrix_set(local_best_coord, i, j, Input[j]);
     }
   }
 
   initialized = 1;
 
-  for (j=0; j<dimensions; j++)
-    xGuess[j] = gsl_matrix_get (local_best_coord, best_index, j);
-
-  *yReturn = best_result;
+  if (best_index!=-1) {
+    for (j=0; j<dimensions; j++)
+      xGuess[j] = gsl_matrix_get (local_best_coord, best_index, j);
+    
+    *yReturn = best_result;
 
 #if MPI_DEBUG
-  printf ("Result=%lf\n", result);
+    printf ("Result=%lf\n", result);
 #endif
-  
+  }
+
   return local_populations;
 }
