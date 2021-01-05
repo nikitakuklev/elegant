@@ -36,7 +36,10 @@ typedef struct {
   COMPLEX **BzTop, **BzBottom, **BzRight, **BzLeft;
   long Nx, Ny, Nfft;
   double dx, dy, dz;
-  double xCenter, yCenter, zStart;
+  double xMin, xMax;
+  double yMin, yMax;
+  double zMin, zMax;
+  double xCenter, yCenter;
 } FIELDS_ON_PLANES;
 
 typedef struct {
@@ -51,6 +54,8 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewfile,
 int ReadInputFiles(FIELDS_ON_PLANES *fieldsOnPlanes, 
                    char *topFile, char *bottomFile, char *leftFile, char *rightFile, long needBz);
 void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData);
+int evaluateGGEAndOutput(char *outputFile, char *normalFile, char *skewFile, FIELDS_ON_PLANES *fieldsOnPlanes);
+void freeFieldsOnPlanes(FIELDS_ON_PLANES *fop);
 
 #define SET_YMINUS 0
 #define SET_YPLUS 1
@@ -62,15 +67,17 @@ void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData);
 #define SET_MULTIPOLES 7
 #define SET_FUNDAMENTAL 8
 #define SET_AUTO_TUNE 9
-#define N_OPTIONS 10
+#define SET_EVALUATE 10
+#define N_OPTIONS 11
 
 char *option[N_OPTIONS] = {
   "yminus", "yplus", "xminus", "xplus", "normal", "skew", "derivatives", "multipoles", "fundamental",
-  "autotune"
+  "autotune", "evaluate",
 };
 
 #define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
              -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]\n\
+              [-evaluate=<filename>]\n\
               [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,verbose]]\n\
 -yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
 -yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
@@ -81,6 +88,7 @@ char *option[N_OPTIONS] = {
 -derivatives Number of derivatives vs z desired in output. Default: 7\n\
 -multipoles  Number of multipoles desired in output. Default: 8\n\
 -fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\
+-evaluate    Evaluate the GGE over the interior region, including the four boundaries.\n\
 -autotune    Seeks to minimize the number of multipoles and derivatives to avoid using terms\n\
              that do not contribute to a good fit at the given level of significance. The user can\n\
              choose to minimize the maximum error (default), the rms error, or the mean absolute value\n\
@@ -91,7 +99,8 @@ Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Sol
 #define AUTOTUNE_RMS      0x0002UL
 #define AUTOTUNE_MAXIMUM  0x0004UL
 #define AUTOTUNE_MAV      0x0008UL
-#define AUTOTUNE_MODE_SET 0x0010UL
+#define AUTOTUNE_EVALONLY 0x0010UL
+#define AUTOTUNE_MODE_SET 0x0100UL
 char *modeOption[3] = {"rms", "maximum", "mav"};
 
 int main(int argc, char **argv)
@@ -103,6 +112,7 @@ int main(int argc, char **argv)
   char *topFile = NULL, *bottomFile = NULL, *leftFile = NULL, *rightFile = NULL;
   char *normalOutputFile = NULL, *skewOutputFile = NULL;
   char *fieldMapFile = NULL;
+  char *evaluationOutput = NULL;
   double autoTuneSignificance = 1e-12;
   FIELDS_ON_PLANES fieldsOnPlanes;
   FIELD_MAP fieldMap;
@@ -180,6 +190,14 @@ int main(int argc, char **argv)
                 }
               skewOutputFile = scanned[i_arg].list[1];
               break;
+            case SET_EVALUATE:
+              if (scanned[i_arg].n_items != 2)
+                {
+                  fprintf(stderr, "invalid -evaluate syntax\n%s\n", USAGE);
+                  return (1);
+                }
+              evaluationOutput = scanned[i_arg].list[1];
+              break;
             case SET_DERIVATIVES:
               if (scanned[i_arg].n_items != 2 ||
                   sscanf(scanned[i_arg].list[1], "%ld", &maxDerivatives) != 1 ||
@@ -220,6 +238,7 @@ int main(int argc, char **argv)
               if (scanned[i_arg].n_items>0 &&
                   (!scanItemList(&autoTuneFlags, scanned[i_arg].list+2, &scanned[i_arg].n_items, 0,
                                  "verbose", -1, NULL, 0, AUTOTUNE_VERBOSE, 
+                                 "evaluate", -1, NULL, 0, AUTOTUNE_EVALONLY,
                                  "significance", SDDS_DOUBLE, &autoTuneSignificance, 1, 0,
                                  "minimize", SDDS_STRING, &autoTuneModeString, 1, AUTOTUNE_MODE_SET, 
                                  NULL) ||
@@ -288,6 +307,10 @@ int main(int argc, char **argv)
       derivatives = maxDerivatives;
       fieldMap.n = 0;
     }
+    if (autoTuneFlags&AUTOTUNE_EVALONLY)
+      derivatives = maxDerivatives;
+
+    memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
 
     for ( ; derivatives<=maxDerivatives; derivatives++) {
       if (fieldMapFile) {
@@ -296,7 +319,9 @@ int main(int argc, char **argv)
         /* no auto-tuning */
         multipoles = maxMultipoles;
       }
-
+      if (autoTuneFlags&AUTOTUNE_EVALONLY)
+        multipoles = maxMultipoles;
+        
       for ( ; multipoles<=maxMultipoles; multipoles++) {
 
         if (normalOutputFile != NULL)
@@ -313,6 +338,7 @@ int main(int argc, char **argv)
                 computeGGcos(&fieldsOnPlanes, skewOutputFile, derivatives, multipoles, fundamental))
               return 1;
           }
+        freeFieldsOnPlanes(&fieldsOnPlanes);
         if (fieldMapFile) {
           double residual;
           if ((residual = evaluateGGEForFieldMap(&fieldMap, normalOutputFile, skewOutputFile,
@@ -333,15 +359,89 @@ int main(int argc, char **argv)
       }
     }
 
-
     if (fieldMapFile) {
-      if (normalOutputFile != NULL && computeGGderiv(&fieldsOnPlanes, normalOutputFile, bestDerivatives, bestMultipoles, fundamental))
-        return 1;
-      if (skewOutputFile != NULL && computeGGcos(&fieldsOnPlanes, skewOutputFile, bestDerivatives, bestMultipoles, fundamental))
-        return 1;
+      if (normalOutputFile) 
+        if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 0) ||
+            computeGGderiv(&fieldsOnPlanes, normalOutputFile, bestDerivatives, bestMultipoles, fundamental))
+          return 1;
+      if (skewOutputFile)
+        if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1) ||
+            computeGGcos(&fieldsOnPlanes, skewOutputFile, bestDerivatives, bestMultipoles, fundamental))
+          return 1;
     }
 
+    if (evaluationOutput)
+      evaluateGGEAndOutput(evaluationOutput, normalOutputFile, skewOutputFile, &fieldsOnPlanes);
+
     return (0);
+}
+
+void freeFieldsOnPlanes(FIELDS_ON_PLANES *fop)
+{
+  long ix, iy;
+
+  if (fop->ByTop) {
+    for (ix=0; ix<fop->Nx; ix++) {
+      free(fop->ByTop[ix]);
+    }
+    free(fop->ByTop);
+    fop->ByTop = NULL;
+  }
+  if (fop->ByBottom) {
+    for (ix=0; ix<fop->Nx; ix++) {
+      free(fop->ByBottom[ix]);
+    }
+    free(fop->ByBottom);
+    fop->ByBottom = NULL;
+  }
+
+  if (fop->BzTop) {
+    for (ix=0; ix<fop->Nx; ix++) {
+      free(fop->BzTop[ix]);
+    }
+    free(fop->BzTop);
+    fop->BzTop = NULL;
+  }
+  if (fop->ByBottom) {
+    for (ix=0; ix<fop->Nx; ix++) {
+      free(fop->ByBottom[ix]);
+    }
+    free(fop->ByBottom);
+    fop->ByBottom = NULL;
+  }
+  
+  if (fop->BxLeft) {
+    for (iy=0; iy<fop->Ny; iy++) {
+      free(fop->BxLeft[iy]);
+    }
+    free(fop->BxLeft);
+    fop->BxLeft = NULL;
+  }
+  if (fop->BxRight) {
+    for (iy=0; iy<fop->Ny; iy++) {
+      free(fop->BxRight[iy]);
+    }
+    free(fop->BxRight);
+    fop->BxRight = NULL;
+  }
+
+  if (fop->BzLeft) {
+    for (iy=0; iy<fop->Ny; iy++) {
+      free(fop->BzLeft[iy]);
+    }
+    free(fop->BzLeft);
+    fop->BzLeft = NULL;
+  }
+  if (fop->BzRight) {
+    for (iy=0; iy<fop->Ny; iy++) {
+      free(fop->BzRight[iy]);
+    }
+    free(fop->BzRight);
+    fop->BzRight = NULL;
+  }
+
+  fop->Nx = fop->Ny = fop->Nfft = 0;
+  fop->dx = fop->dy = fop->dz = 0;
 }
 
 int ReadInputFiles
@@ -428,7 +528,9 @@ int ReadInputFiles
   xmintop = xvalues[0];
   xmaxtop = xvalues[rows-1];
   ytop = yvalues[0];
-  find_min_max(&(fieldsOnPlanes->zStart), NULL, zvalues, rows);
+  fieldsOnPlanes->xMin = xmintop;
+  fieldsOnPlanes->xMax = xmaxtop;
+  find_min_max(&(fieldsOnPlanes->zMin), &(fieldsOnPlanes->zMax), zvalues, rows);
   for (ix = 1; ix < rows; ix++)
     {
       if (zvalues[ix-1] != zvalues[ix])
@@ -654,6 +756,8 @@ int ReadInputFiles
   }
   yminleft = yvalues[0];
   ymaxleft = yvalues[rows-1];
+  fieldsOnPlanes->yMin = yminleft;
+  fieldsOnPlanes->yMax = ymaxleft;
   xleft = xvalues[0];
   for (iy = 1; iy < rows; iy++)
     {
@@ -882,7 +986,7 @@ int ReadInputFiles
 
   double *lambda, *tau, *k, *x, *y;
 
-  double xMax, yMax, xCenter, yCenter, zStart;
+  double xMax, yMax, xCenter, yCenter, zMin;
   double dx, dy, dz, dk, invNfft;
 
   int32_t n, ir, ix, Nx, iy, Ny, ik, Nfft, Nz;
@@ -909,7 +1013,7 @@ int ReadInputFiles
   BxLeft = fieldsOnPlanes->BxLeft;
   xCenter = fieldsOnPlanes->xCenter;
   yCenter = fieldsOnPlanes->yCenter;
-  zStart = fieldsOnPlanes->zStart;
+  zMin = fieldsOnPlanes->zMin;
 
   Nz = Nfft;
   
@@ -1130,7 +1234,7 @@ int ReadInputFiles
       for (ik = 0; ik < Nz; ik++)
         {
           if (SDDS_SetRowValues(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, ik,
-                                "z", zStart + dz * (double)ik,
+                                "z", zMin + dz * (double)ik,
                                 "CnmS0", genGradr_k[ir][ik].re * invNfft,
                                 NULL) != 1)
             {
@@ -1195,7 +1299,7 @@ int computeGGcos
 
   double *lambda, *tau, *k, *x, *y;
 
-  double xMax, yMax, xCenter, yCenter, zStart;
+  double xMax, yMax, xCenter, yCenter, zMin;
   double dx, dy, dz, dk, invNfft;
 
   int32_t n, ir, ix, Nx, iy, Ny, ik, Nfft, Nz;
@@ -1227,7 +1331,7 @@ int computeGGcos
   BzLeft = fieldsOnPlanes->BzLeft;
   xCenter = fieldsOnPlanes->xCenter;
   yCenter = fieldsOnPlanes->yCenter;
-  zStart = fieldsOnPlanes->zStart;
+  zMin = fieldsOnPlanes->zMin;
 
   Nz = Nfft;
 
@@ -1535,7 +1639,7 @@ int computeGGcos
           if (ir == 0)
             {
               if (SDDS_SetRowValues(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, ik,
-                                    "z", zStart + dz * (double)ik,
+                                    "z", zMin + dz * (double)ik,
                                     "CnmC0", 0.0,
                                     NULL) != 1)
                 {
@@ -1546,7 +1650,7 @@ int computeGGcos
           else
             {
               if (SDDS_SetRowValues(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, ik,
-                                    "z", zStart + dz * (double)ik,
+                                    "z", zMin + dz * (double)ik,
                                     "CnmC0", genGradr_k[ir][ik].re * invNfft,
                                     NULL) != 1)
                 {
@@ -2685,5 +2789,112 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
   }
 
   return residualWorst>significance ? residualWorst : 0.0;
+}
+
+int evaluateGGEAndOutput(char *outputFile, char *normalFile, char *skewFile, FIELDS_ON_PLANES *fieldsOnPlanes)
+{
+  double B[3], Br, Bphi;
+  double x, y, z, r, phi;
+  long ns, ig, m, im;
+  BGGEXP_DATA bggexpData[2];
+  char haveData[2] = {1, 0};
+  SDDS_DATASET SDDSout;
+  long ix, iy, iz, irow;
+
+  readBGGExpData(&bggexpData[0], normalFile, "CnmS", 0);
+  if (skewFile) {
+    readBGGExpData(&bggexpData[1], skewFile, "CnmC", 1);
+    haveData[1] = 1;
+  }
+
+  if (SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 1, NULL, NULL, outputFile)!=1 ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "x", "m", SDDS_DOUBLE) || 
+      !SDDS_DefineSimpleColumn(&SDDSout, "y", "m", SDDS_DOUBLE) || 
+      !SDDS_DefineSimpleColumn(&SDDSout, "z", "m", SDDS_DOUBLE) || 
+      !SDDS_DefineSimpleColumn(&SDDSout, "Bx", "T", SDDS_DOUBLE) || 
+      !SDDS_DefineSimpleColumn(&SDDSout, "By", "T", SDDS_DOUBLE) || 
+      !SDDS_DefineSimpleColumn(&SDDSout, "Bz", "T", SDDS_DOUBLE) ||
+      !SDDS_WriteLayout(&SDDSout)  ||
+      !SDDS_StartPage(&SDDSout, fieldsOnPlanes->Nfft*fieldsOnPlanes->Nx*fieldsOnPlanes->Ny)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    return 1;
+  }
+
+  irow = 0;
+  for (iz=0; iz<fieldsOnPlanes->Nfft; iz++) {
+    z  = fieldsOnPlanes->zMin + fieldsOnPlanes->dz*iz;
+    for (iy=0; iy<fieldsOnPlanes->Ny; iy++) {
+      y  = fieldsOnPlanes->yMin + fieldsOnPlanes->dy*iy;
+      for (ix=0; ix<fieldsOnPlanes->Nx; ix++) {
+        x  = fieldsOnPlanes->xMin + fieldsOnPlanes->dx*ix;
+
+        /* Compute fields */
+        Br = Bphi = B[0] = B[1] = B[2] = 0;
+        phi = 0;
+        for (ns=0; ns<2; ns++) {
+          /* ns=0 => normal, ns=1 => skew */
+          if (!haveData[ns])
+            continue;
+
+          r = sqrt(sqr(x)+sqr(y));
+          phi = atan2(y, x);
+          
+          for (im=0; im<bggexpData[ns].nm; im++) {
+            double mfact, term, sin_mphi, cos_mphi;
+            m = bggexpData[ns].m[im];
+            mfact = dfactorial(m);
+            sin_mphi = sin(m*phi);
+            cos_mphi = cos(m*phi);
+            if (ns==0) {
+              /* normal */
+              for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
+                term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
+                term *= bggexpData[ns].Cmn[im][ig][iz];
+                Br   += term*(2*ig+m)*sin_mphi;
+                Bphi += m*term*cos_mphi;
+              }
+            } else {
+              /* skew */
+              if (m==0) {
+                B[2] += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
+                for (ig=1; ig<bggexpData[ns].nGradients; ig++) {
+                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                  B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
+                  Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
+                }
+              } else {
+                for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
+                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                  B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
+                  term *= bggexpData[ns].Cmn[im][ig][iz];
+                  Br   += term*(2*ig+m)*cos_mphi;
+                  Bphi -= m*term*sin_mphi;
+                }
+              }
+            }
+          }
+        }
+        B[0] = Br*cos(phi) - Bphi*sin(phi);
+        B[1] = Br*sin(phi) + Bphi*cos(phi);
+        if (SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, irow++,
+                               "x", x, "y", y, "z", z, 
+                               "Bx", B[0], "By", B[1], "Bz", B[2],
+                               NULL)!=1) {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          return (1);
+        }
+      }
+    }
+  }
+  if (!SDDS_WritePage(&SDDSout) || !SDDS_Terminate(&SDDSout)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    return (1);
+  }
+  
+  freeBGGExpData(&bggexpData[0]);
+  if (haveData[1])
+    freeBGGExpData(&bggexpData[1]);
+  return 0;
 }
 
