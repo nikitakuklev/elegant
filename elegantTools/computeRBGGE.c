@@ -50,7 +50,8 @@ typedef struct {
 
 int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
 int computeGGcos(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
-double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewfile, double significance, unsigned long flags);
+double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewfile, double significance, double radiusLimit,
+                              unsigned long flags);
 int ReadInputFiles(FIELDS_ON_PLANES *fieldsOnPlanes, 
                    char *topFile, char *bottomFile, char *leftFile, char *rightFile, long needBz);
 void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData);
@@ -78,7 +79,7 @@ char *option[N_OPTIONS] = {
 #define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
              -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]\n\
               [-evaluate=<filename>]\n\
-              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,verbose]]\n\
+              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,verbose]]\n\
 -yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
 -yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
 -xminus      (x, y, z, Bx, By, Bz) map for negative-x plane.\n\
@@ -95,12 +96,12 @@ char *option[N_OPTIONS] = {
              error.\n\
 Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Soliday, and Michael Borland."
 
-#define AUTOTUNE_VERBOSE  0x0001UL
-#define AUTOTUNE_RMS      0x0002UL
-#define AUTOTUNE_MAXIMUM  0x0004UL
-#define AUTOTUNE_MAV      0x0008UL
-#define AUTOTUNE_EVALONLY 0x0010UL
-#define AUTOTUNE_MODE_SET 0x0100UL
+#define AUTOTUNE_VERBOSE   0x0001UL
+#define AUTOTUNE_RMS       0x0002UL
+#define AUTOTUNE_MAXIMUM   0x0004UL
+#define AUTOTUNE_MAV       0x0008UL
+#define AUTOTUNE_EVALONLY  0x0010UL
+#define AUTOTUNE_MODE_SET  0x0100UL
 char *modeOption[3] = {"rms", "maximum", "mav"};
 
 int main(int argc, char **argv)
@@ -113,7 +114,7 @@ int main(int argc, char **argv)
   char *normalOutputFile = NULL, *skewOutputFile = NULL;
   char *fieldMapFile = NULL;
   char *evaluationOutput = NULL;
-  double autoTuneSignificance = 1e-12;
+  double autoTuneSignificance = 1e-12, autoTuneRadiusLimit = 0;
   FIELDS_ON_PLANES fieldsOnPlanes;
   FIELD_MAP fieldMap;
   double bestResidual;
@@ -234,12 +235,14 @@ int main(int argc, char **argv)
               fieldMapFile = scanned[i_arg].list[1];
               scanned[i_arg].n_items -= 2;
               autoTuneSignificance = 1e-12;
+              autoTuneRadiusLimit = 0;
               autoTuneFlags = 0;
               if (scanned[i_arg].n_items>0 &&
                   (!scanItemList(&autoTuneFlags, scanned[i_arg].list+2, &scanned[i_arg].n_items, 0,
                                  "verbose", -1, NULL, 0, AUTOTUNE_VERBOSE, 
                                  "evaluate", -1, NULL, 0, AUTOTUNE_EVALONLY,
                                  "significance", SDDS_DOUBLE, &autoTuneSignificance, 1, 0,
+                                 "radiuslimit", SDDS_DOUBLE, &autoTuneRadiusLimit, 1, 0,
                                  "minimize", SDDS_STRING, &autoTuneModeString, 1, AUTOTUNE_MODE_SET, 
                                  NULL) ||
                    autoTuneSignificance<=0))
@@ -342,7 +345,8 @@ int main(int argc, char **argv)
         if (fieldMapFile) {
           double residual;
           if ((residual = evaluateGGEForFieldMap(&fieldMap, normalOutputFile, skewOutputFile,
-                                                 autoTuneSignificance, autoTuneFlags))<bestResidual) {
+                                                 autoTuneSignificance, autoTuneRadiusLimit,
+                                                 autoTuneFlags))<bestResidual) {
             bestResidual = residual;
             bestMultipoles = multipoles;
             bestDerivatives = derivatives;
@@ -2664,7 +2668,7 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
   bggexpData->nz = nz;
 }
 
-double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile, double significance, unsigned long flags)
+double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile, double significance, double radiusLimit, unsigned long flags)
 {
   double B[3], Br, Bphi;
   double x, y, z, r, phi, dz;
@@ -2767,13 +2771,15 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
             fmap->x[ip], fmap->y[ip], iz*dz+bggexpData[0].zMin,
             B[0], B[1], B[2], fmap->Bx[ip], fmap->By[ip], fmap->Bz[ip]);
 #endif
-    if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst)
-      residualWorst = residualTerm;
-    residualCount ++;
-    residualSum += fabs(residualTerm);
-    residualSum2 += sqr(residualTerm);
+    if (radiusLimit==0 || r<radiusLimit) {
+      if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst)
+        residualWorst = residualTerm;
+      residualCount ++;
+      residualSum += fabs(residualTerm);
+      residualSum2 += sqr(residualTerm);
+    }
   }
-  
+
   freeBGGExpData(&bggexpData[0]);
   if (haveData[1])
     freeBGGExpData(&bggexpData[1]);
@@ -2785,7 +2791,10 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
   if (flags&AUTOTUNE_RMS) {
     residualWorst = sqrt(residualSum2/residualCount);
   } else if (flags&AUTOTUNE_MAV) {
-    residualWorst = residualSum/residualCount;
+    if (residualCount)
+      residualWorst = residualSum/residualCount;
+    else
+      residualWorst = DBL_MAX;
   }
 
   return residualWorst>significance ? residualWorst : 0.0;
