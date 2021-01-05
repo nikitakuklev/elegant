@@ -47,8 +47,7 @@ typedef struct {
 
 int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
 int computeGGcos(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
-double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewfile, double significance);
-
+double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewfile, double significance, unsigned long flags);
 int ReadInputFiles(FIELDS_ON_PLANES *fieldsOnPlanes, 
                    char *topFile, char *bottomFile, char *leftFile, char *rightFile, long needBz);
 void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData);
@@ -72,7 +71,7 @@ char *option[N_OPTIONS] = {
 
 #define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
              -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]\n\
-              [-autotune=<3dMapFile>[,significance=<fieldValue>][,verbose]]\n\
+              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,verbose]]\n\
 -yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
 -yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
 -xminus      (x, y, z, Bx, By, Bz) map for negative-x plane.\n\
@@ -83,8 +82,17 @@ char *option[N_OPTIONS] = {
 -multipoles  Number of multipoles desired in output. Default: 8\n\
 -fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\
 -autotune    Seeks to minimize the number of multipoles and derivatives to avoid using terms\n\
-             that do not contribute to a good fit at the given level of significance.\n\n\
+             that do not contribute to a good fit at the given level of significance. The user can\n\
+             choose to minimize the maximum error (default), the rms error, or the mean absolute value\n\
+             error.\n\
 Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Soliday, and Michael Borland."
+
+#define AUTOTUNE_VERBOSE  0x0001UL
+#define AUTOTUNE_RMS      0x0002UL
+#define AUTOTUNE_MAXIMUM  0x0004UL
+#define AUTOTUNE_MAV      0x0008UL
+#define AUTOTUNE_MODE_SET 0x0010UL
+char *modeOption[3] = {"rms", "maximum", "mav"};
 
 int main(int argc, char **argv)
 {
@@ -96,12 +104,12 @@ int main(int argc, char **argv)
   char *normalOutputFile = NULL, *skewOutputFile = NULL;
   char *fieldMapFile = NULL;
   double autoTuneSignificance = 1e-12;
-  long autoTuneVerbose = 0;
-  unsigned long tmpFlag;
   FIELDS_ON_PLANES fieldsOnPlanes;
   FIELD_MAP fieldMap;
   double bestResidual;
   long bestMultipoles, bestDerivatives;
+  unsigned long autoTuneFlags = 0;
+  char *autoTuneModeString;
 
 #ifdef DEBUG
 #ifdef OLDFFT
@@ -207,21 +215,36 @@ int main(int argc, char **argv)
                 }
               fieldMapFile = scanned[i_arg].list[1];
               scanned[i_arg].n_items -= 2;
-              autoTuneVerbose = 0;
               autoTuneSignificance = 1e-12;
-              tmpFlag = 0;
+              autoTuneFlags = 0;
               if (scanned[i_arg].n_items>0 &&
-                  (!scanItemList(&tmpFlag, scanned[i_arg].list+2, &scanned[i_arg].n_items, 0,
-                                 "verbose", -1, NULL, 0, 1, 
+                  (!scanItemList(&autoTuneFlags, scanned[i_arg].list+2, &scanned[i_arg].n_items, 0,
+                                 "verbose", -1, NULL, 0, AUTOTUNE_VERBOSE, 
                                  "significance", SDDS_DOUBLE, &autoTuneSignificance, 1, 0,
+                                 "minimize", SDDS_STRING, &autoTuneModeString, 1, AUTOTUNE_MODE_SET, 
                                  NULL) ||
                    autoTuneSignificance<=0))
                 {
                   fprintf(stderr, "invalid -autotune syntax\n%s\n", USAGE);
                   return (1);
                 }
-              if (tmpFlag&0x01)
-                autoTuneVerbose = 1;
+              if (autoTuneFlags&AUTOTUNE_MODE_SET) {
+                switch (match_string(autoTuneModeString, modeOption, 3, 0)) {
+                case 0:
+                  autoTuneFlags |= AUTOTUNE_RMS;
+                  break;
+                case 1:
+                  autoTuneFlags |= AUTOTUNE_MAXIMUM;
+                  break;
+                case 2:
+                  autoTuneFlags |= AUTOTUNE_MAV;
+                  break;
+                default:
+                  SDDS_Bomb("invalid mode for autotune minimization. Use rms or maximum.");
+                  break;
+                }
+              } else
+                autoTuneFlags |= AUTOTUNE_MAXIMUM;
               break;
             default:
               fprintf(stderr, "unknown option given\n%s\n", USAGE);
@@ -292,16 +315,17 @@ int main(int argc, char **argv)
           }
         if (fieldMapFile) {
           double residual;
-          if ((residual = evaluateGGEForFieldMap(&fieldMap, normalOutputFile, skewOutputFile, autoTuneSignificance))<bestResidual) {
+          if ((residual = evaluateGGEForFieldMap(&fieldMap, normalOutputFile, skewOutputFile,
+                                                 autoTuneSignificance, autoTuneFlags))<bestResidual) {
             bestResidual = residual;
             bestMultipoles = multipoles;
             bestDerivatives = derivatives;
-            if (autoTuneVerbose) {
+            if (autoTuneFlags&AUTOTUNE_VERBOSE) {
               printf("New best residual of %le for m=%ld, d=%ld\n", residual, multipoles, derivatives);
               fflush(stdout);
             }
           } else {
-            if (autoTuneVerbose) {
+            if (autoTuneFlags&AUTOTUNE_VERBOSE) {
               printf("Goodness of fit (%le) for m=%ld, d=%ld is not better\n", residual, multipoles, derivatives);
             }
           }
@@ -2536,12 +2560,13 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
   bggexpData->nz = nz;
 }
 
-double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile, double significance)
+double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile, double significance, unsigned long flags)
 {
   double B[3], Br, Bphi;
   double x, y, z, r, phi, dz;
   long ip, ns, iz, ig, m, im;
-  double residualTerm, residualWorst;
+  double residualTerm, residualSum, residualSum2, residualWorst;
+  long residualCount;
   BGGEXP_DATA bggexpData[2];
   char haveData[2] = {1, 0};
 #ifdef DEBUG
@@ -2570,7 +2595,8 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
     haveData[1] = 1;
   }
   
-  residualWorst = 0;
+  residualWorst = residualSum = residualSum2 = 0;
+  residualCount = 0;
   for (ip=0; ip<fmap->n; ip++) {
     /* Compute fields */
     Br = Bphi = B[0] = B[1] = B[2] = 0;
@@ -2639,6 +2665,9 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
 #endif
     if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst)
       residualWorst = residualTerm;
+    residualCount ++;
+    residualSum += fabs(residualTerm);
+    residualSum2 += sqr(residualTerm);
   }
   
   freeBGGExpData(&bggexpData[0]);
@@ -2648,6 +2677,12 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
 #ifdef DEBUG
   fclose(fpdeb);
 #endif
+
+  if (flags&AUTOTUNE_RMS) {
+    residualWorst = sqrt(residualSum2/residualCount);
+  } else if (flags&AUTOTUNE_MAV) {
+    residualWorst = residualSum/residualCount;
+  }
 
   return residualWorst>significance ? residualWorst : 0.0;
 }
