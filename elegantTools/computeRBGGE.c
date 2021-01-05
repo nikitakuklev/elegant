@@ -2708,7 +2708,7 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
   for (ip=0; ip<fmap->n; ip++) {
     /* Compute fields */
     Br = Bphi = B[0] = B[1] = B[2] = 0;
-    phi = dz = 0;
+    r = phi = dz = 0;
     iz = 0;
     for (ns=0; ns<2; ns++) {
       /* ns=0 => normal, ns=1 => skew */
