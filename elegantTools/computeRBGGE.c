@@ -2566,7 +2566,7 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
   spewBGGExpData(&bggexpData[0]);
 #endif
   if (skewFile) {
-    readBGGExpData(&bggexpData[1], skewFile, "CnmC", 0);
+    readBGGExpData(&bggexpData[1], skewFile, "CnmC", 1);
     haveData[1] = 1;
   }
   
