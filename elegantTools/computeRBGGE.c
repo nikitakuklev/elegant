@@ -418,7 +418,8 @@ int ReadInputFiles
     }
   if (rows != fieldsOnPlanes->Nx * fieldsOnPlanes->Nfft)
     {
-      fprintf(stderr, "Unexpected row count\n");
+      fprintf(stderr, "Unexpected row count (y plus file): Nx = %ld, Nz = %ld, rows = %ld\n",
+              (long)fieldsOnPlanes->Nx, (long)fieldsOnPlanes->Nfft, (long)rows);
       return (1);
     }
 #ifdef DEBUG
@@ -521,7 +522,8 @@ int ReadInputFiles
     }
   if (rows != fieldsOnPlanes->Nx * fieldsOnPlanes->Nfft)
     {
-      fprintf(stderr, "Unexpected row count\n");
+      fprintf(stderr, "Unexpected row count (y minus file): Nx = %ld, Nz = %ld, rows = %ld\n",
+              (long) fieldsOnPlanes->Nx, (long) fieldsOnPlanes->Nfft, (long)rows);
       return (1);
     }
 #ifdef DEBUG
@@ -541,13 +543,13 @@ int ReadInputFiles
     }
   if ((tmpdx + 1e-9 < fieldsOnPlanes->dx) || (tmpdx - 1e-9 > fieldsOnPlanes->dx))
     {
-      fprintf(stderr, "dx values differ in the input files\n");
+      fprintf(stderr, "dx values differ in the input files (%21.15le vs %21.15le)\n", tmpdx, fieldsOnPlanes->dx);
       return (1);
     }
   if ((tmpdz + 1e-9 < fieldsOnPlanes->dz) || (tmpdz - 1e-9 > fieldsOnPlanes->dz))
     {
-      fprintf(stderr, "dz values differ in the input files\n");
-      return (1);
+      fprintf(stderr, "dz values differ in the input files (%21.15le vs %21.15le)\n", tmpdz, fieldsOnPlanes->dz); 
+     return (1);
     }
 
   fieldsOnPlanes->ByBottom = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[0]);
@@ -642,7 +644,8 @@ int ReadInputFiles
     }
   if (rows != fieldsOnPlanes->Ny * fieldsOnPlanes->Nfft)
     {
-      fprintf(stderr, "Unexpected row count\n");
+      fprintf(stderr, "Unexpected row count (x minus file): Ny = %ld, Nz = %ld, rows = %ld\n",
+              (long) fieldsOnPlanes->Ny, (long) fieldsOnPlanes->Nfft, (long) rows);
       return (1);
     }
 
@@ -754,7 +757,8 @@ int ReadInputFiles
     }
   if (rows != fieldsOnPlanes->Ny * fieldsOnPlanes->Nfft)
     {
-      fprintf(stderr, "Unexpected row count\n");
+      fprintf(stderr, "Unexpected row count (x plus file): Ny = %ld, Nz = %ld, rows = %ld\n", 
+              (long) fieldsOnPlanes->Ny, (long) fieldsOnPlanes->Nfft, (long) rows);
       return (1);
     }
 #ifdef DEBUG
@@ -772,14 +776,14 @@ int ReadInputFiles
       fprintf(stderr, "Nfft values differ in the input files\n");
       return (1);
     }
-  if ((tmpdy + 1e-9 < fieldsOnPlanes->dy) || (tmpdx - 1e-9 > fieldsOnPlanes->dy))
+  if ((tmpdy + 1e-9 < fieldsOnPlanes->dy) || (tmpdy - 1e-9 > fieldsOnPlanes->dy))
     {
-      fprintf(stderr, "dx values differ in the input files\n");
+      fprintf(stderr, "dy values differ in the x input files (%21.15le vs %21.15le)\n", tmpdy, fieldsOnPlanes->dy);
       return (1);
     }
   if ((tmpdz + 1e-9 < fieldsOnPlanes->dz) || (tmpdz - 1e-9 > fieldsOnPlanes->dz))
     {
-      fprintf(stderr, "dz values differ in the input files\n");
+      fprintf(stderr, "dz values differ in the x input files (%21.15le vs %21.15le)\n", tmpdz, fieldsOnPlanes->dz);
       return (1);
     }
 
