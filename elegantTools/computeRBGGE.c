@@ -38,12 +38,21 @@ typedef struct {
   double dx, dy, dz;
   double xCenter, yCenter, zStart;
 } FIELDS_ON_PLANES;
-  
+
+typedef struct {
+  double *x, *y, *z;
+  double *Bx, *By, *Bz;
+  long n;
+} FIELD_MAP;
+
 int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
 int computeGGcos(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
+double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewfile, double significance);
 
 int ReadInputFiles(FIELDS_ON_PLANES *fieldsOnPlanes, 
                    char *topFile, char *bottomFile, char *leftFile, char *rightFile, long needBz);
+void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData);
+
 #define SET_YMINUS 0
 #define SET_YPLUS 1
 #define SET_XMINUS 2
@@ -63,7 +72,7 @@ char *option[N_OPTIONS] = {
 
 #define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
              -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]\n\
-              [-autotune=<3dMapFile>[,significance=<ratio>][,verbose]]\n\
+              [-autotune=<3dMapFile>[,significance=<fieldValue>][,verbose]]\n\
 -yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
 -yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
 -xminus      (x, y, z, Bx, By, Bz) map for negative-x plane.\n\
@@ -74,22 +83,25 @@ char *option[N_OPTIONS] = {
 -multipoles  Number of multipoles desired in output. Default: 8\n\
 -fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\
 -autotune    Seeks to minimize the number of multipoles and derivatives to avoid using terms\n\
-             that do not contribute to a good fit or to significant field values in the expansion\n\
-             region.\n\n\
+             that do not contribute to a good fit at the given level of significance.\n\n\
 Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Soliday, and Michael Borland."
 
 int main(int argc, char **argv)
 {
   SCANNED_ARG *scanned;
   long i_arg;
-  long multipoles = 8, derivatives = 7, fundamental=0;
+  long multipoles, derivatives, fundamental=0;
+  long maxMultipoles = 8, maxDerivatives = 7;
   char *topFile = NULL, *bottomFile = NULL, *leftFile = NULL, *rightFile = NULL;
   char *normalOutputFile = NULL, *skewOutputFile = NULL;
-  char *fieldMap = NULL;
+  char *fieldMapFile = NULL;
   double autoTuneSignificance = 1e-12;
   long autoTuneVerbose = 0;
   unsigned long tmpFlag;
   FIELDS_ON_PLANES fieldsOnPlanes;
+  FIELD_MAP fieldMap;
+  double bestResidual;
+  long bestMultipoles, bestDerivatives;
 
 #ifdef DEBUG
 #ifdef OLDFFT
@@ -162,8 +174,8 @@ int main(int argc, char **argv)
               break;
             case SET_DERIVATIVES:
               if (scanned[i_arg].n_items != 2 ||
-                  sscanf(scanned[i_arg].list[1], "%ld", &derivatives) != 1 ||
-                  derivatives <= 0)
+                  sscanf(scanned[i_arg].list[1], "%ld", &maxDerivatives) != 1 ||
+                  maxDerivatives <= 0)
                 {
                   fprintf(stderr, "invalid -derivatives syntax\n%s\n", USAGE);
                   return (1);
@@ -171,8 +183,8 @@ int main(int argc, char **argv)
               break;
             case SET_MULTIPOLES:
               if (scanned[i_arg].n_items != 2 ||
-                  sscanf(scanned[i_arg].list[1], "%ld", &multipoles) != 1 ||
-                  multipoles <= 0)
+                  sscanf(scanned[i_arg].list[1], "%ld", &maxMultipoles) != 1 ||
+                  maxMultipoles <= 0)
                 {
                   fprintf(stderr, "invalid -multipoles syntax\n%s\n", USAGE);
                   return (1);
@@ -193,7 +205,7 @@ int main(int argc, char **argv)
                   fprintf(stderr, "invalid -autotune syntax\n%s\n", USAGE);
                   return (1);
                 }
-              fieldMap = scanned[i_arg].list[1];
+              fieldMapFile = scanned[i_arg].list[1];
               scanned[i_arg].n_items -= 2;
               autoTuneVerbose = 0;
               autoTuneSignificance = 1e-12;
@@ -210,8 +222,6 @@ int main(int argc, char **argv)
                 }
               if (tmpFlag&0x01)
                 autoTuneVerbose = 1;
-              fprintf(stderr, "Unfortunately, the autotune procedure has yet to be implemented.\n");
-              return (1);
               break;
             default:
               fprintf(stderr, "unknown option given\n%s\n", USAGE);
@@ -242,19 +252,72 @@ int main(int argc, char **argv)
     fprintf(stderr, "skewOutputFile=%s\n", skewOutputFile);
 #endif
 
-    if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, skewOutputFile?1:0))
-      return 1;
+    bestResidual = DBL_MAX;
+    bestDerivatives = maxDerivatives;
+    bestMultipoles = maxMultipoles;
 
-    if (normalOutputFile != NULL)
-    {
-      if (computeGGderiv(&fieldsOnPlanes, normalOutputFile, derivatives, multipoles, fundamental))
+    if (fieldMapFile) {
+      /* read 3D map */
+      readFieldMap(fieldMapFile, &fieldMap);
+      derivatives = 1;
+    } else  {
+      /* no auto-tuning */
+      derivatives = maxDerivatives;
+      fieldMap.n = 0;
+    }
+
+    for ( ; derivatives<=maxDerivatives; derivatives++) {
+      if (fieldMapFile) {
+        multipoles = 1;
+      } else {
+        /* no auto-tuning */
+        multipoles = maxMultipoles;
+      }
+
+      for ( ; multipoles<=maxMultipoles; multipoles++) {
+
+        if (normalOutputFile != NULL)
+          {
+            /* Have to read the data each time because it is modified by computeGGderiv and computeGGcos */
+            if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 0) ||
+                computeGGderiv(&fieldsOnPlanes, normalOutputFile, derivatives, multipoles, fundamental))
+              return 1;
+          }
+        if (skewOutputFile != NULL)
+          {
+            /* Have to read the data each time because it is modified by computeGGderiv and computeGGcos */
+            if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1) ||
+                computeGGcos(&fieldsOnPlanes, skewOutputFile, derivatives, multipoles, fundamental))
+              return 1;
+          }
+        if (fieldMapFile) {
+          double residual;
+          if ((residual = evaluateGGEForFieldMap(&fieldMap, normalOutputFile, skewOutputFile, autoTuneSignificance))<bestResidual) {
+            bestResidual = residual;
+            bestMultipoles = multipoles;
+            bestDerivatives = derivatives;
+            if (autoTuneVerbose) {
+              printf("New best residual of %le for m=%ld, d=%ld\n", residual, multipoles, derivatives);
+              fflush(stdout);
+            }
+          } else {
+            if (autoTuneVerbose) {
+              printf("Goodness of fit (%le) for m=%ld, d=%ld is not better\n", residual, multipoles, derivatives);
+            }
+          }
+        }
+      }
+    }
+
+
+    if (fieldMapFile) {
+      if (normalOutputFile != NULL && computeGGderiv(&fieldsOnPlanes, normalOutputFile, bestDerivatives, bestMultipoles, fundamental))
+        return 1;
+      if (skewOutputFile != NULL && computeGGcos(&fieldsOnPlanes, skewOutputFile, bestDerivatives, bestMultipoles, fundamental))
         return 1;
     }
-  if (skewOutputFile != NULL)
-    {
-      computeGGcos(&fieldsOnPlanes, skewOutputFile, derivatives, multipoles, fundamental);
-    }
-  return (0);
+
+    return (0);
 }
 
 int ReadInputFiles
@@ -280,12 +343,12 @@ int ReadInputFiles
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
-  if ((SDDS_CheckColumn(&SDDSInput, "By", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+  if ((SDDS_CheckColumn(&SDDSInput, "By", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (needBz && 
-       SDDS_CheckColumn(&SDDSInput, "Bz", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "x", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "y", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+       SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -385,12 +448,12 @@ int ReadInputFiles
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
-  if ((SDDS_CheckColumn(&SDDSInput, "By", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+  if ((SDDS_CheckColumn(&SDDSInput, "By", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (needBz && 
-       SDDS_CheckColumn(&SDDSInput, "Bz", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "x", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "y", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+       SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -505,12 +568,12 @@ int ReadInputFiles
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
-  if ((SDDS_CheckColumn(&SDDSInput, "Bx", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+  if ((SDDS_CheckColumn(&SDDSInput, "Bx", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (needBz && 
-       SDDS_CheckColumn(&SDDSInput, "Bz", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "x", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "y", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+       SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -618,12 +681,12 @@ int ReadInputFiles
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
-  if ((SDDS_CheckColumn(&SDDSInput, "Bx", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+  if ((SDDS_CheckColumn(&SDDSInput, "Bx", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
       (needBz && 
-       SDDS_CheckColumn(&SDDSInput, "Bz", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "x", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "y", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "z", NULL, SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+       SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+      (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -779,7 +842,7 @@ int ReadInputFiles
   return (0);
 }
 
-int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental)
+ int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental)
 {
   COMPLEX **ByTop, **ByBottom, **BxRight, **BxLeft;
 
@@ -801,7 +864,7 @@ int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long deri
   int32_t Ncoeff = 40;
 
   SDDS_DATASET SDDSOutput;
-  char name[20];
+  char name[1024];
 
   Ngrad = multipoles;
   Nderiv = 2 * derivatives - 1;
@@ -1366,7 +1429,7 @@ int computeGGcos
       (SDDS_DefineSimpleParameter(&SDDSOutput, "yCenter", NULL, SDDS_DOUBLE) != 1) ||
       (SDDS_DefineSimpleParameter(&SDDSOutput, "xMax", NULL, SDDS_DOUBLE) != 1) ||
       (SDDS_DefineSimpleParameter(&SDDSOutput, "yMax", NULL, SDDS_DOUBLE) != 1) ||
-      (SDDS_DefineSimpleColumn(&SDDSOutput, "z", NULL, SDDS_DOUBLE) != 1))
+      (SDDS_DefineSimpleColumn(&SDDSOutput, "z", "m", SDDS_DOUBLE) != 1))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
@@ -2236,3 +2299,352 @@ COMPLEX **createComplexArray(long nxy, long nz, double *value)
   }
   return array;
 }
+
+void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData)
+{
+  SDDS_DATASET SDDSin;
+
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, fieldMapFile))
+    SDDS_Bomb("unable to read field input file");
+  if (SDDS_CheckColumn(&SDDSin, "Bx", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY ||
+      SDDS_CheckColumn(&SDDSin, "By", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY ||
+      SDDS_CheckColumn(&SDDSin, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) 
+    SDDS_Bomb("Didn't find required field columns Bx, By, Bz in T");
+  if (SDDS_CheckColumn(&SDDSin, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY ||
+      SDDS_CheckColumn(&SDDSin, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY ||
+      SDDS_CheckColumn(&SDDSin, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY)
+    SDDS_Bomb("Didn't find required coordinate columns x, y, z in T");
+  if (SDDS_ReadPage(&SDDSin)<=0 ||
+      !(fmData->x=SDDS_GetColumnInDoubles(&SDDSin, "x")) || 
+      !(fmData->y=SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
+      !(fmData->z=SDDS_GetColumnInDoubles(&SDDSin, "z")) ||
+      !(fmData->Bx=SDDS_GetColumnInDoubles(&SDDSin, "Bx")) || 
+      !(fmData->By=SDDS_GetColumnInDoubles(&SDDSin, "By")) ||
+      !(fmData->Bz=SDDS_GetColumnInDoubles(&SDDSin, "Bz")) )
+    SDDS_Bomb("unable to get data from field input file");
+  if (!(fmData->n=SDDS_CountRowsOfInterest(&SDDSin)) || fmData->n<1) 
+    SDDS_Bomb("field map file has insufficient data");
+  SDDS_Terminate(&SDDSin);
+}
+
+typedef struct {
+  short skew;          /* if non-zero, these are skew terms */
+  long nz;             /* number of z points */
+  double dz;           /* z spacing */
+  double xCenter, yCenter; /* center of the expansion in magnet coordinate system */
+  double xMax, yMax;   /* half-aperture of the field expansion in expansion coordinate system */
+  double zMin, zMax;   /* minimum and maximum z values */
+  long nm;             /* number of values of m (angular harmonic) */
+  long *m;             /* value of m */
+  long nGradients;   /* number of gradient functions per m */
+  double ***Cmn;       /* generalized gradient: Cnms[im][in][iz] */
+  double ***dCmn_dz;   /* z derivative of generalized gradient */
+} BGGEXP_DATA;
+
+void freeBGGExpData(BGGEXP_DATA *bggexpData) 
+{
+  long im, id;
+  for (im=0; im<bggexpData->nm; im++) {
+    for (id=0; id<bggexpData->nGradients; id++)  {
+      if (bggexpData->Cmn[im][id])
+        free(bggexpData->Cmn[im][id]);
+      if (bggexpData->dCmn_dz[im][id])
+        free(bggexpData->dCmn_dz[im][id]);
+      bggexpData->Cmn[im][id] = bggexpData->dCmn_dz[im][id] = NULL;
+    }
+  }
+  free(bggexpData->m);
+  bggexpData->m = NULL;
+  bggexpData->nm = bggexpData->nGradients = 0;
+}
+
+#define BUFSIZE 1024
+
+void spewBGGExpData(BGGEXP_DATA *bgg)
+{
+  FILE *fp;
+  long im, ig, iz;
+  fp = fopen("checkBGGExp.sdds", "w");
+  fprintf(fp, "SDDS1\n&parameter name=m type=long &end\n");
+  fprintf(fp, "&column name=z type=double units=m &end\n");
+  for (ig=0; ig<bgg->nGradients; ig++) {
+    fprintf(fp, "&column name=CnmS%ld, type=double &end\n", 2*ig);
+    fprintf(fp, "&column name=dCnmS%ld/dz, type=double &end\n", 2*ig);
+  }
+  fprintf(fp, "&data mode=ascii &end\n");
+  for (im=0; im<bgg->nm; im++) {
+    fprintf(fp, "%ld\n%ld\n", bgg->m[im], bgg->nz);
+    for (iz=0; iz<bgg->nz; iz++) {
+      fprintf(fp, "%le ", bgg->zMin + (bgg->zMax-bgg->zMin)/(bgg->nz-1.0)*iz);
+      for (ig=0; ig<bgg->nGradients; ig++) {
+        fprintf(fp, "%le %le ",
+                bgg->Cmn[im][ig][iz], bgg->dCmn_dz[im][ig][iz]);
+      }
+      fputc('\n', fp);
+    }
+  }
+  fclose(fp);
+}
+
+void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment, short skew)
+{
+  SDDS_DATASET SDDSin;
+  char buffer[BUFSIZE];
+  long im, ic, nc, readCode, nz;
+  int32_t m;
+  short xCenterPresent=0, yCenterPresent=0, xMaxPresent=0, yMaxPresent=0;
+
+  if (!SDDS_InitializeInput(&SDDSin, filename)) {
+    fprintf(stderr, "Unable to read file %s\n", filename);
+    exit(1);
+  }
+
+  /* Check presence of z column */
+  if (SDDS_CheckColumn(&SDDSin, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Unable to find floating-point column \"z\" with units \"m\" in file %s\n", filename);
+    exit(1);
+  }
+
+  /* Check presence of Cnm* columns */
+  ic = 0;
+  while (1) {
+    snprintf(buffer, BUFSIZE, "%s%ld", nameFragment, 2*ic);
+    if (SDDS_CheckColumn(&SDDSin, buffer, NULL, SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK)
+      break;
+    ic ++;
+  }
+  if (ic==0) {
+    fprintf(stderr, "Unable to find any floating-point columns %s* in file %s\n",
+            nameFragment, filename);
+    exit(1);
+  }
+  nc = ic;
+
+  /* Check for presence of matching dCnmXXX/dz columns */
+  for (ic=0; ic<nc; ic++) {
+    snprintf(buffer, BUFSIZE, "d%s%ld/dz", nameFragment, 2*ic);
+    if (SDDS_CheckColumn(&SDDSin, buffer, NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
+      break;
+  }
+  if (ic!=nc)  {
+    fprintf(stderr, "Unable to find matching floating-point columns dCnm*/dz in file %s\n", filename);
+    exit(1);
+  }
+
+  bggexpData->nm = bggexpData->nz = 0;
+  bggexpData->nGradients = nc;
+  bggexpData->m = NULL;
+  bggexpData->Cmn = NULL;
+  bggexpData->dCmn_dz = NULL;
+
+  im = nz = 0;
+  bggexpData->zMin = DBL_MAX;
+  bggexpData->zMax = -DBL_MAX;
+  bggexpData->xCenter = bggexpData->yCenter = 0;
+  bggexpData->xMax = bggexpData->yMax = -1;
+  while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
+    if (!SDDS_GetParameterAsLong(&SDDSin, "m", &m) || (m<1 && !skew) || (m<0 && skew)) {
+      fprintf(stderr, "Problem with value of m (m<%d) for page %ld of file %s\n", 
+              (skew?0:1), readCode, filename);
+      exit(1);
+    }
+    if (readCode==1) {
+      long iz;
+      double dz0, dz, *z, zMin, zMax;
+      if ((xCenterPresent && !SDDS_GetParameterAsDouble(&SDDSin, "xCenter", &(bggexpData->xCenter))) ||
+          (yCenterPresent && !SDDS_GetParameterAsDouble(&SDDSin, "yCenter", &(bggexpData->yCenter)))) {
+        fprintf(stderr, "Problem getting xCenter or yCenter values from file %s\n",
+                filename);
+        exit(1);
+      }
+      if ((xMaxPresent && !SDDS_GetParameterAsDouble(&SDDSin, "xMax", &(bggexpData->xMax))) ||
+          (yMaxPresent && !SDDS_GetParameterAsDouble(&SDDSin, "yMax", &(bggexpData->yMax)))) {
+        fprintf(stderr, "Problem getting xMax or yMax values from file %s\n",
+                filename);
+        exit(1);
+      }
+      if ((nz = SDDS_RowCount(&SDDSin))<=1) {
+        fprintf(stderr, "Too few z values in file %s\n", filename);
+        exit(1);
+      }
+      if (!(z=SDDS_GetColumnInDoubles(&SDDSin, "z"))) {
+        fprintf(stderr, "Problem reading column z from %s\n", filename);
+        exit(1);
+      }
+      find_min_max(&zMin, &zMax, z, nz);
+      if (zMin<bggexpData->zMin)
+        bggexpData->zMin = zMin;
+      if (zMax>bggexpData->zMax)
+        bggexpData->zMax = zMax;
+      dz0 = z[1] - z[0];
+      for (iz=1; iz<nz; iz++) {
+        dz = z[iz] - z[iz-1];
+        if (dz<=0 || fabs(dz0/dz-1)>1e-6) {
+          fprintf(stderr, "Data not uniformly and monotonically increasing in z column from %s\n", filename);
+          exit(1);
+        }
+      }
+      free(z);
+      bggexpData->dz = dz0;
+    } else {
+      if (nz != SDDS_RowCount(&SDDSin)) {
+        fprintf(stderr, "Inconsistent number of z values in file %s\n", filename);
+        exit(1);
+      }
+    }
+    if (!(bggexpData->m = SDDS_Realloc(bggexpData->m, 
+                                      sizeof(*bggexpData->m)*(im+1))) ||
+        !(bggexpData->Cmn = SDDS_Realloc(bggexpData->Cmn, 
+                                        sizeof(*bggexpData->Cmn)*(im+1))) ||
+        !(bggexpData->dCmn_dz = SDDS_Realloc(bggexpData->dCmn_dz, 
+                                            sizeof(*bggexpData->dCmn_dz)*(im+1)))) {
+      fprintf(stderr, "Memory allocation failure (1) loading data from file %s\n", filename);
+      exit(1);
+    }
+    bggexpData->Cmn[im] = NULL;
+    bggexpData->dCmn_dz[im] = NULL;
+    if (!(bggexpData->Cmn[im] = malloc(sizeof(*bggexpData->Cmn[im])*nc)) ||
+        !(bggexpData->dCmn_dz[im] = malloc(sizeof(*bggexpData->dCmn_dz[im])*nc)))
+      fprintf(stderr, "Memory allocation failure (2) loading data from file %s\n", filename);
+
+    for (ic=0; ic<nc; ic++) {
+      snprintf(buffer, BUFSIZE, "%s%ld", nameFragment, 2*ic);
+      if (!(bggexpData->Cmn[im][ic] = SDDS_GetColumnInDoubles(&SDDSin, buffer)))  {
+        SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+        fprintf(stderr, "Problem reading column %s from %s\n", buffer, filename);
+        exit(1);
+      }
+      snprintf(buffer, BUFSIZE, "d%s%ld/dz", nameFragment, 2*ic);
+      if (!(bggexpData->dCmn_dz[im][ic] = SDDS_GetColumnInDoubles(&SDDSin, buffer))) {
+        SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+        fprintf(stderr, "Problem reading column %s from %s\n", buffer, filename);
+        exit(1);
+      }
+    }
+
+    bggexpData->m[im] = m;
+    im ++;
+  }
+
+  SDDS_Terminate(&SDDSin);
+  
+  bggexpData->nm = im;
+  bggexpData->nz = nz;
+}
+
+double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile, double significance)
+{
+  double B[3], Br, Bphi;
+  double x, y, z, r, phi, dz;
+  long ip, ns, iz, ig, m, im;
+  double residualTerm, residualWorst;
+  BGGEXP_DATA bggexpData[2];
+  char haveData[2] = {1, 0};
+#ifdef DEBUG
+  FILE *fpdeb;
+
+  fpdeb = fopen("computeRBGGE.debug", "w");
+  fprintf(fpdeb, "SDDS1\n");
+  fprintf(fpdeb, "&column name=x type=float units=m &end\n");
+  fprintf(fpdeb, "&column name=y type=float units=m &end\n");
+  fprintf(fpdeb, "&column name=z type=float units=m &end\n");
+  fprintf(fpdeb, "&column name=Bx type=float units=T &end\n");
+  fprintf(fpdeb, "&column name=By type=float units=T &end\n");
+  fprintf(fpdeb, "&column name=Bz type=float units=T &end\n");
+  fprintf(fpdeb, "&column name=BxRef type=float units=T &end\n");
+  fprintf(fpdeb, "&column name=ByRef type=float units=T &end\n");
+  fprintf(fpdeb, "&column name=BzRef type=float units=T &end\n");
+  fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+#endif
+
+  readBGGExpData(&bggexpData[0], normalFile, "CnmS", 0);
+#ifdef DEBUG
+  spewBGGExpData(&bggexpData[0]);
+#endif
+  if (skewFile) {
+    readBGGExpData(&bggexpData[1], skewFile, "CnmC", 0);
+    haveData[1] = 1;
+  }
+  
+  residualWorst = 0;
+  for (ip=0; ip<fmap->n; ip++) {
+    /* Compute fields */
+    Br = Bphi = B[0] = B[1] = B[2] = 0;
+    phi = dz = 0;
+    iz = 0;
+    for (ns=0; ns<2; ns++) {
+      /* ns=0 => normal, ns=1 => skew */
+      if (!haveData[ns])
+        continue;
+      x = fmap->x[ip] - bggexpData[ns].xCenter;
+      y = fmap->y[ip] - bggexpData[ns].yCenter;
+      z = fmap->z[ip];
+      dz = (bggexpData[ns].zMax-bggexpData[ns].zMin)/(bggexpData[ns].nz-1);
+      iz = (z-bggexpData[ns].zMin)/dz + 0.5;
+      if (fabs(iz*dz+bggexpData[ns].zMin-z)>1e-4*dz || iz<0 || iz>=bggexpData[ns].nz) {
+        fprintf(stderr, "evaluation points in the 3d field map need to be at the same z planes as the input data\n");
+        fprintf(stderr, "no match for z=%15.8le, dz=%15.8le, zMin=%15.8le, iz=%ld\n", z, dz, bggexpData[ns].zMin, iz);
+        exit(1);
+      }
+        
+      r = sqrt(sqr(x)+sqr(y));
+      phi = atan2(y, x);
+      
+      for (im=0; im<bggexpData[ns].nm; im++) {
+        double mfact, term, sin_mphi, cos_mphi;
+        m = bggexpData[ns].m[im];
+        mfact = dfactorial(m);
+        sin_mphi = sin(m*phi);
+        cos_mphi = cos(m*phi);
+        if (ns==0) {
+         /* normal */
+          for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
+            term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+            B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
+            term *= bggexpData[ns].Cmn[im][ig][iz];
+            Br   += term*(2*ig+m)*sin_mphi;
+            Bphi += m*term*cos_mphi;
+          }
+        } else {
+          /* skew */
+          if (m==0) {
+            B[2] += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
+            for (ig=1; ig<bggexpData[ns].nGradients; ig++) {
+              term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+              B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
+              Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
+            }
+          } else {
+            for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
+              term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+              B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
+              term *= bggexpData[ns].Cmn[im][ig][iz];
+              Br   += term*(2*ig+m)*cos_mphi;
+              Bphi -= m*term*sin_mphi;
+            }
+          }
+        }
+      }
+    }
+    B[0] = Br*cos(phi) - Bphi*sin(phi);
+    B[1] = Br*sin(phi) + Bphi*cos(phi);
+#ifdef DEBUG
+    fprintf(fpdeb, "%le %le %le %le %le %le %le %le %le\n",
+            fmap->x[ip], fmap->y[ip], iz*dz+bggexpData[0].zMin,
+            B[0], B[1], B[2], fmap->Bx[ip], fmap->By[ip], fmap->Bz[ip]);
+#endif
+    if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst)
+      residualWorst = residualTerm;
+  }
+  
+  freeBGGExpData(&bggexpData[0]);
+  if (haveData[1])
+    freeBGGExpData(&bggexpData[1]);
+
+#ifdef DEBUG
+  fclose(fpdeb);
+#endif
+
+  return residualWorst>significance ? residualWorst : 0.0;
+}
+
