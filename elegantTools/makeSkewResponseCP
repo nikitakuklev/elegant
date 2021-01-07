@@ -12,7 +12,7 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage {usage: makeSkewResponseCP -rootname <string> -lattice <filename> -input <parameterFile> -beamline <string> -skewPattern <string> -bpmPattern <string> -hcPattern <string> -vcPattern <string> -tweek <value> -order {1|2} -svalues <numberToKeep> -verbosity <integer>(1) -energy <MeV> -etayWeight <value> [-submitCommand <command>]}
+set usage {usage: makeSkewResponseCP -rootname <string> -lattice <filename> -input <parameterFile> -beamline <string> -skewPattern <string> -bpmPattern <string> -hcPattern <string> -vcPattern <string> -tweek <value> -order {1|2} -svalues <numberToKeep> -verbosity <integer>(1) -energy <MeV> -etayWeight <value> -fixedLength {0|1} [-submitCommand <command>]}
 set lattice ""
 set rootname ""
 set input ""
@@ -23,6 +23,7 @@ set hcPattern "*A:H2"
 set vcPattern "*A:V2"
 set tweek 0.001
 set order 2
+set fixedLength 0
 set srcDir $OAGGlobal(OAGAppConfigDataDirectory)/elegant
 set svalues 10000
 set queue 1
@@ -31,7 +32,7 @@ set verbosity 1
 set energy 7e3
 set etayWeight 1
 set args $argv
-if {[APSStrictParseArguments {input lattice beamline rootname skewPattern bpmPattern hcPattern vcPattern tweek srcDir order svalues queue verbosity energy etayWeight submitCommand}] || \
+if {[APSStrictParseArguments {input lattice beamline rootname skewPattern bpmPattern hcPattern vcPattern tweek srcDir order svalues queue verbosity energy etayWeight submitCommand fixedLength}] || \
     ![string length $lattice] || ![string length $rootname]} {
     return -code error "$usage"
 }
@@ -69,7 +70,7 @@ foreach skew [exec sddsprocess ${rootname}0.twi -pipe=out -match=col,ElementName
     occurence [exec sddsprocess ${rootname}0.twi -pipe=out -match=col,ElementName=$skewPattern -match=col,ElementType=*QUAD* | sdds2stream -col=ElementOccurence -pipe] {
 
     set fd [open ${rootname}-job$index.csh w]
-    puts $fd "elegant $srcDir/skewResponseCPTemplate.ele -macro=pCentralMeV=$energy,rootname=$rootname,skew=$skew,occurence=$occurence,tweek=$tweek,lattice=$lattice,hcPattern=$hcPattern,vcPattern=$vcPattern,bpmPattern=$bpmPattern,beamline=$beamline,input=$input,order=$order"
+    puts $fd "elegant $srcDir/skewResponseCPTemplate.ele -macro=pCentralMeV=$energy,rootname=$rootname,skew=$skew,occurence=$occurence,tweek=$tweek,lattice=$lattice,hcPattern=$hcPattern,vcPattern=$vcPattern,bpmPattern=$bpmPattern,beamline=$beamline,input=$input,order=$order,fixedLength=$fixedLength > $rootname-$skew-$occurence.log"
     close $fd
 
     exec chmod +x ${rootname}-job$index.csh
@@ -167,7 +168,11 @@ eval exec sddsxref $respList -pipe=out \
     {"-print=parameter,hcPattern,$hcPattern"} \
     {"-print=parameter,vcPattern,$vcPattern"} \
     {"-print=parameter,lattice,$lattice"} \
-    {"-print=parameter,beamline,$beamline"}
+    {"-print=parameter,beamline,$beamline"} \
+    "{-define=parameter,fixedLength,$fixedLength,type=short}"  \
+    "{-define=parameter,etayWeight,$etayWeight,type=double}" \
+    "{-define=parameter,energy,$energy,units=MeV}"  \
+    "{-define=parameter,order,$order,type=short}" 
 
 eval file delete -force $respList
 
@@ -187,8 +192,11 @@ exec sddspseudoinverse ${rootname}.qsResp -pipe=out -sFile=${rootname}.qsSval -l
     "-print=parameter,hcPattern,$hcPattern" \
     "-print=parameter,vcPattern,$vcPattern" \
     "-print=parameter,lattice,$lattice" \
-    "-print=parameter,beamline,$beamline"
-
+    "-print=parameter,beamline,$beamline" \
+    "-define=parameter,fixedLength,$fixedLength,type=short"  \
+    "-define=parameter,etayWeight,$etayWeight,type=double" \
+    "-define=parameter,energy,$energy,units=MeV"  \
+    "-define=parameter,order,$order,type=short" 
 
 foreach done $doneList {
     catch {eval file delete -force [glob -nocomplain [file root $done].*]}

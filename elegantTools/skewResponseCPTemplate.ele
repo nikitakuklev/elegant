@@ -7,9 +7,8 @@
 	default_order = <order>,
         rootname = <rootname>-<skew>-<occurence>,
         semaphore_file = %s.done,
+	search_path = ". multipoleData/workingConfiguration septumFiles kickmaps" 
 &end
-
-&alter_elements name=<skew>, item=K1, value="(<tweek> chs)", start_occurence=<occurence>, end_occurence=<occurence> &end
 
 &load_parameters
         filename_list = "<input> ",
@@ -18,6 +17,10 @@
 	allow_missing_parameters = 1
 	allow_missing_elements = 1
 &end
+
+&alter_elements name=<skew>, item=K1, value="(<tweek> chs)", start_occurence=<occurence>, end_occurence=<occurence> &end
+&alter_elements name=*, type=UKICKMAP, item=KREF, value=0 &end
+&alter_elements name=*, type=UKICKMAP, item=KACTUAL, value=0 &end
 
 &twiss_output
 	matched = 1
@@ -31,8 +34,9 @@
 &correct
     mode = "orbit", method = "global",
     verbose = 0, n_iterations = 0, n_xy_cycles = 1,
-    fixed_length = 1
-    fixed_length_matrix = 1
+    correction_fraction[0] = 2*1e-100,
+    fixed_length = <fixedLength>
+    fixed_length_matrix = <fixedLength>
     closed_orbit_accuracy = 1e-9
     closed_orbit_iterations = 500
     closed_orbit_iteration_fraction = 0.5
@@ -41,7 +45,7 @@
 &correction_matrix_output
 	response[2] = %s.vhrm0, %s.hvrm0,
         coupled = 1,
-        fixed_length = 1
+        fixed_length = <fixedLength>
 &end
 
 &run_control &end
@@ -58,9 +62,8 @@
 	default_order = <order>,
         rootname = <rootname>-<skew>-<occurence>,
         semaphore_file = %s.done,
+	search_path = ". multipoleData/workingConfiguration septumFiles kickmaps" 
 &end
-
-&alter_elements name=<skew>, item=K1, value=<tweek>, start_occurence=<occurence>, end_occurence=<occurence> &end
 
 &load_parameters
         filename_list = "<input> ",
@@ -69,6 +72,10 @@
 	allow_missing_parameters = 1
 	allow_missing_elements = 1
 &end
+
+&alter_elements name=<skew>, item=K1, value=<tweek>, start_occurence=<occurence>, end_occurence=<occurence> &end
+&alter_elements name=*, type=UKICKMAP, item=KREF, value=0 &end
+&alter_elements name=*, type=UKICKMAP, item=KACTUAL, value=0 &end
 
 &twiss_output
         filename = %s.twi1
@@ -82,13 +89,18 @@
 &correct
     mode = "orbit", method = "global",
     verbose = 0, n_iterations = 0, n_xy_cycles = 1,
-    fixed_length = 1
+    correction_fraction[0] = 2*1e-100,
+    fixed_length = <fixedLength>
+    fixed_length_matrix = <fixedLength>
+    closed_orbit_accuracy = 1e-9
+    closed_orbit_iterations = 500
+    closed_orbit_iteration_fraction = 0.5
 &end
 
 &correction_matrix_output
 	response[2] = %s.vhrm1, %s.hvrm1,
         coupled = 1,
-        fixed_length = 1
+        fixed_length = <fixedLength>
 &end
 
 &run_control &end

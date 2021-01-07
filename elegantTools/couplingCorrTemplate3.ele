@@ -25,11 +25,11 @@
 &end
 
 &alter_elements
-        name = *, type=CSBEND, item=SYNCH_RAD, value=1, allow_missing_elements=1 &end
+        name = *, type=*BEN*, item=SYNCH_RAD, value=1, allow_missing_elements=1 &end
 &alter_elements
-        name = *, type=CSBEND, item=ISR, value=1, allow_missing_elements=1 &end
+        name = *, type=*BEN*, item=ISR, value=1, allow_missing_elements=1 &end
 &alter_elements
-        name = *, type=CSBEND, item=ISR1PART, value=0, allow_missing_elements=1 &end
+        name = *, type=*BEN*, item=ISR1PART, value=0, allow_missing_elements=1 &end
 &alter_elements
         name = *, type=KQUAD, item=SYNCH_RAD, value=1, allow_missing_elements=1 &end
 &alter_elements
@@ -66,8 +66,9 @@
 &correct
     mode = "orbit", method = "global",
     verbose = 0, n_iterations = 0, n_xy_cycles = 1,
-    fixed_length = 1
-    fixed_length_matrix = 1
+    correction_fraction[0] = 2*1e-100,
+    fixed_length = <fixedLength>
+    fixed_length_matrix = <fixedLength>
     closed_orbit_accuracy = 1e-9
     closed_orbit_iterations = 500
     closed_orbit_iteration_fraction = 0.5
@@ -78,7 +79,7 @@
 &correction_matrix_output
 	response[2] = <rootname>-final.vhrm, <rootname>-final.hvrm,
         coupled = 1,
-        fixed_length = 1
+        fixed_length = <fixedLength>
 &end
 
 &run_control &end

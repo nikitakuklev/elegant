@@ -12,22 +12,26 @@
 	p_central_mev = <pCentralMeV>,
 	default_order = <order>,
         rootname = <rootname>
+	parameters = %s.param
+	suppress_parameter_defaults = 1
+	search_path = ". multipoleData/workingConfiguration septumFiles kickmaps" 
 &end
 
 &load_parameters
         filename = <inputParameters>
         change_defined_values = 1,
         force_occurence_data = 1,
-        allow_missing_elements = 1,
-	allow_missing_parameters = 1
+        allow_missing_elements = 0,
+	allow_missing_parameters = 0
+	exclude_type_pattern = *MON*,
 &end
 
 &alter_elements
-        name = *, type=CSBEND, item=SYNCH_RAD, value=1, allow_missing_elements=1 &end
+        name = *, type=*BEN*, item=SYNCH_RAD, value=1, allow_missing_elements=1 &end
 &alter_elements
-        name = *, type=CSBEND, item=ISR, value=1, allow_missing_elements=1 &end
+        name = *, type=*BEN*, item=ISR, value=1, allow_missing_elements=1 &end
 &alter_elements
-        name = *, type=CSBEND, item=ISR1PART, value=0, allow_missing_elements=1 &end
+        name = *, type=*BEN*, item=ISR1PART, value=0, allow_missing_elements=1 &end
 &alter_elements
         name = *, type=KQUAD, item=SYNCH_RAD, value=1, allow_missing_elements=1 &end
 &alter_elements
@@ -40,6 +44,13 @@
         name = *, type=KSEXT, item=ISR, value=1, allow_missing_elements=1 &end
 &alter_elements
         name = *, type=KSEXT, item=ISR1PART, value=0, allow_missing_elements=1 &end
+
+&closed_orbit
+	output = %s.clo
+	fixed_length = 1
+	closed_orbit_accuracy = 1e-9
+	iteration_fraction = 0.5
+&end
 
 &moments_output
         filename = "%s.mom",
@@ -57,17 +68,17 @@
         output_at_each_step = 1
 &end
 
-&steering_element name = <hcPattern>, element_type = *HKICK, item = KICK, tweek = 1e-6, plane = "h" &end
-&steering_element name = <vcPattern>, element_type = *VKICK, item = KICK, tweek = 1e-6, plane = "v" &end
+&steering_element name = <hcPattern>, element_type = *HKICK, item = KICK, tweek = 1e-5, plane = "h" &end
+&steering_element name = <vcPattern>, element_type = *VKICK, item = KICK, tweek = 1e-5, plane = "v" &end
 
 &correct
         mode = "orbit", method = "global",
-        verbose = 1, n_iterations = 4, n_xy_cycles = 100,
-        correction_fraction[0] = 0.5, 0.5,
+        verbose = 1, n_iterations = 1, n_xy_cycles = 2,
+        correction_fraction[0] = 1e-100, 1e-001,
         bpm_noise[0] = 0e-6, 0e-6,
         correction_accuracy[0] = 1e-6, 1e-6,
         closed_orbit_iteration_fraction = 0.5,
-        closed_orbit_iterations = 40,
+        closed_orbit_iterations = 50,
         closed_orbit_accuracy = 1e-9,
         fixed_length = 1
         prezero_correctors = 0
