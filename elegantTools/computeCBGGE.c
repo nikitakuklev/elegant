@@ -33,8 +33,7 @@ int SetUpOutputFile(SDDS_DATASET *SDDSout, char *filename, long skew, long deriv
 int StartPage(SDDS_DATASET *SDDSout, FIELDS_ON_BOUNDARY *fob, long m );
 void FFT(COMPLEX *field, int32_t isign, int32_t npts);
 
-double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewfile, double significance, double radiusLimit,
-                              unsigned long flags);
+double evaluateGGEFit(FIELDS_ON_BOUNDARY *fob, char *normalFile, char *skewfile, double significance, unsigned long flags);
 void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData);
 int evaluateGGEAndOutput(char *outputFile, long nrho, long nphi, char *normalFile, char *skewFile, FIELDS_ON_BOUNDARY *fob);
 int computeGGE(FIELDS_ON_BOUNDARY *fieldsOnBoundary, char *normalOutput, char *skewOutput, 
@@ -58,7 +57,7 @@ char *option[N_OPTIONS] = {
               -normal=<output> [-skew=<output>]\n\
               [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]\n\
               [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]\n\
-              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,verbose]]\n\
+              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,verbose]]\n\
 -input       Single-page file giving (z, phi, Brho) on circular cylinder of radius rho.\n\
 -normal      Output file for normal-component generalized gradients.\n\
 -skew        Output file for skew-component generalized gradients.\n\
@@ -70,8 +69,8 @@ char *option[N_OPTIONS] = {
 -autotune    Seeks to minimize the number of multipoles and derivatives to avoid using terms\n\
              that do not contribute to a good fit at the given level of significance. The user can\n\
              choose to minimize the maximum error (default), the rms error, or the mean absolute value\n\
-             error.\n\n\
-Circular-cylinder Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Soliday, and Michael Borland."
+             error. The fit is evaluated with respect to the input file.\n\n\
+Circular-cylinder Boundary Generalized Gradient Expansion by Michael Borland, Robert Soliday, and Ryan Lindberg."
 
 #define AUTOTUNE_VERBOSE   0x0001UL
 #define AUTOTUNE_RMS       0x0002UL
@@ -79,6 +78,7 @@ Circular-cylinder Boundary Generalized Gradient Expansion by Ryan Lindberg, Robe
 #define AUTOTUNE_MAV       0x0008UL
 #define AUTOTUNE_EVALONLY  0x0010UL
 #define AUTOTUNE_MODE_SET  0x0100UL
+#define AUTOTUNE_ACTIVE    0x0200UL
 char *modeOption[3] = {"rms", "maximum", "mav"};
 
 int main(int argc, char **argv)
@@ -88,19 +88,20 @@ int main(int argc, char **argv)
   long multipoles, derivatives, fundamental=0;
   long maxMultipoles = 8, maxDerivatives = 7;
   char *inputFile = NULL, *normalOutputFile = NULL, *skewOutputFile = NULL;
-  char *fieldMapFile = NULL;
   char *evaluationOutput = NULL;
   long evaluation_nRho = -1, evaluation_nPhi = -1;
-  double autoTuneSignificance = 1e-12, autoTuneRadiusLimit = 0;
+  double autoTuneSignificance = 1e-12;
   FIELDS_ON_BOUNDARY fieldsOnBoundary;
-  FIELD_MAP fieldMap;
   double bestResidual;
   long bestMultipoles, bestDerivatives;
   unsigned long autoTuneFlags = 0, dummyFlags;
   char *autoTuneModeString;
   char *BrhoName = "Brho", *zName = "z", *phiName = "phi", *rhoName = "rho";
 
-  /* gsl_set_error_handler_off(); */
+  /* Using this routine can prevent exceptions when large harmonics are used, but the data thus
+     obtained is suspect.
+     gsl_set_error_handler_off(); 
+  */
 
   argc = scanargs(&scanned, argc, argv);
   if (argc < 2 || argc > (2 + N_OPTIONS)) {
@@ -185,51 +186,43 @@ int main(int argc, char **argv)
         }
         break;
       case SET_AUTO_TUNE:
-        if (scanned[i_arg].n_items < 2) {
-          {
-            fprintf(stderr, "invalid -autotune syntax\n%s\n", USAGE);
-            return (1);
-          }
-          fieldMapFile = scanned[i_arg].list[1];
-          scanned[i_arg].n_items -= 2;
-          autoTuneSignificance = 1e-12;
-          autoTuneRadiusLimit = 0;
-          autoTuneFlags = 0;
-          if (scanned[i_arg].n_items>0 &&
-              (!scanItemList(&autoTuneFlags, scanned[i_arg].list+2, &scanned[i_arg].n_items, 0,
-                             "verbose", -1, NULL, 0, AUTOTUNE_VERBOSE, 
-                             "evaluate", -1, NULL, 0, AUTOTUNE_EVALONLY,
-                             "significance", SDDS_DOUBLE, &autoTuneSignificance, 1, 0,
-                             "radiuslimit", SDDS_DOUBLE, &autoTuneRadiusLimit, 1, 0,
-                             "minimize", SDDS_STRING, &autoTuneModeString, 1, AUTOTUNE_MODE_SET, 
-                             NULL) ||
-               autoTuneSignificance<=0)) {
-            fprintf(stderr, "invalid -autotune syntax\n%s\n", USAGE);
-            return (1);
-          }
-          if (autoTuneFlags&AUTOTUNE_MODE_SET) {
-            switch (match_string(autoTuneModeString, modeOption, 3, 0)) {
-            case 0:
-              autoTuneFlags |= AUTOTUNE_RMS;
-              break;
-            case 1:
-              autoTuneFlags |= AUTOTUNE_MAXIMUM;
-              break;
-            case 2:
-              autoTuneFlags |= AUTOTUNE_MAV;
-              break;
-            default:
-              SDDS_Bomb("invalid mode for autotune minimization. Use rms or maximum.");
-              break;
-            }
-          } else
-            autoTuneFlags |= AUTOTUNE_MAXIMUM;
-          break;
-        default:
-          fprintf(stderr, "unknown option given\n%s\n", USAGE);
+        autoTuneSignificance = 1e-12;
+        autoTuneFlags = 0;
+        scanned[i_arg].n_items -= 1;
+        if (scanned[i_arg].n_items>0 &&
+            (!scanItemList(&autoTuneFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
+                           "verbose", -1, NULL, 0, AUTOTUNE_VERBOSE, 
+                           "evaluate", -1, NULL, 0, AUTOTUNE_EVALONLY,
+                           "significance", SDDS_DOUBLE, &autoTuneSignificance, 1, 0,
+                           "minimize", SDDS_STRING, &autoTuneModeString, 1, AUTOTUNE_MODE_SET, 
+                           NULL) ||
+             autoTuneSignificance<=0)) {
+          fprintf(stderr, "invalid -autotune syntax\n%s\n", USAGE);
           return (1);
-          break;
         }
+        autoTuneFlags |= AUTOTUNE_ACTIVE;
+        if (autoTuneFlags&AUTOTUNE_MODE_SET) {
+          switch (match_string(autoTuneModeString, modeOption, 3, 0)) {
+          case 0:
+            autoTuneFlags |= AUTOTUNE_RMS;
+            break;
+          case 1:
+            autoTuneFlags |= AUTOTUNE_MAXIMUM;
+            break;
+          case 2:
+            autoTuneFlags |= AUTOTUNE_MAV;
+            break;
+          default:
+            SDDS_Bomb("invalid mode for autotune minimization. Use rms or maximum.");
+            break;
+          }
+        } else
+          autoTuneFlags |= AUTOTUNE_MAXIMUM;
+        break;
+      default:
+        fprintf(stderr, "unknown option given\n%s\n", USAGE);
+        return (1);
+        break;
       }
     } else {
         fprintf(stderr, "Unreconized option\n%s\n", USAGE);
@@ -246,57 +239,54 @@ int main(int argc, char **argv)
   bestDerivatives = maxDerivatives;
   bestMultipoles = maxMultipoles;
 
-  if (fieldMapFile) {
-    /* read 3D map */
-    readFieldMap(fieldMapFile, &fieldMap);
+  if (autoTuneFlags&AUTOTUNE_ACTIVE) {
     if (autoTuneFlags&AUTOTUNE_EVALONLY)
       derivatives = maxDerivatives;
     else
       derivatives = 1;
-  } else  {
+  } else 
     /* no auto-tuning */
     derivatives = maxDerivatives;
-    fieldMap.n = 0;
-  }
 
   memset(&fieldsOnBoundary, 0, sizeof(fieldsOnBoundary));
   if (ReadInputFile(&fieldsOnBoundary, inputFile, zName, phiName, BrhoName, rhoName))
     SDDS_Bomb("unable to read input file");
 
   for ( ; derivatives<=maxDerivatives; derivatives++) {
-    if (fieldMapFile && !(autoTuneFlags&AUTOTUNE_EVALONLY))
-      multipoles = 1;
-    else
+    multipoles = 1;
+    if (autoTuneFlags&AUTOTUNE_ACTIVE) {
+      if (autoTuneFlags&AUTOTUNE_EVALONLY)
+        multipoles = maxMultipoles;
+    } else
       /* no auto-tuning */
       multipoles = maxMultipoles;
         
     for ( ; multipoles<=maxMultipoles; multipoles++) {
       if (computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, derivatives, multipoles, fundamental)) 
         return 1;
-    }
 
-    if (fieldMapFile) {
-      double residual;
-      if ((residual = evaluateGGEForFieldMap(&fieldMap, normalOutputFile, skewOutputFile,
-                                             autoTuneSignificance, autoTuneRadiusLimit,
-                                             autoTuneFlags))<bestResidual) {
-        bestResidual = residual;
-        bestMultipoles = multipoles;
-        bestDerivatives = derivatives;
-        if (autoTuneFlags&AUTOTUNE_VERBOSE) {
-          printf("New best residual of %le for m=%ld, d=%ld\n", residual, multipoles, derivatives);
-          fflush(stdout);
-        }
-      } else {
-        if (autoTuneFlags&AUTOTUNE_VERBOSE) {
-          printf("Goodness of fit (%le) for m=%ld, d=%ld is not better\n", residual, multipoles, derivatives);
+      if (autoTuneFlags&AUTOTUNE_ACTIVE) {
+        double residual;
+        if ((residual = evaluateGGEFit(&fieldsOnBoundary, normalOutputFile, skewOutputFile,
+                                       autoTuneSignificance, autoTuneFlags))<bestResidual) {
+          bestResidual = residual;
+          bestMultipoles = multipoles;
+          bestDerivatives = derivatives;
+          if (autoTuneFlags&AUTOTUNE_VERBOSE) {
+            printf("New best residual of %le for m=%ld, d=%ld\n", residual, multipoles, derivatives);
+            fflush(stdout);
+          }
+        } else {
+          if (autoTuneFlags&AUTOTUNE_VERBOSE) {
+            printf("Goodness of fit (%le) for m=%ld, d=%ld is not better\n", residual, multipoles, derivatives);
+          }
         }
       }
     }
   }
-   
-  if (fieldMapFile && 
-      computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, derivatives, multipoles, fundamental))
+
+  if (autoTuneFlags&AUTOTUNE_ACTIVE && !(autoTuneFlags&AUTOTUNE_EVALONLY) && 
+      computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, bestDerivatives, bestMultipoles, fundamental))
     return 1;
   
   if (evaluationOutput)
@@ -836,133 +826,95 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
   bggexpData->nz = nz;
 }
 
-double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile, double significance, double radiusLimit, unsigned long flags)
+double evaluateGGEFit
+(
+ FIELDS_ON_BOUNDARY *fieldsOnBoundary,
+ char *normalFile, 
+ char *skewFile, 
+ double significance, 
+ unsigned long flags
+ )
 {
-  double B[3], Br, Bphi;
-  double x, y, z, r, phi, dz;
-  long ip, ns, iz, ig, m, im;
-  double residualTerm, residualSum, residualSum2, residualWorst;
-  long residualCount;
+  double Bz, Br, Bphi;
+  double r, phi, residual;
+  double residualWorst, residualSum, residualSum2;
+  long ns, ig, m, im;
   BGGEXP_DATA bggexpData[2];
   char haveData[2] = {1, 0};
-#ifdef DEBUG
-  FILE *fpdeb;
-
-  fpdeb = fopen("computeRBGGE.debug", "w");
-  fprintf(fpdeb, "SDDS1\n");
-  fprintf(fpdeb, "&column name=x type=float units=m &end\n");
-  fprintf(fpdeb, "&column name=y type=float units=m &end\n");
-  fprintf(fpdeb, "&column name=z type=float units=m &end\n");
-  fprintf(fpdeb, "&column name=Bx type=float units=T &end\n");
-  fprintf(fpdeb, "&column name=By type=float units=T &end\n");
-  fprintf(fpdeb, "&column name=Bz type=float units=T &end\n");
-  fprintf(fpdeb, "&column name=BxRef type=float units=T &end\n");
-  fprintf(fpdeb, "&column name=ByRef type=float units=T &end\n");
-  fprintf(fpdeb, "&column name=BzRef type=float units=T &end\n");
-  fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
-#endif
+  long iphi, iz;
 
   readBGGExpData(&bggexpData[0], normalFile, "CnmS", 0);
-#ifdef DEBUG
-  spewBGGExpData(&bggexpData[0]);
-#endif
   if (skewFile) {
     readBGGExpData(&bggexpData[1], skewFile, "CnmC", 1);
     haveData[1] = 1;
   }
-  
+
   residualWorst = residualSum = residualSum2 = 0;
-  residualCount = 0;
-  for (ip=0; ip<fmap->n; ip++) {
-    /* Compute fields */
-    Br = Bphi = B[0] = B[1] = B[2] = 0;
-    r = phi = dz = 0;
-    iz = 0;
-    for (ns=0; ns<2; ns++) {
-      /* ns=0 => normal, ns=1 => skew */
-      if (!haveData[ns])
-        continue;
-      x = fmap->x[ip] - bggexpData[ns].xCenter;
-      y = fmap->y[ip] - bggexpData[ns].yCenter;
-      z = fmap->z[ip];
-      dz = (bggexpData[ns].zMax-bggexpData[ns].zMin)/(bggexpData[ns].nz-1);
-      iz = (z-bggexpData[ns].zMin)/dz + 0.5;
-      if (fabs(iz*dz+bggexpData[ns].zMin-z)>1e-4*dz || iz<0 || iz>=bggexpData[ns].nz) {
-        fprintf(stderr, "evlluation points in the 3d field map need to be at the same z planes as the input data\n");
-        fprintf(stderr, "no match for z=%15.8le, dz=%15.8le, zMin=%15.8le, iz=%ld\n", z, dz, bggexpData[ns].zMin, iz);
-        exit(1);
-      }
-        
-      r = sqrt(sqr(x)+sqr(y));
-      phi = atan2(y, x);
+
+  r = fieldsOnBoundary->rho;
+  for (iz=0; iz<fieldsOnBoundary->Nz; iz++) {
+    for (iphi=0; iphi<fieldsOnBoundary->Nphi; iphi++) {
+      phi = TWOPI*iphi/(fieldsOnBoundary->Nphi-1.0);
       
-      for (im=0; im<bggexpData[ns].nm; im++) {
-        double mfact, term, sin_mphi, cos_mphi;
-        m = bggexpData[ns].m[im];
-        mfact = dfactorial(m);
-        sin_mphi = sin(m*phi);
-        cos_mphi = cos(m*phi);
-        if (ns==0) {
-         /* normal */
-          for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
-            term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-            B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
-            term *= bggexpData[ns].Cmn[im][ig][iz];
-            Br   += term*(2*ig+m)*sin_mphi;
-            Bphi += m*term*cos_mphi;
-          }
-        } else {
-          /* skew */
-          if (m==0) {
-            B[2] += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
-            for (ig=1; ig<bggexpData[ns].nGradients; ig++) {
-              term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-              B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
-              Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
-            }
-          } else {
+      /* Compute fields */
+      Br = Bphi = Bz = 0;
+      for (ns=0; ns<2; ns++) {
+        /* ns=0 => normal, ns=1 => skew */
+        if (!haveData[ns])
+          continue;
+        
+        for (im=0; im<bggexpData[ns].nm; im++) {
+          double mfact, term, sin_mphi, cos_mphi;
+          m = bggexpData[ns].m[im];
+          mfact = dfactorial(m);
+          sin_mphi = sin(m*phi);
+          cos_mphi = cos(m*phi);
+          if (ns==0) {
+            /* normal */
             for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
               term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-              B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
+              Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
               term *= bggexpData[ns].Cmn[im][ig][iz];
-              Br   += term*(2*ig+m)*cos_mphi;
-              Bphi -= m*term*sin_mphi;
+              Br   += term*(2*ig+m)*sin_mphi;
+              Bphi += m*term*cos_mphi;
+            }
+          } else {
+            /* skew */
+            if (m==0) {
+              Bz += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
+              for (ig=1; ig<bggexpData[ns].nGradients; ig++) {
+                term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
+                Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
+              }
+            } else {
+              for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
+                term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
+                term *= bggexpData[ns].Cmn[im][ig][iz];
+                Br   += term*(2*ig+m)*cos_mphi;
+                Bphi -= m*term*sin_mphi;
+              }
             }
           }
         }
       }
-    }
-    B[0] = Br*cos(phi) - Bphi*sin(phi);
-    B[1] = Br*sin(phi) + Bphi*cos(phi);
-#ifdef DEBUG
-    fprintf(fpdeb, "%le %le %le %le %le %le %le %le %le\n",
-            fmap->x[ip], fmap->y[ip], iz*dz+bggexpData[0].zMin,
-            B[0], B[1], B[2], fmap->Bx[ip], fmap->By[ip], fmap->Bz[ip]);
-#endif
-    if (radiusLimit==0 || r<radiusLimit) {
-      if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst)
-        residualWorst = residualTerm;
-      residualCount ++;
-      residualSum += fabs(residualTerm);
-      residualSum2 += sqr(residualTerm);
+      residual = fabs(Br - fieldsOnBoundary->Brho[iz*fieldsOnBoundary->Nphi+iphi]);
+      if (residual>residualWorst)
+        residualWorst = residual;
+      residualSum2 += sqr(residual);
+      residualSum += residual;
     }
   }
-
+  
   freeBGGExpData(&bggexpData[0]);
   if (haveData[1])
     freeBGGExpData(&bggexpData[1]);
 
-#ifdef DEBUG
-  fclose(fpdeb);
-#endif
-
   if (flags&AUTOTUNE_RMS) {
-    residualWorst = sqrt(residualSum2/residualCount);
+    residualWorst = sqrt(residualSum2/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi));
   } else if (flags&AUTOTUNE_MAV) {
-    if (residualCount)
-      residualWorst = residualSum/residualCount;
-    else
-      residualWorst = DBL_MAX;
+    residualWorst = residualSum/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi);
   }
 
   return residualWorst>significance ? residualWorst : 0.0;
