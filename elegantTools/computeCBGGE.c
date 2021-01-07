@@ -100,7 +100,7 @@ int main(int argc, char **argv)
   char *autoTuneModeString;
   char *BrhoName = "Brho", *zName = "z", *phiName = "phi", *rhoName = "rho";
 
-  gsl_set_error_handler_off();
+  /* gsl_set_error_handler_off(); */
 
   argc = scanargs(&scanned, argc, argv);
   if (argc < 2 || argc > (2 + N_OPTIONS)) {
@@ -429,6 +429,7 @@ int ReadInputFile
 double Imp(double kR, long m)
 {
   double t1;
+  
   t1 = (BesIn(fabs(kR), m-1) + BesIn(fabs(kR), m+1))/2;
   if (kR<0)
     return t1*ipow(-1, m+1);
@@ -1094,12 +1095,12 @@ double BesIn(double x, long order)
       order = -order;
     /* Need this code to compensate for issues with gsl_sf_bessel_Inu() domain */
     if (x>0)
-      result = gsl_sf_bessel_Inu(order, x);
+      result = gsl_sf_bessel_In(order, x);
     else {
       if (((long)fabs(order))%2)
-        result = -gsl_sf_bessel_Inu(order, -x);
+        result = -gsl_sf_bessel_In(order, -x);
       else
-        result = gsl_sf_bessel_Inu(order, -x);
+        result = gsl_sf_bessel_In(order, -x);
     }
   }
   return result;
