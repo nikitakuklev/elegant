@@ -143,6 +143,7 @@ ifeq ($(GSL), 1)
 PROD_HOST += csrImpedance
 csrImpedance_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/gsl -DUSE_GSL
 sddsmatchmoments_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/gsl -DUSE_GSL
+computeCBGGE_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/gsl -DUSE_GSL
 GSLLIB = gsl gslcblas
 SYS_GSLLIB = 
 gsl_DIR = $(EPICS_EXTENSIONS_LIB)

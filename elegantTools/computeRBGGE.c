@@ -1561,10 +1561,10 @@ int computeGGcos
       return (1);
     }
   if ((SDDS_DefineSimpleParameter(&SDDSOutput, "m", NULL, SDDS_LONG) != 1) ||
-      (SDDS_DefineSimpleParameter(&SDDSOutput, "xCenter", NULL, SDDS_DOUBLE) != 1) ||
-      (SDDS_DefineSimpleParameter(&SDDSOutput, "yCenter", NULL, SDDS_DOUBLE) != 1) ||
-      (SDDS_DefineSimpleParameter(&SDDSOutput, "xMax", NULL, SDDS_DOUBLE) != 1) ||
-      (SDDS_DefineSimpleParameter(&SDDSOutput, "yMax", NULL, SDDS_DOUBLE) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "xCenter", "m", SDDS_DOUBLE) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "yCenter", "m", SDDS_DOUBLE) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "xMax", "m", SDDS_DOUBLE) != 1) ||
+      (SDDS_DefineSimpleParameter(&SDDSOutput, "yMax", "m", SDDS_DOUBLE) != 1) ||
       (SDDS_DefineSimpleColumn(&SDDSOutput, "z", "m", SDDS_DOUBLE) != 1))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
