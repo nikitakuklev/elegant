@@ -251,19 +251,33 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
     if (bgg->dataIndex[0]!=-1 && bgg->dataIndex[1]!=-1) {
       if (storedBGGExpData[bgg->dataIndex[0]].xCenter != storedBGGExpData[bgg->dataIndex[1]].xCenter)
-        bombElegantVA("Mismatch of xCenter between normal and skew data for BGGEXP %s", tcontext.elementName);
+        bombElegantVA("Mismatch of xCenter between normal (%le) and skew (%le) data for BGGEXP %s\n", 
+		      storedBGGExpData[bgg->dataIndex[0]].xCenter, storedBGGExpData[bgg->dataIndex[1]].xCenter,
+		      tcontext.elementName);
       if (storedBGGExpData[bgg->dataIndex[0]].yCenter != storedBGGExpData[bgg->dataIndex[1]].yCenter)
-        bombElegantVA("Mismatch of yCenter between normal and skew data for BGGEXP %s", tcontext.elementName);
+        bombElegantVA("Mismatch of yCenter between normal (%le) and skew (%le) data for BGGEXP %s\n", 
+		      storedBGGExpData[bgg->dataIndex[0]].yCenter, storedBGGExpData[bgg->dataIndex[1]].yCenter,
+		      tcontext.elementName);
       if (storedBGGExpData[bgg->dataIndex[0]].xMax != storedBGGExpData[bgg->dataIndex[1]].xMax)
-        bombElegantVA("Mismatch of xMax between normal and skew data for BGGEXP %s", tcontext.elementName);
+        bombElegantVA("Mismatch of xMax between normal (%le) and skew (%le) data for BGGEXP %s\n", 
+		      storedBGGExpData[bgg->dataIndex[0]].xMax, storedBGGExpData[bgg->dataIndex[1]].xMax,
+		      tcontext.elementName);
       if (storedBGGExpData[bgg->dataIndex[0]].yMax != storedBGGExpData[bgg->dataIndex[1]].yMax)
-        bombElegantVA("Mismatch of yCenter between normal and skew data for BGGEXP %s", tcontext.elementName);
+        bombElegantVA("Mismatch of yCenter between normal (%le) and skew (%le) data for BGGEXP %s\n", 
+		      storedBGGExpData[bgg->dataIndex[0]].yMax, storedBGGExpData[bgg->dataIndex[1]].yMax,
+		      tcontext.elementName);
       if (storedBGGExpData[bgg->dataIndex[0]].dz != storedBGGExpData[bgg->dataIndex[1]].dz)
-        bombElegantVA("Mismatch of z spacing between normal and skew data for BGGEXP %s", tcontext.elementName);
+        bombElegantVA("Mismatch of z spacing between normal (%le) and skew (%le) data for BGGEXP %s\n", 
+		      storedBGGExpData[bgg->dataIndex[0]].dz, storedBGGExpData[bgg->dataIndex[1]].dz,
+		      tcontext.elementName);
       if (storedBGGExpData[bgg->dataIndex[0]].zMin != storedBGGExpData[bgg->dataIndex[1]].zMin)
-        bombElegantVA("Mismatch of minimum z value between normal and skew data for BGGEXP %s", tcontext.elementName);
+        bombElegantVA("Mismatch of minimum z value between normal (%le) and skew (%le) data for BGGEXP %s\n", 
+		      storedBGGExpData[bgg->dataIndex[0]].zMin, storedBGGExpData[bgg->dataIndex[1]].zMin,
+		      tcontext.elementName);
       if (storedBGGExpData[bgg->dataIndex[0]].zMax != storedBGGExpData[bgg->dataIndex[1]].zMax)
-        bombElegantVA("Mismatch of maximum z value between normal and skew data for BGGEXP %s", tcontext.elementName);
+        bombElegantVA("Mismatch of maximum z value between normal (%le) and skew (%le) data for BGGEXP %s\n", 
+		      storedBGGExpData[bgg->dataIndex[0]].zMax, storedBGGExpData[bgg->dataIndex[1]].zMax,
+		      tcontext.elementName);
     }
 
 #if !USE_MPI
