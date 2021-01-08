@@ -48,9 +48,27 @@ typedef struct {
   long n;
 } FIELD_MAP;
 
+typedef struct {
+  short haveData;
+  short skew;          /* if non-zero, these are skew terms */
+  long nz;             /* number of z points */
+  double dz;           /* z spacing */
+  double xCenter, yCenter; /* center of the expansion in magnet coordinate system */
+  double xMax, yMax;   /* half-aperture of the field expansion in expansion coordinate system */
+  double zMin, zMax;   /* minimum and maximum z values */
+  long nm;             /* number of values of m (angular harmonic) */
+  long *m;             /* value of m */
+  long nGradients;   /* number of gradient functions per m */
+  double ***Cmn;       /* generalized gradient: Cnms[im][in][iz] */
+  double ***dCmn_dz;   /* z derivative of generalized gradient */
+} BGGEXP_DATA;
+
+void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment, short skew);
+void freeBGGExpData(BGGEXP_DATA *bggexpData);
 int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
 int computeGGcos(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
-double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewfile, double significance, double radiusLimit,
+double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, long multipoles, long derivatives,
+                              double significance, double radiusLimit,
                               unsigned long flags);
 int ReadInputFiles(FIELDS_ON_PLANES *fieldsOnPlanes, 
                    char *topFile, char *bottomFile, char *leftFile, char *rightFile, long needBz);
@@ -121,6 +139,7 @@ int main(int argc, char **argv)
   long bestMultipoles, bestDerivatives;
   unsigned long autoTuneFlags = 0;
   char *autoTuneModeString;
+  BGGEXP_DATA bggexpData[2];
 
 #ifdef DEBUG
 #ifdef OLDFFT
@@ -300,6 +319,32 @@ int main(int argc, char **argv)
     bestResidual = DBL_MAX;
     bestDerivatives = maxDerivatives;
     bestMultipoles = maxMultipoles;
+    
+    bggexpData[0].haveData = bggexpData[1].haveData = 0;
+
+    memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
+    if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 0) ||
+        computeGGderiv(&fieldsOnPlanes, normalOutputFile, maxDerivatives, maxMultipoles, fundamental))
+      return 1;
+    readBGGExpData(&bggexpData[0], normalOutputFile, "CnmS", 0);
+    freeFieldsOnPlanes(&fieldsOnPlanes);
+    memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
+
+    if (skewOutputFile) {
+      /* Have to read the data again because it is modified by computeGGderiv and computeGGcos */
+      if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1) ||
+          computeGGcos(&fieldsOnPlanes, skewOutputFile, maxDerivatives, maxMultipoles, fundamental))
+        return 1;
+      readBGGExpData(&bggexpData[1], skewOutputFile, "CnmC", 1);
+      freeFieldsOnPlanes(&fieldsOnPlanes);
+      memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
+    }
+
+    /* Have to read the data again because it is modified by computeGGderiv and computeGGcos */
+    freeFieldsOnPlanes(&fieldsOnPlanes);
+    memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
+    if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1))
+      return 1;
 
     if (fieldMapFile) {
       /* read 3D map */
@@ -313,8 +358,6 @@ int main(int argc, char **argv)
     if (autoTuneFlags&AUTOTUNE_EVALONLY)
       derivatives = maxDerivatives;
 
-    memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
-
     for ( ; derivatives<=maxDerivatives; derivatives++) {
       if (fieldMapFile) {
         multipoles = 1;
@@ -326,25 +369,9 @@ int main(int argc, char **argv)
         multipoles = maxMultipoles;
         
       for ( ; multipoles<=maxMultipoles; multipoles++) {
-
-        if (normalOutputFile != NULL)
-          {
-            /* Have to read the data each time because it is modified by computeGGderiv and computeGGcos */
-            if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 0) ||
-                computeGGderiv(&fieldsOnPlanes, normalOutputFile, derivatives, multipoles, fundamental))
-              return 1;
-          }
-        if (skewOutputFile != NULL)
-          {
-            /* Have to read the data each time because it is modified by computeGGderiv and computeGGcos */
-            if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1) ||
-                computeGGcos(&fieldsOnPlanes, skewOutputFile, derivatives, multipoles, fundamental))
-              return 1;
-          }
-        freeFieldsOnPlanes(&fieldsOnPlanes);
         if (fieldMapFile) {
           double residual;
-          if ((residual = evaluateGGEForFieldMap(&fieldMap, normalOutputFile, skewOutputFile,
+          if ((residual = evaluateGGEForFieldMap(&fieldMap, &bggexpData[0], multipoles, derivatives,
                                                  autoTuneSignificance, autoTuneRadiusLimit,
                                                  autoTuneFlags))<bestResidual) {
             bestResidual = residual;
@@ -364,14 +391,16 @@ int main(int argc, char **argv)
     }
 
     if (fieldMapFile) {
-      if (normalOutputFile) 
-        if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 0) ||
-            computeGGderiv(&fieldsOnPlanes, normalOutputFile, bestDerivatives, bestMultipoles, fundamental))
-          return 1;
-      if (skewOutputFile)
+      if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 0) ||
+          computeGGderiv(&fieldsOnPlanes, normalOutputFile, bestDerivatives, bestMultipoles, fundamental))
+        return 1;
+      freeFieldsOnPlanes(&fieldsOnPlanes);
+      if (skewOutputFile) {
         if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1) ||
             computeGGcos(&fieldsOnPlanes, skewOutputFile, bestDerivatives, bestMultipoles, fundamental))
           return 1;
+        freeFieldsOnPlanes(&fieldsOnPlanes);
+      }
     }
 
     if (evaluationOutput)
@@ -2463,39 +2492,28 @@ void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData)
   SDDS_Terminate(&SDDSin);
 }
 
-typedef struct {
-  short skew;          /* if non-zero, these are skew terms */
-  long nz;             /* number of z points */
-  double dz;           /* z spacing */
-  double xCenter, yCenter; /* center of the expansion in magnet coordinate system */
-  double xMax, yMax;   /* half-aperture of the field expansion in expansion coordinate system */
-  double zMin, zMax;   /* minimum and maximum z values */
-  long nm;             /* number of values of m (angular harmonic) */
-  long *m;             /* value of m */
-  long nGradients;   /* number of gradient functions per m */
-  double ***Cmn;       /* generalized gradient: Cnms[im][in][iz] */
-  double ***dCmn_dz;   /* z derivative of generalized gradient */
-} BGGEXP_DATA;
-
 void freeBGGExpData(BGGEXP_DATA *bggexpData) 
 {
   long im, id;
-  for (im=0; im<bggexpData->nm; im++) {
-    for (id=0; id<bggexpData->nGradients; id++)  {
-      if (bggexpData->Cmn[im][id])
-        free(bggexpData->Cmn[im][id]);
-      if (bggexpData->dCmn_dz[im][id])
-        free(bggexpData->dCmn_dz[im][id]);
-      bggexpData->Cmn[im][id] = bggexpData->dCmn_dz[im][id] = NULL;
+  if (bggexpData->haveData) {
+    for (im=0; im<bggexpData->nm; im++) {
+      for (id=0; id<bggexpData->nGradients; id++)  {
+        if (bggexpData->Cmn[im][id])
+          free(bggexpData->Cmn[im][id]);
+        if (bggexpData->dCmn_dz[im][id])
+          free(bggexpData->dCmn_dz[im][id]);
+        bggexpData->Cmn[im][id] = bggexpData->dCmn_dz[im][id] = NULL;
+      }
     }
+    free(bggexpData->m);
+    bggexpData->m = NULL;
+    bggexpData->nm = bggexpData->nGradients = 0;
   }
-  free(bggexpData->m);
-  bggexpData->m = NULL;
-  bggexpData->nm = bggexpData->nGradients = 0;
 }
 
 #define BUFSIZE 1024
 
+#ifdef DEBUG
 void spewBGGExpData(BGGEXP_DATA *bgg)
 {
   FILE *fp;
@@ -2521,6 +2539,7 @@ void spewBGGExpData(BGGEXP_DATA *bgg)
   }
   fclose(fp);
 }
+#endif
 
 void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment, short skew)
 {
@@ -2534,6 +2553,7 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
     fprintf(stderr, "Unable to read file %s\n", filename);
     exit(1);
   }
+  bggexpData->haveData = 1;
 
   /* Check presence of z column */
   if (SDDS_CheckColumn(&SDDSin, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK) {
@@ -2668,15 +2688,14 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
   bggexpData->nz = nz;
 }
 
-double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile, double significance, double radiusLimit, unsigned long flags)
+double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, long multipoles, long derivatives,
+                              double significance, double radiusLimit, unsigned long flags)
 {
   double B[3], Br, Bphi;
   double x, y, z, r, phi, dz;
   long ip, ns, iz, ig, m, im;
   double residualTerm, residualSum, residualSum2, residualWorst;
   long residualCount;
-  BGGEXP_DATA bggexpData[2];
-  char haveData[2] = {1, 0};
 #ifdef DEBUG
   FILE *fpdeb;
 
@@ -2694,14 +2713,9 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
   fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
 #endif
 
-  readBGGExpData(&bggexpData[0], normalFile, "CnmS", 0);
 #ifdef DEBUG
-  spewBGGExpData(&bggexpData[0]);
+  spewBGGExpData(bggexpData);
 #endif
-  if (skewFile) {
-    readBGGExpData(&bggexpData[1], skewFile, "CnmC", 1);
-    haveData[1] = 1;
-  }
   
   residualWorst = residualSum = residualSum2 = 0;
   residualCount = 0;
@@ -2712,7 +2726,7 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
     iz = 0;
     for (ns=0; ns<2; ns++) {
       /* ns=0 => normal, ns=1 => skew */
-      if (!haveData[ns])
+      if (!bggexpData[ns].haveData)
         continue;
       x = fmap->x[ip] - bggexpData[ns].xCenter;
       y = fmap->y[ip] - bggexpData[ns].yCenter;
@@ -2728,7 +2742,7 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
       r = sqrt(sqr(x)+sqr(y));
       phi = atan2(y, x);
       
-      for (im=0; im<bggexpData[ns].nm; im++) {
+      for (im=0; im<bggexpData[ns].nm && im<multipoles; im++) {
         double mfact, term, sin_mphi, cos_mphi;
         m = bggexpData[ns].m[im];
         mfact = dfactorial(m);
@@ -2736,7 +2750,7 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
         cos_mphi = cos(m*phi);
         if (ns==0) {
          /* normal */
-          for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
+          for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
             term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
             B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
             term *= bggexpData[ns].Cmn[im][ig][iz];
@@ -2747,13 +2761,13 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
           /* skew */
           if (m==0) {
             B[2] += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
-            for (ig=1; ig<bggexpData[ns].nGradients; ig++) {
+            for (ig=1; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
               term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
               B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
               Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
             }
           } else {
-            for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
+            for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
               term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
               B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
               term *= bggexpData[ns].Cmn[im][ig][iz];
@@ -2780,10 +2794,6 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, char *normalFile, char *skewFile,
     }
   }
 
-  freeBGGExpData(&bggexpData[0]);
-  if (haveData[1])
-    freeBGGExpData(&bggexpData[1]);
-
 #ifdef DEBUG
   fclose(fpdeb);
 #endif
@@ -2809,6 +2819,8 @@ int evaluateGGEAndOutput(char *outputFile, char *normalFile, char *skewFile, FIE
   char haveData[2] = {1, 0};
   SDDS_DATASET SDDSout;
   long ix, iy, iz, irow;
+
+  bggexpData[0].haveData = bggexpData[1].haveData = 0;
 
   readBGGExpData(&bggexpData[0], normalFile, "CnmS", 0);
   if (skewFile) {
