@@ -854,7 +854,7 @@ double evaluateGGEFit
   r = fieldsOnBoundary->rho;
   for (iz=0; iz<fieldsOnBoundary->Nz; iz++) {
     for (iphi=0; iphi<fieldsOnBoundary->Nphi; iphi++) {
-      phi = TWOPI*iphi/(fieldsOnBoundary->Nphi-1.0);
+      phi = (TWOPI*iphi)/fieldsOnBoundary->Nphi;
       
       /* Compute fields */
       Br = Bphi = Bz = 0;
@@ -965,7 +965,7 @@ int evaluateGGEAndOutput(char *outputFile, long nrho, long nphi,
     for (irho=0; irho<nrho; irho++) {
       r = (irho+1)*(fieldsOnBoundary->rho/nrho);
       for (iphi=0; iphi<nphi; iphi++) {
-        phi = TWOPI*iphi/(nphi-1.0);
+        phi = (TWOPI*iphi)/nphi;
       
         /* Compute fields */
         Br = Bphi = B[0] = B[1] = B[2] = 0;
