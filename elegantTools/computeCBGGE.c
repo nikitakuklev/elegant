@@ -25,6 +25,21 @@ typedef struct {
   long n;
 } FIELD_MAP;
 
+typedef struct {
+  short haveData;
+  short skew;          /* if non-zero, these are skew terms */
+  long nz;             /* number of z points */
+  double dz;           /* z spacing */
+  double xCenter, yCenter; /* center of the expansion in magnet coordinate system */
+  double xMax, yMax;   /* half-aperture of the field expansion in expansion coordinate system */
+  double zMin, zMax;   /* minimum and maximum z values */
+  long nm;             /* number of values of m (angular harmonic) */
+  long *m;             /* value of m */
+  long nGradients;   /* number of gradient functions per m */
+  double ***Cmn;       /* generalized gradient: Cnms[im][in][iz] */
+  double ***dCmn_dz;   /* z derivative of generalized gradient */
+} BGGEXP_DATA;
+
 int ReadInputFile(FIELDS_ON_BOUNDARY *fieldsOnBoundary, char *inputFile, 
                   char *zName, char *phiName, char *BrhoName, char *rhoName);
 void freeFieldsOnBoundary(FIELDS_ON_BOUNDARY *fob);
@@ -33,7 +48,10 @@ int SetUpOutputFile(SDDS_DATASET *SDDSout, char *filename, long skew, long deriv
 int StartPage(SDDS_DATASET *SDDSout, FIELDS_ON_BOUNDARY *fob, long m );
 void FFT(COMPLEX *field, int32_t isign, int32_t npts);
 
-double evaluateGGEFit(FIELDS_ON_BOUNDARY *fob, char *normalFile, char *skewfile, double significance, unsigned long flags);
+void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment, short skew);
+void freeBGGExpData(BGGEXP_DATA *bggexpData);
+double evaluateGGEFit(FIELDS_ON_BOUNDARY *fob, BGGEXP_DATA *bggexpData,
+                      long derivatives, long multipoles, double significance, unsigned long flags);
 void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData);
 int evaluateGGEAndOutput(char *outputFile, long nrho, long nphi, char *normalFile, char *skewFile, FIELDS_ON_BOUNDARY *fob);
 int computeGGE(FIELDS_ON_BOUNDARY *fieldsOnBoundary, char *normalOutput, char *skewOutput, 
@@ -97,6 +115,7 @@ int main(int argc, char **argv)
   unsigned long autoTuneFlags = 0, dummyFlags;
   char *autoTuneModeString;
   char *BrhoName = "Brho", *zName = "z", *phiName = "phi", *rhoName = "rho";
+  BGGEXP_DATA bggexpData[2];
 
   /* Using this routine can prevent exceptions when large harmonics are used, but the data thus
      obtained is suspect.
@@ -239,6 +258,18 @@ int main(int argc, char **argv)
   bestDerivatives = maxDerivatives;
   bestMultipoles = maxMultipoles;
 
+  memset(&fieldsOnBoundary, 0, sizeof(fieldsOnBoundary));
+  if (ReadInputFile(&fieldsOnBoundary, inputFile, zName, phiName, BrhoName, rhoName))
+    SDDS_Bomb("unable to read input file");
+
+  if (computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, maxDerivatives, maxMultipoles, fundamental)) 
+    return 1;
+
+  bggexpData[0].haveData = bggexpData[1].haveData = 0;
+  readBGGExpData(&bggexpData[0], normalOutputFile, "CnmS", 0);
+  if (skewOutputFile)
+    readBGGExpData(&bggexpData[1], skewOutputFile, "CnmC", 1);
+
   if (autoTuneFlags&AUTOTUNE_ACTIVE) {
     if (autoTuneFlags&AUTOTUNE_EVALONLY)
       derivatives = maxDerivatives;
@@ -247,10 +278,6 @@ int main(int argc, char **argv)
   } else 
     /* no auto-tuning */
     derivatives = maxDerivatives;
-
-  memset(&fieldsOnBoundary, 0, sizeof(fieldsOnBoundary));
-  if (ReadInputFile(&fieldsOnBoundary, inputFile, zName, phiName, BrhoName, rhoName))
-    SDDS_Bomb("unable to read input file");
 
   for ( ; derivatives<=maxDerivatives; derivatives++) {
     multipoles = 1;
@@ -262,12 +289,10 @@ int main(int argc, char **argv)
       multipoles = maxMultipoles;
         
     for ( ; multipoles<=maxMultipoles; multipoles++) {
-      if (computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, derivatives, multipoles, fundamental)) 
-        return 1;
-
       if (autoTuneFlags&AUTOTUNE_ACTIVE) {
         double residual;
-        if ((residual = evaluateGGEFit(&fieldsOnBoundary, normalOutputFile, skewOutputFile,
+        if ((residual = evaluateGGEFit(&fieldsOnBoundary, &bggexpData[0], 
+                                       derivatives, multipoles,
                                        autoTuneSignificance, autoTuneFlags))<bestResidual) {
           bestResidual = residual;
           bestMultipoles = multipoles;
@@ -284,6 +309,9 @@ int main(int argc, char **argv)
       }
     }
   }
+
+  freeBGGExpData(&bggexpData[0]);
+  freeBGGExpData(&bggexpData[1]);
 
   if (autoTuneFlags&AUTOTUNE_ACTIVE && !(autoTuneFlags&AUTOTUNE_EVALONLY) && 
       computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, bestDerivatives, bestMultipoles, fundamental))
@@ -650,35 +678,23 @@ void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData)
   SDDS_Terminate(&SDDSin);
 }
 
-typedef struct {
-  short skew;          /* if non-zero, these are skew terms */
-  long nz;             /* number of z points */
-  double dz;           /* z spacing */
-  double xCenter, yCenter; /* center of the expansion in magnet coordinate system */
-  double xMax, yMax;   /* half-aperture of the field expansion in expansion coordinate system */
-  double zMin, zMax;   /* minimum and maximum z values */
-  long nm;             /* number of values of m (angular harmonic) */
-  long *m;             /* value of m */
-  long nGradients;   /* number of gradient functions per m */
-  double ***Cmn;       /* generalized gradient: Cnms[im][in][iz] */
-  double ***dCmn_dz;   /* z derivative of generalized gradient */
-} BGGEXP_DATA;
-
 void freeBGGExpData(BGGEXP_DATA *bggexpData) 
 {
   long im, id;
-  for (im=0; im<bggexpData->nm; im++) {
-    for (id=0; id<bggexpData->nGradients; id++)  {
-      if (bggexpData->Cmn[im][id])
-        free(bggexpData->Cmn[im][id]);
-      if (bggexpData->dCmn_dz[im][id])
-        free(bggexpData->dCmn_dz[im][id]);
+  if (bggexpData->haveData) {
+    for (im=0; im<bggexpData->nm; im++) {
+      for (id=0; id<bggexpData->nGradients; id++)  {
+        if (bggexpData->Cmn[im][id])
+          free(bggexpData->Cmn[im][id]);
+        if (bggexpData->dCmn_dz[im][id])
+          free(bggexpData->dCmn_dz[im][id]);
       bggexpData->Cmn[im][id] = bggexpData->dCmn_dz[im][id] = NULL;
+      }
     }
+    free(bggexpData->m);
+    bggexpData->m = NULL;
+    bggexpData->nm = bggexpData->nGradients = 0;
   }
-  free(bggexpData->m);
-  bggexpData->m = NULL;
-  bggexpData->nm = bggexpData->nGradients = 0;
 }
 
 #define BUFSIZE 1024
@@ -690,6 +706,8 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
   long im, ic, nc, readCode, nz;
   int32_t m;
   short xCenterPresent=0, yCenterPresent=0, xMaxPresent=0, yMaxPresent=0;
+
+  bggexpData->haveData = 1;
 
   if (!SDDS_InitializeInput(&SDDSin, filename)) {
     fprintf(stderr, "Unable to read file %s\n", filename);
@@ -832,8 +850,9 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
 double evaluateGGEFit
 (
  FIELDS_ON_BOUNDARY *fieldsOnBoundary,
- char *normalFile, 
- char *skewFile, 
+ BGGEXP_DATA bggexpData[2],
+ long derivatives, 
+ long multipoles,
  double significance, 
  unsigned long flags
  )
@@ -842,15 +861,7 @@ double evaluateGGEFit
   double r, phi, residual;
   double residualWorst, residualSum, residualSum2;
   long ns, ig, m, im;
-  BGGEXP_DATA bggexpData[2];
-  char haveData[2] = {1, 0};
   long iphi, iz;
-
-  readBGGExpData(&bggexpData[0], normalFile, "CnmS", 0);
-  if (skewFile) {
-    readBGGExpData(&bggexpData[1], skewFile, "CnmC", 1);
-    haveData[1] = 1;
-  }
 
   residualWorst = residualSum = residualSum2 = 0;
 
@@ -863,10 +874,10 @@ double evaluateGGEFit
       Br = Bphi = Bz = 0;
       for (ns=0; ns<2; ns++) {
         /* ns=0 => normal, ns=1 => skew */
-        if (!haveData[ns])
+        if (!bggexpData[ns].haveData)
           continue;
         
-        for (im=0; im<bggexpData[ns].nm; im++) {
+        for (im=0; im<bggexpData[ns].nm && im<multipoles; im++) {
           double mfact, term, sin_mphi, cos_mphi;
           m = bggexpData[ns].m[im];
           mfact = dfactorial(m);
@@ -874,7 +885,7 @@ double evaluateGGEFit
           cos_mphi = cos(m*phi);
           if (ns==0) {
             /* normal */
-            for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
+            for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
               term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
               Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
               term *= bggexpData[ns].Cmn[im][ig][iz];
@@ -885,13 +896,13 @@ double evaluateGGEFit
             /* skew */
             if (m==0) {
               Bz += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
-              for (ig=1; ig<bggexpData[ns].nGradients; ig++) {
+              for (ig=1; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
                 term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
                 Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
                 Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
               }
             } else {
-              for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
+              for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
                 term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
                 Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
                 term *= bggexpData[ns].Cmn[im][ig][iz];
@@ -910,10 +921,6 @@ double evaluateGGEFit
     }
   }
   
-  freeBGGExpData(&bggexpData[0]);
-  if (haveData[1])
-    freeBGGExpData(&bggexpData[1]);
-
   if (flags&AUTOTUNE_RMS) {
     residualWorst = sqrt(residualSum2/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi));
   } else if (flags&AUTOTUNE_MAV) {
@@ -930,15 +937,12 @@ int evaluateGGEAndOutput(char *outputFile, long nrho, long nphi,
   double z, r, phi;
   long ns, ig, m, im;
   BGGEXP_DATA bggexpData[2];
-  char haveData[2] = {1, 0};
   SDDS_DATASET SDDSout;
   long iphi, iz, irow, irho;
 
   readBGGExpData(&bggexpData[0], normalFile, "CnmS", 0);
-  if (skewFile) {
+  if (skewFile)
     readBGGExpData(&bggexpData[1], skewFile, "CnmC", 1);
-    haveData[1] = 1;
-  }
 
   if (nrho<0)
     nrho = 1;
@@ -974,7 +978,7 @@ int evaluateGGEAndOutput(char *outputFile, long nrho, long nphi,
         Br = Bphi = B[0] = B[1] = B[2] = 0;
         for (ns=0; ns<2; ns++) {
           /* ns=0 => normal, ns=1 => skew */
-          if (!haveData[ns])
+          if (!bggexpData[ns].haveData)
             continue;
 
           for (im=0; im<bggexpData[ns].nm; im++) {
@@ -1033,8 +1037,7 @@ int evaluateGGEAndOutput(char *outputFile, long nrho, long nphi,
   }
   
   freeBGGExpData(&bggexpData[0]);
-  if (haveData[1])
-    freeBGGExpData(&bggexpData[1]);
+  freeBGGExpData(&bggexpData[1]);
   return 0;
 }
 
