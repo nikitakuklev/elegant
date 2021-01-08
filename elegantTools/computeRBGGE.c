@@ -328,7 +328,6 @@ int main(int argc, char **argv)
       return 1;
     readBGGExpData(&bggexpData[0], normalOutputFile, "CnmS", 0);
     freeFieldsOnPlanes(&fieldsOnPlanes);
-    memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
 
     if (skewOutputFile) {
       /* Have to read the data again because it is modified by computeGGderiv and computeGGcos */
@@ -337,12 +336,10 @@ int main(int argc, char **argv)
         return 1;
       readBGGExpData(&bggexpData[1], skewOutputFile, "CnmC", 1);
       freeFieldsOnPlanes(&fieldsOnPlanes);
-      memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
     }
 
     /* Have to read the data again because it is modified by computeGGderiv and computeGGcos */
     freeFieldsOnPlanes(&fieldsOnPlanes);
-    memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
     if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1))
       return 1;
 
@@ -403,8 +400,12 @@ int main(int argc, char **argv)
       }
     }
 
-    if (evaluationOutput)
+    if (evaluationOutput) {
+      if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 0))
+        return 1;
       evaluateGGEAndOutput(evaluationOutput, normalOutputFile, skewOutputFile, &fieldsOnPlanes);
+      freeFieldsOnPlanes(&fieldsOnPlanes);
+    }
 
     return (0);
 }
