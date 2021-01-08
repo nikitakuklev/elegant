@@ -530,7 +530,10 @@ int computeGGE
   c1 = malloc(Nz*sizeof(*c1));
   offset = 1;
   for (m=0; m<multipoles; m++) {
-    iharm = fundamental*(2*m+1);
+    if (fundamental)
+      iharm = fundamental*(2*m+1);
+    else 
+      iharm = m + 1;
     if (normalOutput) {
       offset = SDDS_GetColumnIndex(&SDDSnormal, "CnmS0");
       StartPage(&SDDSnormal, fieldsOnBoundary, iharm);
