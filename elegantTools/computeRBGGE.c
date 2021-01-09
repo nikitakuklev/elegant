@@ -525,7 +525,7 @@ int ReadInputFiles
     }
   cvalues[1] = NULL;
   if (needBz) {
-    cvalues[1] = SDDS_GetColumnInDoubles(&SDDSInput, "By");
+    cvalues[1] = SDDS_GetColumnInDoubles(&SDDSInput, "Bz");
     if (cvalues[1] == NULL)
       {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
