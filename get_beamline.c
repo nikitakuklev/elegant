@@ -1135,6 +1135,8 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
           strcat(s, t);
         }
         for (j=0; j<entity_description[eptr->type].n_params; j++) {
+          if (parameter[j].flags&PARAM_IS_ALIAS)
+            continue;
           switch (parameter[j].type) {
           case IS_DOUBLE:
             dvalue = *(double*)(eptr->p_elem+parameter[j].offset);
@@ -1188,11 +1190,11 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         }
         if (s[j=strlen(s)-1]==',')
           s[j] = 0;
-        print_with_continuation(fp, s, 79);
+        print_with_continuation(fp, s, 139);
         eptr = eptr->succ;
       } else {
         lptr = (LINE_LIST*)(object->ptr);
-        print_with_continuation(fp, lptr->definition, 79);
+        print_with_continuation(fp, lptr->definition, 139);
       }
     } while ((object=object->next));
     
@@ -1215,6 +1217,8 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
             strcat(s, t);
           }
           for (j=0; j<entity_description[eptr->type].n_params; j++) {
+            if (parameter[j].flags&PARAM_IS_ALIAS)
+              continue;
             switch (parameter[j].type) {
             case IS_DOUBLE:
               dvalue = *(double*)(eptr->p_elem+parameter[j].offset);
@@ -1268,7 +1272,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
           }
           if (s[j=strlen(s)-1]==',')
             s[j] = 0;
-          print_with_continuation(fp, s, 79);
+          print_with_continuation(fp, s, 139);
         }
         eptr = eptr->succ;
       }
@@ -1292,7 +1296,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         if (s[j=strlen(s)-1]==',')
           s[j] = 0;
         strcat(s, ")");
-        print_with_continuation(fp, s, 79);
+        print_with_continuation(fp, s, 139);
         sprintf(s, "L%04ld: LINE = (", nline);
       }
     }
@@ -1301,7 +1305,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       if (s[j=strlen(s)-1]==',')
         s[j] = 0;
       strcat(s, ")");
-      print_with_continuation(fp, s, 79);
+      print_with_continuation(fp, s, 139);
     }
 
     sprintf(s, "%s: LINE = (",  beamline->name);
@@ -1312,7 +1316,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if (s[j=strlen(s)-1]==',')
       s[j] = 0;
     strcat(s, ")");
-    print_with_continuation(fp, s, 79);
+    print_with_continuation(fp, s, 139);
   }
   
   if (beamline && beamline->name)
@@ -1814,7 +1818,7 @@ void print_beamlines(FILE *fp)
   do {
     if (object->isLine) {
         lptr = (LINE_LIST*)(object->ptr);
-        print_with_continuation(fp, lptr->definition, 79);
+        print_with_continuation(fp, lptr->definition, 139);
       }
     } while ((object=object->next));
 }

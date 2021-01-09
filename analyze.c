@@ -1509,8 +1509,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   else if (eptr->type==T_WIGGLER)
     nSlices *= (((WIGGLER*)eptr->p_elem)->poles/2);
   else if (eptr->type==T_CCBEND) {
-    if (nSlices > ((CCBEND*)eptr->p_elem)->n_kicks)
-      nSlices = ((CCBEND*)eptr->p_elem)->n_kicks;
+    if (nSlices > ((CCBEND*)eptr->p_elem)->nSlices)
+      nSlices = ((CCBEND*)eptr->p_elem)->nSlices;
   }
   z = 0;
   
@@ -1531,7 +1531,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       length = (csbend.length /= nSlices);
       csbend.xKick /= nSlices;
       csbend.yKick /= nSlices;
-      csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
+      csbend.nSlices = fabs(csbend.angle/0.005) + 1;
       csbend.refTrajectoryChangeSet = 0;
       csbend.refLength = 0;
       csbend.refAngle = 0;
@@ -1548,7 +1548,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       if (slice==0) {
         memcpy(&ccbend, (CCBEND*)eptr->p_elem, sizeof(CCBEND));
         ccbend.isr = 0;
-        ccbend.n_kicks = nSlices;
+        ccbend.nSlices = nSlices;
         elem.type = T_CCBEND;
         elem.p_elem = (void*)&ccbend;
       }
@@ -1599,7 +1599,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
       csbend.k1 = sbend->k1;
       csbend.k2 = sbend->k2;
-      csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
+      csbend.nSlices = fabs(csbend.angle/0.005) + 1;
       csbend.integration_order = 4;
       break;
     case T_CSRCSBEND:
@@ -1648,7 +1648,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
       csbend.k1 = csrcsbend->k1;
       csbend.k2 = csrcsbend->k2;
-      csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
+      csbend.nSlices = fabs(csbend.angle/0.005) + 1;
       csbend.integration_order = 4;
       break;
     case T_KQUAD:

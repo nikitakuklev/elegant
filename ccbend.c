@@ -74,7 +74,7 @@ long track_through_ccbend(
   double KnL[9];
   long iTerm, nTerms;
   double dx, dy, dz; /* offsets of the multipole center */
-  long n_kicks, integ_order;
+  long nSlices, integ_order;
   long i_part, i_top;
   double *coef;
   double fse, etilt, tilt, rad_coef, isr_coef, dzLoss=0;
@@ -210,7 +210,7 @@ long track_through_ccbend(
 
   rad_coef = isr_coef = 0;
 
-  n_kicks = ccbend->n_kicks;
+  nSlices = ccbend->nSlices;
   arcLength = ccbend->length;
   if (ccbend->optimized!=0)
     fse = ccbend->fse + ccbend->fseOffset;
@@ -351,8 +351,8 @@ long track_through_ccbend(
   if (multData && !multData->initialized)
     multData = NULL;
 
-  if (n_kicks<=0)
-    bombTracking("n_kicks<=0 in track_ccbend()");
+  if (nSlices<=0)
+    bombTracking("nSlices<=0 in track_ccbend()");
   if (integ_order!=2 && integ_order!=4 && integ_order!=6) 
     bombTracking("multipole integration_order must be 2, 4, or 6");
 
@@ -417,7 +417,7 @@ long track_through_ccbend(
   edgeMultActive[0] = edgeMultActive[1] = 0;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!integrate_kick_KnL(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL, nTerms,
-                             integ_order, n_kicks, iPart, iFinalSlice, length, multData, edge1MultData, edge2MultData, 
+                             integ_order, nSlices, iPart, iFinalSlice, length, multData, edge1MultData, edge2MultData, 
                              &apertureData, &dzLoss, sigmaDelta2)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
@@ -433,13 +433,13 @@ long track_through_ccbend(
       printf("Edge multipoles active: %ld, %ld\n", edgeMultActive[0], edgeMultActive[1]);
     */
   }
-  multipoleKicksDone += (i_top+1)*n_kicks;
+  multipoleKicksDone += (i_top+1)*nSlices;
   if (multData)
-    multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
+    multipoleKicksDone += (i_top+1)*nSlices*multData->orders;
   if (sigmaDelta2)
     *sigmaDelta2 /= i_top+1;
 
-  if ((iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) {
+  if ((iPart<0 || iPart==(ccbend->nSlices-1)) && iFinalSlice<=0) {
     /*
     printf("output before adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
            particle[0][0], particle[0][1], particle[0][2],
@@ -507,7 +507,7 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
                         double Po, double rad_coef, double isr_coef, /* radiation effects */
                         double K0L, double K1L, double K2L, /* strength parameters for full magnet */
                         long integration_order, /* 2 or 4 */
-                        long n_parts, /* N_KICKS */
+                        long n_parts, /* NSLICES */
                         long iPart,   /* If <0, integrate the full magnet. If >=0, integrate just a single part and return.
                                        * This is needed to allow propagation of the radiation matrix. */
                         long iFinalSlice, /* If >0, integrate to the indicated slice. Needed to allow extracting the
@@ -779,7 +779,7 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
                        double *KnLFull, 
                        long nTerms,
                        long integration_order, /* 2, 4, or 6 */
-                       long n_parts, /* N_KICKS */
+                       long n_parts, /* NSLICES */
                        long iPart,   /* If <0, integrate the full magnet. If >=0, integrate just a single part and return.
                                       * This is needed to allow propagation of the radiation matrix. */
                        long iFinalSlice, /* If >0, integrate to the indicated slice. Needed to allow extracting the
@@ -1339,8 +1339,8 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
   etap1 = etap0;
   alpha1 = alpha0;
   H1 = (eta1*eta1 + sqr(beta1*etap1 + alpha1*eta1))/beta1;
-  ds = ccbend->length/ccbend->n_kicks; /* not really right... */
-  for (iSlice=1; iSlice<=ccbend->n_kicks; iSlice++) {
+  ds = ccbend->length/ccbend->nSlices; /* not really right... */
+  for (iSlice=1; iSlice<=ccbend->nSlices; iSlice++) {
     /* Determine matrix from start of element to exit of slice iSlice */
     M = determinePartialCcbendLinearMatrix(ccbend, startingCoord, pCentral, iSlice);
     C = M->R[0][0];

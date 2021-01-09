@@ -943,6 +943,8 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline, long s
       value = 0;
       string_value = NULL;
       doSave = 1;
+      if (parameter[iParam].flags&PARAM_IS_ALIAS)
+        continue;
       switch (parameter[iParam].type) {
       case IS_DOUBLE: 
         value = *(double*)(eptr->p_elem+parameter[iParam].offset);

@@ -1364,8 +1364,8 @@ VMATRIX *compute_matrix(
         kquad = (KQUAD*)elem->p_elem;
         if (kquad->bore)
             kquad->k1 = kquad->B/kquad->bore*(particleCharge/(particleMass*c_mks*elem->Pref_input));
-        if (kquad->n_kicks<1)
-            bombElegant("n_kicks must by > 0 for KQUAD element", NULL);
+        if (kquad->nSlices<1)
+            bombElegant("n_slices must be > 0 for KQUAD element", NULL);
         readErrorMultipoleData(&(kquad->systematicMultipoleData),
                                   kquad->systematic_multipoles, 0);
         readErrorMultipoleData(&(kquad->randomMultipoleData),
@@ -1392,8 +1392,8 @@ VMATRIX *compute_matrix(
         ksext = (KSEXT*)elem->p_elem;
         if (ksext->bore)
             ksext->k2 = 2*ksext->B/sqr(ksext->bore)*(particleCharge/(particleMass*c_mks*elem->Pref_input));
-        if (ksext->n_kicks<1)
-            bombElegant("n_kicks must by > 0 for KSEXT element", NULL);
+        if (ksext->nSlices<1)
+            bombElegant("n_slices must be > 0 for KSEXT element", NULL);
         elem->matrix = sextupole_matrix(ksext->k2, ksext->k1, ksext->j1, ksext->length, 
                                         (run->default_order?run->default_order:2), ksext->tilt,
                                         ksext->fse, 
@@ -1410,8 +1410,8 @@ VMATRIX *compute_matrix(
         koct = (KOCT*)elem->p_elem;
         if (koct->bore)
             koct->k3 = 6*koct->B/ipow(koct->bore,3)*(particleCharge/(particleMass*c_mks*elem->Pref_input));
-        if (koct->n_kicks<1)
-            bombElegant("n_kicks must by > 0 for KOCT element", NULL);
+        if (koct->nSlices<1)
+            bombElegant("n_slices must be > 0 for KOCT element", NULL);
         elem->matrix = octupole_matrix(koct->k3, koct->length, 
                                         (run->default_order?run->default_order:2), koct->tilt,
                                         koct->fse);
@@ -1424,8 +1424,8 @@ VMATRIX *compute_matrix(
         break;
       case T_KQUSE:
         kquse = (KQUSE*)elem->p_elem;
-        if (kquse->n_kicks<1)
-            bombElegant("n_kicks must by > 0 for KQUSE element", NULL);
+        if (kquse->nSlices<1)
+            bombElegant("n_slices must be > 0 for KQUSE element", NULL);
         elem->matrix = quse_matrix(kquse->k1, kquse->k2, kquse->length, 
                                       (run->default_order?run->default_order:1), kquse->tilt,
                                       kquse->fse1, kquse->fse2);
@@ -1475,8 +1475,8 @@ VMATRIX *compute_matrix(
         break;
       case T_CSBEND:
         csbend = (CSBEND*)elem->p_elem;
-        if (csbend->n_kicks<1)
-            bombElegant("n_kicks must be > 0 for CSBEND element", NULL);
+        if (csbend->nSlices<1)
+            bombElegant("n_slices must be > 0 for CSBEND element", NULL);
         csbend->edgeFlags = determine_bend_flags(elem, csbend->edge_effects[csbend->e1Index], csbend->edge_effects[csbend->e2Index]);
         csbend_update_fse_adjustment(csbend);
         if (csbend->length==0 && (csbend->use_bn || csbend->xReference)) 
@@ -1535,14 +1535,14 @@ VMATRIX *compute_matrix(
 	printf("optimized = %hd\n", ccbend->optimized);
 	fflush(stdout);
 #endif
-        if (ccbend->n_kicks<1)
-            bombElegant("n_kicks must be > 0 for CCBEND element", NULL);
+        if (ccbend->nSlices<1)
+            bombElegant("N_SLICES must be > 0 for CCBEND element", NULL);
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
         break;
       case T_CSRCSBEND:
         csrcsbend = (CSRCSBEND*)elem->p_elem;
-        if (csrcsbend->n_kicks<1)
-            bombElegant("n_kicks must be > 0 for CSRCSBEND element", NULL);
+        if (csrcsbend->nSlices<1)
+            bombElegant("N_SLICES must be > 0 for CSRCSBEND element", NULL);
         csrcsbend->edgeFlags = determine_bend_flags(elem, csrcsbend->edge_effects[csrcsbend->e1Index], csrcsbend->edge_effects[csrcsbend->e2Index]);
         elem->matrix = 
             bend_matrix(csrcsbend->length, csrcsbend->angle, csrcsbend->e[csrcsbend->e1Index], csrcsbend->e[csrcsbend->e2Index], 

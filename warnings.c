@@ -31,23 +31,6 @@ void printWarningWithContext(char *context1, char  *context2, char *text,  char 
 {
   long i;
   char buffer[32768];
-  if (!fpWarn)
-    fpWarn = stdout;
-  if (context1 && strlen(context1)) {
-    if (context2 && strlen(context2))
-      /* context1 is typically the element type name, context2 is typically the element name */
-      snprintf(buffer, 32768, "%s %s: %s", context1, context2, text);
-    else
-      /* context1 is typically the command name or subroutine name */
-      snprintf(buffer, 32768, "%s: %s", context1, text);
-  }
-  else
-    strncpy(buffer, text, 32768);
-  if (detail && strlen(detail))
-    fprintf(fpWarn, "*** Warning: %s---%s\n", buffer, detail);
-  else
-    fprintf(fpWarn, "*** Warning: %s.\n", buffer);
-  fflush(stdout);
   for (i=0; i<warnings; i++) 
     if (strcmp(warningText[i], buffer)==0)
       break;
@@ -61,6 +44,28 @@ void printWarningWithContext(char *context1, char  *context2, char *text,  char 
     warnings++;
   } else 
     warningCount[i] += 1;
+
+  if (!fpWarn)
+    fpWarn = stdout;
+  if (context1 && strlen(context1)) {
+    if (context2 && strlen(context2))
+      /* context1 is typically the element type name, context2 is typically the element name */
+      snprintf(buffer, 32768, "%s %s: %s", context1, context2, text);
+    else
+      /* context1 is typically the command name or subroutine name */
+      snprintf(buffer, 32768, "%s: %s", context1, text);
+  }
+  else
+    strncpy(buffer, text, 32768);
+  if (warningCount[i]<=warningCountLimit) {
+    if (detail && strlen(detail))
+      fprintf(fpWarn, "*** Warning: %s---%s\n", buffer, detail);
+    else
+      fprintf(fpWarn, "*** Warning: %s\n", buffer);
+    if (warningCount[i]==warningCountLimit)
+      fprintf(fpWarn, "Further warnings of this type will be suppressed.\n");
+    fflush(fpWarn);
+  }
 }
 
 void summarizeWarnings()

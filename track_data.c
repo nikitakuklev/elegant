@@ -39,6 +39,7 @@ long parallelTrackingBasedMatrices = 1;
 double trackingMatrixStepFactor = 1;
 long trackingMatrixPoints = 9;
 double trackingMatrixStepSize[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
+long warningCountLimit = 10;
 #if USE_MPI
 short mpiAbort = 0;
 #endif
@@ -363,9 +364,10 @@ PARAMETER mult_param[N_MULT_PARAMS] = {
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mult_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mult_example.factor), NULL, 1.0, 0, "factor by which to multiply strength"},
     {"ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&mult_example.order), NULL, 0.0, 1, "multipole order"},
-    {"N_KICKS", "", IS_SHORT, 0, (long)((char *)&mult_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&mult_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"EXPAND_HAMILTONIAN", "", IS_SHORT, 0, (long)((char *)&mult_example.expandHamiltonian), NULL, 0.0, 0, "If 1, Hamiltonian is expanded to leading order."},
+    {"N_SLICES", "", IS_LONG, 0, (long)((char *)&mult_example.nSlices), NULL, 0.0, DEFAULT_N_SLICES, "Number of slices (full integrator steps)."},
+    {"N_KICKS", "", IS_LONG, PARAM_IS_ALIAS|PARAM_IS_DEPRECATED, (long)((char *)&mult_example.nSlices), NULL, 0.0, DEFAULT_N_SLICES, "Deprecated. Use N_SLICES."},
     };
 
 FMULT fmult_example;
@@ -377,7 +379,8 @@ PARAMETER fmult_param[N_FMULT_PARAMS] = {
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.n_kicks), NULL, 0.0, 1, "number of kicks"},
+    {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX|PARAM_IS_DEPRECATED, (long)((char *)&fmult_example.n_kicks), NULL, 0.0, 0, "Deprecated. Use N_SLICES."},
+    {"N_SLICES", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.nSlices), NULL, 0.0, 1, "Number of slices (full integrator steps)."},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&fmult_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&fmult_example.filename), NULL, 0.0, 0, "name of file containing multipole data"},
     {"SQRT_ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
@@ -926,7 +929,7 @@ PARAMETER scraper_param[N_SCRAPER_PARAMS]={
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.dy), NULL, 0.0, 0, "misalignment"},
     {"INSERT_FROM", "", IS_STRING, 0, (long)((char *)&scraper_example.insert_from), NULL, 0.0, 0, "direction from which inserted (+x, -x, x, +y, -y, y)"},
-    {"DIRECTION", "", IS_LONG, 0, (long)((char *)&scraper_example.oldDirection), NULL, 0.0, -1, "Deprecated. use INSERT_FROM."},
+    {"DIRECTION", "", IS_LONG, PARAM_IS_DEPRECATED, (long)((char *)&scraper_example.oldDirection), NULL, 0.0, -1, "Deprecated. use INSERT_FROM."},
     };
 
 CENTER center_example;
@@ -990,7 +993,8 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"BORE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.bore), NULL, 0.0, 0, "bore radius"},
     {"B", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.B), NULL, 0.0, 0, "field at pole tip (used if bore nonzero)"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ksext_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks (rounded up to next multipole of 4 if INTEGRATION_ORDER=4)"},
+    {"N_KICKS", "", IS_LONG, PARAM_IS_DEPRECATED, (long)((char *)&ksext_example.n_kicks), NULL, 0.0, 0, "number of kicks (rounded up to next multipole of 4 if INTEGRATION_ORDER=4. Deprecated. Use N_SLICES.)"},
+    {"N_SLICES", "", IS_LONG, 0, (long)((char *)&ksext_example.nSlices), NULL, 0.0, 1, "Number of slices (full integrator steps)."},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.dz), NULL, 0.0, 0, "misalignment"},
@@ -1013,7 +1017,7 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"MIN_SKEW_ORDER", "", IS_SHORT, 0, (long)((char *)&ksext_example.minMultipoleOrder[1]), NULL, 0.0, -1, "If nonnegative, minimum order of systematic and random skew multipoles to use from data files."},
     {"MAX_NORMAL_ORDER", "", IS_SHORT, 0, (long)((char *)&ksext_example.maxMultipoleOrder[0]), NULL, 0.0, -1, "If nonnegative, maximum order of systematic and random normal multipoles to use from data files."},
     {"MAX_SKEW_ORDER", "", IS_SHORT, 0, (long)((char *)&ksext_example.maxMultipoleOrder[1]), NULL, 0.0, -1, "If nonnegative, maximum order of systematic and random skew multipoles to use from data files."},
-    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&ksext_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&ksext_example.integration_order), NULL, 0.0, 4, "integration order (2, 4, or 6)"},
     {"SQRT_ORDER", "", IS_SHORT, 0, (long)((char *)&ksext_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     {"ISR", "", IS_SHORT, 0, (long)((char *)&ksext_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&ksext_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
@@ -1032,10 +1036,11 @@ PARAMETER koct_param[N_KOCT_PARAMS] = {
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&koct_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks (rounded up to next multipole of 4 if INTEGRATION_ORDER=4)"},
+    {"N_KICKS", "", IS_LONG, PARAM_IS_DEPRECATED, (long)((char *)&koct_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks (rounded up to next multipole of 4 if INTEGRATION_ORDER=4). Deprecated. Use N_SLICES."},
+    {"N_SLICES", "", IS_LONG, 0, (long)((char *)&koct_example.nSlices), NULL, 0.0, DEFAULT_N_SLICES, "Number of slices (full integrator steps)."},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&koct_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&koct_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
-    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&koct_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&koct_example.integration_order), NULL, 0.0, 4, "integration order (2, 4, or 6)"},
     {"SQRT_ORDER", "", IS_SHORT, 0, (long)((char *)&koct_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&koct_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"ISR", "", IS_SHORT, 0, (long)((char *)&koct_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
@@ -1087,7 +1092,8 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks (rounded up to next multipole of 4 if INTEGRATION_ORDER=4)"},
+    {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX|PARAM_IS_DEPRECATED, (long)((char *)&kquad_example.n_kicks), NULL, 0.0, 0, "number of kicks (rounded up to next multipole of 4 if INTEGRATION_ORDER=4). Deprecated. Use N_SLICES."},
+    {"N_SLICES", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.nSlices), NULL, 0.0, 1, "Number of slices (full integrator steps)."},
     {"HKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&kquad_example.xkick), NULL, 0.0, 0, "horizontal correction kick"},
     {"VKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&kquad_example.ykick), NULL, 0.0, 0, "vertical correction kick"},
     {"HCALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.xKickCalibration), NULL, 1.0, 0, "calibration factor for horizontal correction kick"},
@@ -1106,7 +1112,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"MIN_SKEW_ORDER", "", IS_SHORT, 0, (long)((char *)&kquad_example.minMultipoleOrder[1]), NULL, 0.0, -1, "If nonnegative, minimum order of systematic and random skew multipoles to use from data files."},
     {"MAX_NORMAL_ORDER", "", IS_SHORT, 0, (long)((char *)&kquad_example.maxMultipoleOrder[0]), NULL, 0.0, -1, "If nonnegative, maximum order of systematic and random normal multipoles to use from data files."},
     {"MAX_SKEW_ORDER", "", IS_SHORT, 0, (long)((char *)&kquad_example.maxMultipoleOrder[1]), NULL, 0.0, -1, "If nonnegative, maximum order of systematic and random skew multipoles to use from data files."},
-    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&kquad_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&kquad_example.integration_order), NULL, 0.0, 4, "integration order (2, 4, or 6)"},
     {"SQRT_ORDER", "", IS_SHORT, 0, (long)((char *)&kquad_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     {"ISR", "", IS_SHORT, 0, (long)((char *)&kquad_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&kquad_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
@@ -1773,14 +1779,15 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"FSE_DIPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.fseDipole), NULL, 0.0, 0, "fractional strength error of dipole component"},
     {"FSE_QUADRUPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.fseQuadrupole), NULL, 0.0, 0, "fractional strength error of quadrupole component"},
     {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"N_SLICES", "", IS_LONG, 0, (long)((char *)&csbend_example.nSlices), NULL, 0.0, DEFAULT_N_SLICES, "Number of slices (full integrator steps)."},
+    {"N_KICKS", "", IS_LONG, PARAM_IS_ALIAS|PARAM_IS_DEPRECATED, (long)((char *)&csbend_example.nSlices), NULL, 0.0, DEFAULT_N_SLICES, "number of kicks. Deprecated. Use N_SLICES."},
     {"ETILT_SIGN", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.etiltSign), NULL, 0.0, 1, "Sign of ETILT relative to TILT. -1 is the old convention prior to 2020.5"},
     {"NONLINEAR", "", IS_SHORT, 0, (long)((char *)&csbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&csbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"EDGE1_EFFECTS", "", IS_SHORT, 0, (long)((char *)&csbend_example.edge_effects[0]), NULL, 0.0, 1, "If nonzero, determines the method used to include entrance edge effects."},
     {"EDGE2_EFFECTS", "", IS_SHORT, 0, (long)((char *)&csbend_example.edge_effects[1]), NULL, 0.0, 1, "If nonzero, determines the method used to include exit edge effects."},
     {"EDGE_ORDER", "", IS_SHORT, 0, (long)((char *)&csbend_example.edge_order), NULL, 0.0, 1, "order to which to include edge effects"},
-    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&csbend_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&csbend_example.integration_order), NULL, 0.0, 4, "integration order (2, 4, or 6)"},
     {"EXPAND_HAMILTONIAN", "", IS_SHORT, 0, (long)((char *)&csbend_example.expandHamiltonian), NULL, 0.0, 0, "If 1, Hamiltonian is expanded to leading order."},
     {"EDGE1_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge_kick_limit[0]), NULL, -1., 0, "maximum kick entrance edge can deliver"},
     {"EDGE2_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge_kick_limit[1]), NULL, -1., 0, "maximum kick exit edge can deliver"},
@@ -1850,7 +1857,8 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"N_SLICES", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.nSlices), NULL, 0.0, DEFAULT_N_SLICES, "Number of slices (full integrator steps)."},
+    {"N_KICKS", "", IS_LONG, PARAM_IS_ALIAS|PARAM_IS_DEPRECATED, (long)((char *)&csrcsbend_example.nSlices), NULL, 0.0, DEFAULT_N_SLICES, "number of kicks. Deprecated. Use N_SLICES"},
     {"ETILT_SIGN", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.etiltSign), NULL, 0.0, 1, "Sign of ETILT relative to TILT. -1 is the old convention prior to 2020.5"},
     {"NONLINEAR", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
     {"LINEARIZE", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.useMatrix), NULL, 0.0, 0, "use linear matrix instead of symplectic integrator?"},
@@ -1858,7 +1866,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"EDGE1_EFFECTS", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.edge_effects[0]), NULL, 0.0, 1, "include entrance edge effects?"},
     {"EDGE2_EFFECTS", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.edge_effects[1]), NULL, 0.0, 1, "include exit edge effects?"},
     {"EDGE_ORDER", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.edge_order), NULL, 0.0, 1, "order to which to include edge effects"},
-    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.integration_order), NULL, 0.0, 4, "integration order (2, 4, or 6)"},
     {"BINS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.bins), NULL, 0.0, 0, "number of bins for CSR wake"},
     {"BIN_ONCE", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.binOnce), NULL, 0.0, 0, "bin only at the start of the dipole?"},
     {"BIN_RANGE_FACTOR", "", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.binRangeFactor), NULL, 1.2, 0, "Factor by which to increase the range of histogram compared to total bunch length.  Large value eliminates binning problems in CSRDRIFTs."},
@@ -2548,7 +2556,7 @@ PARAMETER cwiggler_param[N_CWIGGLER_PARAMS] = {
   {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.tilt), NULL, 0.0, 0, "Rotation about beam axis."},
   {"PERIODS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.periods), NULL, 0.0, 0, "Number of wiggler periods."},
   {"STEPS_PER_PERIOD", "", IS_LONG, 0, (long)((char *)&cwiggler_example.stepsPerPeriod), NULL, 0.0, 10, "Integration steps per period."},
-  {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.integrationOrder), NULL, 0.0, 4, "Integration order (2 or 4)."},
+  {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.integrationOrder), NULL, 0.0, 4, "Integration order (2, 4, or 6)."},
   {"BY_FILE", " ", IS_STRING, 0, (long)((char *)&cwiggler_example.ByFile), NULL, 0.0, 0, "Name of SDDS file with By harmonic data."},
   {"BX_FILE", " ", IS_STRING, 0, (long)((char *)&cwiggler_example.BxFile), NULL, 0.0, 0, "Name of SDDS file with Bx harmonic data."},
   {"BY_SPLIT_POLE", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.BySplitPole), NULL, 0.0, 0, "Use \"split-pole\" expansion for By?"},
@@ -3094,8 +3102,9 @@ PARAMETER kquse_param[N_KQUSE_PARAMS] = {
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.fse1), NULL, 0.0, 0, "fractional strength error for K1"},
     {"FSE2", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.fse2), NULL, 0.0, 0, "fractional strength error for K2"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&kquse_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
-    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&kquse_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"N_KICKS", "", IS_LONG, PARAM_IS_DEPRECATED, (long)((char *)&kquse_example.n_kicks), NULL, 0.0, 0, "number of kicks. Deprecated. Use N_SLICES."},
+    {"N_SLICES", "", IS_LONG, 0, (long)((char *)&kquse_example.nSlices), NULL, 0.0, 1, "Number of slices (full integrator steps)."},
+    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&kquse_example.integration_order), NULL, 0.0, 4, "integration order (2, 4, or 6)"},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&kquse_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"ISR", "", IS_SHORT, 0, (long)((char *)&kquse_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&kquse_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
@@ -3420,8 +3429,9 @@ PARAMETER ccbend_param[N_CCBEND_PARAMS] = {
     {"FSE_DIPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.fseDipole), NULL, 0.0, 0, "fractional strength error of dipole component"},
     {"FSE_QUADRUPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.fseQuadrupole), NULL, 0.0, 0, "fractional strength error of quadrupole component"},
     {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ccbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
-    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&ccbend_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"N_SLICES", "", IS_LONG, 0, (long)((char *)&ccbend_example.nSlices), NULL, 0.0, DEFAULT_N_SLICES, "Number of slices (full integrator steps)."},
+    {"N_KICKS", "", IS_LONG, PARAM_IS_ALIAS|PARAM_IS_DEPRECATED, (long)((char *)&ccbend_example.nSlices), NULL, 0.0, DEFAULT_N_SLICES, "number of kicks. Deprecated. Use N_SLICES."},
+    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&ccbend_example.integration_order), NULL, 0.0, 4, "integration order (2, 4, or 6)"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ccbend_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
     {"EDGE_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ccbend_example.edge_multipoles), NULL, 0.0, 0, "input file for systematic entrance/exit edge multipoles"},
     {"EDGE1_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ccbend_example.edge1_multipoles), NULL, 0.0, 0, "input file for systematic entrance edge multipoles. Overrides EDGE_MULTIPOLES."},
@@ -3719,6 +3729,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
 void compute_offsets()
 {
   long i, j, typeSize=0;
+  PARAMETER *parameter;
   for (i=0; i<N_TYPES; i++) {
     for (j=entity_description[i].n_params-1; j>=0; j--)
       entity_description[i].parameter[j].offset -= entity_description[i].parameter[0].offset;
@@ -3757,21 +3768,32 @@ void compute_offsets()
       fflush(stdout);
       exitElegant(1);
     }
+    parameter = entity_description[i].parameter;
     for (j=1; j<entity_description[i].n_params; j++) {
       /* difference of offsets must be positive and less than size of double */
-      if ((difference=(entity_description[i].parameter[j].offset-entity_description[i].parameter[j-1].offset))<=0) {
-        printf("error: bad parameter offset (retrograde) for element type %s, parameter %s\n",
-               entity_name[i], entity_description[i].parameter[j].name?entity_description[i].parameter[j].name:"NULL");
+      if ((difference=parameter[j].offset-parameter[j-1].offset)<=0 && !(parameter[j].flags&PARAM_IS_ALIAS)) {
+        printf("error: bad parameter offset (retrograde) for element type %s, parameter %ld (%s)\n",
+               entity_name[i], i, parameter[j].name?parameter[j].name:"NULL");
         fflush(stdout);
         exitElegant(1);
       }
-      if (difference>sizeof(double) && i!=T_TWISSELEMENT && i!=T_EMATRIX) {
-        printf("error: bad parameter offset (too large %ld) for element type %s, parameter %s\n",
-               difference, entity_name[i], entity_description[i].parameter[j].name?entity_description[i].parameter[j].name:"NULL");
-        fflush(stdout);
-        exitElegant(1);
+      if (parameter[j].flags&PARAM_IS_ALIAS) {
+        if ( difference!=0) {
+          printf("error: bad parameter offset (should be zero) for element type %s, parameter %ld (%s)\n",
+                 entity_name[i], i, parameter[j].name?parameter[j].name:"NULL");
+          fflush(stdout);
+          exitElegant(1);
+        }
+      } else {
+        if (difference>sizeof(double) && i!=T_TWISSELEMENT && i!=T_EMATRIX) {
+          printf("error: bad parameter offset (too large) for element type %s, parameter %ld (%s)\n",
+                 entity_name[i], i, parameter[j].name?parameter[j].name:"NULL");
+          fflush(stdout);
+          exitElegant(1);
+        }
       }
     }
+
     entity_description[i].flags |= OFFSETS_CHECKED;
   }
 }

@@ -64,7 +64,7 @@ void convert_to_EmmaMatlab(char *outputfile, LINE_LIST *beamline, char *header_f
         E2 = csbend->e[csbend->e2Index];
         length = csbend->length;
         k1 = csbend->k1;
-        slices = csbend->n_kicks;
+        slices = csbend->nSlices;
         break;
       case T_CSRCSBEND:
         csrbend = (CSRCSBEND*)eptr->p_elem;
@@ -73,7 +73,7 @@ void convert_to_EmmaMatlab(char *outputfile, LINE_LIST *beamline, char *header_f
         E2 = csrbend->e[csrbend->e2Index];
         length = csrbend->length;
         k1 = csrbend->k1;
-        slices = csrbend->n_kicks;
+        slices = csrbend->nSlices;
         break;
       case T_DRIF:
         drift = (DRIFT*)eptr->p_elem;

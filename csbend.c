@@ -650,7 +650,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     bombElegant("CSBEND has EDGE_ORDER>1 and EDGE[12]_EFFECTS==2, but HGAP=0. This gives undefined results.", NULL);
   
   if (csbend->referenceCorrection) {
-    if (csbend->refTrajectoryChangeSet==0 || csbend->refLength!=csbend->length || csbend->refAngle!=csbend->angle || csbend->refKicks!=csbend->n_kicks) {
+    if (csbend->refTrajectoryChangeSet==0 || csbend->refLength!=csbend->length || csbend->refAngle!=csbend->angle || csbend->refSlices!=csbend->nSlices) {
       /* Figure out the reference trajectory offsets to suppress inaccuracy in the integrator */
       CSBEND csbend0;
       double **part0;
@@ -661,10 +661,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 	printf("Determining reference trajectory for CSBEND %s#%ld at s=%e\n", tcontext.elementName, tcontext.elementOccurrence, tcontext.zStart);
       }
       
-      if (csbend->refTrajectoryChange && csbend->refKicks) {
-        free_czarray_2d((void**)csbend->refTrajectoryChange, csbend->refKicks, 5);
+      if (csbend->refTrajectoryChange && csbend->refSlices) {
+        free_czarray_2d((void**)csbend->refTrajectoryChange, csbend->refSlices, 5);
         csbend->refTrajectoryChange = NULL;
-        csbend->refKicks = 0;
+        csbend->refSlices = 0;
       }
       
       part0 = (double**)czarray_2d(sizeof(double), 1, totalPropertiesPerParticle);
@@ -673,35 +673,35 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 
         csbend0.fseDipole = csbend0.fseQuadrupole = csbend0.xKick = csbend0.yKick = 0;
       
-      csbend0.refTrajectoryChange = csbend->refTrajectoryChange = (double**)czarray_2d(sizeof(double), csbend->n_kicks, 5);
-      refTrajectoryPoints = csbend->n_kicks;
+      csbend0.refTrajectoryChange = csbend->refTrajectoryChange = (double**)czarray_2d(sizeof(double), csbend->nSlices, 5);
+      refTrajectoryPoints = csbend->nSlices;
       csbend0.refLength = csbend0.length;
       csbend0.refAngle = csbend0.angle;
-      csbend0.refKicks = csbend0.n_kicks;
+      csbend0.refSlices = csbend0.nSlices;
       /* This forces us into the next branch on the next call to this routine */
       csbend0.refTrajectoryChangeSet = 1;
       setTrackingContext("csbend0", 0, T_CSBEND, "none", NULL);
       track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apContour, apFileData);
       csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
 
-      csbend->refKicks = csbend->n_kicks;
+      csbend->refSlices = csbend->nSlices;
       csbend->refLength = csbend->length;
       csbend->refAngle = csbend->angle;
       free_czarray_2d((void**)part0, 1, totalPropertiesPerParticle);
 
       refTrajectoryData = csbend->refTrajectoryChange;
-      refTrajectoryPoints = csbend->refKicks;
+      refTrajectoryPoints = csbend->refSlices;
       refTrajectoryMode = SUBTRACT_TRAJECTORY;
     } else if (csbend->refTrajectoryChangeSet==1) {
       /* indicates reference trajectory is about to be determined */
       refTrajectoryData = csbend->refTrajectoryChange;
-      refTrajectoryPoints = csbend->n_kicks;
+      refTrajectoryPoints = csbend->nSlices;
       refTrajectoryMode = RECORD_TRAJECTORY;
       csbend->refTrajectoryChangeSet = 2;
     } else {
       /* assume that reference trajectory already determined */
       refTrajectoryData = csbend->refTrajectoryChange;
-      refTrajectoryPoints = csbend->refKicks;
+      refTrajectoryPoints = csbend->refSlices;
       refTrajectoryMode = SUBTRACT_TRAJECTORY;
     }
   } else
@@ -840,7 +840,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       kquad.synch_rad = csbend->synch_rad;
       kquad.isr = csbend->isr;
       kquad.isr1Particle = csbend->isr1Particle;
-      kquad.n_kicks = csbend->n_kicks;
+      kquad.nSlices = csbend->nSlices;
       kquad.integration_order = csbend->integration_order;
       return multipole_tracking2(part, n_part, &elem, p_error, Po, accepted, z_start, maxamp, NULL, apFileData, sigmaDelta2);
     } else {
@@ -969,7 +969,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   i_top = n_part-1;
 #if !defined(PARALLEL)
-  multipoleKicksDone += n_part*csbend->n_kicks*(csbend->integration_order==4?4:1);
+  multipoleKicksDone += n_part*csbend->nSlices*(csbend->integration_order==4?4:1);
 #endif
 
   if (sigmaDelta2)
@@ -1067,10 +1067,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
     
     if (csbend->expandHamiltonian)
-      particle_lost = !integrate_csbend_ordn_expanded(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &dz_lost,
+      particle_lost = !integrate_csbend_ordn_expanded(Qf, Qi, sigmaDelta2, csbend->length, csbend->nSlices, rho0, Po, &dz_lost,
                                                       &apertureData, csbend->integration_order);
     else
-      particle_lost = !integrate_csbend_ordn(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &dz_lost,
+      particle_lost = !integrate_csbend_ordn(Qf, Qi, sigmaDelta2, csbend->length, csbend->nSlices, rho0, Po, &dz_lost,
                                              &apertureData, csbend->integration_order);
     if (csbend->fseCorrection==1)
       Qf[4] -= csbend->fseCorrectionPathError;
@@ -1836,8 +1836,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   if (csbend->useMatrix) {
     csbend->nonlinear = 0;
     Me1 = edge_matrix(e1, 1./(rho0/(1+csbend->fse)), 0.0, n, -1, Kg, 1, 0, 0, csbend->length);
-    Msection = bend_matrix(csbend->length/csbend->n_kicks, 
-                           angle/csbend->n_kicks, 0.0, 0.0, 
+    Msection = bend_matrix(csbend->length/csbend->nSlices, 
+                           angle/csbend->nSlices, 0.0, 0.0, 
                            0.0, 0.0, csbend->b[1]*h,  0.0,
                            0.0, 0.0, 0.0, 0.0, csbend->fse, 0.0, 0.0, 
                            csbend->etilt*csbend->etiltSign, 1, 1, 0, 0);
@@ -1963,7 +1963,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   /* prepare some data for CSRDRIFT */
   csrWake.dGamma = dGamma;
   csrWake.bins = nBins;
-  csrWake.ds0 = csbend->length/csbend->n_kicks;
+  csrWake.ds0 = csbend->length/csbend->nSlices;
   csrWake.zLast = csrWake.z0 = z_end;
   csrWake.highFrequencyCutoff0 = csbend->highFrequencyCutoff0;
   csrWake.highFrequencyCutoff1 = csbend->highFrequencyCutoff1;
@@ -1976,7 +1976,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   csrWake.wffImagFactor = csbend->wffImagFactor;
   
 #if !defined(PARALLEL)  
-  multipoleKicksDone += n_part*csbend->n_kicks*(csbend->integration_order==4?4:1);
+  multipoleKicksDone += n_part*csbend->nSlices*(csbend->integration_order==4?4:1);
 #endif
 
   if (isSlave || !notSinglePart) {
@@ -2078,8 +2078,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   /* Now do the body of the sector dipole */
   phiBend = accumulatedAngle; 
   i_top = n_part - 1;
-  for (kick=0; kick<(csbend->n_kicks+1); kick++) {
-    if (!csbend->backtrack && kick==csbend->n_kicks)
+  for (kick=0; kick<(csbend->nSlices+1); kick++) {
+    if (!csbend->backtrack && kick==csbend->nSlices)
       break;
     if (isSlave || !notSinglePart) {
       if (!csbend->backtrack || kick!=0) {
@@ -2098,7 +2098,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             Qi[5] = DP;
             convertToDipoleCanonicalCoordinates(Qi, 0);
             
-            particleLost = !integrate_csbend_ordn(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &dz_lost, &apertureData, csbend->integration_order);
+            particleLost = !integrate_csbend_ordn(Qf, Qi, NULL, csbend->length/csbend->nSlices, 1, rho0, Po, &dz_lost, &apertureData, csbend->integration_order);
 
             /* retrieve coordinates from arrays */
             convertFromDipoleCanonicalCoordinates(Qf, 0);
@@ -2149,7 +2149,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       }
     }
 
-    if (csbend->backtrack && kick==csbend->n_kicks)
+    if (csbend->backtrack && kick==csbend->nSlices)
       break;
 
     if (n_partMoreThanOne && csbend->derbenevCriterionMode) {
@@ -2277,12 +2277,12 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         SavitzyGolaySmooth(ctHistDeriv, nBins, csbend->SGDerivOrder, 
                            csbend->SGDerivHalfWidth, csbend->SGDerivHalfWidth, 1);
       } else {
-        ctLower += rho0*angle/csbend->n_kicks;
-        ctUpper += rho0*angle/csbend->n_kicks;
+        ctLower += rho0*angle/csbend->nSlices;
+        ctUpper += rho0*angle/csbend->nSlices;
       }
       
       
-      phiBend += angle/csbend->n_kicks;
+      phiBend += angle/csbend->nSlices;
       slippageLength = fabs(rho0*ipow(phiBend, 3)/24.0);
       slippageLength13 = pow(slippageLength, 1./3.);
       diSlippage = slippageLength/dct;
@@ -2365,9 +2365,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
               }
               /* there is no negative sign here because my derivative is w.r.t. -s
                  in notation of Saldin, et. al. */
-              T1[iBin] *= CSRConstant*csbend->length/csbend->n_kicks; 
+              T1[iBin] *= CSRConstant*csbend->length/csbend->nSlices; 
               /* keep the negative sign on this term, which has no derivative */
-              T2[iBin] *= -CSRConstant*csbend->length/csbend->n_kicks/slippageLength13;
+              T2[iBin] *= -CSRConstant*csbend->length/csbend->nSlices/slippageLength13;
             }
             dGamma[iBin] = T1[iBin]+T2[iBin];
           }
@@ -2376,7 +2376,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	if (csbend->integratedGreensFunction) {
           convolveArrays1(dGamma, nBins, ctHist, grnk);
           for (iBin=0; iBin<nBins; iBin++) 
-            dGamma[iBin] *= -macroParticleCharge/(particleMass*sqr(c_mks))*csbend->length/csbend->n_kicks;
+            dGamma[iBin] *= -macroParticleCharge/(particleMass*sqr(c_mks))*csbend->length/csbend->nSlices;
 #ifdef DEBUG_IGF
 	  fprintf(fpdeb, "%ld\n%ld\n", kick, nBins);
 	  for (iBin=0; iBin<nBins; iBin++)
@@ -2440,7 +2440,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       }
 
       if (tContext.sliceAnalysis && tContext.sliceAnalysis->active &&
-	  kick!=(csbend->n_kicks-1) &&
+	  kick!=(csbend->nSlices-1) &&
 	  (csbend->sliceAnalysisInterval==0 ||
 	   kick%csbend->sliceAnalysisInterval==0)) {
 #if (!USE_MPI)
@@ -2449,7 +2449,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 				   0, tContext.step, Po, 
 				   macroParticleCharge*n_part,
 				   tContext.elementName, 
-				   z_start + (kick*(z_end-z_start))/(csbend->n_kicks-1),
+				   z_start + (kick*(z_end-z_start))/(csbend->nSlices-1),
 				   1);
 	convertToCSBendCoords(part, n_part, rho0, cos_ttilt, sin_ttilt, 1);
 #else 
@@ -2461,7 +2461,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
       if (csbend->wakeFileActive && 
           ((!csbend->outputLastWakeOnly && kick%csbend->outputInterval==0) ||
-           (csbend->outputLastWakeOnly && kick==(csbend->n_kicks-1)))) {
+           (csbend->outputLastWakeOnly && kick==(csbend->nSlices-1)))) {
         /* scale the linear density and its derivative to get C/s and C/s^2 
          * ctHist is already normalized to dct, but ctHistDeriv requires an additional factor
          */
@@ -2478,7 +2478,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             !SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, ctHist, nBins, "LinearDensity") ||
             !SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, ctHistDeriv, nBins, "LinearDensityDeriv") ||
             !SDDS_SetParameters(csbend->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                                "Pass", -1, "Kick", kick, "dsKick", csbend->length/csbend->n_kicks,
+                                "Pass", -1, "Kick", kick, "dsKick", csbend->length/csbend->nSlices,
                                 "pCentral", Po, "Angle", phiBend, "SlippageLength", slippageLength,
                                 "TotalBunchLength", ctUpper-ctLower,
                                 "BinSize", dct, 
@@ -2493,7 +2493,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         /* use T1 array to output s and T2 to output dGamma/ds */
         for (iBin=0; iBin<nBins; iBin++) {
           T1[iBin] = ctLower-(ctLower+ctUpper)/2.0+dct*(iBin+0.5);
-          T2[iBin] = dGamma[iBin]/(csbend->length/csbend->n_kicks);
+          T2[iBin] = dGamma[iBin]/(csbend->length/csbend->nSlices);
         }
 	if (isMaster){
         if (!SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "s") ||

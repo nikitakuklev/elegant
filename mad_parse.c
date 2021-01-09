@@ -607,7 +607,7 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
         case T_CSBEND:
           csbptr = (CSBEND*)e1->p_elem;
           csbptr->angle /= divisions;
-          csbptr->n_kicks = csbptr->n_kicks / divisions + 1;
+          csbptr->nSlices = csbptr->nSlices / divisions + 1;
           break;
         default:
           printf("Internal error: Attempt to divide angle for element that is not supported (type=%ld)\n",
@@ -903,17 +903,26 @@ void parse_element(
     }
     for (i=1; i<n_params; i++) {
       /* difference of offsets must be positive and less than size of double */
-      if ((difference=parameter[i].offset-parameter[i-1].offset)<=0) {
+      if ((difference=parameter[i].offset-parameter[i-1].offset)<=0 && !(parameter[i].flags&PARAM_IS_ALIAS)) {
         printf("error: bad parameter offset (retrograde) for element type %s, parameter %ld (%s)\n",
-                type_name, i, parameter[i].name?parameter[i].name:"NULL");
+               type_name, i, parameter[i].name?parameter[i].name:"NULL");
         fflush(stdout);
         exitElegant(1);
       }
-      if (difference>sizeof(double) && eptr->type!=T_TWISSELEMENT && eptr->type!=T_EMATRIX) {
-        printf("error: bad parameter offset (too large) for element type %s, parameter %ld (%s)\n",
-                type_name, i, parameter[i].name?parameter[i].name:"NULL");
-        fflush(stdout);
-        exitElegant(1);
+      if (parameter[i-1].flags&PARAM_IS_ALIAS) {
+        if ( difference!=0) {
+          printf("error: bad parameter offset (should be zero) for element type %s, parameter %ld (%s)\n",
+                 type_name, i, parameter[i].name?parameter[i].name:"NULL");
+          fflush(stdout);
+          exitElegant(1);
+        }
+      } else {
+        if (difference>sizeof(double) && eptr->type!=T_TWISSELEMENT && eptr->type!=T_EMATRIX) {
+          printf("error: bad parameter offset (too large) for element type %s, parameter %ld (%s)\n",
+                 type_name, i, parameter[i].name?parameter[i].name:"NULL");
+          fflush(stdout);
+          exitElegant(1);
+        }
       }
     }
     entity_description[eptr->type].flags |= OFFSETS_CHECKED;
@@ -1008,6 +1017,13 @@ void parse_element(
       printf("Error: missing value for parameter %s of %s\n",
               parameter[i].name, eptr->name);
       exitElegant(1);
+    }
+    if (parameter[i].flags&PARAM_IS_DEPRECATED)  {
+      char buffer1[1024], buffer2[1024];
+      snprintf(buffer1, 1024, "Parameter %s of %s is deprecated.",
+               parameter[i].name, entity_name[eptr->type]);
+      snprintf(buffer2, 1024, "Element is %s. Please consult manual for details.", eptr->name);
+      printWarning(buffer1, buffer2);
     }
     switch (pType) {
     case IS_DOUBLE:

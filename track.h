@@ -110,6 +110,7 @@ extern long parallelTrackingBasedMatrices;
 extern double trackingMatrixStepFactor;
 extern long trackingMatrixPoints;
 extern double trackingMatrixStepSize[6];
+extern long warningCountLimit;
 
 /* flag used to identify which processor is allowed to write to a file */
 extern long writePermitted;
@@ -1004,7 +1005,7 @@ extern char *entity_text[N_TYPES];
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 11
 #define N_OCTU_PARAMS 8
-#define N_MULT_PARAMS 13
+#define N_MULT_PARAMS 14
 #define N_SOLE_PARAMS 7
 #define N_HCOR_PARAMS 11
 #define N_VCOR_PARAMS 11
@@ -1037,9 +1038,9 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 15
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
-#define N_KSEXT_PARAMS 35
+#define N_KSEXT_PARAMS 36
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 52
+#define N_KQUAD_PARAMS 53
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -1050,7 +1051,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 77
+#define N_CSBEND_PARAMS 78
 #define N_MATTER_PARAMS 21
 #define N_RFMODE_PARAMS 56
 #define N_TRFMODE_PARAMS 25
@@ -1060,7 +1061,7 @@ extern char *entity_text[N_TYPES];
 #define N_SREFFECTS_PARAMS 15
 #define N_ZTRANSVERSE_PARAMS 37
 #define N_IBSCATTER_PARAMS 12
-#define N_FMULT_PARAMS 10
+#define N_FMULT_PARAMS 11
 #define N_BMAPXY_PARAMS 7
 #define N_WAKE_PARAMS 15
 #define N_TRWAKE_PARAMS 23
@@ -1068,7 +1069,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 3
 #define N_PFILTER_PARAMS 6
 #define N_HISTOGRAM_PARAMS 14
-#define N_CSRCSBEND_PARAMS 71
+#define N_CSRCSBEND_PARAMS 72
 #define N_CSRDRIFT_PARAMS 27
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
@@ -1096,13 +1097,13 @@ extern char *entity_text[N_TYPES];
 #define N_SCMULT_PARAMS 0		
 #define N_ILMATRIX_PARAMS 46
 #define N_TSCATTER_PARAMS 1
-#define N_KQUSE_PARAMS 16
+#define N_KQUSE_PARAMS 17
 #define N_UKICKMAP_PARAMS 17
 #define N_MKICKER_PARAMS 13
 #define N_EMITTANCEELEMENT_PARAMS 4
 #define N_MHISTOGRAM_PARAMS 12
 #define N_FTABLE_PARAMS 16
-#define N_KOCT_PARAMS 18
+#define N_KOCT_PARAMS 19
 #define N_MRADITEGRALS_PARAMS 1
 #define N_APPLE_PARAMS 25
 #define N_MRFDF_PARAMS 23
@@ -1118,7 +1119,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 14
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CCBEND_PARAMS 50
+#define N_CCBEND_PARAMS 51
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS 19
 #define N_APCONTOUR_PARAMS 12
@@ -1132,6 +1133,8 @@ extern char *entity_text[N_TYPES];
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
 #define PARAM_XY_WAVEFORM      0x0004UL
+#define PARAM_IS_ALIAS         0x0008UL
+#define PARAM_IS_DEPRECATED    0x0010UL
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1176,6 +1179,7 @@ typedef struct {
 #define DEFAULT_THRESHOLD 1e-12
 #define DEFAULT_NIBEND_TYPE "linear"
 #define DEFAULT_N_KICKS 4
+#define DEFAULT_N_SLICES 4
 
 /* bit definitions for flags word in ELEMENT_DESCRIPTION */
 #define HAS_MATRIX         0x00000001UL
@@ -1304,7 +1308,8 @@ extern PARAMETER mult_param[N_MULT_PARAMS];
 typedef struct {
     double length, KnL, tilt, bore, BTipL;
     double dx, dy, dz, factor;
-    short order, n_kicks, synch_rad, expandHamiltonian;
+    short order, synch_rad, expandHamiltonian;
+    long nSlices;
     } MULT;
 
 /* names and storage structure for arbitary multipole from an SDDS File */
@@ -1312,7 +1317,7 @@ extern PARAMETER fmult_param[N_FMULT_PARAMS];
 
 typedef struct {
   double length, tilt, dx, dy, dz, fse;
-  long n_kicks;
+  long n_kicks, nSlices;
   short synch_rad;
   char *filename;
   short sqrtOrder;
@@ -2031,7 +2036,7 @@ extern PARAMETER sext_param[N_SEXT_PARAMS];
 
 typedef struct {
     double length, k2, k1, j1, tilt, bore, B;
-    long n_kicks;
+    long n_kicks, nSlices;
     double dx, dy, dz, fse, xkick, ykick;
     double xKickCalibration, yKickCalibration;
     short xSteering, ySteering, synch_rad;
@@ -2054,7 +2059,7 @@ extern PARAMETER koct_param[N_KOCT_PARAMS];
 typedef struct {
     double length, k3, tilt, bore, B;
     double dx, dy, dz, fse;
-    long n_kicks;
+    long n_kicks, nSlices;
     char *systematic_multipoles, *random_multipoles;
     short integration_order, sqrtOrder, synch_rad, isr, isr1Particle, expandHamiltonian;
     /* for internal use */
@@ -2087,7 +2092,7 @@ extern PARAMETER kquad_param[N_KQUAD_PARAMS];
 typedef struct {
     double length, k1, tilt, bore, B;
     double dx, dy, dz, fse;
-    long n_kicks;
+    long n_kicks, nSlices;
     double xkick, ykick;
     double xKickCalibration, yKickCalibration;
     short xSteering, ySteering, synch_rad;
@@ -2349,7 +2354,7 @@ typedef struct {
     double dx, dy, dz, xKick, yKick;
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
     double etilt;   /* error tilt angle */
-    long n_kicks;
+    long nSlices;
     short etiltSign, nonlinear, synch_rad;
     short edge_effects[2], edge_order;
     short integration_order, expandHamiltonian;
@@ -2369,7 +2374,7 @@ typedef struct {
     double b[9], c[9], fseCorrectionValue, fseCorrectionPathError;
     short refTrajectoryChangeSet;
     double refLength, refAngle, **refTrajectoryChange;
-    short refKicks;
+    long refSlices;
     short photonFileActive;
     SDDS_DATASET *SDDSphotons;
     short e1Index, e2Index;
@@ -2385,7 +2390,7 @@ typedef struct {
     double dx, dy, dz, xKick;
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
     double etilt;   /* error tilt angle */
-    long n_kicks;
+    long nSlices;
     short integration_order;
     char *systematic_multipoles, *edge_multipoles, *edge1_multipoles, *edge2_multipoles, *random_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor;
@@ -2417,7 +2422,7 @@ typedef struct {
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
-    long n_kicks;
+    long nSlices;
     short etiltSign, nonlinear, useMatrix, synch_rad;
     short edge_effects[2],  edge_order;
     short integration_order;
@@ -3323,7 +3328,7 @@ extern PARAMETER kquse_param[N_KQUSE_PARAMS];
 typedef struct {
     double length, k1, k2, tilt;
     double dx, dy, dz, fse1, fse2;
-    long n_kicks;
+    long n_kicks, nSlices;
     short integration_order, synch_rad, isr, isr1Particle, matrixTracking, expandHamiltonian;
   } KQUSE;
 

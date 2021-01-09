@@ -381,7 +381,7 @@ long fmultipole_tracking(
 {
   /* double dummy; */
   double dzLoss=0;
-  long n_kicks;       /* number of kicks to split multipole into */
+  long nSlices;
   long i_part, i_top, is_lost=0, i_order;
   double *coord;
   double drift;
@@ -404,9 +404,11 @@ long fmultipole_tracking(
   
   if (!multipole->multData.initialized)
     initialize_fmultipole(multipole);
-  
-  if ((n_kicks=multipole->n_kicks)<=0)
-    bombTracking("n_kicks<=0 in fmultipole_tracking()");
+
+  if ((nSlices=multipole->n_kicks)<=0) {
+    if ((nSlices=multipole->nSlices)<=0)
+      bombTracking("N_KICKS<=0 and N_SLICES<=0 in fmultipole_tracking()");
+  }
 
   drift = multipole->length;
 
@@ -436,7 +438,7 @@ long fmultipole_tracking(
     rotateBeamCoordinatesForMisalignment(particle, n_part, multipole->tilt);
 
   i_top = n_part-1;
-  multipoleKicksDone += (i_top+1)*multData.orders*n_kicks*4;
+  multipoleKicksDone += (i_top+1)*multData.orders*nSlices*4;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
       printf("null coordinate pointer for particle %ld (fmultipole_tracking)", i_part);
@@ -451,7 +453,7 @@ long fmultipole_tracking(
 
     is_lost = 0;
     if (!integrate_kick_multipole_ordn(coord, multipole->dx, multipole->dy, 0.0, 0.0, Po, rad_coef, 0.0,
-                                       order, KnL, skew, n_kicks, drift, 4, &multData, NULL, NULL, NULL, 
+                                       order, KnL, skew, nSlices, drift, 4, &multData, NULL, NULL, NULL, 
                                        &dzLoss, NULL, 0, multipole->tilt))
       is_lost = 1;
     
@@ -503,7 +505,7 @@ long multipole_tracking(
 {
     double KnL;         /* integrated strength = L/(B.rho)*(Dx^n(By))_o for central momentum */
     long order;         /* order (n) */
-    long n_kicks;       /* number of kicks to split multipole into */
+    long nSlices;       /* number of parts to split multipole into */
     long i_part, i_kick, i, i_top, is_lost;
     double sum_Fx, sum_Fy, qx, qy;
     double *coord;
@@ -525,8 +527,8 @@ long multipole_tracking(
         bombTracking("null MULT pointer (multipole_tracking)");
     expandHamiltonian = multipole->expandHamiltonian;
 
-    if ((n_kicks=multipole->n_kicks)<=0) 
-      bombTracking("n_kicks<=0 in multipole_tracking()");
+    if ((nSlices=multipole->nSlices)<=0)
+      bombTracking("N_SLICES (or N_KICKS) <=0  in multipole_tracking()");
 
     if ((order=multipole->order)<0)
       bombTracking("order < 0 in multipole_tracking()");
@@ -539,13 +541,13 @@ long multipole_tracking(
     if (!(coef = expansion_coefficients(order)))
       bombTracking("expansion_coefficients() returned null pointer (multipole_tracking)");
 
-    drift = multipole->length/n_kicks/2;
+    drift = multipole->length/nSlices/2;
     if (multipole->bore)
         /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) */
         KnL = dfactorial(multipole->order)*multipole->BTipL/ipow(multipole->bore, multipole->order)*
-              (particleCharge/(particleMass*c_mks*Po))*multipole->factor/n_kicks;
+              (particleCharge/(particleMass*c_mks*Po))*multipole->factor/nSlices;
     else
-      KnL = multipole->KnL*multipole->factor/n_kicks;
+      KnL = multipole->KnL*multipole->factor/nSlices;
 
     if (KnL==0) {
       if (multipole->length==0)
@@ -565,7 +567,7 @@ long multipole_tracking(
       rotateBeamCoordinatesForMisalignment(particle, n_part, multipole->tilt);
 
     i_top = n_part-1;
-    multipoleKicksDone += (i_top+1)*n_kicks*4;
+    multipoleKicksDone += (i_top+1)*nSlices*4;
     for (i_part=0; i_part<=i_top; i_part++) {
         if (!(coord = particle[i_part])) {
             printf("null coordinate pointer for particle %ld (multipole_tracking)", i_part);
@@ -620,7 +622,7 @@ long multipole_tracking(
         /* calculate initial canonical momenta */
         convertSlopesToMomenta(&qx, &qy, xp, yp, dp);
         is_lost = 0;
-        for (i_kick=0; i_kick<n_kicks; i_kick++) {
+        for (i_kick=0; i_kick<nSlices; i_kick++) {
             if (drift) {
                 x += xp*drift*(i_kick?2:1);
                 y += yp*drift*(i_kick?2:1);
@@ -769,8 +771,8 @@ long multipole_tracking2(
   long order[3] = {0, 0, 0};
   short skew[3] = {0, 0, 0};
   double dx, dy, dz;        /* offsets of the multipole center */
-  long n_kicks, integ_order, iOrder;
-  long i_part, i_top, n_parts;
+  long nSlices, n_kicks, integ_order, iOrder;
+  long i_part, i_top;
   double *coord;
   double drift;
   double tilt, rad_coef, isr_coef, xkick, ykick, dzLoss=0;
@@ -815,6 +817,7 @@ long multipole_tracking2(
   switch (elem->type) {
   case T_KQUAD:
     kquad = ((KQUAD*)elem->p_elem);
+    nSlices = kquad->nSlices;
     n_kicks = kquad->n_kicks;
     expandHamiltonian = kquad->expandHamiltonian;
     order[0] = 1;
@@ -883,6 +886,7 @@ long multipole_tracking2(
   case T_KSEXT:
     ksext = ((KSEXT*)elem->p_elem);
     n_kicks = ksext->n_kicks;
+    nSlices = ksext->nSlices;
     expandHamiltonian = ksext->expandHamiltonian;
     order[0] = 2;
     if (ksext->bore)
@@ -953,6 +957,7 @@ long multipole_tracking2(
   case T_KOCT:
     koct = ((KOCT*)elem->p_elem);
     n_kicks = koct->n_kicks;
+    nSlices = koct->nSlices;
     expandHamiltonian = koct->expandHamiltonian;
     order[0] = 3;
     if (koct->bore)
@@ -1007,6 +1012,7 @@ long multipole_tracking2(
     /* Implemented as a quadrupole with sextupole as a secondary multipole */
     kquse = ((KQUSE*)elem->p_elem);
     n_kicks = kquse->n_kicks;
+    nSlices = kquse->nSlices;
     expandHamiltonian = kquse->expandHamiltonian;
     order[0] = 1;
     KnL[0] = kquse->k1*kquse->length*(1+kquse->fse1);
@@ -1036,15 +1042,13 @@ long multipole_tracking2(
     printf("error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
     fflush(stdout);
     KnL[0] = dx = dy = dz = tilt = drift = 0;
-    integ_order = order[0] = n_kicks = 0;
+    integ_order = order[0] = n_kicks = nSlices = 0;
     exitElegant(1);
     break;
   }
   if (multData && !multData->initialized)
     multData = NULL;
-  
-  if (n_kicks<=0)
-    bombTracking("n_kicks<=0 in multipole()");
+
   if (order[0]<=0)
     bombTracking("order <= 0 in multipole()");
   if (integ_order!=2 && integ_order!=4 && integ_order!=6) 
@@ -1056,14 +1060,20 @@ long multipole_tracking2(
   }
 
   i_top = n_part-1;
-  if (integ_order==4) {
-    if ((n_parts = ceil(n_kicks/4.0))<1)
-      n_parts = 1;
-    n_kicks = n_parts*4;
+
+  if (n_kicks<=0) {
+    if (nSlices<=0)
+      bombTracking("N_KICKS<=0 and N_SLICES<=0 in multipole tracking");
+  } else {
+    if (integ_order>2) {
+      if ((nSlices = ceil(n_kicks/(1.0*integ_order)))<1)
+        nSlices = 1;
+      n_kicks = nSlices*integ_order;
+    }
+    else
+      nSlices = n_kicks;
   }
-  else
-    n_parts = n_kicks;
-  
+
   multipoleKicksDone += (i_top+1)*n_kicks;
   if (multData)
     multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
@@ -1107,7 +1117,7 @@ long multipole_tracking2(
     if (!integrate_kick_multipole_ordn(coord, dx, dy, xkick, ykick,
                                        Po, rad_coef, isr_coef, 
                                        order, KnL, skew,
-                                       n_parts, drift, integ_order,
+                                       nSlices, drift, integ_order,
                                        multData, edgeMultData, steeringMultData,
                                        &apertureData, &dzLoss, sigmaDelta2,
                                        elem->type==T_KQUAD?kquad->radial:0, tilt)) {
