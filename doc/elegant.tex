@@ -53,8 +53,16 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None.
+\item Several elements have a new parameter,  \verb|N_SLICES|, that replaces the inconsistently-used and misleadingly-named
+  \verb|N_KICKS| parameter. The \verb|N_KICKS| parameter is still available for use, but is deprecated.
+  \begin{itemize}
+  \item \verb|CCBEND|, \verb|CSBEND|, \verb|CSRCSBEND|, \verb|FMULT|, \verb|MULT|: The \verb|N_KICKS| parameter was
+    poorly-named. It actually gave the desired number of full integrator steps, or ``slices.''
+  \item \verb|KQUAD|, \verb|KSEXT|, \verb|KQUSE|: The \verb|N_KICKS| parameter was actually the number of total
+    integrator steps. E.g., for the fourth-order integrator, dividing \verb|N_KICKS| by 4 gave the number of slices.
+  \end{itemize}
 \end{itemize}
+
 
 \subsection{New and Modified Commands}
 \begin{itemize}
@@ -90,9 +98,13 @@ the serial or parallel versions and report issues to the developers.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The \verb|computeRBGGE| program was added, allowing computation of a generalized gradient expansion\cite{Venturini-NIMA427-387} for
-  use with \verb|BGGEXP| based on field data on a rectangular boundary \cite{Mitchell-2007}. The code was developed by R. Lindberg (APS)
-  with help from R. Soliday (APS) and M. Borland (APS).
+\item The program \verb|computeRBGGE|, which allows computation of a generalized gradient
+  expansion\cite{Venturini-NIMA427-387} for use with \verb|BGGEXP| based on field data on a rectangular boundary
+  \cite{Mitchell-2007}, was improved to support automatic tuning of the number of gradients and multipoles.
+  In addition, output of the implied field map is supported.
+\item The program \verb|computeCBGGE| was added, which allows computation of a generalized gradient expansion
+  based on field data on a circular-cylinder boundary \cite{Venturini-NIMA427-387}. It replaces the script
+  \verb|computeGeneralizedGradients|, providing better performance and features.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -6164,9 +6176,10 @@ up-to-date than these manual pages.
   parameter output, using a user-supplied, s-dependent gas pressure.
   (Program by M. Borland.)
 \item {\tt computeCoherentFraction} --- Computes the coherent fraction for undulator radiation.
-\item {\tt computeGeneralizedGradients} --- Computes generalized gradients from data on a circular cylinder
-  for use with the \verb|BGGEXP| element.
-\item {\tt computeRBGGE} --- Computed generalized gradients from data on a rectangular boundary 
+\item {\tt computeCBGGE} --- Computes generalized gradients from data on a circular cylinder
+  for use with the \verb|BGGEXP| element. 
+\item {\tt computeGeneralizedGradients} --- Deprecated.  Use \verb|computeCBGGE|.
+\item {\tt computeRBGGE} --- Computes generalized gradients from data on a rectangular boundary 
   for use with the \verb|BGGEXP| element.
 \item {\tt computeSCTuneSpread} --- Compute space charge tune spread.
 \item {\tt coreEmittance} --- Computes the slice emittance for the beam core (e.g., 80\% of the beam).
@@ -6443,47 +6456,49 @@ astra2elegant [{\em inputFile}] [{\em outputFile}] [-centerReference] [-pipe=[in
 
 %\begin{latexonly}
 \newpage
-\begin{center}{\Large\verb|computeGeneralizedGradients|}\end{center}
+\begin{center}{\Large\verb|computeCBGGE|}\end{center}
 %\end{latexonly}
-\subsection{computeGeneralizedGradients}
+\subsection{computeCBGGE}
 
 \begin{itemize}
-\item {\bf description:}  Converts data of the form $B_\rho(z, \phi)$ into a set of generalized gradients \cite{Venturini-NIMA427-387} 
-for use with {\tt elegant}'s \verb|BGGEXP| element.
+\item {\bf description:}  Compute generalized gradients \cite{Venturini-NIMA427-387} from data on a circular-cylinder
+boundary for use with {\tt elegant}'s \verb|BGGEXP| element.
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
-computeGeneralizedGradients -input {\em filename} -output {\em rootname} -mainHarmonic {\em integer} -nHarmonics {\em integer} 
-[-allHarmonics 1] 
+computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<columnName>][,rho=<parameterName>]
+              -normal=<output> [-skew=<output>]
+              [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]
+              [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]
+              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,verbose]]
 }\end{flushleft}
 
 \item {\bf switches:}
 \begin{itemize}
-\item \verb|input| --- Give the name of the input file, which must be an SDDS file having two columns and two parameters.
-The columns are \verb|phi| and \verb|Br|, giving respectively the polar angle in radians and the radial magnetic field in
-Tesla. Each page should have the same number of rows $n$.
-The \verb|phi| values are assumed to be equispaced starting at 0 and ending at $2\pi (1-1/n)$.
-The pages are labeled by the parameter \verb|z|, which gives the longitudinal coordinate in meters for the data on that page.
-These \verb|z| values are assumed to be equispaced and to cover the entire length of the magnet, starting and ending well outside
-the magnet. (For periodic systems, the \verb|onePeriod| option may be appropriate. See below.)
-Finally, a parameter \verb|R| must exist that gives the radius in meters for the \verb|Br| values.
-
-\item \verb|output| --- Give the root name for the output files. The main output file, which has extension \verb|ggrad|
- and is used directly with the \verb|BGGEXP| element, will contain the generalized gradients for the normal (non-skew)
- components of the magnetic field. Each page corresponds to a different harmonic.
-
-\item \verb|mainHarmonic| --- The main harmonic of the field, where 2 is quadrupole, 3 is sextupole, etc. For fields with
-  several designed-in harmonics, use the lowest, and see the entry for \verb|allHarmonics|.
-
-\item \verb|nHarmonics| --- The number of harmonics to include.
-
-\item \verb|allHarmonics| --- Normally, only allowed harmonics of the main harmonic are included. However, if the magnet
-  has several main harmonics (e.g., a combined-function quadrupole and sextupole), this may be inappropriate. In that
-  case, use this option to force use of all harmonics greater than the given main harmonic.
-
+\item {\tt input} --- Specify name of the input file, which by default contains three colums \verb|z|, \verb|phi|, and
+  \verb|Brho| giving $B_\rho$ as a function of longitudinal coordinate $z$ and azimuthal angle $\phi$.  The \verb|z|,
+  \verb|phi|, and \verb|Brho| options may be used to give different names for these columns.  The file by default also
+  contains a parmeter \verb|rho| giving the radius of the cylinder. The \verb|rho| option may be used to give a
+  different name for the parameter.  The data must form a uniform grid in $z$ and $\phi$. The $N_\phi$ values of $\phi$
+  should range from $0$ to $\Delta \phi (N_\phi-1)$ where $\Delta \phi = 2\pi/N_\phi$
+\item {\tt normal} ---  Output file for normal-component generalized gradients. Supply to \verb|NORMAL_FILENAME|
+  parameter of \verb|BGGEXP|.
+\item {\tt skew} ---  Output file for skew-component generalized gradients. Supply to \verb|SKEW_FILENAME|
+  parameter of \verb|BGGEXP|.
+\item {\tt derivatives} --- Number of derivatives vs z desired in output. Default: 7
+\item {\tt multipoles} ---  Number of multipoles desired in output. Default: 8
+\item {\tt fundamental} --- Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.
+\item {\tt evaluate} --- Asks to evaluate the GGE and place the results in a file. By default, this is done
+  for the cylinder radius and with the same spacing of $\phi$ values. This can be changed with the \verb|nrho|
+  and \verb|nphi| parameters.
+\item {\tt autotune} --- Optimizes the number of derivaties and multipoles up the to values given with the
+  \verb|-derivatives| and \verb|-multipoles| options, in order to minimize the deviation of the GGE-derived
+  fields from the supplied fields on the cylinder. By default, minimizes the maximum deviation, but user can
+  ask to minimize the rms or mean-absolute-value deviation. Differences below the \verb|significance| value are
+  ignored.
 \end{itemize}
 
-\item {\bf authors:} M. Borland, R. Lindberg (ANL/APS).
+\item {\bf authors:} M. Borland, R. Soliday, R. Lindberg, (ANL/APS).
 \end{itemize}
 
 %\begin{latexonly}
@@ -6498,9 +6513,10 @@ boundary \cite{Mitchell-2007} for use with {\tt elegant}'s \verb|BGGEXP| element
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
-computeRBGGE -yminus={\em filename} -yplus={\em filename} -xminus={\em filename} -xplus={\em filename}
-    -normal={\em outputFilename} [-skew={\em outputFilename}]
-    [-derivatives={\em number}] [-multipoles={\em number}] [-fundamental={\em number}]
+computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>
+             -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]
+              [-evaluate=<filename>]
+              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,verbose]]
 }\end{flushleft}
 
 \item {\bf switches:}
@@ -6521,6 +6537,13 @@ computeRBGGE -yminus={\em filename} -yplus={\em filename} -xminus={\em filename}
 \item {\tt derivatives} --- Number of derivatives vs z desired in output. Default: 7
 \item {\tt multipoles} ---  Number of multipoles desired in output. Default: 8
 \item {\tt fundamental} --- Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.
+\item {\tt evaluate} --- Asks to evaluate the GGE and place the results in a file. The GGE is evaluted over
+  the region bounded by the four planes, using the same coordinate intervals.
+\item {\tt autotune} --- Optimizes the number of derivaties and multipoles up the to values given with the
+  \verb|-derivatives| and \verb|-multipoles| options, in order to minimize the deviation of the GGE-derived
+  fields from the values given in the 3D field map file. By default, minimizes the maximum deviation, but user can
+  ask to minimize the rms or mean-absolute-value deviation. Differences below the \verb|significance| value are
+  ignored.
 \end{itemize}
 
 \item {\bf authors:} R. Lindberg, R. Soliday, M. Borland (ANL/APS).
