@@ -13,7 +13,7 @@
 #include "insert_elements.h"
 
 typedef struct {
-  char **name, *type, *exclude, *elemDef, *elemName;
+  char **name, *type, *exclude, *elemDef;
   long nNames, nskip, add_end, add_start, total, before, occur[100];
   double sStart, sEnd;
 } ADD_ELEM;
@@ -120,7 +120,6 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   addElem.type = type;
   addElem.exclude = exclude;
   addElem.elemDef = element_def;
-  addElem.elemName = element_name;
   addElem.sStart = s_start;
   addElem.sEnd = s_end;
   addElem.before = insert_before;

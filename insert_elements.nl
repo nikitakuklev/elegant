@@ -17,7 +17,6 @@
         double s_start = -1;
         double s_end = -1;
         STRING element_def = NULL;
-        STRING element_name = NULL;
         long verbose = 0;
         long total_occurrences = 0;
         long occurrence[100]={0};

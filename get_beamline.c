@@ -351,8 +351,14 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
         printf("element %s conflicts with line with same name\n", eptr->name);
         exitElegant(1);
       }
-      check_duplic_elem(&elem, &eptr, NULL, n_elems);
-      n_elems++;  	
+      if (check_duplic_elem(&elem, NULL, eptr->name, n_elems)) {
+        printWarning
+          ("insert_elements invoked using same new element name as previous insert_elements command. The first definition is used.",
+           eptr->name);
+      } else {
+        check_duplic_elem(&elem, &eptr, NULL, n_elems);
+        n_elems++;  	
+      }
     }
 
     if (getDelElemFlag()==1) {
