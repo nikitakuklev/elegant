@@ -1281,12 +1281,11 @@ long do_tracking(
                 if (isMaster || !notSinglePart)
        		  store_fitpoint_matrix_values((MARK*)eptr->p_elem, eptr->name, 
 					       eptr->occurence, eptr->accumMatrix);
+		store_fitpoint_beam_parameters((MARK*)eptr->p_elem, eptr->name,eptr->occurence, 
+					       coord, nToTrack, *P_central); 
 		if (flags&CLOSED_ORBIT_TRACKING)
 		  storeMonitorOrbitValues(eptr, coord, nToTrack);
 	      }
-              if (((MARK*)eptr->p_elem)->fitpoint)
-		store_fitpoint_beam_parameters((MARK*)eptr->p_elem, eptr->name,eptr->occurence, 
-					       coord, nToTrack, *P_central); 
 	      break;
 	    case T_RECIRC:
 	      /* Recognize and record recirculation point.  */
