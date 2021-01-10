@@ -94,7 +94,10 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
       name = expand_ranges(name);
     str_toupper(name);
   }
-  
+  if (start_pass>end_pass) {
+    printf("start_pass > end_pass!\n");
+    exitElegant(1);
+  }
   firstIndexInGroup = -1;
   while ((context=wfind_element(name, &context, beamline->elem))) {
     if (type && !wild_match(entity_name[context->type], type))
@@ -123,6 +126,8 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
     modData->flushRecord      = SDDS_Realloc(modData->flushRecord, sizeof(*modData->flushRecord)*(n_items+1));
     modData->fpRecord         = SDDS_Realloc(modData->fpRecord, sizeof(*modData->fpRecord)*(n_items+1));
     modData->convertPassToTime = SDDS_Realloc(modData->convertPassToTime, sizeof(*modData->convertPassToTime)*(n_items+1));
+    modData->startPass         = SDDS_Realloc(modData->startPass, sizeof(*modData->startPass)*(n_items+1));
+    modData->endPass           = SDDS_Realloc(modData->endPass, sizeof(*modData->endPass)*(n_items+1));
 
     modData->element[n_items] = context;
     modData->flags[n_items] = (multiplicative?MULTIPLICATIVE_MOD:0) + (differential?DIFFERENTIAL_MOD:0) 
@@ -134,6 +139,8 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
     modData->nData[n_items] = 0;
     modData->flushRecord[n_items] = flush_record;
     modData->convertPassToTime[n_items] = convert_pass_to_time;
+    modData->startPass[n_items] = start_pass;
+    modData->endPass[n_items] = end_pass;
 
     if (filename) {
       if ((modData->dataIndex[n_items] = firstIndexInGroup)==-1) {
@@ -248,6 +255,8 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
 
 
   for (iMod=0; iMod<modData->nItems; iMod++) {
+    if (iPass<modData->startPass[iMod] || iPass>modData->endPass[iMod])
+      continue;
     if (modData->convertPassToTime[iMod]) {
       double s0;
       s0 = modData->beamline->elem_recirc ? modData->beamline->elem_recirc->end_pos : 0;

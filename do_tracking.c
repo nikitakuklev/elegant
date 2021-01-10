@@ -35,6 +35,7 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr);
 void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha);
 void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX *M);
+void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po);
 long trackWithIndividualizedLinearMatrix(double **particle, long particles,
                                     double **accepted, double Po, double z,
                                     ELEMENT_LIST *eptr,
@@ -1171,6 +1172,23 @@ long do_tracking(
               default:
                 break;
               }
+            }  else {
+              switch (eptr->type) {
+              case T_MONI:
+                if ( ((MONI*)eptr->p_elem)->storeTurnByTurn)
+                  storeBPMReading(eptr, coord, nToTrack, *P_central); 
+                break;
+              case T_HMON:
+                if ( ((HMON*)eptr->p_elem)->storeTurnByTurn)
+                  storeBPMReading(eptr, coord, nToTrack, *P_central); 
+                break;
+              case T_VMON:
+                if ( ((VMON*)eptr->p_elem)->storeTurnByTurn)
+                  storeBPMReading(eptr, coord, nToTrack, *P_central); 
+                break;
+              default:
+                break;
+              }
             }
             /* Only the slave CPUs will track */ 
             if ((!USE_MPI || !notSinglePart) || (USE_MPI && (myid!=0))) 
@@ -1263,11 +1281,12 @@ long do_tracking(
                 if (isMaster || !notSinglePart)
        		  store_fitpoint_matrix_values((MARK*)eptr->p_elem, eptr->name, 
 					       eptr->occurence, eptr->accumMatrix);
-		store_fitpoint_beam_parameters((MARK*)eptr->p_elem, eptr->name,eptr->occurence, 
-					       coord, nToTrack, *P_central); 
 		if (flags&CLOSED_ORBIT_TRACKING)
 		  storeMonitorOrbitValues(eptr, coord, nToTrack);
 	      }
+              if (((MARK*)eptr->p_elem)->fitpoint)
+		store_fitpoint_beam_parameters((MARK*)eptr->p_elem, eptr->name,eptr->occurence, 
+					       coord, nToTrack, *P_central); 
 	      break;
 	    case T_RECIRC:
 	      /* Recognize and record recirculation point.  */
@@ -3627,7 +3646,7 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
 #else
   npTotal = np;
 #endif
-  if (isMaster || !notSinglePart) {
+  /* if (isMaster || !notSinglePart) { */
     for (i=0; i<6; i++) {
       centroid[i] = sums->centroid[i];
       sigma[i] = sqrt(sums->beamSums2->sigma[i][i]);
@@ -3687,8 +3706,68 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
 	rpn_store(sums->beamSums2->sigma[i][j], NULL, fpt->sij_mem[k]);
     rpn_store(Po, NULL, fpt->centroid_mem[6]);
     rpn_store((double)npTotal, NULL, fpt->centroid_mem[7]);
-  }
+      /* } */
   freeBeamSums(sums, 1);
+}
+
+void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po)
+{
+  long npTotal;
+  BEAM_SUMS *sums;
+  char s[1000];
+  double x, y;
+  MONI *moni;
+  HMON *hmon;
+  VMON *vmon;
+
+  sums = allocateBeamSums(0, 1);
+  zero_beam_sums(sums, 1);
+  accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
+#if USE_MPI
+  if (parallelStatus==trueParallel && partOnMaster && notSinglePart)
+    MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  else
+    npTotal = np;
+#else
+  npTotal = np;
+#endif
+
+  x = sums->centroid[0];
+  y = sums->centroid[2];
+  freeBeamSums(sums, 1);
+
+  switch (eptr->type) {
+  case T_MONI:
+    moni = (MONI*)(eptr->p_elem);
+    if (!(moni->initialized&2)) {
+      snprintf(s, 1000, "%s#%ld.x", eptr->name, eptr->occurence);
+      moni->tbtMemoryNumber[0] = rpn_create_mem(s, 0);
+      snprintf(s, 1000, "%s#%ld.y", eptr->name, eptr->occurence);
+      moni->tbtMemoryNumber[1] = rpn_create_mem(s, 0);
+      moni->initialized |= 2;
+    }
+    rpn_store(computeMonitorReading(eptr, 0, x, y, 0), NULL, moni->tbtMemoryNumber[0]);
+    rpn_store(computeMonitorReading(eptr, 1, x, y, 0), NULL, moni->tbtMemoryNumber[1]);
+    break;
+  case T_HMON:
+    hmon = (HMON*)(eptr->p_elem);
+    if (!(hmon->initialized&2)) {
+      snprintf(s, 1000, "%s#%ld.x", eptr->name, eptr->occurence);
+      hmon->tbtMemoryNumber = rpn_create_mem(s, 0);
+      hmon->initialized |= 2;
+    }
+    rpn_store(computeMonitorReading(eptr, 0, x, y, 0), NULL, hmon->tbtMemoryNumber);
+    break;
+  case T_VMON:
+    vmon = (VMON*)(eptr->p_elem);
+    if (!(vmon->initialized&2)) {
+      snprintf(s, 1000, "%s#%ld.x", eptr->name, eptr->occurence);
+      vmon->tbtMemoryNumber = rpn_create_mem(s, 0);
+      vmon->initialized |= 2;
+    }
+    rpn_store(computeMonitorReading(eptr, 1, x, y, 0), NULL, vmon->tbtMemoryNumber);
+    break;
+  }
 }
 
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr)
@@ -4335,7 +4414,7 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
     if (!moni->coFitpoint) 
       return;
     compute_centroids(centroid, part, np);
-    if (!moni->initialized) {
+    if (!(moni->initialized&1)) {
       sprintf(s, "%s#%ld.xco", eptr->name, eptr->occurence);
       moni->coMemoryNumber[0] = rpn_create_mem(s, 0);
       sprintf(s, "%s#%ld.xpco", eptr->name, eptr->occurence);
@@ -4344,7 +4423,7 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
       moni->coMemoryNumber[2] = rpn_create_mem(s, 0);
       sprintf(s, "%s#%ld.ypco", eptr->name, eptr->occurence);
       moni->coMemoryNumber[3] = rpn_create_mem(s, 0);
-      moni->initialized = 1;
+      moni->initialized |= 1;
     }
     for (i=0; i<4; i++) 
       rpn_store(centroid[i], NULL, moni->coMemoryNumber[i]);
@@ -4373,12 +4452,12 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
     if (!hmon->coFitpoint) 
       return;
     compute_centroids(centroid, part, np);
-    if (!hmon->initialized) {
+    if (!(hmon->initialized&1)) {
       sprintf(s, "%s#%ld.xco", eptr->name, eptr->occurence);
       hmon->coMemoryNumber[0] = rpn_create_mem(s, 0);
       sprintf(s, "%s#%ld.xpco", eptr->name, eptr->occurence);
       hmon->coMemoryNumber[1] = rpn_create_mem(s, 0);
-      hmon->initialized = 1;
+      hmon->initialized |= 1;
     }
     for (i=0; i<2; i++) 
       rpn_store(centroid[i], NULL, hmon->coMemoryNumber[i]);
@@ -4388,12 +4467,12 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
     if (!vmon->coFitpoint) 
       return;
     compute_centroids(centroid, part, np);
-    if (!vmon->initialized) {
+    if (!(vmon->initialized&1)) {
       sprintf(s, "%s#%ld.yco", eptr->name, eptr->occurence);
       vmon->coMemoryNumber[0] = rpn_create_mem(s, 0);
       sprintf(s, "%s#%ld.ypco", eptr->name, eptr->occurence);
       vmon->coMemoryNumber[1] = rpn_create_mem(s, 0);
-      vmon->initialized = 1;
+      vmon->initialized |= 1;
     }
     for (i=0; i<2; i++) 
       rpn_store(centroid[i+2], NULL, vmon->coMemoryNumber[i]);

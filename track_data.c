@@ -477,6 +477,7 @@ PARAMETER hmon_param[N_HMON_PARAMS] = {
     {"ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&hmon_example.order), NULL, 1.0, 0, "matrix order"},
     {"READOUT", "", IS_STRING, 0, (long)((char *)&hmon_example.readout), NULL, 0.0, 1, "rpn expression for readout (actual position supplied in variable x)"},
     {"CO_FITPOINT", "", IS_SHORT, 0, (long)((char *)&hmon_example.coFitpoint), NULL, 0.0, 0, "If nonzero, then closed orbit value is placed in variable <name>\\#<occurence>.xco"},
+    {"STORE_TURN_BY_TURN", "", IS_SHORT, 0, (long)((char *)&hmon_example.storeTurnByTurn), NULL, 0.0, 0, "If nonzero, then turn-by-turn horizontal position value is placed in variable <name>\\#<occurence>.Cx etc."},
     } ;
    
 VMON vmon_example;
@@ -492,6 +493,7 @@ PARAMETER vmon_param[N_VMON_PARAMS] = {
     {"ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&vmon_example.order), NULL, 1.0, 0, "matrix order"},
     {"READOUT", "", IS_STRING, 0, (long)((char *)&vmon_example.readout), NULL, 0.0, 1, "rpn expression for readout (actual position supplied in variable y)"},
     {"CO_FITPOINT", "", IS_SHORT, 0, (long)((char *)&vmon_example.coFitpoint), NULL, 0.0, 0, "If nonzero, then closed orbit value is placed in variable <name>\\#<occurence>.yco"},
+    {"STORE_TURN_BY_TURN", "", IS_SHORT, 0, (long)((char *)&vmon_example.storeTurnByTurn), NULL, 0.0, 0, "If nonzero, then turn-by-turn vertical position value is placed in variable <name>\\#<occurence>.Cy etc."},
     } ;
 
 MONI moni_example;   
@@ -510,6 +512,7 @@ PARAMETER moni_param[N_MONI_PARAMS] = {
     {"XREADOUT", "", IS_STRING, 0, (long)((char *)&moni_example.x_readout), NULL, 0.0, 1, "rpn expression for x readout (actual position supplied in variables x, y"},
     {"YREADOUT", "", IS_STRING, 0, (long)((char *)&moni_example.y_readout), NULL, 0.0, 1, "rpn expression for y readout (actual position supplied in variables x, y"},
     {"CO_FITPOINT", "", IS_SHORT, 0, (long)((char *)&moni_example.coFitpoint), NULL, 0.0, 0, "If nonzero, then closed orbit values are placed in variables <name>\\#<occurence>.xco and <name>\\#<occurence>.yco"},
+    {"STORE_TURN_BY_TURN", "", IS_SHORT, 0, (long)((char *)&moni_example.storeTurnByTurn), NULL, 0.0, 0, "If nonzero, then turn-by-turn horizontal/vertical position values are placed in variable <name>\\#<occurence>.Cx/Cy etc."},
     } ;
 
 RCOL rcol_example;   

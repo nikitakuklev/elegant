@@ -17,6 +17,8 @@
     long refresh_matrix = 0;
     long differential = 1;
     long multiplicative = 0;
+    long start_pass = 0;
+    long end_pass = LONG_MAX;
     long start_occurence = 0;
     long end_occurence = 0;
     double s_start = -1;

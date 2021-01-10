@@ -491,6 +491,7 @@ typedef struct {
     char **record;               /* output filenames */
     long *flushRecord;           /* passes between flushing the record file */
     FILE **fpRecord;             /* output file structures */
+    long *startPass, *endPass;
     long *convertPassToTime;
   } MODULATION_DATA;
 
@@ -1011,9 +1012,9 @@ extern char *entity_text[N_TYPES];
 #define N_VCOR_PARAMS 11
 #define N_RFCA_PARAMS 18
 #define N_ELSE_PARAMS 0
-#define N_HMON_PARAMS 10
-#define N_VMON_PARAMS 10
-#define N_MONI_PARAMS 13
+#define N_HMON_PARAMS 11
+#define N_VMON_PARAMS 11
+#define N_MONI_PARAMS 14
 #define N_RCOL_PARAMS 7
 #define N_ECOL_PARAMS 9
 #define N_MARK_PARAMS 3
@@ -1435,24 +1436,27 @@ typedef struct {
     short order;
     char *readout;   /* rpn equation for x readout as function of x and y */
     short coFitpoint;
-    short initialized;
-    long coMemoryNumber[2];
+    short storeTurnByTurn;
+    unsigned short initialized; /* 0x01: CO, 0x02: TBT */
+    long coMemoryNumber[2], tbtMemoryNumber;
     } HMON;
 typedef struct {
     double length, dx, dy, weight, tilt, calibration, setpoint;
     short order;
     char *readout;   /* rpn equation for y readout as function of x and y */
     short coFitpoint;
-    short initialized;
-    long coMemoryNumber[2];
+    short storeTurnByTurn;
+    unsigned short initialized; /* 0x01: CO, 0x02: TBT */
+    long coMemoryNumber[2], tbtMemoryNumber;
     } VMON;
 typedef struct {
     double length, dx, dy, weight, tilt, xcalibration, ycalibration, xsetpoint, ysetpoint;
     short order;
     char *x_readout, *y_readout; /* rpn equations for x and y readouts as function of actual x and y */
     short coFitpoint;
-    short initialized;
-    long coMemoryNumber[4];
+    short storeTurnByTurn;
+    unsigned short initialized; /* 0x01: CO, 0x02: TBT */
+    long coMemoryNumber[4], tbtMemoryNumber[2];
     } MONI;
 
 /* names and storage structure for rectangular collimator physical parameters */
