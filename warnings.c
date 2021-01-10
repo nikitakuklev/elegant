@@ -32,14 +32,14 @@ void printWarningWithContext(char *context1, char  *context2, char *text,  char 
   long i;
   char buffer[32768];
   for (i=0; i<warnings; i++) 
-    if (strcmp(warningText[i], buffer)==0)
+    if (strcmp(warningText[i], text)==0)
       break;
   if (i==warnings)  {
     if (!(warningText = SDDS_Realloc(warningText, sizeof(*warningText)*(warnings+1))))
       bombElegant("Memory allocation error in printWarning\n", NULL);
     if (!(warningCount = SDDS_Realloc(warningCount, sizeof(*warningCount)*(warnings+1))))
       bombElegant("Memory allocation error in printWarning\n", NULL);
-    cp_str(&warningText[warnings], buffer);
+    cp_str(&warningText[warnings], text);
     warningCount[warnings] = 1;
     warnings++;
   } else 
@@ -50,10 +50,10 @@ void printWarningWithContext(char *context1, char  *context2, char *text,  char 
   if (context1 && strlen(context1)) {
     if (context2 && strlen(context2))
       /* context1 is typically the element type name, context2 is typically the element name */
-      snprintf(buffer, 32768, "%s %s: %s", context1, context2, text);
+      snprintf(buffer, 32768, "%s %s: %s", context1, context2, detail);
     else
       /* context1 is typically the command name or subroutine name */
-      snprintf(buffer, 32768, "%s: %s", context1, text);
+      snprintf(buffer, 32768, "%s: %s", context1, detail);
   }
   else
     strncpy(buffer, text, 32768);
