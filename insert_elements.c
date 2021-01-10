@@ -13,7 +13,7 @@
 #include "insert_elements.h"
 
 typedef struct {
-  char **name, *type, *exclude, *elemDef;
+  char **name, *type, *exclude, *elemDef, *elemName;
   long nNames, nskip, add_end, add_start, total, before, occur[100];
   double sStart, sEnd;
 } ADD_ELEM;
@@ -22,7 +22,7 @@ static ADD_ELEM addElem;
 static long add_elem_flag = 0;
 
 #define COPYLEN 1024
-static char elementDefCopy[COPYLEN+1];
+/* static char elementDefCopy[COPYLEN+1]; */
 static long insertCount = 0;
 
 long getAddElemFlag() 
@@ -120,11 +120,12 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   addElem.type = type;
   addElem.exclude = exclude;
   addElem.elemDef = element_def;
+  addElem.elemName = element_name;
   addElem.sStart = s_start;
   addElem.sEnd = s_end;
   addElem.before = insert_before;
   delete_spaces(addElem.elemDef);
-  strncpy(elementDefCopy, element_def, COPYLEN);
+  /* strncpy(elementDefCopy, element_def, COPYLEN); */
 
   addElem.total = total_occurrences;
   for (i=0; i< addElem.total; i++) {
@@ -170,7 +171,7 @@ long insertElem(char *name, long type, long *skip, long occurPosition, double en
       if (occurPosition == addElem.occur[i]) {
 	if (verbose)
 	  printf("Adding \"%s\" %s occurrence %ld of %s\n",
-		 elementDefCopy, addElem.before?"before":"after", occurPosition, name);
+		 addElem.elemDef, addElem.before?"before":"after", occurPosition, name);
 	insertCount ++;
 	return(addElem.before?2:1);
       }
@@ -185,7 +186,7 @@ long insertElem(char *name, long type, long *skip, long occurPosition, double en
     *skip = 0;
     if (verbose)
       printf("Adding \"%s\" %s occurrence %ld of %s\n",
-	     elementDefCopy, addElem.before?"before":"after", occurPosition, name);
+	     addElem.elemDef, addElem.before?"before":"after", occurPosition, name);
     insertCount ++;
     return(addElem.before?2:1);
   }
