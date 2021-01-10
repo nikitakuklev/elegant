@@ -3665,7 +3665,8 @@ extern void delete_spaces(char *s);
 extern void str_to_upper_quotes(char *s);
  
 /* prototypes for check_duplic.c: */
-extern long check_duplic_elem(ELEMENT_LIST **elem, ELEMENT_LIST **new_elem, char *nameToCheck, long n_elems);
+extern long check_duplic_elem(ELEMENT_LIST **elem, ELEMENT_LIST **new_elem, char *nameToCheck, long n_elems,
+			      ELEMENT_LIST **existing_elem);
 extern long check_duplic_line(LINE_LIST *line, char *new_line, long n_lines, long checkOnly);
  
 /* prototypes for compute_centroids.c: */

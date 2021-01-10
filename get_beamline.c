@@ -198,7 +198,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             printf("The name %s is invalid for a beamline: # is a reserved character.\n", lptr->name);
             exitElegant(1);
           }
-          if (check_duplic_elem(&elem, NULL, lptr->name, n_elems)) {
+          if (check_duplic_elem(&elem, NULL, lptr->name, n_elems, NULL)) {
             printf("line definition %s conflicts with element of same name\n", lptr->name);
             exitElegant(1);
           }
@@ -281,7 +281,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
               printf("element %s conflicts with line with same name\n", eptr->name);
               exitElegant(1);
             }
-            check_duplic_elem(&elem, &eptr, NULL, n_elems);
+            check_duplic_elem(&elem, &eptr, NULL, n_elems, NULL);
           }
 #ifdef DEBUG
           print_elem(stdout, elem);
@@ -309,7 +309,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     if (getSCMULTSpecCount()) {
       fill_elem(eptr, getSCMULTName(), T_SCMULT, NULL);
       eptr_sc = eptr;
-      check_duplic_elem(&elem, &eptr, NULL, n_elems);
+      check_duplic_elem(&elem, &eptr, NULL, n_elems, NULL);
       extend_elem_list(&eptr);
       n_elems++;  	
     }
@@ -328,6 +328,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     type = T_NODEF;
 
     if (getAddElemFlag()) {
+      ELEMENT_LIST *eptrExisting;
       /* go to the last elements in linked-list */
       eptr = elem;
       while (eptr->succ) 
@@ -346,17 +347,20 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
         printf("The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
         exitElegant(1);
       }
-      eptr_add = eptr;
       if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
         printf("element %s conflicts with line with same name\n", eptr->name);
         exitElegant(1);
       }
-      if (check_duplic_elem(&elem, NULL, eptr->name, n_elems)) {
+      if (check_duplic_elem(&elem, NULL, eptr->name, n_elems, &eptrExisting)) {
         printWarning
           ("insert_elements invoked using same new element identical to existing element. The existing definition is used.", NULL);
+	free_elements(eptr);
+	eptr_add = tmalloc(sizeof(*eptr_add));
+	copy_element(eptr_add, eptrExisting, 0, 0, 0, NULL);
       } else {
 	/* This will actually insert the new element definition */
-        check_duplic_elem(&elem, &eptr, NULL, n_elems);
+        check_duplic_elem(&elem, &eptr, NULL, n_elems, NULL);
+	eptr_add = eptr;
         n_elems++;  	
       }
     }
@@ -386,7 +390,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
         printf("element %s conflicts with line with same name\n", eptr->name);
         exitElegant(1);
       }
-      check_duplic_elem(&elem, &eptr, NULL, n_elems);
+      check_duplic_elem(&elem, &eptr, NULL, n_elems, NULL);
       n_elems++;  	
     }
   }

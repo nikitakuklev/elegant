@@ -21,9 +21,10 @@
 
 long check_duplic_elem(
                        ELEMENT_LIST **elem0,          /* root of element list */
-                       ELEMENT_LIST **new_elem,       /* newly added element  */
+                       ELEMENT_LIST **new_elem,       /* newly added element */
                        char *nameToCheck,             /* don't add new element, just check for this name */
-                       long n_elems
+                       long n_elems,
+		       ELEMENT_LIST **existing_elem   /* existing, matching element */
                        )
 {
   char *new_name;
@@ -69,10 +70,9 @@ long check_duplic_elem(
     hi = n_elems-1;
     if ((comparison=strcmp(new_name, elemArray[lo]->name))==0) {
       if (checkOnly) {
+	if (existing_elem)
+	  *existing_elem = elemArray[lo];
         free(elemArray);
-#ifdef DEBUG
-        printf("**** check reveals problem\n");
-#endif
         return 1;
       }
       printf("error: multiple definitions of element %s\n",
@@ -85,10 +85,9 @@ long check_duplic_elem(
     if (!insertionPoint) {
       if ((comparison=strcmp(new_name, elemArray[hi]->name))==0) {
         if (checkOnly) {
+	  if (existing_elem)
+	    *existing_elem = elemArray[hi];
           free(elemArray);
-#ifdef DEBUG
-          printf("**** check reveals problem\n");
-#endif
           return 1;
         }
         printf("error: multiple definitions of element %s\n",
@@ -101,10 +100,9 @@ long check_duplic_elem(
           mid = (lo+hi)/2;
           if ((comparison=strcmp(new_name, elemArray[mid]->name))==0) {
             if (checkOnly) {
+	      if (existing_elem)
+		*existing_elem = elemArray[mid];
               free(elemArray);
-#ifdef DEBUG
-              printf("**** check reveals problem\n");
-#endif
               return 1;
             }
             printf("error: multiple definitions of element %s\n",
