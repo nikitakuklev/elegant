@@ -353,9 +353,9 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       }
       if (check_duplic_elem(&elem, NULL, eptr->name, n_elems)) {
         printWarning
-          ("insert_elements invoked using same new element name as previous insert_elements command. The first definition is used.",
-           eptr->name);
+          ("insert_elements invoked using same new element identical to existing element. The existing definition is used.", NULL);
       } else {
+	/* This will actually insert the new element definition */
         check_duplic_elem(&elem, &eptr, NULL, n_elems);
         n_elems++;  	
       }

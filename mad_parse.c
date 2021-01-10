@@ -1018,7 +1018,7 @@ void parse_element(
               parameter[i].name, eptr->name);
       exitElegant(1);
     }
-    if (parameter[i].flags&PARAM_IS_DEPRECATED)  {
+    if (!isGroup && parameter[i].flags&PARAM_IS_DEPRECATED)  {
       char buffer1[1024], buffer2[1024];
       snprintf(buffer1, 1024, "Parameter %s of %s is deprecated.",
                parameter[i].name, entity_name[eptr->type]);
