@@ -359,8 +359,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 	copy_element(eptr_add, eptrExisting, 0, 0, 0, NULL);
       } else {
 	/* This will actually insert the new element definition */
+        eptr_add = eptr;
         check_duplic_elem(&elem, &eptr, NULL, n_elems, NULL);
-	eptr_add = eptr;
         n_elems++;  	
       }
     }
