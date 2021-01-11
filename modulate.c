@@ -227,6 +227,9 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
   long type, param;
   char *p_elem;
  
+  if (modData->nItems<=0)
+    return 0;
+
 #if USE_MPI
   long np_total;
   if (notSinglePart) {
@@ -239,9 +242,6 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
   if (np==0)
     return 0;
 #endif
-
-  if (modData->nItems<=0)
-    return 0;
 
   beta = pCentral/sqrt(pCentral*pCentral+1);
 

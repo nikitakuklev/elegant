@@ -35,7 +35,6 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr);
 void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha);
 void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX *M);
-void createBPMReadingMemories(ELEMENT_LIST *eptr);
 void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po);
 long trackWithIndividualizedLinearMatrix(double **particle, long particles,
                                     double **accepted, double Po, double z,
@@ -474,8 +473,6 @@ long do_tracking(
   }
   
   for (i_pass=passOffset; i_pass<n_passes+passOffset; i_pass++) {
-    if (i_pass==passOffset)
-      createBPMReadingMemories(beamline->elem);
 #ifdef DEBUG_CRASH
     printMessageAndTime(stdout, "do_tracking checkpoint 0.35, ");
     printf("pass = %ld\n", i_pass);
@@ -859,17 +856,26 @@ long do_tracking(
         }
         abort();
       }
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.1\n");
+#endif
       if (!eptr->p_elem && !run->concat_order) {
         printf("element %s has NULL p_elem pointer", eptr->name);
         fflush(stdout);
         exitElegant(1);
       }
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.2\n");
+#endif
       if (eptr->type<=0 || eptr->type>=N_TYPES) {
         printf("element %s has type %ld--not recognized/not allowed\n", eptr->name, eptr->type);
         fflush(stdout);
         exitElegant(1);
       }
       log_exit("do_tracking.2.2.0");
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.3\n");
+#endif
 
       log_entry("do_tracking.2.2.1");
 
@@ -906,6 +912,9 @@ long do_tracking(
           }   
         }
 #endif   
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.4\n");
+#endif
       if (sums_vs_z && *sums_vs_z && (!run->final_pass || i_pass==n_passes-1) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
         if (i_sums<0)
           bombElegant("attempt to accumulate beam sums with negative index!", NULL);
@@ -928,6 +937,9 @@ long do_tracking(
 #endif
         i_sums++;
       }
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.5\n");
+#endif
 #if USE_MPI
       if (notSinglePart) {
 	active = 0;
@@ -1031,6 +1043,9 @@ long do_tracking(
 	}
       } 
 #endif
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.6\n");
+#endif
 
 #if defined(BEAM_SUMS_DEBUG)
       name = eptr->name;
@@ -1056,14 +1071,23 @@ long do_tracking(
 
       log_exit("do_tracking.2.2.1");
       if (eptr->p_elem || eptr->matrix) {
+#ifdef DEBUG_CRASH 
+	printMessageAndTime(stdout, "do_tracking checkpoint 4.0\n");
+#endif
         if ((run->print_statistics>0 || (run->print_statistics<0 && (-run->print_statistics)<=(i_pass+1))) && !(flags&TEST_PARTICLES)) {
           char buffer[16384];
+#ifdef DEBUG_CRASH 
+	  printMessageAndTime(stdout, "do_tracking checkpoint 4.1\n");
+#endif
 #if USE_MPI
 	  if (!partOnMaster && notSinglePart) {
 	    if (isMaster) nToTrack = 0; 
             if (beam)
               MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	  }
+#endif
+#ifdef DEBUG_CRASH 
+	  printMessageAndTime(stdout, "do_tracking checkpoint 4.2\n");
 #endif
           snprintf(buffer, 16384, "Starting %s#%ld at s=%le to %le m, pass %ld, %ld particles, memory %ld kB\n", 
                  eptr->name, eptr->occurence, 
@@ -1078,6 +1102,9 @@ long do_tracking(
           printMessageAndTime(stdout, buffer);
           fflush(stdout);
 	}
+#ifdef DEBUG_CRASH 
+	printMessageAndTime(stdout, "do_tracking checkpoint 4.3\n");
+#endif
         /* show_dE = 0; */
         nLeft = nToTrack;  /* in case it isn't set by the element tracking */
         if (eptr==eptrCLMatrix) {
@@ -1144,6 +1171,9 @@ long do_tracking(
         }
         else if (entity_description[eptr->type].flags&MATRIX_TRACKING &&
 		 !(flags&IBS_ONLY_TRACKING)) {
+#ifdef DEBUG_CRASH 
+	  printMessageAndTime(stdout, "do_tracking checkpoint 5.0\n");
+#endif
           if (!(entity_description[eptr->type].flags&HAS_MATRIX))
             bombElegant("attempt to matrix-multiply for element with no matrix!",  NULL);
           if (!eptr->matrix) {
@@ -1200,6 +1230,9 @@ long do_tracking(
         }
         else { /* normal tracking ends up here */
           long type;
+#ifdef DEBUG_CRASH 
+	  printMessageAndTime(stdout, "do_tracking checkpoint 6.0\n");
+#endif
           if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
             printf("Tracking element: ");
             fflush(stdout);
@@ -3712,22 +3745,22 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
   freeBeamSums(sums, 1);
 }
 
-void createBPMReadingMemories(ELEMENT_LIST *eptr)
+void createBPMReadingMemories(ELEMENT_LIST *eptr, double **coord, long np, double Po)
 {
   /* run through the beamline and force creation of some variables for storing BPM readings */
   while (eptr) {
     switch (eptr->type) {
     case T_MONI:
       if ( ((MONI*)eptr->p_elem)->storeTurnByTurn)
-	storeBPMReading(eptr, NULL, 0, 0.0); 
+	storeBPMReading(eptr, coord, np, Po);
       break;
     case T_HMON:
       if ( ((HMON*)eptr->p_elem)->storeTurnByTurn)
-	storeBPMReading(eptr, NULL, 0, 0.0); 
+	storeBPMReading(eptr, coord, np, Po);
       break;
     case T_VMON:
       if ( ((VMON*)eptr->p_elem)->storeTurnByTurn)
-	storeBPMReading(eptr, NULL, 0, 0.0); 
+	storeBPMReading(eptr, coord, np, Po);
       break;
     default:
       break;
@@ -3745,26 +3778,22 @@ void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po)
   MONI *moni;
   HMON *hmon;
   VMON *vmon;
-  
-  if (coord) {
-    sums = allocateBeamSums(0, 1);
-    zero_beam_sums(sums, 1);
-    accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
+
+  sums = allocateBeamSums(0, 1);
+  zero_beam_sums(sums, 1);
+  accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
 #if USE_MPI
-    if (parallelStatus==trueParallel && partOnMaster && notSinglePart)
-      MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-    else
-      npTotal = np;
-#else
+  if (parallelStatus==trueParallel && partOnMaster && notSinglePart)
+    MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  else
     npTotal = np;
+#else
+  npTotal = np;
 #endif
-    
-    x = sums->centroid[0];
-    y = sums->centroid[2];
-    freeBeamSums(sums, 1);
-  } else {
-    x = y = 0;
-  }
+  
+  x = sums->centroid[0];
+  y = sums->centroid[2];
+  freeBeamSums(sums, 1);
 
   switch (eptr->type) {
   case T_MONI:
