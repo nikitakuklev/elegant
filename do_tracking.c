@@ -35,6 +35,7 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr);
 void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha);
 void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX *M);
+void createBPMReadingMemories(ELEMENT_LIST *eptr);
 void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po);
 long trackWithIndividualizedLinearMatrix(double **particle, long particles,
                                     double **accepted, double Po, double z,
@@ -473,6 +474,8 @@ long do_tracking(
   }
   
   for (i_pass=passOffset; i_pass<n_passes+passOffset; i_pass++) {
+    if (i_pass==passOffset)
+      createBPMReadingMemories(beamline->elem);
 #ifdef DEBUG_CRASH
     printMessageAndTime(stdout, "do_tracking checkpoint 0.35, ");
     printf("pass = %ld\n", i_pass);
@@ -3709,6 +3712,30 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
   freeBeamSums(sums, 1);
 }
 
+void createBPMReadingMemories(ELEMENT_LIST *eptr)
+{
+  /* run through the beamline and force creation of some variables for storing BPM readings */
+  while (eptr) {
+    switch (eptr->type) {
+    case T_MONI:
+      if ( ((MONI*)eptr->p_elem)->storeTurnByTurn)
+	storeBPMReading(eptr, NULL, 0, 0.0); 
+      break;
+    case T_HMON:
+      if ( ((HMON*)eptr->p_elem)->storeTurnByTurn)
+	storeBPMReading(eptr, NULL, 0, 0.0); 
+      break;
+    case T_VMON:
+      if ( ((VMON*)eptr->p_elem)->storeTurnByTurn)
+	storeBPMReading(eptr, NULL, 0, 0.0); 
+      break;
+    default:
+      break;
+    }
+    eptr = eptr->succ;
+  }
+}
+
 void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po)
 {
   long npTotal;
@@ -3718,22 +3745,26 @@ void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po)
   MONI *moni;
   HMON *hmon;
   VMON *vmon;
-
-  sums = allocateBeamSums(0, 1);
-  zero_beam_sums(sums, 1);
-  accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
+  
+  if (coord) {
+    sums = allocateBeamSums(0, 1);
+    zero_beam_sums(sums, 1);
+    accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
 #if USE_MPI
-  if (parallelStatus==trueParallel && partOnMaster && notSinglePart)
-    MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-  else
-    npTotal = np;
+    if (parallelStatus==trueParallel && partOnMaster && notSinglePart)
+      MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    else
+      npTotal = np;
 #else
-  npTotal = np;
+    npTotal = np;
 #endif
-
-  x = sums->centroid[0];
-  y = sums->centroid[2];
-  freeBeamSums(sums, 1);
+    
+    x = sums->centroid[0];
+    y = sums->centroid[2];
+    freeBeamSums(sums, 1);
+  } else {
+    x = y = 0;
+  }
 
   switch (eptr->type) {
   case T_MONI:
