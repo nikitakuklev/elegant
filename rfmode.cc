@@ -470,7 +470,8 @@ void track_through_rfmode(
                 }
                 IgAmp = 0;
               }
-              
+	      IgAmp *= rfmode->generatorFactor;
+
               /* Calculate updated I/Q components for generator current */
               rfmode->Iiq->a[0][0] = IgAmp*cos(IgPhase);
               rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);

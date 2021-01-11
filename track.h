@@ -1054,7 +1054,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 78
 #define N_MATTER_PARAMS 21
-#define N_RFMODE_PARAMS 56
+#define N_RFMODE_PARAMS 57
 #define N_TRFMODE_PARAMS 25
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 28
@@ -2585,6 +2585,7 @@ typedef struct {
     char *IFilterFile, *QFilterFile;
     char *feedbackRecordFile;
     long muteGenerator;        /* if non-zero, generator output is muted */
+    double generatorFactor;
   /** char *noiseAlphaGen, *noisePhiGen; */
 #define I_NOISE_ALPHA_GEN 0
 #define I_NOISE_PHI_GEN 1
