@@ -34,7 +34,7 @@ long getAddStartFlag();
  * input file.  An important use of this list is to keep track of the lattice
  * that will be saved with save_lattice.
  */
-static ELEMENT_LIST *elem;   
+static ELEMENT_LIST *elem = NULL; 
 
 /* line: root of linked-list of LINE structures 
  * This list contains the definitions of all beamlines as supplied in the
@@ -330,9 +330,10 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     if (getAddElemFlag()) {
       ELEMENT_LIST *eptrExisting;
       /* go to the last elements in linked-list */
-      eptr = elem;
-      while (eptr->succ) 
-        eptr = eptr->succ;
+      if ((eptr = elem)) {
+        while (eptr->succ) 
+          eptr = eptr->succ;
+      }
       /* extend the list for accommodating new element */
       extend_elem_list(&eptr);
       /* add new element to linked-list */
@@ -354,6 +355,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       if (check_duplic_elem(&elem, NULL, eptr->name, n_elems, &eptrExisting)) {
         printWarning
           ("insert_elements invoked using same new element identical to existing element. The existing definition is used.", NULL);
+        if (eptr->pred)
+          eptr->pred->succ = NULL;
 	free_elements(eptr);
 	eptr_add = tmalloc(sizeof(*eptr_add));
 	copy_element(eptr_add, eptrExisting, 0, 0, 0, NULL);
