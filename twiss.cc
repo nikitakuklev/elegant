@@ -1925,7 +1925,11 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
   while (eptr) {
     if (eptr->type==T_RECIRC && matched) {
       last_n_elem = n_elem;
-      beamline->elem_twiss = beamline->elem_recirc = eptr;
+      if (eptr->pred)
+        beamline->elem_twiss = eptr->pred;
+      else
+        beamline->elem_twiss = eptr;
+      beamline->elem_recirc = eptr;
     }
     eptr = eptr->succ;
     n_elem --;
