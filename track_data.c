@@ -3031,6 +3031,7 @@ PARAMETER scmult_param[N_SCMULT_PARAMS] = {
 */
 /*#ifdef WIN32*/
 PARAMETER scmult_param[1] = {
+  /* This looks like an error, but it is ok because a difference is taken later */
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&edrift_example.length), NULL, 0.0, 0, "length"},
 };
 /*#else
@@ -3692,7 +3693,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_POLYNOMIALSERIES_PARAMS, MAT_LEN_NCAT|IS_MAGNET, sizeof(POLYNOMIALSERIES),  polynomialSeries_param  },
     {    N_RFTM110_PARAMS,  0|MPALGORITHM,       sizeof(RFTM110),    rftm110_param     }, 
     {   N_CWIGGLER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(CWIGGLER),    cwiggler_param     }, 
-    {   N_EDRIFT_PARAMS, MAT_LEN|DIVIDE_OK|GPU_SUPPORT|BACKTRACK, sizeof(EDRIFT),    edrift_param   },
+    {   N_EDRIFT_PARAMS, MAT_LEN_NCAT|DIVIDE_OK|GPU_SUPPORT|BACKTRACK, sizeof(EDRIFT),    edrift_param   },
     {   N_SCMULT_PARAMS,    0,       sizeof(SCMULT),    scmult_param     },   
     {  N_ILMATRIX_PARAMS,  HAS_RF_MATRIX|MAT_LEN_NCAT,  sizeof(ILMATRIX),    ilmatrix_param     }, 
     {   N_TSCATTER_PARAMS,  0,       sizeof(TSCATTER),  tscatter_param     },   

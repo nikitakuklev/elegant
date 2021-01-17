@@ -2329,7 +2329,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
     }
   }
 
-  if (*ncor==0)
+  if (*ncor==0 && !recircs)
     return start;
 
   /* put the correctors into s order */
