@@ -1418,50 +1418,53 @@ long do_tracking(
               taperapc = (TAPERAPC*)eptr->p_elem;
 	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
 		drift_beam(coord, nToTrack, ((TAPERAPC*)eptr->p_elem)->length, run->default_order);
-	      else
+	      else {
 		nLeft = trackThroughTaperApCirc(coord, (TAPERAPC*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
-              if (taperapc->sticky) {
-                maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
-                maxamp->x_max = maxamp->y_max = x_max = y_max = taperapc->r[taperapc->e2Index];
-                maxamp->elliptical = elliptical = 1;
-                maxampOpenCode = 0;
-                maxamp->openSide = NULL;
-                maxamp->exponent = maxamp->yExponent = maxampExponent = maxampYExponent = 2;
-              }
+		if (taperapc->sticky) {
+		  maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
+		  maxamp->x_max = maxamp->y_max = x_max = y_max = taperapc->r[taperapc->e2Index];
+		  maxamp->elliptical = elliptical = 1;
+		  maxampOpenCode = 0;
+		  maxamp->openSide = NULL;
+		  maxamp->exponent = maxamp->yExponent = maxampExponent = maxampYExponent = 2;
+		}
+	      }
 	      break;
 	    case T_TAPERAPE:
               taperape = (TAPERAPE*)eptr->p_elem;
 	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
 		drift_beam(coord, nToTrack, taperape->length, run->default_order);
-	      else
+	      else {
 		nLeft = trackThroughTaperApElliptical(coord, taperape, nToTrack, accepted, last_z, *P_central);
-              if (taperape->sticky) {
-                maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
-                maxamp->x_max = x_max = taperape->a[taperape->e2Index];
-                maxamp->y_max = y_max = taperape->b[taperape->e2Index];
-                maxamp->elliptical = elliptical = 1;
-                maxampOpenCode = 0;
-                maxamp->openSide = NULL;
-                maxamp->exponent  = maxampExponent  = taperape->xExponent;
-                maxamp->yExponent = maxampYExponent = taperape->yExponent;
-              }
+		if (taperape->sticky) {
+		  maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
+		  maxamp->x_max = x_max = taperape->a[taperape->e2Index];
+		  maxamp->y_max = y_max = taperape->b[taperape->e2Index];
+		  maxamp->elliptical = elliptical = 1;
+		  maxampOpenCode = 0;
+		  maxamp->openSide = NULL;
+		  maxamp->exponent  = maxampExponent  = taperape->xExponent;
+		  maxamp->yExponent = maxampYExponent = taperape->yExponent;
+		}
+	      }
 	      break;
 	    case T_TAPERAPR:
               taperapr = (TAPERAPR*)eptr->p_elem;
 	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
 		drift_beam(coord, nToTrack, taperapr->length, run->default_order);
-	      else
+	      else {
 		nLeft = trackThroughTaperApRectangular(coord, taperapr, nToTrack, accepted, last_z, *P_central);
-              if (taperapr->sticky) {
-                maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
-                maxamp->x_max = x_max = taperapr->xmax[taperapr->e2Index];
-                maxamp->y_max = y_max = taperapr->ymax[taperapr->e2Index];
-                maxamp->elliptical = elliptical = 0;
-                maxampOpenCode = 0;
-                maxamp->openSide = NULL;
-                maxamp->exponent  = maxampExponent  = 0;
-                maxamp->yExponent = maxampYExponent = 0;
-              }
+		if (taperapr->sticky) {
+		  maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
+		  maxamp->x_max = x_max = taperapr->xmax[taperapr->e2Index];
+		  maxamp->y_max = y_max = taperapr->ymax[taperapr->e2Index];
+		  maxamp->elliptical = elliptical = 0;
+		  maxampOpenCode = 0;
+		  maxamp->openSide = NULL;
+		  maxamp->exponent  = maxampExponent  = 0;
+		  maxamp->yExponent = maxampYExponent = 0;
+		}
+	      }
 	      break;
 	    case T_CLEAN:
 	      if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)))
