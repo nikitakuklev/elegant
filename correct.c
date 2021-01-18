@@ -3901,11 +3901,14 @@ long global_coupled_trajcor
       for (i=0; i<beamline->n_elems+1; i++)
 	if (traj[i].n_part==0)
 	  break;
-      if (i!=0 && i<beamline->n_elems+1)
-	printf("Beam lost before z=%em (element %s)",
-	       traj[i].elem->end_pos, traj[i].elem->name);
+      if (i!=0 && i<beamline->n_elems+1) {
+	printf("Beam lost before z=%em (element %s#%ld)\n",
+	       traj[i].elem->end_pos, traj[i].elem->name, traj[i].elem->occurence);
+	if (i>0)
+	  printf("Trajectory at end of previous element is x=%le, y=%le\n",
+		 traj[i-1].centroid[0], traj[i-1].centroid[1]);
+      }
       fflush(stdout);
-      fputc('\n', stdout);
     }
 
     /* find readings at monitors and add in reading errors */

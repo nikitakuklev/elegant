@@ -1774,13 +1774,15 @@ long do_tracking(
 		set_central_momentum(coord, nToTrack, energy->central_momentum, P_central);
 	      break;
 	    case T_MAXAMP:
-	      maxamp = (MAXAMP*) eptr->p_elem;
-	      x_max = maxamp->x_max;
-	      y_max = maxamp->y_max;
-	      elliptical = maxamp->elliptical;
-	      maxampOpenCode = determineOpenSideCode(maxamp->openSide);
-	      maxampExponent = maxamp->exponent;
-	      maxampYExponent = maxamp->yExponent;
+	      if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))) {
+		maxamp = (MAXAMP*) eptr->p_elem;
+		x_max = maxamp->x_max;
+		y_max = maxamp->y_max;
+		elliptical = maxamp->elliptical;
+		maxampOpenCode = determineOpenSideCode(maxamp->openSide);
+		maxampExponent = maxamp->exponent;
+		maxampYExponent = maxamp->yExponent;
+	      }
 	      break;
 	    case T_TRCOUNT:
 	      /* >>>>> Needs to be updated */
