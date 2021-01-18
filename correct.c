@@ -2662,6 +2662,11 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 
     /* change the corrector by corr_tweek and compute the new matrix for the corrector */
     *((double*)(corr->p_elem+kick_offset)) = kick0 + corr_tweek;
+    if (flags&COMPUTE_RESPONSE_VERBOSE) {
+      printf("Working on response for element %s#%ld, with values of %le +/- %le\n", 
+	     corr->name, corr->occurence, kick0, corr_tweek);
+      fflush(stdout);
+    }
 
     if (corr->matrix) {
       save = corr->matrix;
