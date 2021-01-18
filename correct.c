@@ -1567,7 +1567,8 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   TRAJECTORY *traj;
   long iteration, kick_offset;
   long i_moni, i_corr;
-  long n_part, i, tracking_flags, sl_index;
+  long n_part, i, sl_index;
+  unsigned long tracking_flags;
   double **particle;
   double p, x, y, reading, fraction, minFraction, param, change;
   MAT *Qo, *dK;
@@ -1776,7 +1777,8 @@ long one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
   TRAJECTORY *traj;
   long iteration, kick_offset;
   long i_moni, i_corr, sl_index;
-  long n_part, i, tracking_flags;
+  long n_part, i;
+  unsigned long tracking_flags;
   double **particle, param, fraction;
   double p, x, y, reading;
   double response;
@@ -1974,10 +1976,11 @@ long thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   TRAJECTORY *traj;
   long iteration, kick_offset;
   long i_corr, i_moni, sl_index, iElem, nElems, iBest;
-  long n_part, n_left, i, tracking_flags, done, direction, improved, worsened;
+  long n_part, n_left, i, done, direction, improved, worsened;
   double **particle, param, fraction, bestValue, origValue, lastValue;
   double p, scanStep;
   long iScan, nScan, nToTry, corrLeft;
+  unsigned long tracking_flags;
 
   if (!CM->mon_index)
     bombElegant("monitor index array is NULL (thread__trajcor_plane)", NULL);
@@ -3815,11 +3818,12 @@ long global_coupled_trajcor
   TRAJECTORY *traj;
   long iteration, kick_offset;
   long i_moni, i_corr;
-  long n_part, i, tracking_flags, sl_index;
+  long n_part, i, sl_index;
   double **particle;
   double p, x, y, reading, fraction, minFraction, param, change;
   MAT *Qo, *dK;
   long i_pegged;
+  unsigned long tracking_flags;
 
   if (!matrix_check(CM->C) || !matrix_check(CM->T))
     bombElegant("corrupted response matrix detected (global_coupled_trajcor)", NULL);
@@ -3845,6 +3849,8 @@ long global_coupled_trajcor
       bombElegant("no particles to track in global_coupled_trajcor()", NULL);
     particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, totalPropertiesPerParticle);
     tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
+    printf("Including loss of test particles in trajectory correction\n");
+    fflush(stdout);
   }
 
   if (CM->nmon<CM->ncor) {
@@ -3891,8 +3897,15 @@ long global_coupled_trajcor
       fputc('\n', stdout);
     } else if (n_part==0) {
       /* This actually should never happen given the tracking flags */
-      printf("Beam lost before end of beamline during trajectory correction\n");
+      printf("Beam lost before end of beamline during trajectory correction (flags=%x)\n", tracking_flags);
+      for (i=0; i<beamline->n_elems+1; i++)
+	if (traj[i].n_part==0)
+	  break;
+      if (i!=0 && i<beamline->n_elems+1)
+	printf("Beam lost before z=%em (element %s)",
+	       traj[i].elem->end_pos, traj[i].elem->name);
       fflush(stdout);
+      fputc('\n', stdout);
     }
 
     /* find readings at monitors and add in reading errors */
