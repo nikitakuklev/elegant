@@ -10,7 +10,6 @@
 #include "mdb.h"
 #include "track.h"
 #include "ramp.h"
-#define DEBUG 1
 
 void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beamline, RUN *run)
 {

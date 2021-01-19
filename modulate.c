@@ -15,8 +15,6 @@
 #include <gpu_simple_rfca.h>
 #endif
 
-#define DEBUG 1
-
 long loadModulationTable(double **t, double **value, char *file, char *timeColumn, char *amplitudeColumn);
 
 void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE_LIST *beamline, RUN *run)
