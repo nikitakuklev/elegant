@@ -15,6 +15,8 @@
 #include <gpu_simple_rfca.h>
 #endif
 
+#define DEBUG 1
+
 long loadModulationTable(double **t, double **value, char *file, char *timeColumn, char *amplitudeColumn);
 
 void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE_LIST *beamline, RUN *run)
@@ -230,6 +232,10 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
   if (modData->nItems<=0)
     return 0;
 
+#ifdef DEBUG
+  printf("applyElementModulations\n"); fflush(stdout);
+#endif
+
 #if USE_MPI
   long np_total;
   if (notSinglePart) {
@@ -238,6 +244,9 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       return 0;
   } else if (np==0)
     return 0;
+#ifdef DEBUG
+  printf("applyElementModulations: np_total = %ld\n", np_total); fflush(stdout);
+#endif
 #else
   if (np==0)
     return 0;
@@ -251,18 +260,31 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
   else 
 #endif
     tBeam = findFiducialTime(coord, np, 0, 0, pCentral, FID_MODE_TMEAN|FID_MODE_FULLBEAM);
+#ifdef DEBUG
+    printf("applyElementModulations: tBeam = %le\n", tBeam); fflush(stdout);
+#endif
+
   matricesUpdated = 0;
 
 
   for (iMod=0; iMod<modData->nItems; iMod++) {
+#ifdef DEBUG
+    printf("applyElementModulations: iMod = %ld\n", iMod); fflush(stdout);
+#endif
     if (iPass<modData->startPass[iMod] || iPass>modData->endPass[iMod])
       continue;
+#ifdef DEBUG
+    printf("applyElementModulations: iMod = %ld active\n", iMod); fflush(stdout);
+#endif
     if (modData->convertPassToTime[iMod]) {
       double s0;
       s0 = modData->beamline->elem_recirc ? modData->beamline->elem_recirc->end_pos : 0;
       t = (iPass*modData->beamline->revolution_length + (modData->element[iMod]->end_pos-s0))/(beta*c_mks);
     } else
       t = tBeam;
+#ifdef DEBUG
+    printf("applyElementModulations: t = %le\n", t); fflush(stdout);
+#endif
 
     type = modData->element[iMod]->type;
     param = modData->parameterNumber[iMod];
@@ -297,6 +319,9 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       push_num(t);
       modulation = rpn(modData->expression[iMod]);
       rpn_clear();
+#ifdef DEBUG
+      printf("applyElementModulations: modulation from expression = %le\n", modulation); fflush(stdout);
+#endif
     }
 
     if (modData->flags[iMod]&DIFFERENTIAL_MOD) {
@@ -310,6 +335,10 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       else
         value = modulation;
     }
+
+#ifdef DEBUG
+    printf("applyElementModulations: value = %le\n", value); fflush(stdout);
+#endif
 
     switch (entity_description[type].parameter[param].type)  {
     case IS_DOUBLE:
@@ -348,6 +377,10 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       break;
     }
 
+#ifdef DEBUG
+    printf("applyElementModulations: Set parameter value on elements(s)\n"); fflush(stdout);
+#endif
+
     if (modData->fpRecord[iMod] 
 #if USE_MPI
         && myid==0
@@ -357,8 +390,11 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
               t, iPass, modulation, modData->unperturbedValue[iMod], value);
       if (modData->flushRecord[iMod]>0 && (iPass%modData->flushRecord[iMod])==0)
 	fflush(modData->fpRecord[iMod]);
+#ifdef DEBUG
+      printf("applyElementModulations: Updated record file\n"); fflush(stdout);
+#endif
     }
-    
+
     if (entity_description[type].flags&HAS_MATRIX && 
         entity_description[type].parameter[param].flags&PARAM_CHANGES_MATRIX &&
         ((modData->flags[iMod]&REFRESH_MATRIX_MOD) || 
@@ -371,8 +407,15 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       }
       compute_matrix(modData->element[iMod], run, NULL);
       matricesUpdated ++;
+#ifdef DEBUG
+      printf("applyElementModulations: Updated matrices\n"); fflush(stdout);
+#endif
     }
+
   }
+#ifdef DEBUG
+  printf("applyElementModulations: returning\n"); fflush(stdout);
+#endif
 
   return matricesUpdated;
 }

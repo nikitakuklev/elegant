@@ -10,6 +10,7 @@
 #include "mdb.h"
 #include "track.h"
 #include "ramp.h"
+#define DEBUG 1
 
 void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beamline, RUN *run)
 {
@@ -165,8 +166,14 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
   char *p_elem;
   
   matricesUpdated = 0;
+#ifdef DEBUG
+  printf("applyElementRamps\n"); fflush(stdout);
+#endif
   
   for (iMod=0; iMod<rampData->nItems; iMod++) {
+#ifdef DEBUG
+    printf("applyElementRamps: iMod = %ld\n", iMod); fflush(stdout);
+#endif
 
     type = rampData->element[iMod]->type;
     param = rampData->parameterNumber[iMod];
@@ -194,6 +201,9 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
       else
         value = modulation;
     }
+#ifdef DEBUG
+    printf("applyElementRamps: value = %le\n", value); fflush(stdout);
+#endif
 
     switch (entity_description[type].parameter[param].type)  {
     case IS_DOUBLE:
@@ -220,6 +230,9 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
     default:
       break;
     }
+#ifdef DEBUG
+    printf("applyElementRamps: changed element parameter\n"); fflush(stdout);
+#endif
     
     if (rampData->fpRecord[iMod] 
 #if USE_MPI
@@ -229,6 +242,9 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
       fprintf(rampData->fpRecord[iMod], "%ld %le %le %le\n",
               iPass, modulation, rampData->unperturbedValue[iMod], value);
       fflush(rampData->fpRecord[iMod]);
+#ifdef DEBUG
+      printf("applyElementRamps: updated record file\n"); fflush(stdout);
+#endif
     }
     
     if (entity_description[type].flags&HAS_MATRIX && 
@@ -243,9 +259,15 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
         compute_matrix(rampData->element[iMod], run, NULL);
         matricesUpdated ++;
       }
+#ifdef DEBUG
+      printf("applyElementRamps: updated matrix\n"); fflush(stdout);
+#endif
     }
   }
 
+#ifdef DEBUG
+  printf("applyElementRamps: returning\n"); fflush(stdout);
+#endif
   return matricesUpdated;
 }
 
