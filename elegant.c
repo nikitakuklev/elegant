@@ -724,10 +724,11 @@ char **argv;
       set_print_namelist_flags(0);
       if (processNamelist(&run_setup, &namelist_text)==NAMELIST_ERROR)
         bombElegant(NULL, NULL);
+      if (echoNamelists) print_namelist(stdout, &run_setup);
+
       if (concat_order!=0)
         printWarning("concat_order is non-zero in run_setup, which is deprecated", 
                      "Using matrix concatenation is rarely needed and reduces accuracy.");
-      if (echoNamelists) print_namelist(stdout, &run_setup);
 
       setSearchPath(search_path);
       /* check for validity of namelist inputs */
