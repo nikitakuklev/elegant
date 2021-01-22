@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 	if (s_arg[i_arg].n_items!=2 ||
 	    sscanf(s_arg[i_arg].list[1], "%ld", &omegaPoints)!=1 ||
             omegaPoints<=0)
-	  SDDS_Bomb("invalid -omegaPoints syntax");
+	  SDDS_Bomb("invalid -points syntax");
         break;
       case SET_MODE:
         if (s_arg[i_arg].n_items!=2 ||
@@ -142,7 +142,10 @@ int main(int argc, char **argv)
   
   if (!SetUpOutputFile(&SDDSout, outputfile, &SDDSin, columnUnits)) 
     SDDS_Bomb("problem setting up output file");
-  
+
+  if (omegaPoints<=0 || omegaLower==omegaUpper)
+    SDDS_Bomb("must give -omegaRange and -points");
+
   omegaArray = tmalloc(sizeof(*omegaArray)*omegaPoints);
   cosSum = tmalloc(sizeof(*cosSum)*omegaPoints);
   sinSum = tmalloc(sizeof(*sinSum)*omegaPoints);
