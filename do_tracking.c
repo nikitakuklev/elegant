@@ -514,14 +514,14 @@ long do_tracking(
 #ifdef DEBUG_CRASH 
     printMessageAndTime(stdout, "do_tracking checkpoint 0.41\n");
 #endif
-    if (applyElementModulations(&(run->modulationData), *P_central, coord, nToTrack, run, i_pass)) {
+    if (applyElementModulations(&(run->modulationData), beamline, *P_central, coord, nToTrack, run, i_pass, i_pass==passOffset)) {
       beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
       beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
     }
 #ifdef DEBUG_CRASH 
     printMessageAndTime(stdout, "do_tracking checkpoint 0.42\n");
 #endif
-    if (applyElementRamps(&(run->rampData), *P_central, run, i_pass)) {
+    if (applyElementRamps(&(run->rampData), beamline, *P_central, run, i_pass, i_pass==passOffset)) {
       beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
       beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
     }

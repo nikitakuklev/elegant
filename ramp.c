@@ -118,15 +118,6 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
       exitElegant(1);
     }
 
-    rampData->unperturbedValue[n_items] 
-      = parameter_value(context->name, context->type, rampData->parameterNumber[n_items], beamline);
-
-    if (rampData->unperturbedValue[n_items]==0 && rampData->flags[n_items]&MULTIPLICATIVE_RAMP) {
-      printf("***\7\7\7 warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
-              context->name, item);
-      fflush(stdout);
-    }
-
     if (record 
 #if USE_MPI
         && myid==0
@@ -157,7 +148,7 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
   }
 }
 
-long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPass)
+long applyElementRamps(RAMP_DATA *rampData, LINE_LIST *beamline, double pCentral, RUN *run, long iPass, long firstPass)
 {
   long iMod, matricesUpdated;
   double modulation, value;
@@ -173,6 +164,23 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
 #ifdef DEBUG
     printf("applyElementRamps: iMod = %ld\n", iMod); fflush(stdout);
 #endif
+
+    if (firstPass) {
+      rampData->unperturbedValue[iMod] 
+	= parameter_value(rampData->element[iMod]->name, rampData->element[iMod]->type,
+			  rampData->parameterNumber[iMod], beamline);
+      printf("Unperturbed value of ramped quantity %s.%s is %le\n",
+	     rampData->element[iMod]->name, 
+	     entity_description[rampData->element[iMod]->type].parameter[rampData->parameterNumber[iMod]].name,
+	     rampData->unperturbedValue[iMod]);
+      
+      if (rampData->unperturbedValue[iMod]==0 && rampData->flags[iMod]&MULTIPLICATIVE_RAMP) {
+	printf("*** warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
+	       rampData->element[iMod]->name,
+	       entity_description[rampData->element[iMod]->type].parameter[rampData->parameterNumber[iMod]].name);
+	fflush(stdout);
+      }
+    }
 
     type = rampData->element[iMod]->type;
     param = rampData->parameterNumber[iMod];

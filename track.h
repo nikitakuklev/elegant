@@ -4747,11 +4747,12 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
 void finish_coupled_twiss_output();
 void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenModesNumber, int verbosity);
 
-long applyElementModulations(MODULATION_DATA *modData, double pCentral, double **coord, long np, RUN *run, long i_pass);
+  long applyElementModulations(MODULATION_DATA *modData, LINE_LIST *beamline, double pCentral, double **coord, long np,
+			       RUN *run, long i_pass, long firstPass);
 void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE_LIST *beamline, RUN *run);
 
 void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beamline, RUN *run);
-long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPass);
+long applyElementRamps(RAMP_DATA *rampData, LINE_LIST *beamline, double pCentral, RUN *run, long iPass, long firstPass);
 
 #if USE_MPI
 void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his);

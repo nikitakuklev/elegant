@@ -157,15 +157,6 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
       exitElegant(1);
     }
 
-    modData->lastVerboseValue[n_items] = modData->unperturbedValue[n_items] 
-      = parameter_value(context->name, context->type, modData->parameterNumber[n_items], beamline);
-
-    if (modData->unperturbedValue[n_items]==0 && modData->flags[n_items]&MULTIPLICATIVE_MOD) {
-      printf("***\7\7\7 warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
-              context->name, item);
-      fflush(stdout);
-    }
-
     if (record 
 #if USE_MPI
         && myid==0
@@ -219,7 +210,8 @@ long loadModulationTable(double **t, double **value, char *file, char *timeColum
   return(count);
 }
 
-long applyElementModulations(MODULATION_DATA *modData, double pCentral, double **coord, long np, RUN *run, long iPass)
+long applyElementModulations(MODULATION_DATA *modData, LINE_LIST *beamline, double pCentral, 
+			     double **coord, long np, RUN *run, long iPass, long firstPass)
 {
   long iMod, code, matricesUpdated, jMod;
   /* short modulationValid = 0; */
@@ -269,6 +261,21 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
 #ifdef DEBUG
     printf("applyElementModulations: iMod = %ld\n", iMod); fflush(stdout);
 #endif
+    if (firstPass) {
+      modData->lastVerboseValue[iMod] = modData->unperturbedValue[iMod] 
+	= parameter_value(modData->element[iMod]->name,  modData->element[iMod]->type,
+			  modData->parameterNumber[iMod], beamline);
+      printf("Unperturbed value of modulated quantity %s.%s is %le\n",
+	     modData->element[iMod]->name, 
+	     entity_description[modData->element[iMod]->type].parameter[modData->parameterNumber[iMod]].name,
+	     modData->unperturbedValue[iMod]);
+      if (modData->unperturbedValue[iMod]==0 && modData->flags[iMod]&MULTIPLICATIVE_MOD) {
+	printf("***\7\7\7 warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
+	       modData->element[iMod]->name, 
+	       entity_description[modData->element[iMod]->type].parameter[modData->parameterNumber[iMod]].name);
+	fflush(stdout);
+      }
+    }
     if (iPass<modData->startPass[iMod] || iPass>modData->endPass[iMod])
       continue;
 #ifdef DEBUG
