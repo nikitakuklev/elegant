@@ -100,7 +100,12 @@ extern "C"
     /* Adjust global thread/block decomposition based on device prop
        only 256, 512, 1024 and 2048 are supported for nReductionBlocks */
     cudaDeviceProp props;
-    cudaGetDeviceProperties(&props, 0);
+    if (cudaGetDeviceProperties(&props, 0) != cudaSuccess)
+      {
+	std::cout << "gpuElegant: Problem reading NVIDIA GPU properties. Ensure you have the latest NVIDIA driver installed." << std::endl;
+	exit(-1);
+	
+      }
     if (props.major >= 3)
       {
         gpuBase->nThreads = 512;
