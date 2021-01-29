@@ -9,8 +9,11 @@ ifdef WIN32
 NVCC = nvcc
 OBJ = obj
 else
-NVCC = $(firstword $(wildcard /usr/bin/nvcc /usr/local/cuda-11.1/bin/nvcc /usr/local/cuda-11.0/bin/nvcc /usr/local/cuda-10.2/bin/nvcc /usr/local/cuda-10.1/bin/nvcc /usr/local/cuda-10.0/bin/nvcc /usr/local/cuda-9.2/bin/nvcc /usr/local/cuda-9.1/bin/nvcc /usr/local/cuda-9.0/bin/nvcc /usr/local/cuda-8.0/bin/nvcc /usr/local/cuda-7.5/bin/nvcc /usr/local/cuda/bin/nvcc /Developer/NVIDIA/CUDA-11.1/bin/nvcc /Developer/NVIDIA/CUDA-11.0/bin/nvcc /Developer/NVIDIA/CUDA-10.2/bin/nvcc /Developer/NVIDIA/CUDA-10.1/bin/nvcc /Developer/NVIDIA/CUDA-10.0/bin/nvcc /Developer/NVIDIA/CUDA-9.2/bin/nvcc /Developer/NVIDIA/CUDA-9.1/bin/nvcc /Developer/NVIDIA/CUDA-9.0/bin/nvcc /Developer/NVIDIA/CUDA-8.0/bin/nvcc /soft/cudatoolkit/6.5.14/bin/nvcc))
+NVCC = $(firstword $(wildcard /usr/bin/nvcc /usr/local/cuda-11.2/bin/nvcc /usr/local/cuda-11.1/bin/nvcc /usr/local/cuda-11.0/bin/nvcc /usr/local/cuda-10.2/bin/nvcc /usr/local/cuda-10.1/bin/nvcc /usr/local/cuda-10.0/bin/nvcc /usr/local/cuda-9.2/bin/nvcc /usr/local/cuda-9.1/bin/nvcc /usr/local/cuda-9.0/bin/nvcc /usr/local/cuda-8.0/bin/nvcc /usr/local/cuda-7.5/bin/nvcc /usr/local/cuda/bin/nvcc /Developer/NVIDIA/CUDA-11.1/bin/nvcc /Developer/NVIDIA/CUDA-11.0/bin/nvcc /Developer/NVIDIA/CUDA-10.2/bin/nvcc /Developer/NVIDIA/CUDA-10.1/bin/nvcc /Developer/NVIDIA/CUDA-10.0/bin/nvcc /Developer/NVIDIA/CUDA-9.2/bin/nvcc /Developer/NVIDIA/CUDA-9.1/bin/nvcc /Developer/NVIDIA/CUDA-9.0/bin/nvcc /Developer/NVIDIA/CUDA-8.0/bin/nvcc /soft/cudatoolkit/6.5.14/bin/nvcc))
 OBJ = o
+
+NVCC11_VERSION=$(words $(shell $(NVCC) --version | grep 11.))
+
 endif
 
 MPI_INCLUDE = $(wildcard /usr/include/mpich-3.2-x86_64 /software/mvapich2-intel-psm-1.9.5/include )
@@ -106,11 +109,22 @@ HNAMES = gpu_base.h \
 	 printCudaDeviceProp.h
 
 
+CFLAGS = -c -m64 -DHAVE_CONFIG_H -DzLib -DHAVE_LAPACK -DLAPACK -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -DWL=32 -DRPN_SUPPORT -DUNIX -Dlinux -D_X86_64_ -DHAVE_GPU=1 -DUSE_GSL -D_FORCE_INLINES --fmad=true --Werror cross-execution-space-call -O3 --use_fast_math -DNVCC -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
 ifdef WIN32
-CFLAGS = -c -ccbin cl -m64 -DHAVE_CONFIG_H -DzLib -DHAVE_LAPACK -DLAPACK -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -DWL=32 -DRPN_SUPPORT -DUNIX -Dlinux -D_X86_64_ -DHAVE_GPU=1 -DUSE_GSL -D_FORCE_INLINES -Xcompiler ,\"-Ox\",\"-DNDEBUG\",\"-MD\" --fmad=true --Werror cross-execution-space-call -O3 --use_fast_math --generate-code arch=compute_52,code=sm_52 --generate-code arch=compute_60,code=sm_60 --generate-code arch=compute_70,code=sm_70 -DNVCC -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
+CFLAGS += -ccbin cl -Xcompiler ,\"-Ox\",\"-DNDEBUG\",\"-MD\" \
+	--generate-code arch=compute_$(CUDA_HARDWARE_52),code=sm_$(CUDA_HARDWARE_52) \
+	--generate-code arch=compute_$(CUDA_HARDWARE_60),code=sm_$(CUDA_HARDWARE_60) \
+	--generate-code arch=compute_$(CUDA_HARDWARE_70),code=sm_$(CUDA_HARDWARE_70)
+	
 else
-CFLAGS = -c -ccbin /usr/bin/cc -m64 -DHAVE_CONFIG_H -DzLib -DHAVE_LAPACK -DLAPACK -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -DWL=32 -DRPN_SUPPORT -DUNIX -Dlinux -D_X86_64_ -DHAVE_GPU=1 -DUSE_GSL -D_FORCE_INLINES -Xcompiler ,\"-ansi\",\"-pipe\",\"-O3\",\"-DNDEBUG\",\"-msse2\" -Xcompiler ,\"-Wno-write-strings\" --fmad=true --Werror cross-execution-space-call -O3 --use_fast_math --generate-code arch=compute_$(CUDA_HARDWARE),code=sm_$(CUDA_HARDWARE) -DNVCC -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
-CFLAGS = -c -ccbin /usr/bin/cc -m64 -DHAVE_CONFIG_H -DzLib -DHAVE_LAPACK -DLAPACK -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -DWL=32 -DRPN_SUPPORT -DUNIX -Dlinux -D_X86_64_ -DHAVE_GPU=1 -DUSE_GSL -D_FORCE_INLINES -Xcompiler ,\"-ansi\",\"-pipe\",\"-O3\",\"-DNDEBUG\",\"-msse2\" -Xcompiler ,\"-Wno-write-strings\" --fmad=true --Werror cross-execution-space-call -O3 --use_fast_math --generate-code arch=compute_$(CUDA_HARDWARE_52),code=sm_$(CUDA_HARDWARE_52) --generate-code arch=compute_$(CUDA_HARDWARE_60),code=sm_$(CUDA_HARDWARE_60) --generate-code arch=compute_$(CUDA_HARDWARE_70),code=sm_$(CUDA_HARDWARE_70) -DNVCC -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
+CFLAGS += -ccbin /usr/bin/cc  -Xcompiler ,\"-ansi\",\"-pipe\",\"-O3\",\"-DNDEBUG\",\"-msse2\" -Xcompiler ,\"-Wno-write-strings\" \
+	--generate-code arch=compute_$(CUDA_HARDWARE_52),code=sm_$(CUDA_HARDWARE_52) \
+	--generate-code arch=compute_$(CUDA_HARDWARE_60),code=sm_$(CUDA_HARDWARE_60) \
+	--generate-code arch=compute_$(CUDA_HARDWARE_70),code=sm_$(CUDA_HARDWARE_70)
+
+ifneq ($(NVCC11_VERSION),0)
+CFLAGS += -Xcompiler ,\"-std=c++14\"
+endif
 endif
 
 #CFLAGS += -DCUDA_DEVICE_COUNT=<count>
