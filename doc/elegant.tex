@@ -63,9 +63,9 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
   \verb|N_KICKS| parameter. The \verb|N_KICKS| parameter is still available for use, but is deprecated.
   \begin{itemize}
   \item \verb|CCBEND|, \verb|CSBEND|, \verb|CSRCSBEND|, \verb|FMULT|, \verb|MULT|: The \verb|N_KICKS| parameter was
-    poorly-named. It actually gave the desired number of full integrator steps, or ``slices.''
+    poorly named. It actually gave the desired number of full integrator steps, or ``slices.''
   \item \verb|KQUAD|, \verb|KSEXT|, \verb|KQUSE|: The \verb|N_KICKS| parameter was actually the number of total
-    integrator steps. E.g., for the fourth-order integrator, dividing \verb|N_KICKS| by 4 gave the number of slices.
+    integrator substeps. E.g., for the fourth-order integrator, dividing \verb|N_KICKS| by 4 gave the number of slices.
   \end{itemize}
 \item The \verb|HMON|, \verb|VMON|, and \verb|MONI| elements can be used to store turn-by-turn BPM readings by setting
   the \verb|STORE_TURN_BY_TURN| parameter to 1. This can be used, for example, to create position-based triggers using
