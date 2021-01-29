@@ -291,6 +291,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     variables->varied_quan_value = trealloc(variables->varied_quan_value, sizeof(*variables->varied_quan_value)*(n_variables+extras+1));
     variables->initial_value = trealloc(variables->initial_value, sizeof(*variables->initial_value)*(n_variables+extras+1));
     variables->memory_number = trealloc(variables->memory_number, sizeof(*variables->memory_number)*(n_variables+extras+1));
+    variables->force_inside = trealloc(variables->force_inside, sizeof(*variables->force_inside)*(n_variables+extras+1));
 
     /* check for valid input */
     if (name==NULL)
@@ -336,6 +337,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
         bombElegant("lower_limit >= upper_limit", NULL);
 
     variables->initial_value[n_variables] = variables->varied_quan_value[n_variables];
+    variables->force_inside[n_variables] = force_inside;
     if (variables->initial_value[n_variables]>upper_limit) {
       if (force_inside) {
 	printf("Warning: Initial value (%e) is greater than upper limit\n", variables->initial_value[n_variables]);
@@ -1018,7 +1020,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	  variables->initial_value[i] = variables->varied_quan_value[i];
         }
 	if (variables->initial_value[i]>variables->upper_limit[i]) {
-	  if (force_inside) 
+	  if (variables->force_inside[i]) 
 	    variables->varied_quan_value[i] = variables->initial_value[i] = variables->upper_limit[i];
 	  else {
 	    printf("Initial value (%e) is greater than upper limit for %s.%s\n", 
@@ -1033,7 +1035,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                 variables->element[i], variables->item[i]);
 #endif
 	if (variables->initial_value[i]<variables->lower_limit[i]) {
-	  if (force_inside) 
+	  if (variables->force_inside[i]) 
 	    variables->varied_quan_value[i] = variables->initial_value[i] = variables->lower_limit[i];
 	  else {
 	    printf("Initial value (%e) is smaller than lower limit for %s.%s\n", 

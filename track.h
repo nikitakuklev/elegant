@@ -632,6 +632,7 @@ typedef struct {
     long *varied_param;                   /* parameter numbers of varied parameters */
     double *initial_value;                /* initial values of varied parameters */
     long *memory_number;                  /* rpn memory numbers of varied parameters */
+    short *force_inside;
     long n_variables;
     } OPTIM_VARIABLES ;
 
