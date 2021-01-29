@@ -88,9 +88,9 @@ extern "C"
 
   void gpu_setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np);
   void gpu_logPhoton(double Ep, double x, double xp, double y, double yp, double theta, double thetaf, double rho);
-  SDDS_DATASET *SDDSphotons;
-  long photonRows;
-  double photonLowEnergyCutoff;
+  SDDS_DATASET *SDDSphotonsGPU;
+  long photonRowsGPU;
+  double photonLowEnergyCutoffGPU;
 
 #define RECORD_TRAJECTORY 1
 #define SUBTRACT_TRAJECTORY 2
@@ -1115,7 +1115,7 @@ gpu_integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2,
     kickFrac = kickFrac6;
     break;
   default:
-    printf("invalid order %ld given for symplectic integrator", integration_order);
+    printf("invalid order %d given for symplectic integrator", integration_order);
     return(0);
   }
 
@@ -1314,7 +1314,7 @@ gpu_integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
     kickFrac = kickFrac6;
     break;
   default:
-    printf("invalid order %ld given for symplectic integrator", integration_order);
+    printf("invalid order %d given for symplectic integrator", integration_order);
     return(0);
   }
 #define X0 Qi[0]
@@ -2963,16 +2963,16 @@ extern "C"
     void gpu_setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np)
     {
 #if USE_MPI
-      SDDSphotons = NULL;
+      SDDSphotonsGPU = NULL;
       return;
 #else
       TRACKING_CONTEXT tc;
       if (!csbend->photonOutputFile)
         {
-          SDDSphotons = NULL;
+          SDDSphotonsGPU = NULL;
           return;
         }
-      photonLowEnergyCutoff = csbend->photonLowEnergyCutoff;
+      photonLowEnergyCutoffGPU = csbend->photonLowEnergyCutoff;
       getTrackingContext(&tc);
       if (!csbend->photonFileActive)
         {
@@ -2998,13 +2998,13 @@ extern "C"
         }
       if (!SDDS_StartPage(csbend->SDDSphotons, 10000) ||
           !SDDS_SetParameters(csbend->SDDSphotons, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "Particles", np, "Step", tc.step,
-                              "LowEnergyCutoff", photonLowEnergyCutoff, "ElementName", tc.elementName, "ElementOccurence", tc.elementOccurrence, NULL))
+                              "LowEnergyCutoff", photonLowEnergyCutoffGPU, "ElementName", tc.elementName, "ElementOccurence", tc.elementOccurrence, NULL))
         {
           SDDS_SetError((char *)"Problem setting up photon output file for CSBEND");
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
         }
-      photonRows = 0;
-      SDDSphotons = csbend->SDDSphotons;
+      photonRowsGPU = 0;
+      SDDSphotonsGPU = csbend->SDDSphotons;
 #endif
     }
 
@@ -3014,7 +3014,7 @@ extern "C"
       double L, R;
       double XBar, thetaBar, phiBar, yBar;
 
-      if ((Ep *= me_mev * 1e6) < photonLowEnergyCutoff)
+      if ((Ep *= me_mev * 1e6) < photonLowEnergyCutoffGPU)
         return;
 
       /* emission */
@@ -3031,7 +3031,7 @@ extern "C"
       phiBar = phii;
       yBar = y + L * tan(phii);
 
-      if (!SDDS_SetRowValues(SDDSphotons, SDDS_SET_BY_INDEX | SDDS_PASS_BY_VALUE, photonRows++,
+      if (!SDDS_SetRowValues(SDDSphotonsGPU, SDDS_SET_BY_INDEX | SDDS_PASS_BY_VALUE, photonRowsGPU++,
                              0, (float)Ep,
                              1, (float)XBar,
                              2, (float)(-tan(thetaBar)),
@@ -3039,9 +3039,9 @@ extern "C"
                              4, (float)tan(phiBar),
                              -1))
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
-      if (photonRows % 10000 == 0)
+      if (photonRowsGPU % 10000 == 0)
         {
-          if (!SDDS_UpdatePage(SDDSphotons, FLUSH_TABLE))
+          if (!SDDS_UpdatePage(SDDSphotonsGPU, FLUSH_TABLE))
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
         }
     }
@@ -4423,7 +4423,7 @@ __device__ void gpu_dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
                             dran = curand_normal_double(state);
                           dphi = thetaRms * dran;
                           /*
-                            if (SDDSphotons)
+                            if (SDDSphotonsGPU)
                             gpu_logPhoton(dDelta*Po, x, xp-dtheta/dDelta, y, yp-dphi/dDelta, theta, thetaf, 1/h0);
                           */
                           xp += dtheta;
