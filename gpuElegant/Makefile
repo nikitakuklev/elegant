@@ -115,7 +115,7 @@ CFLAGS += -ccbin cl -Xcompiler ,\"-Ox\",\"-DNDEBUG\",\"-MD\" \
 	--generate-code arch=compute_$(CUDA_HARDWARE_52),code=sm_$(CUDA_HARDWARE_52) \
 	--generate-code arch=compute_$(CUDA_HARDWARE_60),code=sm_$(CUDA_HARDWARE_60) \
 	--generate-code arch=compute_$(CUDA_HARDWARE_70),code=sm_$(CUDA_HARDWARE_70)
-	
+
 else
 CFLAGS += -ccbin /usr/bin/cc  -Xcompiler ,\"-ansi\",\"-pipe\",\"-O3\",\"-DNDEBUG\",\"-msse2\" -Xcompiler ,\"-Wno-write-strings\" \
 	--generate-code arch=compute_$(CUDA_HARDWARE_52),code=sm_$(CUDA_HARDWARE_52) \
