@@ -464,7 +464,7 @@ extern "C"
       long order, order2;    */     
     double dx(0), dy(0), dz(0); /* offsets of the multipole center */
     long n_kicks(0), integ_order(0), iOrder;
-    long i_top, n_parts;
+    long i_top, nSlices;
     double *coef;
     double drift(0);
     double tilt, rad_coef, isr_coef, xkick, ykick;
@@ -500,6 +500,7 @@ extern "C"
       {
       case T_KQUAD:
         kquad = ((KQUAD *)elem->p_elem);
+        nSlices = kquad->nSlices;
         n_kicks = kquad->n_kicks;
         host_expandHamiltonian = kquad->expandHamiltonian;
         order[0] = 1;
@@ -573,6 +574,7 @@ extern "C"
       case T_KSEXT:
         ksext = ((KSEXT *)elem->p_elem);
         n_kicks = ksext->n_kicks;
+        nSlices = ksext->nSlices;
         host_expandHamiltonian = ksext->expandHamiltonian;
         order[0] = 2;
         if (ksext->bore)
@@ -649,6 +651,7 @@ extern "C"
       case T_KOCT:
         koct = ((KOCT *)elem->p_elem);
         n_kicks = koct->n_kicks;
+        nSlices = koct->nSlices;
         host_expandHamiltonian = koct->expandHamiltonian;
         order[0] = 3;
         if (koct->bore)
@@ -707,6 +710,7 @@ extern "C"
         /* Implemented as a quadrupole with sextupole as a secondary multipole */
         kquse = ((KQUSE *)elem->p_elem);
         n_kicks = kquse->n_kicks;
+        nSlices = kquse->nSlices;
         host_expandHamiltonian = kquse->expandHamiltonian;
         order[0] = 1;
         KnL[0] = kquse->k1 * kquse->length * (1 + kquse->fse1);
@@ -738,15 +742,13 @@ extern "C"
         printf("error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
         fflush(stdout);
         KnL[0] = dx = dy = dz = tilt = drift = 0;
-        integ_order = order[0] = n_kicks = 0;
+        integ_order = order[0] = n_kicks = nSlices = 0;
         exitElegant(1);
         break;
       }
     if (multData && !multData->initialized)
       multData = NULL;
 
-    if (n_kicks <= 0)
-      bombTracking("n_kicks<=0 in multipole()");
     if (order[0] <= 0)
       bombTracking("order <= 0 in multipole()");
     if (integ_order != 2 && integ_order != 4 && integ_order != 6)
@@ -759,14 +761,19 @@ extern "C"
       }
 
     i_top = n_part - 1;
-    if (integ_order == 4)
-      {
-        if ((n_parts = ceil(n_kicks / 4.0)) < 1)
-          n_parts = 1;
-        n_kicks = n_parts * 4;
+
+    if (n_kicks<=0) {
+      if (nSlices<=0)
+        bombTracking("N_KICKS<=0 and N_SLICES<=0 in multipole tracking");
+    } else {
+      if (integ_order>2) {
+        if ((nSlices = ceil(n_kicks/(1.0*integ_order)))<1)
+          nSlices = 1;
+        n_kicks = nSlices*integ_order;
       }
-    else
-      n_parts = n_kicks;
+      else
+        nSlices = n_kicks;
+    }
 
     //Copy multipoleKicksDone from host cpu to gpu device
     cudaMemcpyToSymbol(&d_multipoleKicksDone, &multipoleKicksDone, sizeof(long), 0, cudaMemcpyHostToDevice);
@@ -895,7 +902,7 @@ extern "C"
                            gpu_multipole_tracking2_kernel(d_sortIndex, d_sigmaDelta2, state,
                                                           dx, dy, xkick, ykick, Po, rad_coef, isr_coef, KnL[0], KnL[1], KnL[2], drift, z_start, 
                                                           order[0], order[1], order[2], skew[0], skew[1], skew[2],
-                                                          n_parts, integ_order, multData ? multData->orders : -1,
+                                                          nSlices, integ_order, multData ? multData->orders : -1,
                                                           edgeMultData ? edgeMultData->orders : -1,
                                                           steeringMultData ? steeringMultData->orders : -1, apertureData.present,
                                                           apertureData.xMax, apertureData.xCen, apertureData.yMax,

@@ -233,7 +233,7 @@ class gpu_track_through_csbend_kernel
   double length, b1, hgap, fint1, fint2, fintBoth;
   double h1, h2;
   int edge1_effects, edge2_effects;
-  int edge_order, n_kicks;
+  int edge_order, nSlices;
   int integration_order, d_expansionOrder, d_hasSkew, d_hasNormal;
   unsigned long edgeFlags;
   long expandHamiltonian;
@@ -256,7 +256,7 @@ class gpu_track_through_csbend_kernel
                                  double e1_kick_limit, double e2_kick_limit,
                                  double length, double b1, double hgap, double fint1, double fint2, double fintBoth, double h1, double h2,
                                  int edge1_effects, int edge2_effects,
-                                 int edge_order, int n_kicks, int integration_order,
+                                 int edge_order, int nSlices, int integration_order,
                                  unsigned long edgeFlags, long expandHamiltonian,
                                  short fseCorrection, double fseCorrectionPathError, double d_rho0, double d_rho_actual,
                                  double d_rad_coef, double d_isrConstant, int d_expansionOrder, int d_hasSkew, int d_hasNormal,
@@ -271,7 +271,7 @@ class gpu_track_through_csbend_kernel
     e2_kick_limit(e2_kick_limit), length(length),
     b1(b1), hgap(hgap), fint1(fint1), fint2(fint2), fintBoth(fintBoth), h1(h1), h2(h2),
     edge1_effects(edge1_effects), edge2_effects(edge2_effects),
-    edge_order(edge_order), n_kicks(n_kicks),
+    edge_order(edge_order), nSlices(nSlices),
     integration_order(integration_order), edgeFlags(edgeFlags), expandHamiltonian(expandHamiltonian),
     fseCorrection(fseCorrection), fseCorrectionPathError(fseCorrectionPathError), d_rho0(d_rho0),
     d_rho_actual(d_rho_actual), d_rad_coef(d_rad_coef),
@@ -396,15 +396,15 @@ class gpu_track_through_csbend_kernel
     double *t_gauss_rn2 = NULL;
     double *t_gauss_rn3 = NULL;
     if (d_gauss_rn)
-      t_gauss_rn1 = &d_gauss_rn[n_kicks * tid];
+      t_gauss_rn1 = &d_gauss_rn[nSlices * tid];
     if (d_gauss_rn_p2)
-      t_gauss_rn2 = &d_gauss_rn_p2[n_kicks * tid];
+      t_gauss_rn2 = &d_gauss_rn_p2[nSlices * tid];
     if (d_gauss_rn_p3)
-      t_gauss_rn3 = &d_gauss_rn_p3[n_kicks * tid];
+      t_gauss_rn3 = &d_gauss_rn_p3[nSlices * tid];
     if (expandHamiltonian)
       {
         particle_lost = !gpu_integrate_csbend_ordn_expanded(Qf, Qi, tSigmaDelta2, length,
-                                                            n_kicks, d_rho0, Po, &dz_lost,
+                                                            nSlices, d_rho0, Po, &dz_lost,
                                                             d_rho_actual, d_rad_coef, d_isrConstant,
                                                             d_distributionBasedRadiation, d_includeOpeningAngle,
                                                                 d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
@@ -414,7 +414,7 @@ class gpu_track_through_csbend_kernel
     else
       {
         particle_lost = !gpu_integrate_csbend_ordn(Qf, Qi, tSigmaDelta2, length,
-                                                   n_kicks, d_rho0, Po, &dz_lost,
+                                                   nSlices, d_rho0, Po, &dz_lost,
                                                    d_rho_actual, d_rad_coef, d_isrConstant,
                                                    d_distributionBasedRadiation, d_includeOpeningAngle,
                                                    d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
@@ -583,7 +583,7 @@ extern "C"
 
     if (csbend->referenceCorrection)
       {
-        if (csbend->refTrajectoryChangeSet == 0 || csbend->refLength != csbend->length || csbend->refAngle != csbend->angle || csbend->refKicks != csbend->n_kicks)
+        if (csbend->refTrajectoryChangeSet == 0 || csbend->refLength != csbend->length || csbend->refAngle != csbend->angle || csbend->refSlices != csbend->nSlices)
           {
             /* Figure out the reference trajectory offsets to suppress inaccuracy in the integrator */
             CSBEND csbend0;
@@ -598,11 +598,11 @@ extern "C"
                 printf("Determining reference trajectory for CSBEND %s#%ld at s=%e\n", tcontext.elementName, tcontext.elementOccurrence, tcontext.zStart);
               }
 
-            if (csbend->refTrajectoryChange && csbend->refKicks)
+            if (csbend->refTrajectoryChange && csbend->refSlices)
               {
-                free_czarray_2d((void **)csbend->refTrajectoryChange, csbend->refKicks, 5);
+                free_czarray_2d((void **)csbend->refTrajectoryChange, csbend->refSlices, 5);
                 csbend->refTrajectoryChange = NULL;
-                csbend->refKicks = 0;
+                csbend->refSlices = 0;
               }
 
             part0 = (double **)czarray_2d(sizeof(double), 1, totalPropertiesPerParticle);
@@ -611,11 +611,11 @@ extern "C"
             csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 0;
             csbend0.fseDipole = csbend0.fseQuadrupole = csbend0.xKick = csbend0.yKick = 0;
 
-            csbend0.refTrajectoryChange = csbend->refTrajectoryChange = (double **)czarray_2d(sizeof(double), csbend->n_kicks, 5);
-            refTrajectoryPoints = csbend->n_kicks;
+            csbend0.refTrajectoryChange = csbend->refTrajectoryChange = (double **)czarray_2d(sizeof(double), csbend->nSlices, 5);
+            refTrajectoryPoints = csbend->nSlices;
             csbend0.refLength = csbend0.length;
             csbend0.refAngle = csbend0.angle;
-            csbend0.refKicks = csbend0.n_kicks;
+            csbend0.refSlices = csbend0.nSlices;
             /* This forces us into the next branch on the next call to this routine */
             csbend0.refTrajectoryChangeSet = 1;
             setTrackingContext((char *)"csbend0", 0, T_CSBEND, (char *)"none", NULL);
@@ -626,13 +626,13 @@ extern "C"
             //gpuBase->elementOnGpu=1;
             csbend->refTrajectoryChangeSet = 2; /* indicates that reference trajectory has been determined */
 
-            csbend->refKicks = csbend->n_kicks;
+            csbend->refSlices = csbend->nSlices;
             csbend->refLength = csbend->length;
             csbend->refAngle = csbend->angle;
             free_czarray_2d((void **)part0, 1, totalPropertiesPerParticle);
 
             refTrajectoryData = csbend->refTrajectoryChange;
-            refTrajectoryPoints = csbend->refKicks;
+            refTrajectoryPoints = csbend->refSlices;
             refTrajectoryMode = SUBTRACT_TRAJECTORY;
           }
         else if (csbend->refTrajectoryChangeSet == 1)
@@ -640,7 +640,7 @@ extern "C"
             /* indicates reference trajectory is about to be determined */
             printf("GPU DEBUG2\n");
             refTrajectoryData = csbend->refTrajectoryChange;
-            refTrajectoryPoints = csbend->n_kicks;
+            refTrajectoryPoints = csbend->nSlices;
             refTrajectoryMode = RECORD_TRAJECTORY;
             csbend->refTrajectoryChangeSet = 2;
           }
@@ -649,7 +649,7 @@ extern "C"
             /* assume that reference trajectory already determined */
             printf("GPU DEBUG3\n");
             refTrajectoryData = csbend->refTrajectoryChange;
-            refTrajectoryPoints = csbend->refKicks;
+            refTrajectoryPoints = csbend->refSlices;
             refTrajectoryMode = SUBTRACT_TRAJECTORY;
           }
       }
@@ -801,7 +801,7 @@ extern "C"
             kquad.synch_rad = csbend->synch_rad;
             kquad.isr = csbend->isr;
             kquad.isr1Particle = csbend->isr1Particle;
-            kquad.n_kicks = csbend->n_kicks;
+            kquad.nSlices = csbend->nSlices;
             kquad.integration_order = csbend->integration_order;
             return gpu_multipole_tracking2(n_part, &elem, p_error, Po, accepted, z_start, maxamp, NULL, apFileData, sigmaDelta2);
           }
@@ -934,7 +934,7 @@ extern "C"
     dyf = csbend->dy;
 
 #if !defined(PARALLEL)
-    multipoleKicksDone += n_part * csbend->n_kicks * (csbend->integration_order == 4 ? 4 : 1);
+    multipoleKicksDone += n_part * csbend->nSlices * (csbend->integration_order == 4 ? 4 : 1);
 #endif
 
     if (sigmaDelta2)
@@ -977,19 +977,19 @@ extern "C"
     double *d_gauss_rn, *d_gauss_rn_p2, *d_gauss_rn_p3;
     if (rad_coef || isrConstant)
       {
-        err = cudaMalloc((void **)&d_gauss_rn, sizeof(double) * n_part * csbend->n_kicks);
+        err = cudaMalloc((void **)&d_gauss_rn, sizeof(double) * n_part * csbend->nSlices);
         gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
-        err = cudaMalloc((void **)&d_gauss_rn_p2, sizeof(double) * n_part * csbend->n_kicks);
+        err = cudaMalloc((void **)&d_gauss_rn_p2, sizeof(double) * n_part * csbend->nSlices);
         gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
-        err = cudaMalloc((void **)&d_gauss_rn_p3, sizeof(double) * n_part * csbend->n_kicks);
+        err = cudaMalloc((void **)&d_gauss_rn_p3, sizeof(double) * n_part * csbend->nSlices);
         gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
         if (!distributionBasedRadiation && isrConstant)
           {
-            gpu_d_gauss_rn_lim(d_gauss_rn, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
+            gpu_d_gauss_rn_lim(d_gauss_rn, gpuBase->nOriginal, csbend->nSlices, 0.0, 1.0, 3.0, random_2(0));
             if (csbend->integration_order == 4)
               {
-                gpu_d_gauss_rn_lim(d_gauss_rn_p2, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
-                gpu_d_gauss_rn_lim(d_gauss_rn_p3, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
+                gpu_d_gauss_rn_lim(d_gauss_rn_p2, gpuBase->nOriginal, csbend->nSlices, 0.0, 1.0, 3.0, random_2(0));
+                gpu_d_gauss_rn_lim(d_gauss_rn_p3, gpuBase->nOriginal, csbend->nSlices, 0.0, 1.0, 3.0, random_2(0));
               }
           }
         else if (distributionBasedRadiation)
@@ -1017,7 +1017,7 @@ extern "C"
                                                            e1_kick_limit, e2_kick_limit,
                                                            csbend->length, csbend->b[1], csbend->hgap, csbend->fint[csbend->e1Index], csbend->fint[csbend->e2Index], csbend->fintBoth,
                                                            csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], csbend->edge_effects[csbend->e1Index], csbend->edge_effects[csbend->e2Index],
-                                                           csbend->edge_order, csbend->n_kicks, csbend->integration_order,
+                                                           csbend->edge_order, csbend->nSlices, csbend->integration_order,
                                                            csbend->edgeFlags, csbend->expandHamiltonian, csbend->fseCorrection, csbend->fseCorrectionPathError, rho0, rho_actual, rad_coef, isrConstant,
                                                            expansionOrder1, hasSkew, hasNormal, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
                                                            distributionBasedRadiation, includeOpeningAngle, srGaussianLimit,
@@ -1591,7 +1591,7 @@ class gpu_track_through_csbendCSR_kernel5
   double Po, srGaussianLimit;
   // From CSRCSBEND struct
   int integration_order;
-  double length, n_kicks;
+  double length, nSlices;
   int d_expansionOrder, d_hasSkew, d_hasNormal;
   // From csbend.h globals
   double d_rho0, d_rho_actual, d_rad_coef, d_isrConstant;
@@ -1600,13 +1600,13 @@ class gpu_track_through_csbendCSR_kernel5
   MULT_APERTURE_DATA apertureData;
  gpu_track_through_csbendCSR_kernel5(unsigned int *d_sortIndex, double *d_beta0,
                                      double *d_gauss_rn, double *d_gauss_rn_p2, double *d_gauss_rn_p3, curandState_t *state, double Po, int integration_order,
-                                     double length, double n_kicks, int d_expansionOrder, int d_hasSkew, int d_hasNormal, double d_rho0,
+                                     double length, double nSlices, int d_expansionOrder, int d_hasSkew, int d_hasNormal, double d_rho0,
                                      double d_rho_actual, double d_rad_coef, double d_isrConstant,
                                      double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
                                      int d_distributionBasedRadiation, int d_includeOpeningAngle,
                                      double srGaussianLimit, MULT_APERTURE_DATA apertureData) : d_sortIndex(d_sortIndex), d_beta0(d_beta0), d_gauss_rn(d_gauss_rn), d_gauss_rn_p2(d_gauss_rn_p2), d_gauss_rn_p3(d_gauss_rn_p3),
     state(state), Po(Po), integration_order(integration_order), length(length),
-    n_kicks(n_kicks), d_expansionOrder(d_expansionOrder), d_hasSkew(d_hasSkew), d_hasNormal(d_hasNormal), d_rho0(d_rho0),
+    nSlices(nSlices), d_expansionOrder(d_expansionOrder), d_hasSkew(d_hasSkew), d_hasNormal(d_hasNormal), d_rho0(d_rho0),
     d_rho_actual(d_rho_actual), d_rad_coef(d_rad_coef),
     d_isrConstant(d_isrConstant),
     d_meanPhotonsPerMeter0(d_meanPhotonsPerMeter0),
@@ -1645,7 +1645,7 @@ class gpu_track_through_csbendCSR_kernel5
       t_gauss_rn2 = &d_gauss_rn_p2[tid];
     if (d_gauss_rn_p3)
       t_gauss_rn3 = &d_gauss_rn_p3[tid];
-    particle_lost = !gpu_integrate_csbend_ordn(Qf, Qi, NULL, length / n_kicks,
+    particle_lost = !gpu_integrate_csbend_ordn(Qf, Qi, NULL, length / nSlices,
                                                    1, d_rho0, Po, &dz_lost,
                                                    d_rho_actual, d_rad_coef, d_isrConstant,
                                                    d_distributionBasedRadiation, d_includeOpeningAngle,
@@ -2122,8 +2122,8 @@ extern "C"
       {
         csbend->nonlinear = 0;
         Me1 = edge_matrix(e1, 1. / (rho0 / (1 + csbend->fse)), 0.0, n, -1, Kg, 1, 0, 0, csbend->length);
-        Msection = bend_matrix(csbend->length / csbend->n_kicks,
-                               angle / csbend->n_kicks, 0.0, 0.0,
+        Msection = bend_matrix(csbend->length / csbend->nSlices,
+                               angle / csbend->nSlices, 0.0, 0.0,
                                0.0, 0.0, csbend->b[1] * h, 0.0,
                                0.0, 0.0, 0.0, 0.0, csbend->fse, 0.0, 0.0,
                                csbend->etilt*csbend->etiltSign, 1, 1, 0, 0);
@@ -2257,7 +2257,7 @@ extern "C"
     /* prepare some data for CSRDRIFT */
     csrWake.dGamma = dGamma;
     csrWake.bins = nBins;
-    csrWake.ds0 = csbend->length / csbend->n_kicks;
+    csrWake.ds0 = csbend->length / csbend->nSlices;
     csrWake.zLast = csrWake.z0 = z_end;
     csrWake.highFrequencyCutoff0 = csbend->highFrequencyCutoff0;
     csrWake.highFrequencyCutoff1 = csbend->highFrequencyCutoff1;
@@ -2270,7 +2270,7 @@ extern "C"
     csrWake.wffImagFactor = csbend->wffImagFactor;
 
 #if !defined(PARALLEL)
-    multipoleKicksDone += n_part * csbend->n_kicks * (csbend->integration_order == 4 ? 4 : 1);
+    multipoleKicksDone += n_part * csbend->nSlices * (csbend->integration_order == 4 ? 4 : 1);
 #endif
 
     if (isSlave || !notSinglePart)
@@ -2332,9 +2332,9 @@ extern "C"
           (curandState_t*)gpu_get_rand_state(d_gauss_rn, n_part, random_2(0));
         */
       }
-    for (kick = 0; kick < csbend->n_kicks+1; kick++)
+    for (kick = 0; kick < csbend->nSlices+1; kick++)
       {
-        if (!csbend->backtrack && kick==csbend->n_kicks)
+        if (!csbend->backtrack && kick==csbend->nSlices)
           break;
         if (isSlave || !notSinglePart)
           {
@@ -2369,14 +2369,14 @@ extern "C"
                   gpuDriver(n_part,
                             gpu_track_through_csbendCSR_kernel5(d_sortIndex, d_beta0,
                                                                 d_gauss_rn, d_gauss_rn_p2, d_gauss_rn_p3, state, Po, csbend->integration_order, csbend->length,
-                                                                csbend->n_kicks, expansionOrder1, hasSkew, hasNormal, rho0, rho_actual, rad_coef,
+                                                                csbend->nSlices, expansionOrder1, hasSkew, hasNormal, rho0, rho_actual, rad_coef,
                                                                 isrConstant, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
                                                                 distributionBasedRadiation, includeOpeningAngle, srGaussianLimit, apertureData));
                   gpuErrorHandler("gpu_track_through_csbendCSR: gpu_track_through_csbendCSR_kernel5");
                 }
             }
           }
-        if (csbend->backtrack && kick==csbend->n_kicks)
+        if (csbend->backtrack && kick==csbend->nSlices)
           break;
 
         if (n_partMoreThanOne && csbend->derbenevCriterionMode)
@@ -2526,11 +2526,11 @@ extern "C"
                   }
                 else
                   {
-                    ctLower += rho0 * angle / csbend->n_kicks;
-                    ctUpper += rho0 * angle / csbend->n_kicks;
+                    ctLower += rho0 * angle / csbend->nSlices;
+                    ctUpper += rho0 * angle / csbend->nSlices;
                   }
 
-                phiBend += angle / csbend->n_kicks;
+                phiBend += angle / csbend->nSlices;
                 slippageLength = fabs(rho0 * pow(phiBend, 3.0) / 24.0);
                 slippageLength13 = pow(slippageLength, 1. / 3.);
                 diSlippage = slippageLength / dct;
@@ -2629,9 +2629,9 @@ extern "C"
                                   }
                                 /* there is no negative sign here because my derivative is w.r.t. -s
                                    in notation of Saldin, et. al. */
-                                T1[iBin] *= CSRConstant * csbend->length / csbend->n_kicks;
+                                T1[iBin] *= CSRConstant * csbend->length / csbend->nSlices;
                                 /* keep the negative sign on this term, which has no derivative */
-                                T2[iBin] *= -CSRConstant * csbend->length / csbend->n_kicks / slippageLength13;
+                                T2[iBin] *= -CSRConstant * csbend->length / csbend->nSlices / slippageLength13;
                               }
                             dGamma[iBin] = T1[iBin] + T2[iBin];
                           }
@@ -2641,7 +2641,7 @@ extern "C"
                       {
                         convolveArrays1(dGamma, nBins, ctHist, grnk);
                         for (iBin = 0; iBin < nBins; iBin++)
-                          dGamma[iBin] *= -macroParticleCharge / (particleMass * sqr(c_mks)) * csbend->length / csbend->n_kicks;
+                          dGamma[iBin] *= -macroParticleCharge / (particleMass * sqr(c_mks)) * csbend->length / csbend->nSlices;
 #ifdef DEBUG_IGF
                         fprintf(fpdeb, "%ld\n%ld\n", kick, nBins);
                         for (iBin = 0; iBin < nBins; iBin++)
@@ -2699,7 +2699,7 @@ extern "C"
                   }
 
                 if (tContext.sliceAnalysis && tContext.sliceAnalysis->active &&
-                    kick != (csbend->n_kicks - 1) &&
+                    kick != (csbend->nSlices - 1) &&
                     (csbend->sliceAnalysisInterval == 0 ||
                      kick % csbend->sliceAnalysisInterval == 0))
                   {
@@ -2709,7 +2709,7 @@ extern "C"
                     //			   0, tContext.step, Po,
                     //			   macroParticleCharge*n_part,
                     //			   tContext.elementName,
-                    //			   z_start + (kick*(z_end-z_start))/(csbend->n_kicks-1),
+                    //			   z_start + (kick*(z_end-z_start))/(csbend->nSlices-1),
                     //			   1);
                     //convertToCSBendCoords(part, n_part, rho0, cos_ttilt, sin_ttilt, 1);
                     if (isMaster)
@@ -2723,7 +2723,7 @@ extern "C"
 
                 if (csbend->wakeFileActive &&
                     ((!csbend->outputLastWakeOnly && kick % csbend->outputInterval == 0) ||
-                     (csbend->outputLastWakeOnly && kick == (csbend->n_kicks - 1))))
+                     (csbend->outputLastWakeOnly && kick == (csbend->nSlices - 1))))
                   {
                     /* scale the linear density and its derivative to get C/s and C/s^2 
                      * ctHist is already normalized to dct, but ctHistDeriv requires an additional factor
@@ -2743,7 +2743,7 @@ extern "C"
                             !SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, ctHist, nBins, "LinearDensity") ||
                             !SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, ctHistDeriv, nBins, "LinearDensityDeriv") ||
                             !SDDS_SetParameters(csbend->SDDSout, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE,
-                                                "Pass", -1, "Kick", kick, "dsKick", csbend->length / csbend->n_kicks,
+                                                "Pass", -1, "Kick", kick, "dsKick", csbend->length / csbend->nSlices,
                                                 "pCentral", Po, "Angle", phiBend, "SlippageLength", slippageLength,
                                                 "TotalBunchLength", ctUpper - ctLower,
                                                 "BinSize", dct,
@@ -2760,7 +2760,7 @@ extern "C"
                     for (iBin = 0; iBin < nBins; iBin++)
                       {
                         T1[iBin] = ctLower - (ctLower + ctUpper) / 2.0 + dct * (iBin + 0.5);
-                        T2[iBin] = dGamma[iBin] / (csbend->length / csbend->n_kicks);
+                        T2[iBin] = dGamma[iBin] / (csbend->length / csbend->nSlices);
                       }
                     if (isMaster)
                       {
