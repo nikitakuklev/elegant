@@ -596,7 +596,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         else 
           change_defined_parameter(element[j], param, eptr->type, 
                                    value?value[j]:0, 
-                                   valueString?valueString[i]:NULL, 
+                                   valueString?valueString[j]:NULL, 
                                    mode_flags+(verbose?LOAD_FLAG_VERBOSE:0));
       }
       numberChanged = 0;
