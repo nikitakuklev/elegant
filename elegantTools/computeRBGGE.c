@@ -43,6 +43,10 @@ typedef struct {
 } FIELDS_ON_PLANES;
 
 typedef struct {
+  double rms, mad, max;
+} ALL_RESIDUALS;
+
+typedef struct {
   double *x, *y, *z;
   double *Bx, *By, *Bz;
   long n;
@@ -69,7 +73,7 @@ int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long deri
 int computeGGcos(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
 double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, long multipoles, long derivatives,
                               double significance, double radiusLimit,
-                              unsigned long flags);
+                              unsigned long flags, ALL_RESIDUALS *allResiduals);
 int ReadInputFiles(FIELDS_ON_PLANES *fieldsOnPlanes, 
                    char *topFile, char *bottomFile, char *leftFile, char *rightFile, long needBz);
 void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData);
@@ -97,7 +101,7 @@ char *option[N_OPTIONS] = {
 #define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
              -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]\n\
               [-evaluate=<filename>]\n\
-              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,verbose]]\n\
+              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,verbose][,log=<filename>]]\n\
 -yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
 -yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
 -xminus      (x, y, z, Bx, By, Bz) map for negative-x plane.\n\
@@ -120,6 +124,7 @@ Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Sol
 #define AUTOTUNE_MAV       0x0008UL
 #define AUTOTUNE_EVALONLY  0x0010UL
 #define AUTOTUNE_MODE_SET  0x0100UL
+#define AUTOTUNE_LOG       0x0200UL
 char *modeOption[3] = {"rms", "maximum", "mav"};
 
 int main(int argc, char **argv)
@@ -140,6 +145,10 @@ int main(int argc, char **argv)
   unsigned long autoTuneFlags = 0;
   char *autoTuneModeString;
   BGGEXP_DATA bggexpData[2];
+  SDDS_DATASET SDDS_autoTuneLog;
+  char *autoTuneLogFile = NULL;
+  long iAutoTuneLog=0;
+  ALL_RESIDUALS allResiduals;
 
 #ifdef DEBUG
 #ifdef OLDFFT
@@ -263,6 +272,7 @@ int main(int argc, char **argv)
                                  "significance", SDDS_DOUBLE, &autoTuneSignificance, 1, 0,
                                  "radiuslimit", SDDS_DOUBLE, &autoTuneRadiusLimit, 1, 0,
                                  "minimize", SDDS_STRING, &autoTuneModeString, 1, AUTOTUNE_MODE_SET, 
+                                 "log", SDDS_STRING, &autoTuneLogFile, 1, AUTOTUNE_LOG,
                                  NULL) ||
                    autoTuneSignificance<=0))
                 {
@@ -316,6 +326,19 @@ int main(int argc, char **argv)
     fprintf(stderr, "skewOutputFile=%s\n", skewOutputFile);
 #endif
 
+    if (autoTuneFlags&AUTOTUNE_LOG) {
+      if (SDDS_InitializeOutput(&SDDS_autoTuneLog, SDDS_BINARY, 1, NULL, "computeRBGGE autotune output", autoTuneLogFile)!=1 ||
+          SDDS_DefineColumn(&SDDS_autoTuneLog, "m", NULL, NULL, "Number of multipoles", NULL, SDDS_LONG, 0)==-1 ||
+          SDDS_DefineColumn(&SDDS_autoTuneLog, "d", NULL, NULL, "Number of derivatives", NULL, SDDS_LONG, 0)==-1 ||
+          SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "RmsError", "T", SDDS_DOUBLE)!=1 ||
+          SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "MaximumError", "T", SDDS_DOUBLE)!=1 ||
+          SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "MADError", "T", SDDS_DOUBLE)!= 1 || 
+          !SDDS_WriteLayout(&SDDS_autoTuneLog) ||
+          !SDDS_StartPage(&SDDS_autoTuneLog, maxMultipoles*maxDerivatives)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    }
     bestResidual = DBL_MAX;
     bestDerivatives = maxDerivatives;
     bestMultipoles = maxMultipoles;
@@ -370,7 +393,7 @@ int main(int argc, char **argv)
           double residual;
           if ((residual = evaluateGGEForFieldMap(&fieldMap, &bggexpData[0], multipoles, derivatives,
                                                  autoTuneSignificance, autoTuneRadiusLimit,
-                                                 autoTuneFlags))<bestResidual) {
+                                                 autoTuneFlags, &allResiduals))<bestResidual) {
             bestResidual = residual;
             bestMultipoles = multipoles;
             bestDerivatives = derivatives;
@@ -381,6 +404,16 @@ int main(int argc, char **argv)
           } else {
             if (autoTuneFlags&AUTOTUNE_VERBOSE) {
               printf("Goodness of fit (%le) for m=%ld, d=%ld is not better\n", residual, multipoles, derivatives);
+            }
+          }
+          if (autoTuneFlags&AUTOTUNE_LOG) {
+            if (!SDDS_SetRowValues(&SDDS_autoTuneLog, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+                                   iAutoTuneLog++,
+                                   "m", multipoles, "d", derivatives, "RmsError", allResiduals.rms,
+                                   "MaximumError", allResiduals.max, "MADError", allResiduals.mad,
+                                   NULL)) {
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              return (1);
             }
           }
         }
@@ -407,6 +440,13 @@ int main(int argc, char **argv)
       freeFieldsOnPlanes(&fieldsOnPlanes);
     }
 
+    if (autoTuneFlags&AUTOTUNE_LOG) {
+      if (SDDS_WritePage(&SDDS_autoTuneLog)!=1 || SDDS_Terminate(&SDDS_autoTuneLog)!=1) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    }
+    
     return (0);
 }
 
@@ -2690,7 +2730,8 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
 }
 
 double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, long multipoles, long derivatives,
-                              double significance, double radiusLimit, unsigned long flags)
+                              double significance, double radiusLimit, unsigned long flags, 
+                              ALL_RESIDUALS *allResiduals)
 {
   double B[3], Br, Bphi;
   double x, y, z, r, phi, dz;
@@ -2799,13 +2840,20 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, long mul
   fclose(fpdeb);
 #endif
 
+  allResiduals->max = residualWorst;
+  if (residualCount)
+    allResiduals->rms = sqrt(residualSum2/residualCount);
+  else 
+    allResiduals->rms = DBL_MAX;
+  if (residualCount)
+    allResiduals->mad = residualSum/residualCount;
+  else
+    allResiduals->mad = DBL_MAX;
+
   if (flags&AUTOTUNE_RMS) {
-    residualWorst = sqrt(residualSum2/residualCount);
+    residualWorst = allResiduals->rms; 
   } else if (flags&AUTOTUNE_MAV) {
-    if (residualCount)
-      residualWorst = residualSum/residualCount;
-    else
-      residualWorst = DBL_MAX;
+    residualWorst = allResiduals->mad;
   }
 
   return residualWorst>significance ? residualWorst : 0.0;
