@@ -6523,9 +6523,9 @@ boundary \cite{Mitchell-2007} for use with {\tt elegant}'s \verb|BGGEXP| element
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
 computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>
-             -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]
-              [-evaluate=<filename>]
-              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,verbose]]
+   -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]
+   [-evaluate=<filename>]
+   [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,verbose][,log=<filename>]]
 }\end{flushleft}
 
 \item {\bf switches:}
@@ -6552,7 +6552,8 @@ computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<fil
   \verb|-derivatives| and \verb|-multipoles| options, in order to minimize the deviation of the GGE-derived
   fields from the values given in the 3D field map file. By default, minimizes the maximum deviation, but user can
   ask to minimize the rms or mean-absolute-value deviation. Differences below the \verb|significance| value are
-  ignored.
+  ignored. The user may request verbose output to see results printed to the terminal, and also a log file
+  for a detailed record.
 \end{itemize}
 
 \item {\bf authors:} R. Lindberg, R. Soliday, M. Borland (ANL/APS).
