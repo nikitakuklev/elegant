@@ -328,6 +328,13 @@ int main(int argc, char **argv)
 
     if (autoTuneFlags&AUTOTUNE_LOG) {
       if (SDDS_InitializeOutput(&SDDS_autoTuneLog, SDDS_BINARY, 1, NULL, "computeRBGGE autotune output", autoTuneLogFile)!=1 ||
+          SDDS_DefineParameter(&SDDS_autoTuneLog, "OptimalMultipoles", "m$bopt$n", NULL, "Optimal number of multipoles", 
+                               NULL, SDDS_LONG, NULL)==-1 ||
+          SDDS_DefineParameter(&SDDS_autoTuneLog, "OptimalDerivatives", "d$bopt$n", NULL, "Optimal number of derivatives", 
+                               NULL, SDDS_LONG, NULL)==-1 ||
+          SDDS_DefineParameter(&SDDS_autoTuneLog, "OptimalResidual", "r$bopt$n", "T", "Optimal residual", 
+                               NULL, SDDS_DOUBLE, NULL)==-1 ||
+          !SDDS_DefineSimpleParameter(&SDDS_autoTuneLog, "OptimumLabel", NULL, SDDS_STRING) ||
           SDDS_DefineColumn(&SDDS_autoTuneLog, "m", NULL, NULL, "Number of multipoles", NULL, SDDS_LONG, 0)==-1 ||
           SDDS_DefineColumn(&SDDS_autoTuneLog, "d", NULL, NULL, "Number of derivatives", NULL, SDDS_LONG, 0)==-1 ||
           SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "RmsError", "T", SDDS_DOUBLE)!=1 ||
@@ -441,6 +448,17 @@ int main(int argc, char **argv)
     }
 
     if (autoTuneFlags&AUTOTUNE_LOG) {
+      char buffer[1024];
+      snprintf(buffer, 1024, "m$bopt$n: %ld  d$bopt$n: %ld  r$bopt$n: %lg T", 
+               bestMultipoles, bestDerivatives, bestResidual);
+      if (SDDS_SetParameters(&SDDS_autoTuneLog, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                             "OptimalMultipoles", bestMultipoles,
+                             "OptimalDerivatives", bestDerivatives,
+                             "OptimalResidual", bestResidual,
+                             "OptimumLabel", buffer,
+                             NULL)!=1) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      }
       if (SDDS_WritePage(&SDDS_autoTuneLog)!=1 || SDDS_Terminate(&SDDS_autoTuneLog)!=1) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         return (1);
