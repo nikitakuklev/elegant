@@ -75,7 +75,7 @@ long trackKickMap(
          * use interpolation to get dxp and dyp 
          */
         if (!interpolateKickMap(&dxp, &dyp, map, 
-					 coord[0]-dist*tan_yaw+yawOffset, coord[2])) {
+                                coord[0]-dist*tan_yaw+yawOffset, coord[2])) {
           /* particle is lost */
           swapParticles(particle[ip], particle[iTop]); 
           if (accepted)
@@ -85,25 +85,26 @@ long trackKickMap(
           iTop--;
           ip--;
         } else {
-          dxp /= (1+coord[5])*kickSign*nKicks;
-          dyp /= (1+coord[5])*kickSign*nKicks;
+          dxp *= map->factor/((1+coord[5])*kickSign*nKicks);
+          dyp *= map->factor/((1+coord[5])*kickSign*nKicks);
           coord[1] += dxp;
           coord[3] += dyp;
           
           if ((map->synchRad || map->isr) && length) {
-            double kick, dp, p, beta0, deltaFactor, F2, beta1;
-            kick = sqrt(sqr(dxp) + sqr(dyp));
-            F2 = sqr(kick/length);
+            double dp, p, beta0, deltaFactor, F2, beta1;
             dp = coord[5];
+            F2 = sqr(1+dp)*(sqr(dxp)+sqr(dyp))/sqr(length);
             p = pRef*(1+dp);
             beta0 = p/sqrt(sqr(p)+1);
-            deltaFactor = sqr(1+dp);
-            dp -= radCoef*deltaFactor*F2*length;
+            deltaFactor = 1+dp;
+            dp -= radCoef*sqr(deltaFactor)*F2*length*sqrt(1+sqr(coord[1])+sqr(coord[3]));
             if (map->isr)
               dp += isrCoef*deltaFactor*pow(F2, 0.75)*sqrt(length)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
             if (sigmaDelta2)
               *sigmaDelta2 += sqr(isrCoef*deltaFactor)*pow(F2, 1.5)*length;
             p = pRef*(1+dp);
+            coord[1] *= (1+coord[5])/(1+dp);
+            coord[3] *= (1+coord[5])/(1+dp);
             beta1 = p/sqrt(sqr(p)+1);
             coord[5] = dp;
             coord[4] = beta1*coord[4]/beta0;
