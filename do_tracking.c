@@ -2209,6 +2209,10 @@ long do_tracking(
               nLeft = trackUndulatorKickMap(coord, accepted, nToTrack, *P_central, (UKICKMAP*)eptr->p_elem, 
                                             last_z);
               break;
+            case T_KICKMAP:
+              nLeft = trackKickMap(coord, accepted, nToTrack, *P_central, (KICKMAP*)eptr->p_elem, 
+                                   last_z, NULL);
+              break;
             case T_TWISSELEMENT:
 	      if (((TWISSELEMENT*)eptr->p_elem)->disable || flags&TEST_PARTICLES)
 		break;

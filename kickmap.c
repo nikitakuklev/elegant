@@ -10,64 +10,41 @@
 /* routine: kickmap.c
  * purpose: track particles through a kick map (function of x and y)
  * 
- * Michael Borland, Weiming Guo, 2008
+ * Michael Borland, 2021
  */
 #include "mdb.h"
 #include "track.h"
 
-void initializeUndulatorKickMap(UKICKMAP *map);
-long interpolateUndulatorKickMap(double *xpFactor, double *ypFactor, UKICKMAP *map, double x, double y);
-void AddWigglerRadiationIntegrals(double length, long periods, double radius,
-				  double eta, double etap, 
-				  double beta, double alpha,
-				  double *I1, double *I2, double *I3, double *I4, double *I5);
+void initializeKickMap(KICKMAP *map);
+long interpolateKickMap(double *xpFactor, double *ypFactor, KICKMAP *map, double x, double y);
 
-long trackUndulatorKickMap(
+long trackKickMap(
                double **particle,    /* array of particles */
                double **accepted,    /* acceptance array */
                long nParticles,      /* number of particles */
                double pRef,          /* central momentum */
-               UKICKMAP *map,
-               double zStart
+               KICKMAP *map,
+               double zStart,
+               double *sigmaDelta2
                )
 {
   long ip, iTop, ik, nKicks, kickSign=1;
   double *coord;
-  double eomc, H;
-  double dxpFactor, dypFactor;
-  double length, fieldFactor;
-  double radCoef, isrCoef, sxpCoef, beta, alpha, sqrtBeta=0, deltaFactor, delta;
-  double I1, I2, I3, I4, I5;
-  double sqrtI3, sqrtI5, dist, tan_yaw, yawOffset, K;
-  
+  double dxp, dyp;
+  double length;
+  double dist, tan_yaw, yawOffset;
+  double radCoef, isrCoef;
+
   length = map->length;
-  fieldFactor = map->fieldFactor;
   if (map->flipSign) 
     kickSign = -1;
   if (!map->initialized)
-    initializeUndulatorKickMap(map);
+    initializeKickMap(map);
 
-  if (map->Kreference && map->Kactual)
-    bombElegant("Give Kreference or Kactual for UKICKMAP, not both", NULL);
   if ((nKicks=map->nKicks)<1)
     bombElegant("N_KICKS must be >=1 for UKICKMAP", NULL);
 
-  K = map->Kreference ? map->Kreference*fieldFactor : map->Kactual;
-
-  radCoef = isrCoef = sxpCoef = 0;
-  if (map->synchRad)
-    /* radCoef*I2 is d((P-Po)/Po) per step for the on-axis, on-momentum particle */
-    radCoef = 2./3*particleRadius*ipow(pRef, 3);
-  if (map->isr) {
-    /* isrCoef*sqrt(I3) is the RMS increase in dP/P per step due to incoherent SR.  */
-    isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(pRef)*137.0359895);
-    /* sxpCoef*sqrt(I5) is related to the increase in the RMS divergence per step due to incoherent SR */
-    sxpCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(pRef)*137.0359895);
-  }
-  
   length /= nKicks;
-  
-  eomc = particleCharge/particleMass/c_mks; 
 
   if (map->dx || map->dy || map->dz)
     offsetBeamCoordinatesForMisalignment(particle, nParticles, map->dx, map->dy, map->dz);
@@ -81,66 +58,10 @@ long trackUndulatorKickMap(
     bombElegant("YAW_END parameter must be -1, 0, or 1", NULL);
   yawOffset = map->length/2*(map->yawEnd+1.0)*tan_yaw;
 
+  radCoef = sqr(particleCharge)*pow3(pRef)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
+  isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(pRef)*137.0359895);
+
   for (ik=0; ik<nKicks; ik++) {
-    sqrtI3 = sqrtI5 = 0;
-    I1 = I2 = I3 = I4 = I5 = 0;
-    if (radCoef || sxpCoef) {
-      double S11, S12, S22, S16, S26, S66;
-      double S11beta, S12beta, S22beta, emit;
-
-      if (nKicks!=map->periods)
-        bombElegant("Number of kicks must equal number of periods for UKICKMAP radiation tracking", NULL);
-      
-      if (sxpCoef) {
-        /* These calls are inefficient (repeat some calculations), but better than other routines we have now */
-#if !USE_MPI
-        rms_emittance(particle, 0, 1, iTop+1, &S11, &S12, &S22, NULL, NULL);
-        rms_emittance(particle, 0, 5, iTop+1, &S11, &S16, &S66, NULL, NULL);
-        rms_emittance(particle, 1, 5, iTop+1, &S22, &S26, &S66, NULL, NULL);
-#else
-        rms_emittance_p(particle, 0, 1, iTop+1, &S11, &S12, &S22, NULL, NULL, NULL);
-        rms_emittance_p(particle, 0, 5, iTop+1, &S11, &S16, &S66, NULL, NULL, NULL);
-        rms_emittance_p(particle, 1, 5, iTop+1, &S22, &S26, &S66, NULL, NULL, NULL);
-#endif
-
-        if (S66) {
-          S11beta = S11 - sqr(S16)/S66;
-          S12beta = S12 - S16*S26/S66;
-          S22beta = S22 - sqr(S26)/S66;
-        } else {
-          S11beta = S11;
-          S12beta = S12;
-          S22beta = S22;
-        }
-        beta = alpha = sqrtBeta = 0;
-        if ((emit = S11beta*S22beta-sqr(S12beta))>0) {
-          emit = sqrt(emit);
-          beta = sqrt(S11beta/emit);
-          sqrtBeta = sqrt(beta);
-          alpha = -S12beta/emit;
-        }
-      } else {
-        emit = 0;
-        sqrtBeta = beta = 1;
-        alpha = 0;
-      }
-
-      if (map->periods && K) {
-        double radius;
-        radius = 
-          sqrt(sqr(pRef)+1)*(map->length/map->periods)/(PIx2*K);
-        AddWigglerRadiationIntegrals(map->length/map->periods, 2, radius, 
-                                     0.0, 0.0, beta, alpha,
-                                     &I1, &I2, &I3, &I4, &I5);
-      }
-      if (sxpCoef) {
-        if (I3<0 || I5<0)
-          bombElegant("I3 or I5 is negative in UKICKMAP", NULL);
-        sqrtI3 = sqrt(I3);
-        sqrtI5 = sqrt(I5);
-      }
-    }
-    
     if (isSlave || !notSinglePart) {
       for (ip=0; ip<=iTop; ip++) {
         coord = particle[ip];
@@ -151,9 +72,9 @@ long trackUndulatorKickMap(
         coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
         
         /* 2. apply the kicks 
-         * use interpolation to get dxpFactor and dypFactor 
+         * use interpolation to get dxp and dyp 
          */
-        if (!interpolateUndulatorKickMap(&dxpFactor, &dypFactor, map, 
+        if (!interpolateKickMap(&dxp, &dyp, map, 
 					 coord[0]-dist*tan_yaw+yawOffset, coord[2])) {
           /* particle is lost */
           swapParticles(particle[ip], particle[iTop]); 
@@ -164,31 +85,34 @@ long trackUndulatorKickMap(
           iTop--;
           ip--;
         } else {
-          H = pRef*(1+coord[5])/eomc;
-	  if (map->singlePeriodMap) {
-	    coord[1] += dxpFactor*sqr(fieldFactor/H)*kickSign;
-	    coord[3] += dypFactor*sqr(fieldFactor/H)*kickSign;
-          } else {
-	    coord[1] += dxpFactor*sqr(fieldFactor/H)/nKicks*kickSign;
-	    coord[3] += dypFactor*sqr(fieldFactor/H)/nKicks*kickSign;
-	  }
+          dxp /= (1+coord[5])*kickSign*nKicks;
+          dyp /= (1+coord[5])*kickSign*nKicks;
+          coord[1] += dxp;
+          coord[3] += dyp;
+          
+          if ((map->synchRad || map->isr) && length) {
+            double kick, dp, p, beta0, deltaFactor, F2, beta1;
+            kick = sqrt(sqr(dxp) + sqr(dyp));
+            F2 = sqr(kick/length);
+            dp = coord[5];
+            p = pRef*(1+dp);
+            beta0 = p/sqrt(sqr(p)+1);
+            deltaFactor = sqr(1+dp);
+            dp -= radCoef*deltaFactor*F2*length;
+            if (map->isr)
+              dp += isrCoef*deltaFactor*pow(F2, 0.75)*sqrt(length)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+            if (sigmaDelta2)
+              *sigmaDelta2 += sqr(isrCoef*deltaFactor)*pow(F2, 1.5)*length;
+            p = pRef*(1+dp);
+            beta1 = p/sqrt(sqr(p)+1);
+            coord[5] = dp;
+            coord[4] = beta1*coord[4]/beta0;
+          }
 
           /* 3. go through another half length */
           coord[0] += coord[1]*length/2.0;
           coord[2] += coord[3]*length/2.0;
           coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-        }
-        
-        /* 3. Optionally apply synchrotron radiation kicks */
-        if (radCoef || isrCoef) {
-          delta = coord[5];
-          deltaFactor = ipow(1+delta, 2);
-          if (radCoef) 
-            coord[5] -= radCoef*I2*deltaFactor;
-          if (isrCoef)
-            coord[5] += isrCoef*sqrtI3*deltaFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
-          if (sxpCoef && sqrtBeta)
-            coord[1] += sxpCoef*sqrtI5*(1+delta)/sqrtBeta*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
         }
       }
     }
@@ -204,7 +128,7 @@ long trackUndulatorKickMap(
   return iTop+1;
 }
 
-void initializeUndulatorKickMap(UKICKMAP *map)
+void initializeKickMap(KICKMAP *map)
 {
   SDDS_DATASET SDDSin;
   double *x=NULL, *y=NULL, *xpFactor=NULL, *ypFactor=NULL;
@@ -225,9 +149,10 @@ void initializeUndulatorKickMap(UKICKMAP *map)
     fprintf(stderr, "UKICKMAP input file must have both (xpFactor, ypFactor)\n");
     exitElegant(1);
   }
-  if (!check_sdds_column(&SDDSin, "xpFactor", "(T*m)$a2$n") ||
-      !check_sdds_column(&SDDSin, "ypFactor", "(T*m)$a2$n")) {
-    fprintf(stderr, "UKICKMAP input file must have xpFactor and ypFactor with units of (T*m)$a2$n\n");
+  if (!check_sdds_column(&SDDSin, "xpFactor", "") ||
+      !check_sdds_column(&SDDSin, "ypFactor", "")) {
+    fprintf(stderr, "KICKMAP input file must have xpFactor and ypFactor, which must be dimensionless\n");
+    fprintf(stderr, "Do you mean to use UKICKMAP, for an undulator wiggler?\n");
     exitElegant(1);
   }
   
@@ -282,7 +207,7 @@ void initializeUndulatorKickMap(UKICKMAP *map)
   map->initialized = 1;
 }
 
-long interpolateUndulatorKickMap(double *xpFactor, double *ypFactor, UKICKMAP *map, double x, double y)
+long interpolateKickMap(double *xpFactor, double *ypFactor, KICKMAP *map, double x, double y)
 {
   double Fa, Fb, fx, fy;
   long ix, iy;
@@ -312,113 +237,3 @@ long interpolateUndulatorKickMap(double *xpFactor, double *ypFactor, UKICKMAP *m
 
   return 1;
 }
-
-void AddWigglerRadiationIntegrals(double length, long poles, double radius,
-                                   double eta, double etap, 
-                                   double beta, double alpha,
-                                   double *I1, double *I2, double *I3, double *I4, double *I5)
-{
-  double h0, gamma;
-  double Lp;
-  long pole, fieldSign;
-#ifdef DEBUG
-  FILE *fpd = NULL;
-#endif
-
-  if (poles<2)
-    bombElegant("wiggler must have at least 2 poles", NULL);
-  if (radius<=0)
-    bombElegant("wiggler must have positive, nonzero radius", NULL);
-
-  /* length of each pole */
-  Lp = length/poles;
-
-#ifdef DEBUG
-  fpd = fopen_e("wiggler.sdds", "w", 0);
-  fprintf(fpd, "SDDS1\n&column name=Pole type=long &end\n");
-  fprintf(fpd, "&column name=beta type=double units=m &end\n");
-  fprintf(fpd, "&column name=alpha type=double &end\n");
-  fprintf(fpd, "&column name=eta type=double units=m &end\n");
-  fprintf(fpd, "&column name=etap type=double units=m &end\n");
-  fprintf(fpd, "&column name=h0 type=double units=1/m &end\n");
-  fprintf(fpd, "&column name=I1 type=double units=m &end\n");
-  fprintf(fpd, "&column name=I2 type=double units=1/m &end\n");
-  fprintf(fpd, "&column name=I3 type=double units=1/m$a2$n &end\n");
-  fprintf(fpd, "&column name=I4 type=double units=1/m &end\n");
-  fprintf(fpd, "&column name=I5 type=double units=1/m &end\n");
-  fprintf(fpd, "&data mode=ascii no_row_counts=1 &end\n");
-  fprintf(fpd, "0 %e %e %e %e 0 0 0 0 0 0\n", beta, alpha, eta, etap);
-#endif
-  
-  gamma = (1+alpha*alpha)/beta;
-  if (poles%2) {
-    /* Odd number of poles: use half-strength end-poles to match */
-    /* Integrate a half period at a time */
-    fieldSign = 1;
-    for (pole=0; pole<poles; pole++) {
-      fieldSign *= -1;
-      if (pole==0 || pole==poles-1) {
-	h0 = fieldSign*0.5/radius;
-      } else
-	h0 = fieldSign/radius;
-      
-      *I1 += (h0*Lp*(h0*ipow(Lp,2) + 4*eta*PI + 2*etap*Lp*PI))/(2.*ipow(PI,2));
-      *I2 += (ipow(h0,2)*Lp)/2.;
-      *I3 += SIGN(h0)*(4*ipow(h0,3)*Lp)/(3.*PI);
-      
-      *I5 += SIGN(h0)*
-	(ipow(h0,3)*Lp*(gamma*
-			(-50625*eta*h0*ipow(Lp,2)*ipow(PI,3) +
-			 72000*ipow(eta,2)*ipow(PI,4) +
-			 32*ipow(h0,2)*ipow(Lp,4)*(1664 + 225*ipow(PI,2))) +
-			225*ipow(PI,2)*
-			(alpha*(-289*ipow(h0,2)*ipow(Lp,3) +
-				5*h0*Lp*(128*eta - 45*etap*Lp)*PI + 640*eta*etap*ipow(PI,2)
-				) + 64*beta*(6*ipow(h0,2)*ipow(Lp,2) + 10*etap*h0*Lp*PI +
-					     5*ipow(etap,2)*ipow(PI,2)))))/(54000.*ipow(PI,5));
-      
-      beta  = beta - 2*Lp*alpha + sqr(Lp)*gamma;
-      alpha = alpha - Lp*gamma;
-      gamma = (1+alpha*alpha)/beta;
-      eta   = eta + (etap + Lp/PI*h0)*Lp ;
-      etap  = etap + 2*Lp/PI*h0;
-      
-#ifdef DEBUG
-      fprintf(fpd, "%ld %e %e %e %e %e %e %e %e %e %e\n", pole+1, beta, alpha, eta, etap,
-	      h0, *I1, *I2, *I3, *I4, *I5);
-#endif
-    }
-    
-  } else {
-    /* Even number of poles: use half-length end-poles to match 
-     * Integrate a full period at a time (starts and ends in the
-     * middle of a pole).
-     */
-    double L;
-    L = 2*Lp;
-    h0 = 1./radius;
-    for (pole=0; pole<poles; pole+=2) {
-      *I5 += (ipow(h0,3)*Lp*(gamma*
-                              (9000*ipow(eta,2)*ipow(PI,4) +
-                               1125*eta*h0*ipow(Lp,2)*ipow(PI,2)*(16 + 3*PI) +
-                               ipow(h0,2)*ipow(Lp,4)*(15656 + 2235*PI + 2250*ipow(PI,2))) +
-                              225*ipow(PI,2)*(8*beta*
-                                               (ipow(h0,2)*ipow(Lp,2) + 5*ipow(etap,2)*ipow(PI,2)) +
-                                               alpha*(-16*ipow(h0,2)*ipow(Lp,3) +
-                                                       5*etap*(16*eta*ipow(PI,2) + h0*ipow(Lp,2)*(16 + 3*PI))))))/
-                                                         (3375.*ipow(PI,5));
-      beta  = beta - 2*L*alpha + sqr(L)*gamma;
-      alpha = alpha - L*gamma;
-      gamma = (1+alpha*alpha)/beta;
-      eta   = eta + 2*Lp*etap;
-    }
-    *I1 += -(poles/2)*((ipow(h0,2)*ipow(Lp,3))/ipow(PI,2));
-    *I2 += (poles/2)*ipow(h0,2)*Lp;
-    *I3 += (poles/2)*(8*ipow(h0,3)*Lp)/(3.*PI);
-  }
-
-#ifdef DEBUG
-    fclose(fpd);
-#endif
-}
-

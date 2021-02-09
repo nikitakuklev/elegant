@@ -75,7 +75,7 @@ char *entity_name[N_TYPES] = {
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
     "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY", "BOFFAXE",
-    "APCONTOUR", "TAPERAPC", "TAPERAPE", "TAPERAPR", "SHRFDF",
+    "APCONTOUR", "TAPERAPC", "TAPERAPE", "TAPERAPR", "SHRFDF", "KICKMAP",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -212,6 +212,7 @@ char *entity_text[N_TYPES] = {
     "A tapered elliptical aperture.",
     "A tapered rectangular aperture.",
     "Simulation through space harmonics of zero length deflecting cavity.",
+    "An ordinary kick map (use UKICKMAP for undualtors).",
     } ;
 
 QUAD quad_example;
@@ -3141,6 +3142,25 @@ PARAMETER ukickmap_param[N_UKICKMAP_PARAMS] = {
     {"SINGLE_PERIOD_MAP", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.singlePeriodMap), NULL, 0.0, 0, "if non-zero, the map file is for a single period. L still pertains to the full device. Set N_KICKS to the number of periods."},
     };
 
+KICKMAP kickmap_example;
+
+/* general kick map physical parameters */
+PARAMETER kickmap_param[N_KICKMAP_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kickmap_example.length), NULL, 0.0, 0, "length"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kickmap_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kickmap_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kickmap_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kickmap_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kickmap_example.factor), NULL, 1.0, 0, "Factor by which to multiply the kicks."},
+    {"XY_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kickmap_example.xyFactor), NULL, 1.0, 0, "Factor by which to multiply the x and y values in the input file."},
+    {"YAW", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kickmap_example.yaw), NULL, 0.0, 0, "Yaw angle of the device. Meaningful only if N_KICKS is not 1."},
+    {"INPUT_FILE", " ", IS_STRING, 0, (long)((char *)&kickmap_example.inputFile), NULL, 0.0, 0, "Name of SDDS file with undulator kickmap data."},
+    {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kickmap_example.nKicks), NULL, 0.0, 1, "Number of kicks into which to split the element."},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&kickmap_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&kickmap_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
+    {"YAW_END", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&kickmap_example.yawEnd), NULL, 0.0, 0, "-1=Entrance, 0=Center, 1=Exit"},
+    };
+
 FTABLE ftable_example;
 
 /* field table physical parameters */
@@ -3729,6 +3749,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TAPERAPE_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPE), taperape_param},
     { N_TAPERAPR_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPR), taperapr_param},
     { N_SHRFDF_PARAMS,  MPALGORITHM,   sizeof(SHRFDF),    shrfdf_param     },
+    { N_KICKMAP_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MPALGORITHM|BACKTRACK, sizeof(UKICKMAP),    kickmap_param    },
 } ;
 
 void compute_offsets()

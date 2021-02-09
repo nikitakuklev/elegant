@@ -615,7 +615,7 @@ elegant_SRCS = 	pointInsideContour.c ignoreElements.c alpha_data.c alpha_matrix.
 		frfmode.c ftrfmode.c tfeedback.cc engeCoef.c lsc.c frequencyMap.c \
 		GWigSymplecticPass.c gwig.c noiseGroup.c insertSCeffects.cc momentumAperture.c kahan.c \
 		coupled_twiss.c drand_oag.c moments.c \
-                insert_elements.c regexCode.cc touschekScatter.c chbook.c kickmap.c matrixOp.c \
+                insert_elements.c regexCode.cc touschekScatter.c chbook.c ukickmap.c kickmap.c matrixOp.c \
                 replace_elements.c modulate.c ramp.c fringe.c apple.c chaosMap.c lrwake.c iirFilter.c exactCorrector.c \
                 makeInitialParticleEnsemble.c computeMatricesFromTracking.c transformBeamWithScript.c sdds_support_common.c bratSubroutines.c \
                 magneticFieldFromGeneralizedGradient.c ionEffects.cc slicePoint.c pressureData.c elasticScattering.c \

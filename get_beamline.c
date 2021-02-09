@@ -1916,6 +1916,9 @@ void modify_for_backtracking(ELEMENT_LIST *eptr)
     case T_UKICKMAP:
       ((UKICKMAP*)eptr->p_elem)->flipSign = 1;
       break;
+    case T_KICKMAP:
+      ((KICKMAP*)eptr->p_elem)->flipSign = 1;
+      break;
     case T_LSCDRIFT:
       ((LSCDRIFT*)eptr->p_elem)->backtrack = 1;
       break;

@@ -993,7 +993,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_TAPERAPE 126
 #define T_TAPERAPR 127
 #define T_SHRFDF  128
-#define N_TYPES  129
+#define T_KICKMAP 129
+#define N_TYPES  130
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1129,6 +1130,7 @@ extern char *entity_text[N_TYPES];
 #define N_TAPERAPE_PARAMS 12
 #define N_TAPERAPR_PARAMS 9
 #define N_SHRFDF_PARAMS 25
+#define N_KICKMAP_PARAMS 13
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3357,6 +3359,23 @@ typedef struct {
   double radiusInternal;
 } UKICKMAP;  
 
+/* names and storage structure for general kick map physical parameters */
+extern PARAMETER kickmap_param[N_KICKMAP_PARAMS];
+
+typedef struct {
+  double length, tilt, dx, dy, dz, factor, xyFactor, yaw;
+  char *inputFile;
+  long nKicks;
+  short synchRad, isr, yawEnd, singlePeriodMap;
+  /* for internal use only */
+  short initialized;
+  short flipSign; /* 0 for forward tracking, 1 for backward */
+  long points, nx, ny;
+  double *xpFactor, *ypFactor;
+  double xmin, xmax, dxg;
+  double ymin, ymax, dyg;
+} KICKMAP;  
+
 /* names and storage structure for field table parameters */
 extern PARAMETER ftable_param[N_FTABLE_PARAMS];
 
@@ -3509,7 +3528,7 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
                            (type)==T_QUAD || (type)==T_KQUAD || (type)==T_SEXT || (type)==T_KSEXT || \
 			   (type)==T_WIGGLER || (type)==T_CWIGGLER || (type)==T_APPLE || \
                            (type)==T_HCOR || (type)==T_VCOR || (type)==T_HVCOR || (type)==T_BGGEXP || \
-                           (type)==T_CCBEND)
+                           (type)==T_CCBEND || (type)==T_KICKMAP)
 
 /* flags for run_awe_beam and run_bunched_beam */
 #define TRACK_PREVIOUS_BUNCH 1
@@ -4193,6 +4212,10 @@ extern long polynomialSeries_tracking(double **particle,  long n_part, POLYNOMIA
                                 double p_error, double Po, double **accepted, double z_start);
 
 /* prototypes for kickmap.c */
+long trackKickMap(double **particle, double **accepted, long nParticles, double pRef, KICKMAP *map,
+                  double zStart, double *sigmaDelta2);
+
+/* prototypes for ukickmap.c */
 long trackUndulatorKickMap(double **particle, double **accepted, long nParticles, double pRef, UKICKMAP *map,
                   double zStart);
 

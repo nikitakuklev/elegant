@@ -1024,7 +1024,7 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend; BRAT *brat;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler; APPLE *apple;
-    UKICKMAP *ukmap; SCRIPT *script; 
+    KICKMAP *kmap; UKICKMAP *ukmap; SCRIPT *script; 
     EHCOR *ehcor; EVCOR *evcor; EHVCOR *ehvcor;
     double ks, Pref_output, pSave;
     VARY rcContext;
@@ -1154,6 +1154,13 @@ VMATRIX *compute_matrix(
 	      elem->Pref_input*(ukmap->length/ukmap->periods)/(PIx2*K);
 	  }
         }
+        pSave = run->p_central;
+        run->p_central = elem->Pref_input;
+        elem->matrix = determineMatrix(run, elem, NULL, NULL);
+        run->p_central = pSave;
+        break;
+      case T_KICKMAP:
+        kmap = ((KICKMAP*)elem->p_elem);
         pSave = run->p_central;
         run->p_central = elem->Pref_input;
         elem->matrix = determineMatrix(run, elem, NULL, NULL);

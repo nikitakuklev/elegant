@@ -760,6 +760,17 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((UKICKMAP*)eptr->p_elem)->isr = ltmp1;
     ((UKICKMAP*)eptr->p_elem)->synchRad = ltmp2;
     break;
+  case T_KICKMAP:
+    ltmp1 = ((KICKMAP*)eptr->p_elem)->isr;
+    ltmp2 = ((KICKMAP*)eptr->p_elem)->synchRad;
+    ((KICKMAP*)eptr->p_elem)->isr = ((KICKMAP*)eptr->p_elem)->synchRad = 0;
+    if (trackKickMap(coord, NULL, n_track, run->p_central, (KICKMAP*)eptr->p_elem, 0, NULL)!=n_track) {
+      printf("*** Error: particles lost in determineMatrix call for KICKMAP\n");
+      exitElegant(1);
+    }
+    ((KICKMAP*)eptr->p_elem)->isr = ltmp1;
+    ((KICKMAP*)eptr->p_elem)->synchRad = ltmp2;
+    break;
   case T_BGGEXP:
     ltmp1 = ((BGGEXP*)eptr->p_elem)->isr;
     ltmp2 = ((BGGEXP*)eptr->p_elem)->synchRad;
@@ -1175,6 +1186,17 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       ((UKICKMAP*)eptr->p_elem)->isr = ltmp1;
       ((UKICKMAP*)eptr->p_elem)->synchRad = ltmp2;
       break;
+    case T_KICKMAP:
+      ltmp1 = ((KICKMAP*)eptr->p_elem)->isr;
+      ltmp2 = ((KICKMAP*)eptr->p_elem)->synchRad;
+      ((KICKMAP*)eptr->p_elem)->isr = ((KICKMAP*)eptr->p_elem)->synchRad = 0;
+      if (trackKickMap(finalCoord+my_offset, NULL, my_nTrack, run->p_central, (KICKMAP*)eptr->p_elem, 0, NULL)!=my_nTrack) {
+        printf("*** Error: particles lost in determineMatrix call for KICKMAP\n");
+        exitElegant(1);
+      }
+      ((KICKMAP*)eptr->p_elem)->isr = ltmp1;
+      ((KICKMAP*)eptr->p_elem)->synchRad = ltmp2;
+      break;
     case T_BGGEXP:
       ltmp1 = ((BGGEXP*)eptr->p_elem)->isr;
       ltmp2 = ((BGGEXP*)eptr->p_elem)->synchRad;
@@ -1462,6 +1484,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   KSEXT ksext; SEXT *sext;
   HCOR hcor; VCOR vcor; HVCOR hvcor;
   EHCOR ehcor; EVCOR evcor; EHVCOR ehvcor;
+  KICKMAP kickmap;
   double length, z;
   long i, j, k, slice, nSlices0;
   double *accumD1, *accumD2, *dtmp;
@@ -1857,6 +1880,15 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         elem.p_elem = (void*)&boffaxe;
       }
       break;
+    case T_KICKMAP:
+      if (slice==0) {
+        nSlices = 1;
+        memcpy(&kickmap, (KICKMAP*)eptr->p_elem, sizeof(KICKMAP));
+        kickmap.isr = 0;
+        elem.type = T_KICKMAP;
+        elem.p_elem = (void*)&kickmap;
+      }
+      break;
     default:
       printf("*** Error: determineRadiationMatrix called for element (%s) that is not supported!\n", eptr->name);
       printf("***        Seek professional help!\n");
@@ -1996,6 +2028,9 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   case T_EVCOR:
   case T_EHVCOR:
     trackThroughExactCorrector(coord, n_track, elem, run->p_central, NULL, 0, &sigmaDelta2);
+    break;
+  case T_KICKMAP:
+    trackKickMap(coord, NULL, n_track, run->p_central, (KICKMAP*)(elem->p_elem), 0, &sigmaDelta2);
     break;
   case T_TWLA:
     pCentral = run->p_central;
