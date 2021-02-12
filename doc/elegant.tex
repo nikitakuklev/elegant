@@ -6552,7 +6552,8 @@ computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<fil
   the region bounded by the four planes, using the same coordinate intervals.
 \item {\tt autotune} --- Optimizes the number of derivaties and multipoles up the to values given with the
   \verb|-derivatives| and \verb|-multipoles| options, in order to minimize the deviation of the GGE-derived
-  fields from the values given in the 3D field map file. By default, minimizes the maximum deviation, but user can
+  fields from the values given in the 3D field map file. The region of evaluation is automatically limited by
+  the bounding planes, even if the 3D field map has a larger extent. By default, minimizes the maximum deviation, but user can
   ask to minimize the rms or mean-absolute-value deviation. Differences below the \verb|significance| value are
   ignored. The user may request verbose output to see results printed to the terminal, and also a log file
   for a detailed record.
