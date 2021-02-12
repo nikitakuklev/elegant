@@ -2800,6 +2800,8 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, long mul
       }
         
       r = sqrt(sqr(x)+sqr(y));
+      if (radiusLimit>0 && r>radiusLimit)
+        break;
       phi = atan2(y, x);
       
       for (im=0; im<bggexpData[ns].nm && im<multipoles; im++) {
@@ -2845,13 +2847,11 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, long mul
             fmap->x[ip], fmap->y[ip], iz*dz+bggexpData[0].zMin,
             B[0], B[1], B[2], fmap->Bx[ip], fmap->By[ip], fmap->Bz[ip]);
 #endif
-    if (radiusLimit==0 || r<radiusLimit) {
-      if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst)
-        residualWorst = residualTerm;
-      residualCount ++;
-      residualSum += fabs(residualTerm);
-      residualSum2 += sqr(residualTerm);
-    }
+    if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst)
+      residualWorst = residualTerm;
+    residualCount ++;
+    residualSum += fabs(residualTerm);
+    residualSum2 += sqr(residualTerm);
   }
 
 #ifdef DEBUG
