@@ -71,8 +71,8 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
 void freeBGGExpData(BGGEXP_DATA *bggexpData);
 int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
 int computeGGcos(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
-double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, long multipoles, long derivatives,
-                              double significance, double radiusLimit,
+double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_ON_PLANES *fieldsOnPlanes, 
+                              long multipoles, long derivatives, double significance, double radiusLimit,
                               unsigned long flags, ALL_RESIDUALS *allResiduals);
 int ReadInputFiles(FIELDS_ON_PLANES *fieldsOnPlanes, 
                    char *topFile, char *bottomFile, char *leftFile, char *rightFile, long needBz);
@@ -398,7 +398,8 @@ int main(int argc, char **argv)
       for ( ; multipoles<=maxMultipoles; multipoles++) {
         if (fieldMapFile) {
           double residual;
-          if ((residual = evaluateGGEForFieldMap(&fieldMap, &bggexpData[0], multipoles, derivatives,
+          if ((residual = evaluateGGEForFieldMap(&fieldMap, &bggexpData[0], &fieldsOnPlanes,
+                                                 multipoles, derivatives,
                                                  autoTuneSignificance, autoTuneRadiusLimit,
                                                  autoTuneFlags, &allResiduals))<bestResidual) {
             bestResidual = residual;
@@ -2747,9 +2748,9 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
   bggexpData->nz = nz;
 }
 
-double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, long multipoles, long derivatives,
-                              double significance, double radiusLimit, unsigned long flags, 
-                              ALL_RESIDUALS *allResiduals)
+double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_ON_PLANES *fieldsOnPlanes, 
+                              long multipoles, long derivatives, double significance, double radiusLimit,
+                              unsigned long flags, ALL_RESIDUALS *allResiduals)
 {
   double B[3], Br, Bphi;
   double x, y, z, r, phi, dz;
@@ -2780,6 +2781,14 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, long mul
   residualWorst = residualSum = residualSum2 = 0;
   residualCount = 0;
   for (ip=0; ip<fmap->n; ip++) {
+    if (fmap->x[ip]>fieldsOnPlanes->xMax || fmap->x[ip]<fieldsOnPlanes->xMin ||
+        fmap->y[ip]>fieldsOnPlanes->yMax || fmap->y[ip]<fieldsOnPlanes->yMin)
+      continue;
+    if (radiusLimit>0) {
+      r = sqrt(sqr(fmap->x[ip])+sqr(fmap->y[ip]));
+      if (r>radiusLimit)
+        continue;
+    }
     /* Compute fields */
     Br = Bphi = B[0] = B[1] = B[2] = 0;
     r = phi = dz = 0;
@@ -2800,8 +2809,6 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, long mul
       }
         
       r = sqrt(sqr(x)+sqr(y));
-      if (radiusLimit>0 && r>radiusLimit)
-        break;
       phi = atan2(y, x);
       
       for (im=0; im<bggexpData[ns].nm && im<multipoles; im++) {
