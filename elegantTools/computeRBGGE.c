@@ -101,7 +101,7 @@ char *option[N_OPTIONS] = {
 #define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
              -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]\n\
               [-evaluate=<filename>]\n\
-              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,verbose][,log=<filename>]]\n\
+              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,verbose][,increaseOnly][,log=<filename>]]\n\
 -yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
 -yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
 -xminus      (x, y, z, Bx, By, Bz) map for negative-x plane.\n\
@@ -115,7 +115,9 @@ char *option[N_OPTIONS] = {
 -autotune    Seeks to minimize the number of multipoles and derivatives to avoid using terms\n\
              that do not contribute to a good fit at the given level of significance. The user can\n\
              choose to minimize the maximum error (default), the rms error, or the mean absolute value\n\
-             error.\n\
+             error. If 'increaseOnly' is given, the optimization method scans toward increasing values\n\
+             of the number of multipoles and derivatives relative to the previous best; this is often much\n\
+             faster.\n\n\
 Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Soliday, and Michael Borland."
 
 #define AUTOTUNE_VERBOSE   0x0001UL
@@ -125,6 +127,7 @@ Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Sol
 #define AUTOTUNE_EVALONLY  0x0010UL
 #define AUTOTUNE_MODE_SET  0x0100UL
 #define AUTOTUNE_LOG       0x0200UL
+#define AUTOTUNE_INCRONLY  0x0400UL
 char *modeOption[3] = {"rms", "maximum", "mav"};
 
 int main(int argc, char **argv)
@@ -133,6 +136,7 @@ int main(int argc, char **argv)
   long i_arg;
   long multipoles, derivatives, fundamental=0;
   long maxMultipoles = 8, maxDerivatives = 7;
+  long minMultipoles, minDerivatives;
   char *topFile = NULL, *bottomFile = NULL, *leftFile = NULL, *rightFile = NULL;
   char *normalOutputFile = NULL, *skewOutputFile = NULL;
   char *fieldMapFile = NULL;
@@ -268,6 +272,7 @@ int main(int argc, char **argv)
               if (scanned[i_arg].n_items>0 &&
                   (!scanItemList(&autoTuneFlags, scanned[i_arg].list+2, &scanned[i_arg].n_items, 0,
                                  "verbose", -1, NULL, 0, AUTOTUNE_VERBOSE, 
+                                 "increaseonly", -1, NULL, 0, AUTOTUNE_INCRONLY,
                                  "evaluate", -1, NULL, 0, AUTOTUNE_EVALONLY,
                                  "significance", SDDS_DOUBLE, &autoTuneSignificance, 1, 0,
                                  "radiuslimit", SDDS_DOUBLE, &autoTuneRadiusLimit, 1, 0,
@@ -349,7 +354,7 @@ int main(int argc, char **argv)
     bestResidual = DBL_MAX;
     bestDerivatives = maxDerivatives;
     bestMultipoles = maxMultipoles;
-    
+
     bggexpData[0].haveData = bggexpData[1].haveData = 0;
 
     memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
@@ -376,26 +381,27 @@ int main(int argc, char **argv)
     if (fieldMapFile) {
       /* read 3D map */
       readFieldMap(fieldMapFile, &fieldMap);
-      derivatives = 1;
+      minDerivatives = 1;
+      minMultipoles = 1;
     } else  {
       /* no auto-tuning */
-      derivatives = maxDerivatives;
+      minDerivatives = maxDerivatives;
       fieldMap.n = 0;
     }
     if (autoTuneFlags&AUTOTUNE_EVALONLY)
-      derivatives = maxDerivatives;
-
-    for ( ; derivatives<=maxDerivatives; derivatives++) {
-      if (fieldMapFile) {
-        multipoles = 1;
-      } else {
-        /* no auto-tuning */
-        multipoles = maxMultipoles;
+      minDerivatives = maxDerivatives;
+    
+    for (derivatives=minDerivatives; derivatives<=maxDerivatives; derivatives++) {
+      if (!(autoTuneFlags&AUTOTUNE_INCRONLY)) {
+        if (!fieldMapFile) {
+          /* no auto-tuning */
+          minMultipoles = maxMultipoles;
+        }
+        if (autoTuneFlags&AUTOTUNE_EVALONLY)
+          minMultipoles = maxMultipoles;
       }
-      if (autoTuneFlags&AUTOTUNE_EVALONLY)
-        multipoles = maxMultipoles;
-        
-      for ( ; multipoles<=maxMultipoles; multipoles++) {
+
+      for (multipoles=minMultipoles; multipoles<=maxMultipoles; multipoles++) {
         if (fieldMapFile) {
           double residual;
           if ((residual = evaluateGGEForFieldMap(&fieldMap, &bggexpData[0], &fieldsOnPlanes,
@@ -405,6 +411,10 @@ int main(int argc, char **argv)
             bestResidual = residual;
             bestMultipoles = multipoles;
             bestDerivatives = derivatives;
+            if (autoTuneFlags&AUTOTUNE_INCRONLY) {
+              minMultipoles = bestMultipoles;
+              minDerivatives = bestDerivatives;
+            }
             if (autoTuneFlags&AUTOTUNE_VERBOSE) {
               printf("New best residual of %le for m=%ld, d=%ld\n", residual, multipoles, derivatives);
               fflush(stdout);
