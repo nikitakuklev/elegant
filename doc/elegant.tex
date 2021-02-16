@@ -6481,7 +6481,7 @@ computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<column
               -normal=<output> [-skew=<output>]
               [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]
               [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]
-              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,verbose]]
+              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,noDecrease][,verbose]]
 }\end{flushleft}
 
 \item {\bf switches:}
@@ -6504,9 +6504,13 @@ computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<column
   and \verb|nphi| parameters.
 \item {\tt autotune} --- Optimizes the number of derivaties and multipoles up the to values given with the
   \verb|-derivatives| and \verb|-multipoles| options, in order to minimize the deviation of the GGE-derived
-  fields from the supplied fields on the cylinder. By default, minimizes the maximum deviation, but user can
-  ask to minimize the rms or mean-absolute-value deviation. Differences below the \verb|significance| value are
-  ignored.
+  fields from the supplied fields on the cylinder. Differences below the \verb|significance| value are
+  ignored. By default, minimizes the maximum deviation, but user can
+  ask to minimize the rms or mean-absolute-value deviation using the \verb|minimize| qualifier.
+  The \verb|noDecrease| qualifier specifies that the scan over multipoles $m$ and derivatives $d$
+  is restricted to never be less than the previous optimal values; for example, if the best value
+  so far was obtained with $m=4$ and $d=3$, the remainder of the scan would be restricted to $m\ge 4$ and $d\ge 3$;
+  this can save considerable run time.
 \end{itemize}
 
 \item {\bf authors:} M. Borland, R. Soliday, R. Lindberg, (ANL/APS).
