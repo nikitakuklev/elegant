@@ -978,4 +978,405 @@ double checkSymplecticity(VMATRIX *Mv, short canonical)
   return deltaMax;
 }
 
-      
+void checkSymplecticity3rdOrder(VMATRIX *M, double **meanMax)
+{
+  double *C;
+  double **R;
+  double ***T;
+  double ****Q;
+
+  double ****matQ;
+  double ****jacCubic;
+  double ****cubicTerms1, ****cubicTerms2;
+
+  double ***matT2;
+  double ***jacQuad;
+  double ***quadraticTerms1, ***quadraticTerms2;
+
+  double **sympJmat;
+  double **jacLinMat1, **jacLinMat2;
+
+  double mean, max;
+
+  int iz, jz, kz, lz, m, n, Ndim = 6;
+
+  set_matrix_pointers(&C, &R, &T, &Q, M);
+
+  sympJmat = calloc(Ndim, sizeof(double *));
+  jacLinMat1 = calloc(Ndim, sizeof(double *));
+  jacLinMat2 = calloc(Ndim, sizeof(double *));
+  for(iz=0; iz<Ndim; iz++) {
+    sympJmat[iz] = calloc(Ndim, sizeof(double));
+    jacLinMat1[iz] = calloc(Ndim, sizeof(double));
+    jacLinMat2[iz] = calloc(Ndim, sizeof(double));
+  }
+
+  for(iz=0; iz<Ndim; iz++)
+    for(jz=0; jz<Ndim; jz++) {
+      if(jz == iz+1  && iz%2 == 0)
+	sympJmat[iz][jz] =  1.0;
+      if(jz == iz-1 && (iz+1)%2 == 0)
+	sympJmat[iz][jz] = -1.0;
+    }
+
+/* Compute matrix JR^{tr}JR */
+  for(iz=0; iz<Ndim; iz++)
+    for(jz=0; jz<Ndim; jz++)
+      for(kz=0; kz<Ndim; kz++)
+	jacLinMat1[iz][jz] += sympJmat[iz][kz]*R[kz][jz];
+  for(iz=0; iz<Ndim; iz++)
+    for(jz=0; jz<Ndim; jz++)
+      for(kz=0; kz<Ndim; kz++)
+	jacLinMat2[iz][jz] += R[kz][iz]*jacLinMat1[kz][jz];
+  for(iz=0; iz<Ndim; iz++)
+    for(jz=0; jz<Ndim; jz++) {
+      jacLinMat1[iz][jz] = 0.0;
+      for(kz=0; kz<Ndim; kz++)
+	jacLinMat1[iz][jz] += sympJmat[iz][kz]*jacLinMat2[kz][jz];
+    }
+/* add identity */
+  for(iz=0; iz<Ndim; iz++)
+    jacLinMat1[iz][iz] += 1.0;
+
+  for(iz=0; iz<Ndim; iz++)
+    for(jz=0; jz<Ndim; jz++)
+      jacLinMat2[iz][jz] = fabs(jacLinMat1[iz][jz]);
+
+  n = 0;
+  mean = 0.0;
+  max = 0;
+  for(iz=0; iz<Ndim; iz++)
+    for(jz=0; jz<Ndim; jz++) {
+      mean += jacLinMat2[iz][jz];
+      if(max < jacLinMat2[iz][jz])
+	max = jacLinMat2[iz][jz];
+      n++;
+    }
+  mean = mean/30.0;
+  meanMax[0][0] = mean;
+  meanMax[0][1] = max;
+
+  for(iz=0; iz<Ndim; iz++) {
+    free(jacLinMat1[iz]);
+    free(jacLinMat2[iz]);
+  }
+  free(jacLinMat1);
+  free(jacLinMat2);
+
+
+//  second = {x,px,y,py,ct,delta}
+  matT2 = calloc(Ndim, sizeof(double **));
+  quadraticTerms1 = calloc(Ndim, sizeof(double **));
+  quadraticTerms2 = calloc(Ndim, sizeof(double **));
+  jacQuad = calloc(Ndim, sizeof(double **));
+  for(n=0; n<Ndim; n++) {
+    matT2[n] = calloc(Ndim, sizeof(double *));
+    quadraticTerms1[n] = calloc(Ndim, sizeof(double *));
+    quadraticTerms2[n] = calloc(Ndim, sizeof(double *));
+    jacQuad[n] = calloc(Ndim, sizeof(double *));
+    for(iz=0; iz<Ndim; iz++) {
+      matT2[n][iz] = calloc(Ndim, sizeof(double));
+      quadraticTerms1[n][iz] = calloc(Ndim, sizeof(double));
+      quadraticTerms2[n][iz] = calloc(Ndim, sizeof(double));
+      jacQuad[n][iz] = calloc(Ndim, sizeof(double));
+    }
+  }
+
+// find matrix of terms ~{x,px,y,py,ct,delta}
+  for(iz=0; iz<Ndim; iz++)
+    for(jz=0; jz<Ndim; jz++)
+      for(kz=0; kz<=jz; kz++)
+	quadraticTerms1[kz][iz][jz] = T[iz][jz][kz];
+  for(iz=0; iz<Ndim; iz++)
+    for(jz=0; jz<Ndim; jz++)
+      for(kz=jz; kz<Ndim; kz++)
+	quadraticTerms1[kz][iz][jz] += T[iz][kz][jz];
+
+  for(n=0; n<Ndim; n++)
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++) {
+	matT2[n][iz][jz] = quadraticTerms1[n][iz][jz];
+	quadraticTerms1[n][iz][jz] = 0.0;
+      }
+
+/* Compute matrix JR^{tr}JT */
+  for(n=0; n<Ndim; n++)
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++)
+	for(kz=0; kz<Ndim; kz++)
+	  quadraticTerms1[n][iz][jz] += sympJmat[iz][kz]*matT2[n][kz][jz];
+  for(n=0; n<Ndim; n++)
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++)
+	for(kz=0; kz<Ndim; kz++)
+	  quadraticTerms2[n][iz][jz] += R[kz][iz]*quadraticTerms1[n][kz][jz];
+  for(n=0; n<Ndim; n++)
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++)
+	for(kz=0; kz<Ndim; kz++)
+	  jacQuad[n][iz][jz] += sympJmat[iz][kz]*quadraticTerms2[n][kz][jz];
+
+/* Add matrix JT^{tr}JR */
+  for(n=0; n<Ndim; n++)
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++) {
+	quadraticTerms1[n][iz][jz] = 0.0;
+	for(kz=0; kz<Ndim; kz++)
+	  quadraticTerms1[n][iz][jz] += sympJmat[iz][kz]*matT2[n][jz][kz];
+      }
+  for(n=0; n<Ndim; n++)
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++) {
+	quadraticTerms2[n][iz][jz] = 0.0;
+	for(kz=0; kz<Ndim; kz++)
+	  quadraticTerms2[n][iz][jz] += quadraticTerms1[n][iz][kz]*sympJmat[kz][jz];
+      }
+  for(n=0; n<Ndim; n++)
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++)
+	for(kz=0; kz<Ndim; kz++)
+	  jacQuad[n][iz][jz] += quadraticTerms2[n][iz][kz]*R[kz][jz];
+
+  n = 0;
+  mean = 0.0;
+  max = 0.0;
+  for(kz=0; kz<Ndim; kz++)
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++) {
+	mean += fabs(jacQuad[kz][iz][jz]);
+	if(max < fabs(jacQuad[kz][iz][jz]))
+	  max = fabs(jacQuad[kz][iz][jz]);
+	n++;
+      }
+  mean = mean/180.0;
+  meanMax[1][0] = mean;
+  meanMax[1][1] = max;
+
+  for(n=0; n<Ndim; n++) {
+    for(iz=0; iz<Ndim; iz++) {
+      free(jacQuad[n][iz]);
+      free(matT2[n][iz]);
+    }
+    free(jacQuad[n]);
+    free(matT2[n]);
+  }
+  free(jacQuad);
+  free(matT2);
+
+  if(M->order >= 3) {
+    matQ = calloc(Ndim, sizeof(double ***));
+    cubicTerms1 = calloc(Ndim, sizeof(double ***));
+    cubicTerms2 = calloc(Ndim, sizeof(double ***));
+    jacCubic = calloc(Ndim, sizeof(double ***));
+    for(n=0; n<Ndim; n++) {
+      matQ[n] = calloc(Ndim, sizeof(double **));
+      cubicTerms1[n] = calloc(Ndim, sizeof(double **));
+      cubicTerms2[n] = calloc(Ndim, sizeof(double **));
+      jacCubic[n] = calloc(Ndim, sizeof(double **));
+      for(m=0; m<Ndim; m++) {
+	matQ[n][m] = calloc(Ndim, sizeof(double *));
+	cubicTerms1[n][m] = calloc(Ndim, sizeof(double *));
+	cubicTerms2[n][m] = calloc(Ndim, sizeof(double *));
+	jacCubic[n][m] = calloc(Ndim, sizeof(double *));
+	for(iz=0; iz<Ndim; iz++) {
+	  matQ[n][m][iz] = calloc(Ndim, sizeof(double));
+	  cubicTerms1[n][m][iz] = calloc(Ndim, sizeof(double));
+	  cubicTerms2[n][m][iz] = calloc(Ndim, sizeof(double));
+	  jacCubic[n][m][iz] = calloc(Ndim, sizeof(double));
+	}
+      }
+    }
+
+// find matrix of quadratic terms ~{x^2,x*px,...}
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++)
+	for(kz=0; kz<=jz; kz++)
+	  for(lz=0; lz<=kz; lz++)
+	    cubicTerms1[kz][lz][iz][jz] = Q[iz][jz][kz][lz];
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++)
+	for(kz=jz; kz<Ndim; kz++)
+	  for(lz=0; lz<=jz; lz++)
+	    cubicTerms1[kz][lz][iz][jz] += Q[iz][kz][jz][lz];
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++)
+	for(kz=jz; kz<Ndim; kz++)
+	  for(lz=jz; lz<=kz; lz++)
+	    cubicTerms1[kz][lz][iz][jz] += Q[iz][kz][lz][jz];
+
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++) {
+	    matQ[n][m][iz][jz] = cubicTerms1[n][m][iz][jz];
+	    cubicTerms1[n][m][iz][jz] = 0.0;
+	  }
+
+/* Compute matrix JR^{tr}JU */
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++)
+	    for(kz=0; kz<Ndim; kz++)
+	      cubicTerms1[n][m][iz][jz] += sympJmat[iz][kz]*matQ[n][m][kz][jz];
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++)
+	    for(kz=0; kz<Ndim; kz++)
+	      cubicTerms2[n][m][iz][jz] += R[kz][iz]*cubicTerms1[n][m][kz][jz];
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++)
+	    for(kz=0; kz<Ndim; kz++)
+	      jacCubic[n][m][iz][jz] += sympJmat[iz][kz]*cubicTerms2[n][m][kz][jz];
+
+/* Add matrix JU^{tr}JR */
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++) {
+	    cubicTerms1[n][m][iz][jz] = 0.0;
+	    for(kz=0; kz<Ndim; kz++)
+	      cubicTerms1[n][m][iz][jz] += sympJmat[iz][kz]*matQ[n][m][jz][kz];
+	  }
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++) {
+	    cubicTerms2[n][m][iz][jz] = 0.0;
+	    for(kz=0; kz<Ndim; kz++)
+	      cubicTerms2[n][m][iz][jz] += cubicTerms1[n][m][iz][kz]*sympJmat[kz][jz];
+	  }
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++)
+	    for(kz=0; kz<Ndim; kz++)
+	      jacCubic[n][m][iz][jz] += cubicTerms2[n][m][iz][kz]*R[kz][jz];
+
+/* Compute JT^{tr}JT */
+    for(n=0; n<Ndim; n++)
+      for(iz=0; iz<Ndim; iz++)
+	for(jz=0; jz<Ndim; jz++)
+	  quadraticTerms1[n][iz][jz] = 0.0;
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++)
+	for(n=0; n<=jz; n++)
+	  quadraticTerms1[n][iz][jz] = T[iz][jz][n];
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++)
+	for(n=jz; n<Ndim; n++)
+	  quadraticTerms1[n][iz][jz] += T[iz][n][jz];
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++)
+	    cubicTerms1[n][m][iz][jz] = 0.0;
+    for(n=0; n<Ndim; n++)
+      for(iz=0; iz<Ndim; iz++)
+	for(jz=0; jz<Ndim; jz++)
+	  for(kz=0; kz<Ndim; kz++)
+	    cubicTerms1[n][0][iz][jz] += sympJmat[iz][kz]*quadraticTerms1[n][jz][kz];
+
+    for(m=0; m<Ndim; m++)
+      for(iz=0; iz<Ndim; iz++)
+	for(jz=0; jz<Ndim; jz++)
+	  quadraticTerms2[m][iz][jz] = 0.0;
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++)
+	for(m=0; m<=jz; m++)
+	  quadraticTerms2[m][iz][jz] = T[iz][jz][m];
+    for(iz=0; iz<Ndim; iz++)
+      for(jz=0; jz<Ndim; jz++)
+	for(m=jz; m<Ndim; m++)
+	  quadraticTerms2[m][iz][jz] += T[iz][m][jz];
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++)
+	    cubicTerms2[n][m][iz][jz] = 0.0;
+    for(m=0; m<Ndim; m++)
+      for(iz=0; iz<Ndim; iz++)
+	for(jz=0; jz<Ndim; jz++)
+	  for(kz=0; kz<Ndim; kz++)
+	    cubicTerms2[0][m][iz][jz] += sympJmat[iz][kz]*quadraticTerms2[m][kz][jz];
+
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++)
+	    matQ[n][m][iz][jz] = 0.0;
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<=n; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++)
+	    for(kz=0; kz<Ndim; kz++)
+	      matQ[n][m][iz][jz] += cubicTerms1[n][0][iz][kz]*cubicTerms2[0][m][kz][jz];
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<n; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++)
+	    for(kz=0; kz<Ndim; kz++)
+	      matQ[n][m][iz][jz] += cubicTerms1[m][0][iz][kz]*cubicTerms2[0][n][kz][jz];
+
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++)
+	    jacCubic[n][m][iz][jz] += matQ[n][m][iz][jz];
+
+    mean = 0.0;
+    max = 0.0;
+    for(n=0; n<Ndim; n++)
+      for(m=0; m<Ndim; m++)
+	for(iz=0; iz<Ndim; iz++)
+	  for(jz=0; jz<Ndim; jz++) {
+	    mean += fabs(jacCubic[n][m][iz][jz]);
+	    if(max < fabs(jacCubic[n][m][iz][jz]))
+	      max = fabs(jacCubic[n][m][iz][jz]);
+	  }
+    mean = mean/630.0;
+    meanMax[2][0] = mean;
+    meanMax[2][1] = max;
+
+    for(n=0; n<Ndim; n++) {
+      for(m=0; m<Ndim; m++) {
+	for(iz=0; iz<Ndim; iz++) {
+	  free(matQ[n][m][iz]);
+	  free(cubicTerms1[n][m][iz]);
+	  free(cubicTerms2[n][m][iz]);
+	  free(jacCubic[n][m][iz]);
+	}
+	free(matQ[n][m]);
+	free(cubicTerms1[n][m]);
+	free(cubicTerms2[n][m]);
+	free(jacCubic[n][m]);
+      }
+      free(matQ[n]);
+      free(cubicTerms1[n]);
+      free(cubicTerms2[n]);
+      free(jacCubic[n]);
+    }
+    free(matQ);
+    free(cubicTerms1);
+    free(cubicTerms2);
+    free(jacCubic);
+  }
+
+  for(n=0; n<Ndim; n++) {
+    for(iz=0; iz<Ndim; iz++) {
+      free(quadraticTerms1[n][iz]);
+      free(quadraticTerms2[n][iz]);
+    }
+    free(quadraticTerms1[n]);
+    free(quadraticTerms2[n]);
+    free(sympJmat[n]);
+  }
+  free(quadraticTerms1);
+  free(quadraticTerms2);
+  free(sympJmat);
+
+}
+

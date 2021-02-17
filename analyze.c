@@ -591,7 +591,8 @@ void do_transport_analysis(
 void printMapAnalysisResults(FILE *fp, long printoutOrder, char *printoutFormat, 
                              VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chromDeriv, double *data)
 {
-  long saveOrder;
+  double **meanMax;
+  long n, saveOrder;
   saveOrder = M->order;
   M->order = printout_order>3 ? 3 : printout_order;
   print_matrices1(fp, "Matrix from fitting:", printoutFormat, M);
@@ -615,6 +616,26 @@ void printMapAnalysisResults(FILE *fp, long printoutOrder, char *printoutFormat,
   fprintf(fp, "               dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
           chromDeriv->tune1[1], chromDeriv->beta1[1], chromDeriv->alpha1[1]);
   fflush(fp);
+
+  meanMax = calloc(saveOrder, sizeof(double *));
+  for(n=0; n<saveOrder; n++)
+    meanMax[n] = calloc(2, sizeof(double));
+  checkSymplecticity3rdOrder(M, meanMax);
+  fprintf(fp, "\nConstant part of the Jacobian differs in absolute value from the\n");
+  fprintf(fp, "   symplectic condition by terms with:\n");
+  fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[0][0], meanMax[0][1]);
+  fprintf(fp, "First order part of the Jacobian differs in absolute value from the\n");
+  fprintf(fp, "   symplectic condition by a coordinate times terms with:\n");
+  fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[1][0], meanMax[1][1]);
+  fprintf(fp, "Second order part of the Jacobian differs in absolute value from the\n");
+  fprintf(fp, "   symplectic condition by a product of two coordinates times terms with:\n");
+  fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[2][0], meanMax[2][1]);
+  fflush(fp);
+
+  for(n=0; n<saveOrder; n++)
+    free(meanMax[n]);
+  free(meanMax);
+
 }
 
 
