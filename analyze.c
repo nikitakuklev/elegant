@@ -627,10 +627,12 @@ void printMapAnalysisResults(FILE *fp, long printoutOrder, char *printoutFormat,
   fprintf(fp, "First order part of the Jacobian differs in absolute value from the\n");
   fprintf(fp, "   symplectic condition by a coordinate times terms with:\n");
   fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[1][0], meanMax[1][1]);
-  fprintf(fp, "Second order part of the Jacobian differs in absolute value from the\n");
-  fprintf(fp, "   symplectic condition by a product of two coordinates times terms with:\n");
-  fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[2][0], meanMax[2][1]);
-  fflush(fp);
+  if(printoutOrder >= 3) {
+    fprintf(fp, "Second order part of the Jacobian differs in absolute value from the\n");
+    fprintf(fp, "   symplectic condition by a product of two coordinates times terms with:\n");
+    fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[2][0], meanMax[2][1]);
+    fflush(fp);
+  }
 
   for(n=0; n<saveOrder; n++)
     free(meanMax[n]);
