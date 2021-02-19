@@ -292,11 +292,27 @@ long applyElementModulations(MODULATION_DATA *modData, LINE_LIST *beamline, doub
 #endif
 
     type = modData->element[iMod]->type;
+#ifdef DEBUG
+    printf("applyElementModulations: type = %ld\n", type); fflush(stdout);
+#endif
     param = modData->parameterNumber[iMod];
+#ifdef DEBUG
+    printf("applyElementModulations: param = %ld\n", param); fflush(stdout);
+#endif
     p_elem = (char*)(modData->element[iMod]->p_elem);
+#ifdef DEBUG
+    printf("applyElementModulations: p_elem = %x\n", p_elem); fflush(stdout);
+#endif
     value = modData->unperturbedValue[iMod];
+#ifdef DEBUG
+    printf("applyElementModulations: value = %le\n", value); fflush(stdout);
+#endif
+
     modulation = 0;
     
+#ifdef DEBUG
+    printf("applyElementModulations: expression = %s\n", modData->expression[iMod]); fflush(stdout);
+#endif
     if (!modData->expression[iMod]) {
       jMod = iMod;
       if (modData->dataIndex[iMod]!=-1)
@@ -321,8 +337,17 @@ long applyElementModulations(MODULATION_DATA *modData, LINE_LIST *beamline, doub
       }
       /* modulationValid = 1; */
     } else {
+#ifdef DEBUG
+      printf("applyElementModulations: evaluating expression (1)\n"); fflush(stdout);
+#endif
       push_num(t);
+#ifdef DEBUG
+      printf("applyElementModulations: evaluating expression (2)\n"); fflush(stdout);
+#endif
       modulation = rpn(modData->expression[iMod]);
+#ifdef DEBUG
+      printf("applyElementModulations: modulation = %le, evaluating expression (3)\n", modulation); fflush(stdout);
+#endif
       rpn_clear();
 #ifdef DEBUG
       printf("applyElementModulations: modulation from expression = %le\n", modulation); fflush(stdout);
