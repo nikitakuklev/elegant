@@ -46,7 +46,7 @@ void add2dMapList(double interpValue);
 /* parameters of element needed for integration */
 static double theta, fse=0, interpParameter=0;
 static long interpOrder = 1;
-static double dXOffset = 0, dZOffset = 0;
+static double dXOffset = 0, dYOffset = 0, dZOffset = 0;
 static double magnetYaw = 0;
 static double fieldFactor = 1;
 static long zDuplicate = 0;
@@ -561,6 +561,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   theta = brat->angle;
   fse = brat->fse;
   dXOffset = brat->dxMap;
+  dYOffset = brat->dyMap;
   dZOffset = brat->dzMap;
   magnetYaw = brat->yawMap;
   
@@ -1743,7 +1744,7 @@ void BRAT_B_field(double *F, double *Qg)
     Q[1] = -Qy[0]*sin(magnetYaw) + Qy[1]*cos(magnetYaw);
   }
   x = Q[1] - dXOffset;
-  y = Q[2];
+  y = Q[2] - dYOffset;
 
   z = Q[0];
   if (zDuplicate && z>0) {

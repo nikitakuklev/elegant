@@ -3328,6 +3328,7 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"XEXIT", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.xExit), NULL, 0.0, 0, "x coordinate of nominal exit point"},
     {"ZEXIT", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.zExit), NULL, 0.0, 0, "z coordinate of nominal exit point"},
     {"DXMAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.dxMap), NULL, 0.0, 0, "x displacement of map"},
+    {"DYMAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.dyMap), NULL, 0.0, 0, "y displacement of map"},
     {"DZMAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.dzMap), NULL, 0.0, 0, "z displacement of map"},
     {"YAWMAP", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.yawMap), NULL, 0.0, 0, "yaw of map about x=z=0"},
     {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.fieldFactor), NULL, 1.0, 0, "factor by which to multiply fields"},
