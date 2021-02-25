@@ -978,7 +978,7 @@ double checkSymplecticity(VMATRIX *Mv, short canonical)
   return deltaMax;
 }
 
-void checkSymplecticity3rdOrder(VMATRIX *M, double **meanMax)
+void checkSymplecticity3rdOrder(VMATRIX *M, double meanMax[3][2])
 {
   double *C;
   double **R;
@@ -1034,7 +1034,7 @@ void checkSymplecticity3rdOrder(VMATRIX *M, double **meanMax)
       for(kz=0; kz<Ndim; kz++)
 	jacLinMat1[iz][jz] += sympJmat[iz][kz]*jacLinMat2[kz][jz];
     }
-/* add identity */
+  /* add identity */
   for(iz=0; iz<Ndim; iz++)
     jacLinMat1[iz][iz] += 1.0;
 

@@ -4165,7 +4165,7 @@ extern void copy_matrices(VMATRIX *M1, VMATRIX *M0);
 extern long check_matrix(VMATRIX *M, char *comment);
 extern long reverse_matrix(VMATRIX *Mr, VMATRIX *M);
 extern double checkSymplecticity(VMATRIX *Mv, short canonical);
-extern void checkSymplecticity3rdOrder(VMATRIX *M, double **meanMax);
+extern void checkSymplecticity3rdOrder(VMATRIX *M, double meanMax[3][2]);
 
 /* prototypes for motion4.c: */
 extern long motion(double **part, long n_part, void *field, long field_type, double *P_central, double *dgamma,

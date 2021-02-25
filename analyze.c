@@ -30,8 +30,8 @@
 #define CLORB_ETA_OFFSET Y_ETA_OFFSET+2
 /* etax, etaxp, etay, etayp including closed orbit */
 #define SYMPLECTICITY_OFFSET CLORB_ETA_OFFSET+4
-/* symplecticity1 */
-#define N_ANALYSIS_COLUMNS SYMPLECTICITY_OFFSET+1
+/* symplecticity1, 2, 3 */
+#define N_ANALYSIS_COLUMNS SYMPLECTICITY_OFFSET+3
 
 long addMatrixOutputColumns(SDDS_DATASET *SDDSout, long output_order);
 long compareElements(ELEMENT_LIST *e1, ELEMENT_LIST *e2) ;
@@ -59,6 +59,8 @@ SDDS_DEFINITION analysis_column[N_ANALYSIS_COLUMNS] = {
     {"cetay", "&column name=cetay, units=m, symbol=\"$gc$r$byc$n\", type=double &end"},
     {"cetapy", "&column name=cetapy, symbol=\"$gc$r$byc$n$a'$n\", type=double &end"},
   {"Symplecticity1", "&column name=Symplecticity1, type=double, description=\"Symplecticity check for this element's first-order matrix\" &end"},
+  {"Symplecticity2", "&column name=Symplecticity2, type=double, description=\"Symplecticity check for this element's second-order matrix\" &end"},
+  {"Symplecticity3", "&column name=Symplecticity3, type=double, description=\"Symplecticity check for this element's third-order matrix\" &end"},
     } ;
 
 #define IP_STEP 0
@@ -179,6 +181,7 @@ void do_transport_analysis(
     VMATRIX *M;
     TWISS twiss;
     CHROM_DERIVS chromDeriv;
+    double symCheck[3][2];
 #if USE_MPI
     long *nToTrackCounts, my_nTrack, my_offset, n_leftTotal, nItems;
     MPI_Status status;
@@ -475,7 +478,15 @@ void do_transport_analysis(
         for (i=0; i<4; i++)
             data[CLORB_ETA_OFFSET+i] = 0;
 
-    data[SYMPLECTICITY_OFFSET] = checkSymplecticity(M, canonical_variables);
+    if (!canonical_variables) {
+      data[SYMPLECTICITY_OFFSET] = checkSymplecticity(M, canonical_variables); 
+      data[SYMPLECTICITY_OFFSET+1] = data[SYMPLECTICITY_OFFSET+2] = -1;
+    } else {
+      checkSymplecticity3rdOrder(M, symCheck);
+      data[SYMPLECTICITY_OFFSET+0] = symCheck[0][1];
+      data[SYMPLECTICITY_OFFSET+1] = symCheck[1][1];
+      data[SYMPLECTICITY_OFFSET+2] = symCheck[2][1];
+    }
 
     index = N_ANALYSIS_COLUMNS;
     for (i=0; i<control->n_elements_to_vary; i++, index++)
@@ -591,8 +602,8 @@ void do_transport_analysis(
 void printMapAnalysisResults(FILE *fp, long printoutOrder, char *printoutFormat, 
                              VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chromDeriv, double *data)
 {
-  double **meanMax;
-  long n, saveOrder;
+  double meanMax[3][2] = {{0,0},{0,0},{0,0}};
+  long saveOrder;
   saveOrder = M->order;
   M->order = printout_order>3 ? 3 : printout_order;
   print_matrices1(fp, "Matrix from fitting:", printoutFormat, M);
@@ -617,26 +628,24 @@ void printMapAnalysisResults(FILE *fp, long printoutOrder, char *printoutFormat,
           chromDeriv->tune1[1], chromDeriv->beta1[1], chromDeriv->alpha1[1]);
   fflush(fp);
 
-  meanMax = calloc(saveOrder, sizeof(double *));
-  for(n=0; n<saveOrder; n++)
-    meanMax[n] = calloc(2, sizeof(double));
-  checkSymplecticity3rdOrder(M, meanMax);
-  fprintf(fp, "\nConstant part of the Jacobian differs in absolute value from the\n");
-  fprintf(fp, "   symplectic condition by terms with:\n");
-  fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[0][0], meanMax[0][1]);
-  fprintf(fp, "First order part of the Jacobian differs in absolute value from the\n");
-  fprintf(fp, "   symplectic condition by a coordinate times terms with:\n");
-  fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[1][0], meanMax[1][1]);
-  if(printoutOrder >= 3) {
-    fprintf(fp, "Second order part of the Jacobian differs in absolute value from the\n");
-    fprintf(fp, "   symplectic condition by a product of two coordinates times terms with:\n");
-    fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[2][0], meanMax[2][1]);
-    fflush(fp);
+  if (canonical_variables) {
+    checkSymplecticity3rdOrder(M, meanMax);
+    fprintf(fp, "\nConstant part of the Jacobian differs in absolute value from the\n");
+    fprintf(fp, "   symplectic condition by terms with:\n");
+    fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[0][0], meanMax[0][1]);
+    fprintf(fp, "First order part of the Jacobian differs in absolute value from the\n");
+    fprintf(fp, "   symplectic condition by a coordinate times terms with:\n");
+    fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[1][0], meanMax[1][1]);
+    if(printoutOrder >= 3) {
+      fprintf(fp, "Second order part of the Jacobian differs in absolute value from the\n");
+      fprintf(fp, "   symplectic condition by a product of two coordinates times terms with:\n");
+      fprintf(fp, "   Mean = %e, Maximum = %e.\n", meanMax[2][0], meanMax[2][1]);
+      fflush(fp);
+    }
+  } else {
+    fprintf(fp, "\nLinear-order symplecticity check (use canonical variables for higher order): %le\n",
+            checkSymplecticity(M, canonical_variables));
   }
-
-  for(n=0; n<saveOrder; n++)
-    free(meanMax[n]);
-  free(meanMax);
 
 }
 
