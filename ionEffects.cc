@@ -2543,10 +2543,16 @@ void computeIonOverallParameters
    * i.e., the core ions 
    */
   if (ionFieldMethod==ION_FIELD_GAUSSIAN) {
+    /*
     bx1 = bunchCentroid[0] - 3*bunchSigma[0];
     bx2 = bunchCentroid[0] + 3*bunchSigma[0];
     by1 = bunchCentroid[2] - 3*bunchSigma[2];
     by2 = bunchCentroid[2] + 3*bunchSigma[2];
+    */
+    bx1 = bunchCentroid[0] - gaussian_ion_range*bunchSigma[0];
+    bx2 = bunchCentroid[0] + gaussian_ion_range*bunchSigma[0];
+    by1 = bunchCentroid[2] - gaussian_ion_range*bunchSigma[2];
+    by2 = bunchCentroid[2] + gaussian_ion_range*bunchSigma[2];
   } else {
     bx1 = by1 = -DBL_MAX;
     bx2 = by2 = DBL_MAX;
