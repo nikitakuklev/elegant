@@ -616,7 +616,6 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   double dxf, dyf, dzf;
   double delta_xp;
   double e1_kick_limit, e2_kick_limit;
-  long angleSign = 1;
   static long largeRhoWarning = 0;
   MULT_APERTURE_DATA apertureData;
 
@@ -785,8 +784,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     e1    = -csbend->e[csbend->e1Index];
     e2    = -csbend->e[csbend->e2Index];
     etilt = csbend->etilt*csbend->etiltSign;
-    tilt  = csbend->tilt;
-    angleSign = -1;
+    tilt  = csbend->tilt + PI;
     rho0  = csbend->length/angle;
     for (i=1; i<9; i+=2) {
       csbend->b[i] *= -1;
@@ -868,9 +866,6 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       return n_part;
     }
   }
-
-  if (csbend->angle<0)
-    rotateBeamCoordinatesForMisalignment(part, n_part, PI);
 
   fse = csbend->fse + csbend->fseDipole + (csbend->fseCorrection?csbend->fseCorrectionValue:0);
   h = 1/rho0;
@@ -962,27 +957,27 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (misalignmentMethod==0) {
     computeEtiltCentroidOffset(dcoord_etilt, rho0, angle, etilt, tilt);
     
-    dxi = -csbend->dx*angleSign;
+    dxi = -csbend->dx;
     dzi =  csbend->dz;
-    dyi = -csbend->dy*angleSign;
+    dyi = -csbend->dy;
     
     /* must use the original angle here because the translation is done after
      * the final rotation back
      */
-    dxf = angleSign*csbend->dx*cos(csbend->angle) + csbend->dz*sin(csbend->angle);
-    dzf = angleSign*csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
-    dyf = angleSign*csbend->dy;
+    dxf = csbend->dx*cos(csbend->angle) + csbend->dz*sin(csbend->angle);
+    dzf = csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
+    dyf = csbend->dy;
   } else {
     if (misalignmentMethod==1)
-      offsetParticlesForEntranceCenteredMisalignmentLinearized
-        (NULL, part, n_part, 
-         angleSign*csbend->dx, angleSign*csbend->dy, csbend->dz, 
-         0.0, 0.0, csbend->etilt, csbend->tilt, csbend->angle, csbend->length, 1);
+      offsetParticlesForEntranceCenteredMisalignmentExact
+        (part, n_part, 
+         csbend->dx, csbend->dy, csbend->dz, 
+         0.0, 0.0, csbend->etilt, tilt, angle, csbend->length, 1);
     else 
       offsetParticlesForBodyCenteredMisalignmentLinearized
         (NULL, part, n_part, 
-         angleSign*csbend->dx, angleSign*csbend->dy, csbend->dz, 
-         0.0, 0.0, csbend->etilt, csbend->tilt, csbend->angle, csbend->length, 1);
+         csbend->dx, csbend->dy, csbend->dz, 
+         0.0, 0.0, csbend->etilt, tilt, angle, csbend->length, 1);
   }
 
   i_top = n_part-1;
@@ -1231,15 +1226,15 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   if (misalignmentMethod!=0) {
     if (misalignmentMethod==1)
-      offsetParticlesForEntranceCenteredMisalignmentLinearized
-        (NULL, part, n_part, 
-         angleSign*csbend->dx, angleSign*csbend->dy, csbend->dz, 
-         0.0, 0.0, csbend->etilt, csbend->tilt, csbend->angle, csbend->length, 2);
+      offsetParticlesForEntranceCenteredMisalignmentExact
+        (part, n_part, 
+         csbend->dx, csbend->dy, csbend->dz, 
+         0.0, 0.0, csbend->etilt, tilt, angle, csbend->length, 2);
     else 
       offsetParticlesForBodyCenteredMisalignmentLinearized
         (NULL, part, n_part, 
-         angleSign*csbend->dx, angleSign*csbend->dy, csbend->dz, 
-         0.0, 0.0, csbend->etilt, csbend->tilt, csbend->angle, csbend->length, 2);
+         csbend->dx, csbend->dy, csbend->dz, 
+         0.0, 0.0, csbend->etilt, tilt, angle, csbend->length, 2);
   }
 
   if (distributionBasedRadiation) {
@@ -1251,9 +1246,6 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     distributionBasedRadiation = 0;
   }
 
-  if (csbend->angle<0)
-    rotateBeamCoordinatesForMisalignment(part, n_part, PI);
-  
   /*
   for (i_part=i_top+1; i_part<n_part; i_part++) 
       fprintf(fpdeb, "%le %le\n", part[i_part][0], part[i_part][2]);
