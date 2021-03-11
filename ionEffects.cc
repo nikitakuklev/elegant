@@ -114,7 +114,7 @@ void applyIonKicksToElectronBunch(IONEFFECTS *ionEffects, double **part, long np
 				  double bunchCentroid[4], double bunchSigma[4],
 				  double qIon, long nIonsTotal, double ionCentroid[2], double ionSigma[2],
 				  double dpSum[3]);
-void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iPass, double tNow);
+void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iPass, double tNow, long nBunches);
 void flushIonEffectsSummaryOutput(IONEFFECTS *ionEffects);
 
 #if USE_MPI
@@ -511,7 +511,7 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
   /* scan through the beamline, find IONEFFECTS elements, set parameters */
   ELEMENT_LIST *eptr, *eptrLast;
   IONEFFECTS *ionEffects;
-  short chargeSeen = 0;
+  short chargeSeen = 0, ionSeen = 0;
   long iPlane;
   
   eptr = beamline->elem;
@@ -527,7 +527,11 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
       /* Set the start of the s range for this element */
       ionEffects = (IONEFFECTS*)eptr->p_elem;
       ionEffects->sLocation = eptr->end_pos;
-      ionEffects->sStart = (eptrLast->end_pos + eptr->end_pos)/2;
+      if (!ionSeen) {
+	ionEffects->sStart = 0;
+	ionSeen = 1;
+      } 
+      else ionEffects->sStart = (eptrLast->end_pos + eptr->end_pos)/2;
       /* in case this is the last element in the beamline, set s so the range ends here */
       ionEffects->sEnd = eptr->end_pos;
       if (eptrLast && eptrLast->type == T_IONEFFECTS) {
@@ -540,6 +544,10 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
         ionEffects->xyIonHistogram[iPlane] = ionEffects->ionHistogram[iPlane] = 
           ionEffects->ionHistogramFit[iPlane] = NULL;
     } 
+    if (!eptr->succ) {
+      ionEffects = (IONEFFECTS*)eptrLast->p_elem;
+      ionEffects->sEnd = eptr->end_pos;
+    }
     eptr = eptr->succ;
   }
 
@@ -777,7 +785,7 @@ void trackWithIonEffects
       }
     }
 
-    doIonEffectsIonHistogramOutput(ionEffects, iBunch, iPass, tNow);
+    doIonEffectsIonHistogramOutput(ionEffects, iBunch, iPass, tNow, nBunches);
 
 
       // write out coordinates of each ion, not presently used
@@ -3078,7 +3086,7 @@ void applyIonKicksToElectronBunch
   }
 }
 
-void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iPass, double tNow)
+void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iPass, double tNow, long nBunches)
 {
   long iPlane;
   long binOffset, activeBins;
@@ -3088,7 +3096,7 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
     fflush(stdout);
   }
 
-  if (SDDS_ionHistogramOutput && iBunch%ionHistogramOutputInterval == 0
+  if (SDDS_ionHistogramOutput && ((iPass-ionEffects->startPass)*nBunches+iBunch)%ionHistogramOutputInterval == 0
       && (ionHistogramOutput_sStart<0 || ionEffects->sLocation>=ionHistogramOutput_sStart) 
       && (ionHistogramOutput_sEnd<0 || ionEffects->sLocation<=ionHistogramOutput_sEnd)) {
     /* output ion density histogram */
