@@ -19,18 +19,19 @@
 #include "matlib.h"
 
 #define X_BETA_OFFSET 0
-/* betax, alphax, nux, dbetax/ddelta, dalphax/ddelta, xix */
+/* 6: betax, alphax, nux, dbetax/ddelta, dalphax/ddelta, xix */
 #define Y_BETA_OFFSET X_BETA_OFFSET+6
+/* 6: betay, alphay, nuy, dbetay/ddelta, dalphay/ddelta, xiy */
 #define DETR_OFFSET Y_BETA_OFFSET+6
-/* betay, alphay, nuy, dbetay/ddelta, dalphay/ddelta, xiy */
+/* 1: determinant */
 #define X_ETA_OFFSET DETR_OFFSET+1
-/* etax, etaxp */
+/* 2: etax, etaxp */
 #define Y_ETA_OFFSET X_ETA_OFFSET+2
-/* etay, etayp */
+/* 2: etay, etayp */
 #define CLORB_ETA_OFFSET Y_ETA_OFFSET+2
-/* etax, etaxp, etay, etayp including closed orbit */
+/* 4: etax, etaxp, etay, etayp including closed orbit */
 #define SYMPLECTICITY_OFFSET CLORB_ETA_OFFSET+4
-/* symplecticity1, 2, 3 */
+/* 3: symplecticity1, 2, 3 */
 #define N_ANALYSIS_COLUMNS SYMPLECTICITY_OFFSET+3
 
 long addMatrixOutputColumns(SDDS_DATASET *SDDSout, long output_order);

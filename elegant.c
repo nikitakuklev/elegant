@@ -2883,6 +2883,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
     bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &global_settings);
 
+  misalignmentMethod = malign_method;
   inhibitFileSync = inhibit_fsync;
   echoNamelists = echo_namelists;
   mpiRandomizationMode = mpi_randomization_mode;

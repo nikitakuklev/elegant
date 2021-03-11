@@ -616,6 +616,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   double dxf, dyf, dzf;
   double delta_xp;
   double e1_kick_limit, e2_kick_limit;
+  long angleSign = 1;
   static long largeRhoWarning = 0;
   MULT_APERTURE_DATA apertureData;
 
@@ -784,7 +785,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     e1    = -csbend->e[csbend->e1Index];
     e2    = -csbend->e[csbend->e2Index];
     etilt = csbend->etilt*csbend->etiltSign;
-    tilt  = csbend->tilt + PI;      /* work in rotated system */
+    tilt  = csbend->tilt;
+    angleSign = -1;
     rho0  = csbend->length/angle;
     for (i=1; i<9; i+=2) {
       csbend->b[i] *= -1;
@@ -866,7 +868,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       return n_part;
     }
   }
-  
+
+  if (csbend->angle<0)
+    rotateBeamCoordinatesForMisalignment(part, n_part, PI);
+
   fse = csbend->fse + csbend->fseDipole + (csbend->fseCorrection?csbend->fseCorrectionValue:0);
   h = 1/rho0;
   n = -csbend->b[1]/h;
@@ -954,18 +959,31 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     sin_ttilt = sin(ttilt);
   }
 
-  computeEtiltCentroidOffset(dcoord_etilt, rho0, angle, etilt, tilt);
-
-  dxi = -csbend->dx;
-  dzi =  csbend->dz;
-  dyi = -csbend->dy;
-  
-  /* must use the original angle here because the translation is done after
-   * the final rotation back
-   */
-  dxf =  csbend->dx*cos(csbend->angle) + csbend->dz*sin(csbend->angle);
-  dzf =  csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
-  dyf = csbend->dy;
+  if (misalignmentMethod==0) {
+    computeEtiltCentroidOffset(dcoord_etilt, rho0, angle, etilt, tilt);
+    
+    dxi = -csbend->dx*angleSign;
+    dzi =  csbend->dz;
+    dyi = -csbend->dy*angleSign;
+    
+    /* must use the original angle here because the translation is done after
+     * the final rotation back
+     */
+    dxf = angleSign*csbend->dx*cos(csbend->angle) + csbend->dz*sin(csbend->angle);
+    dzf = angleSign*csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
+    dyf = angleSign*csbend->dy;
+  } else {
+    if (misalignmentMethod==1)
+      offsetParticlesForEntranceCenteredMisalignmentLinearized
+        (NULL, part, n_part, 
+         angleSign*csbend->dx, angleSign*csbend->dy, csbend->dz, 
+         0.0, 0.0, csbend->etilt, csbend->tilt, csbend->angle, csbend->length, 1);
+    else 
+      offsetParticlesForBodyCenteredMisalignmentLinearized
+        (NULL, part, n_part, 
+         angleSign*csbend->dx, angleSign*csbend->dy, csbend->dz, 
+         0.0, 0.0, csbend->etilt, csbend->tilt, csbend->angle, csbend->length, 1);
+  }
 
   i_top = n_part-1;
 #if !defined(PARALLEL)
@@ -992,16 +1010,25 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       abort();
     }
 
-    coord[4] += dzi*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
-    coord[0]  = coord[0] + dxi + dzi*coord[1];
-    coord[2]  = coord[2] + dyi + dzi*coord[3];
-
-    x  =  coord[0]*cos_ttilt + coord[2]*sin_ttilt;
-    y  = -coord[0]*sin_ttilt + coord[2]*cos_ttilt;
-    xp =  coord[1]*cos_ttilt + coord[3]*sin_ttilt;
-    yp = -coord[1]*sin_ttilt + coord[3]*cos_ttilt;
-    s  = coord[4];
-    dp = dp0 = coord[5];
+    if (misalignmentMethod==0) {
+      coord[4] += dzi*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
+      coord[0]  = coord[0] + dxi + dzi*coord[1];
+      coord[2]  = coord[2] + dyi + dzi*coord[3];
+      
+      x  =  coord[0]*cos_ttilt + coord[2]*sin_ttilt;
+      y  = -coord[0]*sin_ttilt + coord[2]*cos_ttilt;
+      xp =  coord[1]*cos_ttilt + coord[3]*sin_ttilt;
+      yp = -coord[1]*sin_ttilt + coord[3]*cos_ttilt;
+      s  = coord[4];
+      dp = dp0 = coord[5];
+    } else {
+      x  = coord[0];
+      y  = coord[2];
+      xp = coord[1];
+      yp = coord[3];
+      s  = coord[4];
+      dp = dp0 = coord[5];
+    }
 
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS) {
       if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e1Index]==1) {
@@ -1180,19 +1207,41 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         dp = Qf[5];
       }
     }
-    
-    coord[0] =  x*cos_ttilt -  y*sin_ttilt + dcoord_etilt[0];
-    coord[2] =  x*sin_ttilt +  y*cos_ttilt + dcoord_etilt[2];
-    coord[1] = xp*cos_ttilt - yp*sin_ttilt + dcoord_etilt[1];
-    coord[3] = xp*sin_ttilt + yp*cos_ttilt + dcoord_etilt[3];
-    coord[4] = s + dcoord_etilt[4];
-    coord[5] = dp;
 
-    coord[0] += dxf + dzf*coord[1];
-    coord[2] += dyf + dzf*coord[3];
-    coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
+    if (misalignmentMethod==0) {
+      coord[0] =  x*cos_ttilt -  y*sin_ttilt + dcoord_etilt[0];
+      coord[2] =  x*sin_ttilt +  y*cos_ttilt + dcoord_etilt[2];
+      coord[1] = xp*cos_ttilt - yp*sin_ttilt + dcoord_etilt[1];
+      coord[3] = xp*sin_ttilt + yp*cos_ttilt + dcoord_etilt[3];
+      coord[4] = s + dcoord_etilt[4];
+      coord[5] = dp;
+      
+      coord[0] += dxf + dzf*coord[1];
+      coord[2] += dyf + dzf*coord[3];
+      coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
+    } else {
+      coord[0] = x;
+      coord[2] = y;
+      coord[1] = xp;
+      coord[3] = yp;
+      coord[4] = s;
+      coord[5] = dp;
+    }
   }
-  
+
+  if (misalignmentMethod!=0) {
+    if (misalignmentMethod==1)
+      offsetParticlesForEntranceCenteredMisalignmentLinearized
+        (NULL, part, n_part, 
+         angleSign*csbend->dx, angleSign*csbend->dy, csbend->dz, 
+         0.0, 0.0, csbend->etilt, csbend->tilt, csbend->angle, csbend->length, 2);
+    else 
+      offsetParticlesForBodyCenteredMisalignmentLinearized
+        (NULL, part, n_part, 
+         angleSign*csbend->dx, angleSign*csbend->dy, csbend->dz, 
+         0.0, 0.0, csbend->etilt, csbend->tilt, csbend->angle, csbend->length, 2);
+  }
+
   if (distributionBasedRadiation) {
     radiansTotal += fabs(csbend->angle);
     /*
@@ -1202,6 +1251,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     distributionBasedRadiation = 0;
   }
 
+  if (csbend->angle<0)
+    rotateBeamCoordinatesForMisalignment(part, n_part, PI);
+  
   /*
   for (i_part=i_top+1; i_part<n_part; i_part++) 
       fprintf(fpdeb, "%le %le\n", part[i_part][0], part[i_part][2]);

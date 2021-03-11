@@ -324,6 +324,8 @@ long doFrequencyMap(
                   double dt = delapsed_time();
 		  printf("About %.1f%% done after %lg s wall time, completion expected in about %lg s\n", newPercentage, dt,
                           dt/(0.01*newPercentage+1e-16)-dt);
+                  if (oldPercentage>0.5 && newPercentage<0.5 && (newPercentage-oldPercentage)<3)
+                    printf("Don't you have something more interesting to do besides watching this?\n");
 		  oldPercentage = newPercentage;
 		  fflush(stdout);
 		}

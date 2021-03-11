@@ -419,8 +419,7 @@ VMATRIX *drift_matrix(double length, long order)
     }
 
 VMATRIX *wiggler_matrix(double length, double radius, long poles,
-			double dx, double dy, double dz, 
-			double tilt, long order, long focusing)
+			long order, long focusing)
 {
     VMATRIX *M;
     double **R, *C;
@@ -448,14 +447,10 @@ VMATRIX *wiggler_matrix(double length, double radius, long poles,
       R[4][5] = -(poles/2)*ipow(1/radius,2)*ipow(length/poles, 3)/ipow(PI,2);
     }
 
-    tilt_matrices(M, tilt);
-    if (dx || dy || dz)
-      misalign_matrix(M, dx, dy, dz, 0.0);
-
     return(M);
     }
 
-VMATRIX *sextupole_matrix(double K2, double K1, double J1, double length, long maximum_order, double tilt, double fse, double xkick, double ykick, double ffringe)
+VMATRIX *sextupole_matrix(double K2, double K1, double J1, double length, long maximum_order, double fse, double xkick, double ykick, double ffringe)
 {
     VMATRIX *M, *Medge1, *Medge2;
     VMATRIX *Mfringe, *Mtot;
@@ -855,12 +850,10 @@ VMATRIX *sextupole_matrix(double K2, double K1, double J1, double length, long m
       free_matrices(Mtot); tfree(Mtot); Mtot = NULL;
     }
 
-    tilt_matrices(M, tilt);
-
     return(M);
   }
 
-VMATRIX *octupole_matrix(double K3, double length, long maximum_order, double tilt, double fse)
+VMATRIX *octupole_matrix(double K3, double length, long maximum_order, double fse)
 {
     VMATRIX *M;
     double *C, **R, ***T, ****U;
@@ -929,7 +922,6 @@ VMATRIX *octupole_matrix(double K3, double length, long maximum_order, double ti
       U[3][3][3][2] = -(K3*L3)/6.;
       U[3][3][3][3] = -(K3*L4)/24.;
     }
-    tilt_matrices(M, tilt);
 
     return(M);
   }
@@ -1024,7 +1016,7 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend; BRAT *brat;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler; APPLE *apple;
-    KICKMAP *kmap; UKICKMAP *ukmap; SCRIPT *script; 
+    UKICKMAP *ukmap; SCRIPT *script; 
     EHCOR *ehcor; EVCOR *evcor; EHVCOR *ehvcor;
     double ks, Pref_output, pSave;
     VARY rcContext;
@@ -1091,8 +1083,14 @@ VMATRIX *compute_matrix(
 		  wiggler->length, wiggler->poles, wiggler->radiusInternal, wiggler->K);
 	}
         elem->matrix = wiggler_matrix(wiggler->length, wiggler->radiusInternal, wiggler->poles,
-				      wiggler->dx, wiggler->dy, wiggler->dz, wiggler->tilt,
 				      run->default_order, wiggler->focusing);
+        if (wiggler->dx || wiggler->dy || wiggler->dz || wiggler->tilt) {
+          misalign_matrix(elem->matrix,
+                          wiggler->dx, wiggler->dy, wiggler->dz, 
+                          0.0, 0.0, 0.0, wiggler->tilt,
+                          0.0, wiggler->length, 
+                          misalignmentMethod, misalignmentMethod==1?0:1);
+        }
 	break;
       case T_CWIGGLER:
 	cwiggler = (CWIGGLER*)elem->p_elem;
@@ -1160,7 +1158,6 @@ VMATRIX *compute_matrix(
         run->p_central = pSave;
         break;
       case T_KICKMAP:
-        kmap = ((KICKMAP*)elem->p_elem);
         pSave = run->p_central;
         run->p_central = elem->Pref_input;
         elem->matrix = determineMatrix(run, elem, NULL, NULL);
@@ -1207,43 +1204,54 @@ VMATRIX *compute_matrix(
                         bend->e[bend->e1Index], bend->e[bend->e2Index], 
                         bend->h[bend->e1Index], bend->h[bend->e2Index], 
                         bend->k1_internal, bend->k2_internal, 
-                        bend->tilt, bend->fint, bend->fint, 
+                        misalignmentMethod==0?bend->tilt:0.0, 
+                        bend->fint, bend->fint, 
                         bend->hgap*2, bend->fse, bend->fseDipole, bend->fseQuadrupole, 
-                        bend->etiltSign*bend->etilt,
+                        misalignmentMethod==0?bend->etilt*bend->etiltSign:0.0,
                         bend->order?bend->order:run->default_order, bend->edge_order, 
 			bend->edgeFlags, bend->TRANSPORT);
-        if (bend->dx || bend->dy || bend->dz) {
-            if (bend->tilt)
-                bombElegant("can't misalign tilted bending magnet--sorry.", NULL);
-            misalign_matrix(elem->matrix, bend->dx, bend->dy, bend->dz, bend->angle);
-            }
+        if (bend->dx || bend->dy || bend->dz || bend->tilt || bend->etilt) {
+          misalign_matrix(elem->matrix,
+                          bend->dx, bend->dy, bend->dz, 
+                          0.0, 0.0, 
+                          misalignmentMethod==0?0:bend->etiltSign*bend->etilt, 
+                          misalignmentMethod==0?0:bend->tilt,
+                          bend->angle, bend->length,
+                          misalignmentMethod, misalignmentMethod==1?0:1);
+        }
         break;
       case T_QUAD:
         quad = (QUAD*)elem->p_elem;
         elem->matrix = quadrupole_matrix(quad->k1, quad->length, 
-                                         quad->order?quad->order:run->default_order, quad->tilt, 
+                                         quad->order?quad->order:run->default_order,
                                          quad->fse, quad->xkick, quad->ykick, 
                                          quad->edge1_effects, quad->edge2_effects,
                                          quad->fringeType, quad->ffringe, quad->lEffective,
                                          quad->fringeIntM, quad->fringeIntP, quad->radial); 
-        if (quad->dx || quad->dy || quad->dz)
-          misalign_matrix(elem->matrix, quad->dx, quad->dy, quad->dz, 0.0);
+        if (quad->dx || quad->dy || quad->dz || quad->tilt || quad->pitch || quad->yaw) {
+          misalign_matrix(elem->matrix, quad->dx, quad->dy, quad->dz, 
+                          quad->pitch, quad->yaw, 0.0, quad->tilt, 0.0, quad->length, 
+                          misalignmentMethod, misalignmentMethod==1?0:1);
+        }
         break;
       case T_SEXT:
         sext = (SEXT*)elem->p_elem;
         elem->matrix = sextupole_matrix(sext->k2, sext->k1, sext->j1, sext->length, 
-                                        sext->order?sext->order:run->default_order, sext->tilt,
+                                        sext->order?sext->order:run->default_order, 
                                         sext->fse, 0.0, 0.0, sext->ffringe);
-        if (sext->dx || sext->dy || sext->dz)
-            misalign_matrix(elem->matrix, sext->dx, sext->dy, sext->dz, 0.0);
+        if (sext->dx || sext->dy || sext->dz || sext->tilt)
+            misalign_matrix(elem->matrix, sext->dx, sext->dy, sext->dz, 
+                            0.0, 0.0, sext->tilt, 0.0, 0.0, sext->length,
+                            misalignmentMethod, misalignmentMethod==1?0:1);
         break;
       case T_OCT:
         oct = (OCTU*)elem->p_elem;
         elem->matrix = octupole_matrix(oct->k3, oct->length, 
-                                        oct->order?oct->order:run->default_order, oct->tilt,
-                                        oct->fse);
-        if (oct->dx || oct->dy || oct->dz)
-            misalign_matrix(elem->matrix, oct->dx, oct->dy, oct->dz, 0.0);
+                                       oct->order?oct->order:run->default_order, oct->fse);
+        if (oct->dx || oct->dy || oct->dz || oct->tilt)
+            misalign_matrix(elem->matrix, oct->dx, oct->dy, oct->dz, 
+                            0.0, 0.0, oct->tilt, 0.0, 0.0, oct->length, 
+                            misalignmentMethod, misalignmentMethod==1?0:1);
         break;
       case T_ALPH:
         alph = (ALPH*)elem->p_elem;
@@ -1259,7 +1267,8 @@ VMATRIX *compute_matrix(
         if (alph->tilt)
             tilt_matrices(elem->matrix, alph->tilt);
         if (alph->dx || alph->dy || alph->dz)
-            misalign_matrix(elem->matrix, alph->dx, alph->dy, alph->dz, 0.0);
+            misalign_matrix(elem->matrix, alph->dx, alph->dy, alph->dz, 
+                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0);
         break;  
       case T_ROTATE:
         rot = (ROTATE*)elem->p_elem;
@@ -1288,7 +1297,9 @@ VMATRIX *compute_matrix(
         elem->matrix = solenoid_matrix(sole->length, ks,
                                        sole->order?sole->order:run->default_order);
         if (sole->dx || sole->dy || sole->dz)
-            misalign_matrix(elem->matrix, sole->dx, sole->dy, sole->dz, 0.0);
+            misalign_matrix(elem->matrix, sole->dx, sole->dy, sole->dz, 
+                            0.0, 0.0, 0.0, 0.0, 0.0, sole->length, 
+                            misalignmentMethod, misalignmentMethod==1?0:1);
         break;
       case T_VCOR:
         vcor = (VCOR*) elem->p_elem;
@@ -1334,10 +1345,12 @@ VMATRIX *compute_matrix(
       case T_QFRING:
         qfring = (QFRING*)elem->p_elem;
         elem->matrix = qfringe_matrix(qfring->k1, qfring->length, 
-                                      qfring->tilt, qfring->direction, qfring->order?qfring->order:run->default_order,
+                                      qfring->direction, qfring->order?qfring->order:run->default_order,
                                       qfring->fse);
-        if (qfring->dx || qfring->dy || qfring->dz)
-            misalign_matrix(elem->matrix, qfring->dx, qfring->dy, qfring->dz, 0.0);
+        if (qfring->dx || qfring->dy || qfring->dz || qfring->tilt)
+            misalign_matrix(elem->matrix, qfring->dx, qfring->dy, qfring->dz, 
+                            0.0, 0.0, qfring->tilt, 0.0, 0.0, qfring->length, 
+                            misalignmentMethod, misalignmentMethod==1?0:1);
         break;
       case T_MALIGN: 
         malign = (MALIGN*)elem->p_elem;
@@ -1355,17 +1368,21 @@ VMATRIX *compute_matrix(
             bend_matrix(ksbend->length, ksbend->angle, 
                         ksbend->e[ksbend->e1Index], ksbend->e[ksbend->e2Index], 
                         ksbend->h[ksbend->e1Index], ksbend->h[ksbend->e2Index], 
-                        ksbend->k1, 
-                        ksbend->k2, ksbend->tilt, ksbend->fint, ksbend->fint, 
-                        ksbend->hgap*2, ksbend->fse, 0, 0, ksbend->etilt,
+                        ksbend->k1, ksbend->k2, 
+                        misalignmentMethod==0?ksbend->tilt:0.0, 
+                        ksbend->fint, ksbend->fint, 
+                        ksbend->hgap*2, ksbend->fse, 0, 0, 
+                        misalignmentMethod==0?ksbend->etilt:0.0,                        
                         ksbend->nonlinear?2:(run->default_order?run->default_order:1),
                         ksbend->edge_order, ksbend->flags,
                         ksbend->TRANSPORT);
-        if (ksbend->dx || ksbend->dy || ksbend->dz) {
-            if (ksbend->tilt)
-                bombElegant("can't misalign tilted bending magnet", NULL);
-            misalign_matrix(elem->matrix, ksbend->dx, ksbend->dy, ksbend->dz, ksbend->angle);
-            }
+        if (ksbend->dx || ksbend->dy || ksbend->dz || ksbend->tilt || ksbend->etilt) 
+          misalign_matrix(elem->matrix, ksbend->dx, ksbend->dy, ksbend->dz, 
+                          0.0, 0.0, 
+                          misalignmentMethod==0?0:ksbend->etilt, 
+                          misalignmentMethod==0?0:ksbend->tilt,
+                           ksbend->angle, ksbend->length,
+                          misalignmentMethod, misalignmentMethod==1?0:1);
         break;
       case T_KQUAD:
         kquad = (KQUAD*)elem->p_elem;
@@ -1381,14 +1398,16 @@ VMATRIX *compute_matrix(
                                   kquad->steering_multipoles, 1);
         if (kquad->trackingBasedMatrix<=0) {
           elem->matrix = quadrupole_matrix(kquad->k1, kquad->length, 
-                                           (run->default_order?run->default_order:1), kquad->tilt, 
+                                           (run->default_order?run->default_order:1), 
                                            kquad->fse, kquad->xkick*kquad->xKickCalibration, kquad->ykick*kquad->yKickCalibration,
                                            kquad->edge1Linear?kquad->edge1_effects:0, 
                                            kquad->edge2Linear?kquad->edge2_effects:0,
                                            "integrals", 0.0, kquad->lEffective,
                                            kquad->fringeIntM, kquad->fringeIntP, kquad->radial);
-          if (kquad->dx || kquad->dy || kquad->dz)
-            misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 0.0);
+          if (kquad->dx || kquad->dy || kquad->dz || kquad->tilt)
+            misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 
+                            0.0, 0.0, kquad->tilt, 0.0, 0.0, kquad->length,
+                            misalignmentMethod, misalignmentMethod==1?0:1);
         } else {
           if (kquad->trackingBasedMatrix>3)
             kquad->trackingBasedMatrix = 3;
@@ -1402,12 +1421,14 @@ VMATRIX *compute_matrix(
         if (ksext->nSlices<1)
             bombElegant("n_slices must be > 0 for KSEXT element", NULL);
         elem->matrix = sextupole_matrix(ksext->k2, ksext->k1, ksext->j1, ksext->length, 
-                                        (run->default_order?run->default_order:2), ksext->tilt,
+                                        (run->default_order?run->default_order:2), 
                                         ksext->fse, 
                                         ksext->xkick*ksext->xKickCalibration, ksext->ykick*ksext->yKickCalibration,
                                         0.0);
-        if (ksext->dx || ksext->dy || ksext->dz)
-            misalign_matrix(elem->matrix, ksext->dx, ksext->dy, ksext->dz, 0.0);
+        if (ksext->dx || ksext->dy || ksext->dz || ksext->tilt)
+            misalign_matrix(elem->matrix, ksext->dx, ksext->dy, ksext->dz, 
+                            0.0, 0.0, ksext->tilt, 0.0, 0.0, ksext->length,
+                            misalignmentMethod, misalignmentMethod==1?0:1);
         readErrorMultipoleData(&(ksext->systematicMultipoleData),
                                   ksext->systematic_multipoles, 0);
         readErrorMultipoleData(&(ksext->randomMultipoleData),
@@ -1419,11 +1440,11 @@ VMATRIX *compute_matrix(
             koct->k3 = 6*koct->B/ipow(koct->bore,3)*(particleCharge/(particleMass*c_mks*elem->Pref_input));
         if (koct->nSlices<1)
             bombElegant("n_slices must be > 0 for KOCT element", NULL);
-        elem->matrix = octupole_matrix(koct->k3, koct->length, 
-                                        (run->default_order?run->default_order:2), koct->tilt,
-                                        koct->fse);
-        if (koct->dx || koct->dy || koct->dz)
-            misalign_matrix(elem->matrix, koct->dx, koct->dy, koct->dz, 0.0);
+        elem->matrix = octupole_matrix(koct->k3, koct->length, (run->default_order?run->default_order:2), koct->fse);
+        if (koct->dx || koct->dy || koct->dz || koct->tilt)
+            misalign_matrix(elem->matrix, koct->dx, koct->dy, koct->dz, 
+                            0.0, 0.0, koct->tilt, 0.0, 0.0, koct->length,
+                            misalignmentMethod, misalignmentMethod==1?0:1);
         readErrorMultipoleData(&(koct->systematicMultipoleData),
                                   koct->systematic_multipoles, 0);
         readErrorMultipoleData(&(koct->randomMultipoleData),
@@ -1434,10 +1455,12 @@ VMATRIX *compute_matrix(
         if (kquse->nSlices<1)
             bombElegant("n_slices must be > 0 for KQUSE element", NULL);
         elem->matrix = quse_matrix(kquse->k1, kquse->k2, kquse->length, 
-                                      (run->default_order?run->default_order:1), kquse->tilt,
-                                      kquse->fse1, kquse->fse2);
-        if (kquse->dx || kquse->dy || kquse->dz)
-            misalign_matrix(elem->matrix, kquse->dx, kquse->dy, kquse->dz, 0.0);
+                                   (run->default_order?run->default_order:1),
+                                   kquse->fse1, kquse->fse2);
+        if (kquse->dx || kquse->dy || kquse->dz || kquse->tilt)
+            misalign_matrix(elem->matrix, kquse->dx, kquse->dy, kquse->dz, 
+                            0.0, 0.0, kquse->tilt, 0.0, 0.0, kquse->length,
+                            misalignmentMethod, misalignmentMethod==1?0:1);
         break;
       case T_MAGNIFY:
         elem->matrix = magnification_matrix((MAGNIFY*)elem->p_elem);
@@ -1501,19 +1524,22 @@ VMATRIX *compute_matrix(
                                      + (csbend->xReference>0 ? csbend->f1*csbend->angle/csbend->length/csbend->xReference : 0),
                                      (csbend->use_bn ? csbend->b2/(csbend->length/csbend->angle) : csbend->k2)
                                      + (csbend->xReference>0 ? 2*csbend->f2*csbend->angle/csbend->length/sqr(csbend->xReference) : 0),
-                                     csbend->tilt, 
+                                     misalignmentMethod==0?csbend->tilt:0.0, 
                                      csbend->fint[csbend->e1Index]>=0 ? csbend->fint[csbend->e1Index] : csbend->fintBoth, 
                                      csbend->fint[csbend->e2Index]>=0 ? csbend->fint[csbend->e2Index] : csbend->fintBoth, 
                                      csbend->hgap*2, 
                                      csbend->fse + (csbend->fseCorrection?csbend->fseCorrectionValue:0),
                                      csbend->fseDipole, csbend->fseQuadrupole, 
-                                     csbend->etiltSign*csbend->etilt,
+                                     misalignmentMethod==0?csbend->etilt*csbend->etiltSign:0.0,
                                      csbend->nonlinear?2:(run->default_order?run->default_order:1),
                                      csbend->edge_order, csbend->edgeFlags, 0);
-          if (csbend->dx || csbend->dy || csbend->dz) {
-            if (csbend->tilt)
-              bombElegant("can't misalign tilted bending magnet", NULL);
-            misalign_matrix(elem->matrix, csbend->dx, csbend->dy, csbend->dz, csbend->angle);
+          if (csbend->dx || csbend->dy || csbend->dz || csbend->tilt || csbend->etilt) {
+            misalign_matrix(elem->matrix, csbend->dx, csbend->dy, csbend->dz, 
+                            0.0, 0.0, 
+                            misalignmentMethod==0?0:csbend->etiltSign*csbend->etilt, 
+                            misalignmentMethod==0?0:csbend->tilt,
+                            csbend->angle, csbend->length,
+                            misalignmentMethod, misalignmentMethod==1?0:1);
           }
         }
         break;
@@ -1556,15 +1582,20 @@ VMATRIX *compute_matrix(
                         csrcsbend->h[csrcsbend->e1Index], csrcsbend->h[csrcsbend->e2Index], 
                         csrcsbend->use_bn ? csrcsbend->b1/(csrcsbend->length/csrcsbend->angle) : csrcsbend->k1,
                         csrcsbend->use_bn ? csrcsbend->b2/(csrcsbend->length/csrcsbend->angle) : csrcsbend->k2,
-                        csrcsbend->tilt, csrcsbend->fint, csrcsbend->fint, 
-                        csrcsbend->hgap*2, csrcsbend->fse, 0, 0, csrcsbend->etiltSign*csrcsbend->etilt,
+                        misalignmentMethod==0?csrcsbend->tilt:0.0, 
+                        csrcsbend->fint, csrcsbend->fint, 
+                        csrcsbend->hgap*2, csrcsbend->fse, 0, 0,
+                        misalignmentMethod==0?csrcsbend->etilt*csrcsbend->etiltSign:0.0,
                         csrcsbend->nonlinear?2:(run->default_order?run->default_order:1),
                         csrcsbend->edge_order, csrcsbend->edgeFlags, 0);
-        if (csrcsbend->dx || csrcsbend->dy || csrcsbend->dz) {
-            if (csrcsbend->tilt)
-                bombElegant("can't misalign tilted bending magnet", NULL);
-            misalign_matrix(elem->matrix, csrcsbend->dx, csrcsbend->dy, csrcsbend->dz, csrcsbend->angle);
-            }
+        if (csrcsbend->dx || csrcsbend->dy || csrcsbend->dz || csrcsbend->tilt || csrcsbend->etilt) {
+          misalign_matrix(elem->matrix, csrcsbend->dx, csrcsbend->dy, csrcsbend->dz, 
+                          0.0, 0.0, 
+                          misalignmentMethod==0?0:csrcsbend->etiltSign*csrcsbend->etilt, 
+                          misalignmentMethod==0?0:csrcsbend->tilt,
+                          csrcsbend->angle, csrcsbend->length, 
+                          misalignmentMethod, misalignmentMethod==1?0:1);
+        }
         break;
       case T_RFCA: 
         rfca = (RFCA*)elem->p_elem;
@@ -1575,7 +1606,9 @@ VMATRIX *compute_matrix(
                                         fiducialize*(rfca->change_p0 || run->always_change_p0),
 					Pref_output);
         if (rfca->dx || rfca->dy)
-          misalign_matrix(elem->matrix, rfca->dx, rfca->dy, 0.0, 0.0);
+          misalign_matrix(elem->matrix, rfca->dx, rfca->dy, 0.0, 
+                          0.0, 0.0, 0.0, 0.0, 0.0, rfca->length,
+                          misalignmentMethod, misalignmentMethod==1?0:1);
         break;
       case T_RFCW: 
         rfcw = (RFCW*)elem->p_elem;
@@ -1586,7 +1619,9 @@ VMATRIX *compute_matrix(
                                         fiducialize*(rfcw->change_p0 || run->always_change_p0),
 					Pref_output);
         if (rfcw->dx || rfcw->dy)
-          misalign_matrix(elem->matrix, rfcw->dx, rfcw->dy, 0.0, 0.0);
+          misalign_matrix(elem->matrix, rfcw->dx, rfcw->dy, 0.0, 
+                          0.0, 0.0, 0.0, 0.0, 0.0, rfcw->length,
+                          misalignmentMethod, misalignmentMethod==1?0:1);
         break;
       case T_MODRF: 
         modrf = (MODRF*)elem->p_elem;
@@ -1674,8 +1709,10 @@ VMATRIX *compute_matrix(
         break;
       case T_MULT: 
         elem->matrix = mult_matrix(mult=(MULT*)elem->p_elem, Pref_output, run->default_order);
-        if (mult->dx || mult->dy || mult->dz)
-          misalign_matrix(elem->matrix, mult->dx, mult->dy, mult->dz, 0.0);
+        if (mult->dx || mult->dy || mult->dz || mult->tilt)
+          misalign_matrix(elem->matrix, mult->dx, mult->dy, mult->dz, 
+                          0.0, 0.0, mult->tilt, 0.0, 0.0, mult->length,
+                          misalignmentMethod, misalignmentMethod==1?0:1);
         break;
       case T_FMULT:
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, 3);
@@ -2369,7 +2406,9 @@ VMATRIX *lightThinLensMatrix(LTHINLENS *ltl)
   if (ltl->yaw)
     yaw_matrices(M, ltl->yaw);
   if (ltl->dx || ltl->dy || ltl->dz) 
-    misalign_matrix(M, ltl->dx, ltl->dy, ltl->dz, 0.0);
+    misalign_matrix(M, ltl->dx, ltl->dy, ltl->dz, 
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    misalignmentMethod, misalignmentMethod==1?0:1);
   return M;
 }
 
@@ -2401,7 +2440,9 @@ VMATRIX *lightMirrorMatrix(LMIRROR *lm)
   if (lm->yaw)
     yaw_matrices(M, lm->yaw);
   if (lm->dx || lm->dy || lm->dz) 
-    misalign_matrix(M, lm->dx, lm->dy, lm->dz, 2*PI-2*lm->theta);
+    misalign_matrix(M, lm->dx, lm->dy, lm->dz, 
+                    0.0, 0.0, 0.0, 0.0, 2*PI-2*lm->theta, 0.0,
+                    misalignmentMethod, misalignmentMethod==1?0:1);
   return M;
 }
 
@@ -2441,7 +2482,9 @@ VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order)
   if (emat->yaw)
     yaw_matrices(M, emat->yaw);
   if (emat->dx || emat->dy || emat->dz) 
-    misalign_matrix(M, emat->dx, emat->dy, emat->dz, emat->angle);
+    misalign_matrix(M, emat->dx, emat->dy, emat->dz, 
+                    0.0, 0.0, 0.0, 0.0, emat->angle, C[5],
+                    misalignmentMethod, misalignmentMethod==1?0:1);
   
   return M;
 }
@@ -2544,11 +2587,10 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
     R[5][1] = theta*cphi*R[5][5];
     R[5][4] = -k*cphi*sphi*sqr(theta)*R[5][5]/beta;
 
-    if (rfdf->tilt)
-      tilt_matrices(M, rfdf->tilt);
-    if (rfdf->dx || rfdf->dy || rfdf->dz)
-      misalign_matrix(M, rfdf->dx, rfdf->dy, rfdf->dz, 0.0);
-
+    if (rfdf->dx || rfdf->dy || rfdf->dz || rfdf->tilt)
+      misalign_matrix(M, rfdf->dx, rfdf->dy, rfdf->dz, 
+                      0.0, 0.0, rfdf->tilt, 0.0, 0.0, rfdf->length, 
+                      misalignmentMethod, misalignmentMethod==1?0:1);
     return(M);
   } else {
     VMATRIX *Mt, *Mc, *Md, *Ms, *Mtmp;
@@ -2641,10 +2683,10 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
     null_matrices(Mt, EXCLUDE_R+EXCLUDE_C);
     Mt->order = 1;
 
-    if (rfdf->tilt)
-      tilt_matrices(Mt, rfdf->tilt);
-    if (rfdf->dx || rfdf->dy || rfdf->dz)
-      misalign_matrix(Mt, rfdf->dx, rfdf->dy, rfdf->dz, 0.0);
+    if (rfdf->dx || rfdf->dy || rfdf->dz || rfdf->tilt)
+      misalign_matrix(Mt, rfdf->dx, rfdf->dy, rfdf->dz, 
+                      0.0, 0.0, rfdf->tilt, 0.0, 0.0, rfdf->length,
+                      misalignmentMethod, misalignmentMethod==1?0:1);
     return(Mt);
   }
 
@@ -2865,16 +2907,16 @@ VMATRIX *mult_matrix(MULT *mult, double P, long order)
   }
   switch (mult->order) {
   case 0: /* dipole */
-    M = bend_matrix(length, KnL/length, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, mult->tilt, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, order, order, 0, 0);
+    M = bend_matrix(length, KnL/length, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, order, order, 0, 0);
     break;
   case 1: /* quadrupole */
-    M = quadrupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0, 0.0, 0.0, 0.0, NULL, 0.0, -1.0, NULL, NULL, 0);
+    M = quadrupole_matrix(KnL/length, length, order, 0.0, 0.0, 0.0, 0.0, 0.0, NULL, 0.0, -1.0, NULL, NULL, 0);
     break;
   case 2: /* sextupole */
-    M = sextupole_matrix(KnL/length, 0, 0, length, order, mult->tilt, 0.0, 0.0, 0.0, 0.0);
+    M = sextupole_matrix(KnL/length, 0, 0, length, order, 0.0, 0.0, 0.0, 0.0);
     break;
   case 3: /* octupole */
-    M = octupole_matrix(KnL/length, length, order, mult->tilt, 0.0);
+    M = octupole_matrix(KnL/length, length, order, 0.0);
     break;
   default: /* something else, use drift matrix */
     M = drift_matrix(length, order);

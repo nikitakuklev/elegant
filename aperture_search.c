@@ -936,7 +936,7 @@ long do_aperture_search_line(
   double *dxFactor, *dyFactor;
   double *xLimit, *yLimit;
   double xLost, yLost, sLost;
-  long originStable;
+  long originStable = 0;
 #if USE_MPI
   long break_index; /* The index for which the particle is lost on each CPU */
   long last_index; /* The index for which the last particle is survived */

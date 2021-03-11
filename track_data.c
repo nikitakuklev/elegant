@@ -40,6 +40,7 @@ double trackingMatrixStepFactor = 1;
 long trackingMatrixPoints = 9;
 double trackingMatrixStepSize[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
 long warningCountLimit = 10;
+short misalignmentMethod = 1;
 #if USE_MPI
 short mpiAbort = 0;
 #endif
@@ -221,6 +222,8 @@ PARAMETER quad_param[N_QUAD_PARAMS]={
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&quad_example.length), NULL, 0.0, 0, "length"},
     {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.k1), NULL, 0.0, 0, "geometric strength"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"PITCH", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.pitch), NULL, 0.0, 0, "rotation about horizontal axis"},
+    {"YAW", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.yaw), NULL, 0.0, 0, "rotation about vertical axis"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dz), NULL, 0.0, 0, "misalignment"},

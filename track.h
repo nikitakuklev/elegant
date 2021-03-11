@@ -111,6 +111,7 @@ extern double trackingMatrixStepFactor;
 extern long trackingMatrixPoints;
 extern double trackingMatrixStepSize[6];
 extern long warningCountLimit;
+extern short misalignmentMethod;
 
 /* flag used to identify which processor is allowed to write to a file */
 extern long writePermitted;
@@ -1003,7 +1004,7 @@ extern char *entity_text[N_TYPES];
 /* number of parameters for physical elements
  * a zero indicates an unsupported element
  */
-#define N_QUAD_PARAMS 30
+#define N_QUAD_PARAMS 32
 #define N_BEND_PARAMS 27
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 11
@@ -1233,7 +1234,7 @@ extern ELEMENT_DESCRIPTION entity_description[N_TYPES];
 extern PARAMETER quad_param[N_QUAD_PARAMS];
 
 typedef struct {
-    double length, k1, tilt;
+    double length, k1, tilt, pitch, yaw;
     double dx, dy, dz, fse, xkick, ykick;
     double xKickCalibration, yKickCalibration;
     short xSteering, ySteering, order;
@@ -3735,14 +3736,13 @@ extern long fill_in_matrices(ELEMENT_LIST *elem, RUN *run);
 extern VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation, long nSlices, long sliceEtilted);
 extern long calculate_matrices(LINE_LIST *line, RUN *run);
 extern VMATRIX *drift_matrix(double length, long order);
-extern VMATRIX *wiggler_matrix(double length, double radius, long poles, double dx, double dy, double dz,
-			       double tilt, long order, long focusing);
+extern VMATRIX *wiggler_matrix(double length, double radius, long poles, long order, long focusing);
 extern void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 			CWIGGLER *cwiggler, double *sigmaDelta2, long singleStep, double *ZwStart);
 extern void InitializeAPPLE(char *file, APPLE *apple);
 extern void APPLE_Track(double **coord, long num_particles, double pCentral,
 			APPLE *apple);
-extern VMATRIX *sextupole_matrix(double K2, double K1, double J1, double length, long maximum_order, double tilt, double fse, double xkick, double ykick, double ffringe);
+extern VMATRIX *sextupole_matrix(double K2, double K1, double J1, double length, long maximum_order, double fse, double xkick, double ykick, double ffringe);
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern void startMatrixComputationTiming();
@@ -4137,11 +4137,24 @@ extern long set_max_name_length(long length);
 void resetElementToDefaults(char *p_elem, long type);
  
 /* prototypes for malign_mat.c: */
-extern void misalign_matrix(VMATRIX *M, double dx, double dy, double dz, double bend_angle);
+extern void misalign_matrix(VMATRIX *M, double dx, double dy, double dz, 
+                            double tilt, double pitch, double yaw,
+                            double designTilt, double thetaBend, double length, 
+                            short method, short bodyCentered);
 extern VMATRIX *misalignment_matrix(MALIGN *malign, long order);
-extern void offset_matrix(VMATRIX *M, double dx, double dxp, double dy, double dyp);
 extern void offsetBeamCoordinatesForMisalignment(double **part, long np, double dx, double dy, double dz);
-
+extern void offsetParticlesForEntranceCenteredMisalignmentExact(double **coord, long np, double dx, double dy, 
+                                                                double dz,  double ax, double ay, double az,
+                                                                double tilt, double thetaBend, double length,
+                                                                short face);
+extern void offsetParticlesForEntranceCenteredMisalignmentLinearized(VMATRIX **VM, double **coord, long np, 
+                                                              double dx, double dy, double dz,
+                                                              double ax, double ay, double az, double tilt,
+                                                              double thetaBend, double length, short face);
+extern void offsetParticlesForBodyCenteredMisalignmentLinearized(VMATRIX **VM, double **coord, long np, 
+                                                          double dx, double dy, double dz,
+                                                          double ax, double ay, double az, double tilt,
+                                                          double thetaBend, double length, short face);
 /* prototypes for matrix7.c: */
 extern void print_matrices(FILE *fp, char *string, VMATRIX *M);
 extern void print_matrices1(FILE *fp, char *string, char *format, VMATRIX *M);
@@ -4241,7 +4254,7 @@ extern void print_elem_names(FILE *fp, ELEMENT_LIST *eptr, long width);
 
 /* prototypes for quad_matrix3.c: */
 VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
-                           double tilt, double fse,
+                           double fse,
                            double xkick, double ykick,
                            double edge1_effects, double edge2_effects,
                            char *fringeType, double ffringe, double lEffective,
@@ -4252,8 +4265,8 @@ extern VMATRIX *quad_fringe(double l, double ko, long order, long reverse, doubl
 extern void qfringe_R_matrix(double *R11, double *R21, double *R12, double *R22, double dk_dz, double l);
 extern void qfringe_T_matrix(double *T116, double *T126, double *T216, double *T226,
     double *T511, double *T512, double *T522, double dk_dz, double l, long reverse);
-extern VMATRIX *qfringe_matrix(double K1, double l, double tilt, long direction, long order, double fse);
-extern VMATRIX *quse_matrix(double K1, double K2, double l, long maximum_order, double tilt, double fse1, double fse2);
+extern VMATRIX *qfringe_matrix(double K1, double l, long direction, long order, double fse);
+extern VMATRIX *quse_matrix(double K1, double K2, double l, long maximum_order, double fse1, double fse2);
 
 /* prototypes for fringe.c */
 void quadFringe(double **coord, long np, double K1, double *fringeIntM, double *fringeIntP, 

@@ -432,8 +432,9 @@ long fmultipole_tracking(
     }
   }
   
-  if (multipole->dx || multipole->dy || multipole->dz)
+  if (multipole->dx || multipole->dy || multipole->dz) {
     offsetBeamCoordinatesForMisalignment(particle, n_part, multipole->dx, multipole->dy, multipole->dz);
+  }
   if (multipole->tilt)
     rotateBeamCoordinatesForMisalignment(particle, n_part, multipole->tilt);
 
@@ -1080,10 +1081,24 @@ long multipole_tracking2(
 
   setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, z_start+drift/2);
   
-  if (dx || dy || dz)
-    offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
-  if (tilt)
-    rotateBeamCoordinatesForMisalignment(particle, n_part, tilt);
+  if (misalignmentMethod!=0) {
+    if (dx || dy || dz || tilt) {
+      if (misalignmentMethod==1) {
+        offsetParticlesForEntranceCenteredMisalignmentExact
+          (particle, n_part, dx, dy, dz, 0.0, 0.0, tilt, 0.0, 0.0, drift, 1);
+      }
+      else {
+        offsetParticlesForBodyCenteredMisalignmentLinearized
+          (NULL, particle, n_part, dx, dy, dz, 0.0, 0.0, tilt, 0.0, 0.0, drift, 1);
+      }
+    }
+  }
+  else {
+    if (dx || dy || dz) 
+      offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
+    if (tilt)
+      rotateBeamCoordinatesForMisalignment(particle, n_part, tilt);
+  }
 
   if (doEndDrift) {
     exactDrift(particle, n_part, lEnd);
@@ -1149,12 +1164,25 @@ long multipole_tracking2(
     exactDrift(particle, n_part, lEnd);
   }
   
-  if (tilt)
-    rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
-  if (dx || dy || dz)
-    offsetBeamCoordinatesForMisalignment(particle, n_part, -dx, -dy, -dz);
+  if (misalignmentMethod!=0) {
+    if (dx || dy || dz || tilt)  {
+      if (misalignmentMethod==1) {
+        offsetParticlesForEntranceCenteredMisalignmentExact
+          (particle, n_part, dx, dy, dz, 0.0, 0.0, tilt, 0.0, 0.0, drift, 2);
+      }
+      else {
+        offsetParticlesForBodyCenteredMisalignmentLinearized
+          (NULL, particle, n_part, dx, dy, dz, 0.0, 0.0, tilt, 0.0, 0.0, drift, 2);
+      }
+    }
+  } else {
+    if (tilt)
+      rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
+    if (dx || dy || dz)
+      offsetBeamCoordinatesForMisalignment(particle, n_part, -dx, -dy, -dz);
+  }
 
-  if (freeMultData && !multData->copy) {
+  if (freeMultData && multData->copy) {
     if (multData->order)
       free(multData->order);
     if (multData->KnL)

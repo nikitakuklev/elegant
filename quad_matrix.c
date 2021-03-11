@@ -24,7 +24,7 @@ static double swap_tmp;
 static char *fringeTypeOpt[3] = {"inset", "fixed-strength", "integrals"};
 
 VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
-                           double tilt, double fse,
+                           double fse,
                            double xkick, double ykick,
                            double edge1_effects, double edge2_effects,
                            char *fringeType, double ffringe, double lEffective,
@@ -556,8 +556,6 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
       free_matrices(Mtot); tfree(Mtot); Mtot = NULL;
     }
     
-    tilt_matrices(M, tilt);
-
     return(M);
     }
 
@@ -772,7 +770,7 @@ void qfringe_T_matrix(
  */
 
 VMATRIX *qfringe_matrix(
-    double K1, double l, double tilt, long direction, long order, double fse
+    double K1, double l, long direction, long order, double fse
     )
 {
     VMATRIX *M;
@@ -784,14 +782,12 @@ VMATRIX *qfringe_matrix(
     M->C[4] = l;
     M->R[5][5] = M->R[4][4] = 1;
 
-    tilt_matrices(M, tilt);
-
     log_exit("qfringe_matrix");
     return(M);
     }
 
 VMATRIX *quse_matrix(double K1, double K2, double length, long maximum_order,
-                           double tilt, double fse1, double fse2)
+                     double fse1, double fse2)
 {
     VMATRIX *M;
     double *C, **R, ***T, ****U;
@@ -800,12 +796,12 @@ VMATRIX *quse_matrix(double K1, double K2, double length, long maximum_order,
     if (K1==0 || length==0) {
       if (K2==0)
         return drift_matrix(length, maximum_order);
-      return sextupole_matrix(K2, 0.0, 0.0, length, maximum_order, tilt, fse2, 0.0, 0.0, 0);
+      return sextupole_matrix(K2, 0.0, 0.0, length, maximum_order, fse2, 0.0, 0.0, 0);
     }
     if (fabs(K1*(1+fse1)*length)<1e-6) {
       if (K2!=0)
-        return sextupole_matrix(K2, K1, 0.0, length, maximum_order, tilt, fse2, 0.0, 0.0, 0);
-      return quadrupole_matrix(K1, length, maximum_order, tilt, fse1, 0.0, 0.0, 0, 0, NULL, 0.0, -1.0, NULL, NULL, 0);
+        return sextupole_matrix(K2, K1, 0.0, length, maximum_order, fse2, 0.0, 0.0, 0);
+      return quadrupole_matrix(K1, length, maximum_order, fse1, 0.0, 0.0, 0, 0, NULL, 0.0, -1.0, NULL, NULL, 0);
     }
     
     K1 *= (1+fse1);
@@ -1121,6 +1117,5 @@ VMATRIX *quse_matrix(double K1, double K2, double length, long maximum_order,
       }
     }
     
-    tilt_matrices(M, tilt);
     return(M);
   }
