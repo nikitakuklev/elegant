@@ -1044,7 +1044,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 14
 #define N_KSEXT_PARAMS 36
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 53
+#define N_KQUAD_PARAMS 55
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -2098,7 +2098,7 @@ typedef struct {
 extern PARAMETER kquad_param[N_KQUAD_PARAMS];
 
 typedef struct {
-    double length, k1, tilt, bore, B;
+    double length, k1, tilt, pitch, yaw, bore, B;
     double dx, dy, dz, fse;
     long n_kicks, nSlices;
     double xkick, ykick;

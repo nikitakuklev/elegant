@@ -1230,7 +1230,7 @@ VMATRIX *compute_matrix(
                                          quad->fringeIntM, quad->fringeIntP, quad->radial); 
         if (quad->dx || quad->dy || quad->dz || quad->tilt || quad->pitch || quad->yaw) {
           misalign_matrix(elem->matrix, quad->dx, quad->dy, quad->dz, 
-                          quad->pitch, quad->yaw, 0.0, quad->tilt, 0.0, quad->length, 
+                          quad->pitch, quad->yaw, quad->tilt, 0.0, 0.0, quad->length, 
                           misalignmentMethod, misalignmentMethod==1?0:1);
         }
         break;
@@ -1404,9 +1404,9 @@ VMATRIX *compute_matrix(
                                            kquad->edge2Linear?kquad->edge2_effects:0,
                                            "integrals", 0.0, kquad->lEffective,
                                            kquad->fringeIntM, kquad->fringeIntP, kquad->radial);
-          if (kquad->dx || kquad->dy || kquad->dz || kquad->tilt)
+          if (kquad->dx || kquad->dy || kquad->dz || kquad->tilt || kquad->pitch || kquad->yaw)
             misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 
-                            0.0, 0.0, kquad->tilt, 0.0, 0.0, kquad->length,
+                            kquad->pitch, kquad->yaw, kquad->tilt, 0.0, 0.0, kquad->length,
                             misalignmentMethod, misalignmentMethod==1?0:1);
         } else {
           if (kquad->trackingBasedMatrix>3)

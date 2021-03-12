@@ -776,7 +776,7 @@ long multipole_tracking2(
   long i_part, i_top;
   double *coord;
   double drift;
-  double tilt, rad_coef, isr_coef, xkick, ykick, dzLoss=0;
+  double tilt, pitch, yaw, rad_coef, isr_coef, xkick, ykick, dzLoss=0;
   KQUAD *kquad = NULL;
   KSEXT *ksext;
   KQUSE *kquse;
@@ -815,6 +815,8 @@ long multipole_tracking2(
 
   rad_coef = xkick = ykick = isr_coef = 0;
 
+  pitch = yaw = tilt = 0;
+
   switch (elem->type) {
   case T_KQUAD:
     kquad = ((KQUAD*)elem->p_elem);
@@ -835,6 +837,8 @@ long multipole_tracking2(
       KnL[0] = kquad->k1*lEffective*(1+kquad->fse);
     drift = lEffective;
     tilt = kquad->tilt;
+    pitch = kquad->pitch;
+    yaw = kquad->yaw;
     dx = kquad->dx;
     dy = kquad->dy;
     dz = kquad->dz;
@@ -1082,14 +1086,14 @@ long multipole_tracking2(
   setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, z_start+drift/2);
   
   if (misalignmentMethod!=0) {
-    if (dx || dy || dz || tilt) {
+    if (dx || dy || dz || tilt || pitch || yaw) {
       if (misalignmentMethod==1) {
         offsetParticlesForEntranceCenteredMisalignmentExact
-          (particle, n_part, dx, dy, dz, 0.0, 0.0, tilt, 0.0, 0.0, drift, 1);
+          (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
       }
       else {
         offsetParticlesForBodyCenteredMisalignmentLinearized
-          (NULL, particle, n_part, dx, dy, dz, 0.0, 0.0, tilt, 0.0, 0.0, drift, 1);
+          (NULL, particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
       }
     }
   }
@@ -1165,14 +1169,14 @@ long multipole_tracking2(
   }
   
   if (misalignmentMethod!=0) {
-    if (dx || dy || dz || tilt)  {
+    if (dx || dy || dz || tilt || pitch || yaw)  {
       if (misalignmentMethod==1) {
         offsetParticlesForEntranceCenteredMisalignmentExact
-          (particle, n_part, dx, dy, dz, 0.0, 0.0, tilt, 0.0, 0.0, drift, 2);
+          (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
       }
       else {
         offsetParticlesForBodyCenteredMisalignmentLinearized
-          (NULL, particle, n_part, dx, dy, dz, 0.0, 0.0, tilt, 0.0, 0.0, drift, 2);
+          (NULL, particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
       }
     }
   } else {
