@@ -55,6 +55,9 @@ if [string length $patternString] {
             set bucket [expr $bucket+$spacing]
         }
     }
+    exec sddsmakedataset $output.pattern \
+        -column=BucketNumber,type=long -data=[join $bucketList ,] \
+        -column=Intensity,type=long -data=[join $intensityList ,]
 } else {
     set bucketList [exec sdds2stream -column=BucketNumber $patternFile]
     set intensityList [exec sdds2stream -column=Intensity $patternFile]
