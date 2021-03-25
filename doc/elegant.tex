@@ -116,6 +116,8 @@ the serial or parallel versions and report issues to the developers.
 \item The program \verb|computeCBGGE| was added, which allows computation of a generalized gradient expansion
   based on field data on a circular-cylinder boundary \cite{Venturini-NIMA427-387}. It replaces the script
   \verb|computeGeneralizedGradients|, providing better performance and features.
+\item The script \verb|generateBunchTrain| was added. It allows generating particle input files for a fairly
+  arbitrary multi-train bunch pattern.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -6228,6 +6230,8 @@ up-to-date than these manual pages.
         some restrictions) into formats accepted by other programs, such as COSY, PARMELA, 
         PATPET, PATRICIA, TRANSPORT, XORBIT, and MAD8.  Will also generate an SDDS file containing lattice
         data.  (Program by M. Borland.)
+\item {\tt generateBunch} --- Generates a gaussian-distributed bunch.
+\item {\tt generateBunchTrain} --- Generates a very flexible multi-train bunch file.
 \item {\tt haissinski} --- Computes the steady-state longitudinal distribution in
         an electron storage ring.  Requires as input a file containing the Twiss
         parameters around the ring, such as that provided by the \verb|twiss_output| command.
