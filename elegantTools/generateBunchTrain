@@ -15,7 +15,8 @@ The pattern file has two columns: BucketNumber (integer) and RelativeIntensity (
 The pattern string has the form: <n1>*<s1>*<i1> <n2>*<s2>*<i2> ... where <n1> is the number of \n\
 bunches, <s1> is the spacing in rf buckets, and <i1> is the relative intensity, etc.\n\
 E.g., 5*1*1.0 5*1*0.0 5*2*1.0 specifies two 5-bunch trains separated by 5 empty buckets;\n\
-the first train has single-bucket spacing, while the second has two-bucket spacing.\n"
+the first train has single-bucket spacing, while the second has two-bucket spacing.\n\n\
+Script by M. Borland, 2021."
 
 set args $argv
 set input ""
