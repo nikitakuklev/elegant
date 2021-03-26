@@ -1055,7 +1055,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 78
+#define N_CSBEND_PARAMS 80
 #define N_MATTER_PARAMS 21
 #define N_RFMODE_PARAMS 57
 #define N_TRFMODE_PARAMS 25
@@ -2357,7 +2357,7 @@ extern PARAMETER csbend_param[N_CSBEND_PARAMS];
 typedef struct {
     double length, angle;
     double k1, k2, k3, k4, k5, k6, k7, k8;
-    double e[2], tilt;
+    double e[2], tilt, yaw, pitch;
     double h[2], hgap, fintBoth, fint[2];
     double dx, dy, dz, xKick, yKick;
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */

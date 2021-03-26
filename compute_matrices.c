@@ -1533,9 +1533,9 @@ VMATRIX *compute_matrix(
                                      misalignmentMethod==0?csbend->etilt*csbend->etiltSign:0.0,
                                      csbend->nonlinear?2:(run->default_order?run->default_order:1),
                                      csbend->edge_order, csbend->edgeFlags, 0);
-          if (csbend->dx || csbend->dy || csbend->dz || csbend->tilt || csbend->etilt) {
+          if (csbend->dx || csbend->dy || csbend->dz || csbend->tilt || csbend->etilt || csbend->pitch || csbend->yaw) {
             misalign_matrix(elem->matrix, csbend->dx, csbend->dy, csbend->dz, 
-                            0.0, 0.0, 
+                            csbend->pitch, csbend->yaw,
                             misalignmentMethod==0?0:csbend->etiltSign*csbend->etilt, 
                             misalignmentMethod==0?0:csbend->tilt,
                             csbend->angle, csbend->length,

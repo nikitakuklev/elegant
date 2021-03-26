@@ -617,13 +617,12 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
     bombElegant("m_mult(Yaxis, R, yAxis);", NULL);
   if (!m_mult(Zaxis, R, zAxis))
     bombElegant("m_mult(Zaxis, R, zAxis);", NULL);
-
-  sinThetaW = - SIGN(R->a[1][2])*sqrt(sqr(R->a[0][2]) + sqr(R->a[1][2]));
-  cosThetaW = sqrt(1-sqr(sinThetaW));
-  tanThetaW = sinThetaW/cosThetaW;
   
   if (R->a[0][2]==0) {
+    /* R13 == 0 */
     if (R->a[1][2]!=0) {
+      /* R23 !=0 */
+      printf("Special case 1\n");
       if (!m_mult(ZaxiSxyz, R, zAxis)) 
         bombElegant("m_mult(ZaxiSxyz, R, zAxis)", NULL);
       if (!m_scmul(etaAxis, xAxis, -SIGN(R->a[1][2])))
@@ -636,7 +635,13 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
         bombElegant("m_scmul(V2, yAxis, SIGN(R->a[1][2])*R->a[2][2)];", NULL);
       if (!m_add(csiPAxis, V1, V2))
         bombElegant("m_add(csiPAxis, V1, V)2;", NULL);
+      sinThetaW = -SIGN(R->a[1][2])*R->a[1][2];
+      cosThetaW = sqrt(1-sqr(sinThetaW));
+      tanThetaW = sinThetaW/cosThetaW;
     } else {
+      printf("Special case 2\n");
+      sinThetaW = tanThetaW = 0;
+      cosThetaW = 1;
       if (!m_copy(etaAxis, xAxis))
         bombElegant("m_copy(etaAxis, xAxi)s;", NULL);
       if (!m_copy(csiAxis, yAxis))
@@ -645,6 +650,11 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
         bombElegant("m_copy(csiPAxis, yAxi)s;", NULL);
     }
   } else {
+    /* R13 !=0 */
+    printf("Special case 3\n");
+    sinThetaW = - SIGN(R->a[0][2])*sqrt(sqr(R->a[0][2]) + sqr(R->a[1][2]));
+    cosThetaW = sqrt(1-sqr(sinThetaW));
+    tanThetaW = sinThetaW/cosThetaW;
     etaAxis->a[0][0] = R->a[1][2]/sinThetaW;
     etaAxis->a[1][0] = -R->a[0][2]/sinThetaW;
     etaAxis->a[2][0] = 0;
@@ -877,7 +887,7 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
   else
     Rc = 0; /* not actually used */
 
-  /* rotational-error matrix in the xyz coordinate system */
+  /* rotational-error matrix in the x0y0z0 coordinate system */
   cx = cos(ax0); cy = cos(ay0); cz = cos(az0+tilt);
   sx = sin(ax0); sy = sin(ay0); sz = sin(az0+tilt);
 

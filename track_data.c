@@ -1773,6 +1773,8 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"E1", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.e[0]), NULL, 0.0, 0, "entrance edge angle"},
     {"E2", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.e[1]), NULL, 0.0, 0, "exit edge angle"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
+    {"YAW", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.yaw), NULL, 0.0, 0, "rotation about vertical axis"},
+    {"PITCH", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.pitch), NULL, 0.0, 0, "rotation about horizontal axis"},
     {"H1", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.h[0]), NULL, 0.0, 0, "entrance pole-face curvature"},
     {"H2", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.h[1]), NULL, 0.0, 0, "exit pole-face curvature"},
     {"HGAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
