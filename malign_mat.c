@@ -622,7 +622,6 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
     /* R13 == 0 */
     if (R->a[1][2]!=0) {
       /* R23 !=0 */
-      printf("Special case 1\n");
       if (!m_mult(ZaxiSxyz, R, zAxis)) 
         bombElegant("m_mult(ZaxiSxyz, R, zAxis)", NULL);
       if (!m_scmul(etaAxis, xAxis, -SIGN(R->a[1][2])))
@@ -639,7 +638,6 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
       cosThetaW = sqrt(1-sqr(sinThetaW));
       tanThetaW = sinThetaW/cosThetaW;
     } else {
-      printf("Special case 2\n");
       sinThetaW = tanThetaW = 0;
       cosThetaW = 1;
       if (!m_copy(etaAxis, xAxis))
@@ -651,7 +649,6 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
     }
   } else {
     /* R13 !=0 */
-    printf("Special case 3\n");
     sinThetaW = - SIGN(R->a[0][2])*sqrt(sqr(R->a[0][2]) + sqr(R->a[1][2]));
     cosThetaW = sqrt(1-sqr(sinThetaW));
     tanThetaW = sinThetaW/cosThetaW;
