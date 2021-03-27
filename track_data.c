@@ -40,7 +40,7 @@ double trackingMatrixStepFactor = 1;
 long trackingMatrixPoints = 9;
 double trackingMatrixStepSize[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
 long warningCountLimit = 10;
-short misalignmentMethod = 1;
+short misalignmentMethod = 0;
 #if USE_MPI
 short mpiAbort = 0;
 #endif
