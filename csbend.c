@@ -778,7 +778,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   he1 = csbend->h[csbend->e1Index];
   he2 = csbend->h[csbend->e2Index];
-  if (csbend->angle<0) {
+  if (csbend->angle<0 && misalignmentMethod==0) {
     long i;
     angle = -csbend->angle;
     e1    = -csbend->e[csbend->e1Index];
@@ -802,7 +802,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start+csbend->length/2);
 
-  if (rho0>1e6) {
+  if (fabs(rho0)>1e6) {
     if (csbend->k2!=0)
       bombElegant("Error: One or more CSBENDs have radius > 1e6 but non-zero K2. Best to convert this to KQUSE or KSEXT.\n", NULL);
     if (csbend->k1!=0) {
@@ -895,10 +895,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     fflush(stdout);
   }
   /* angles for fringe-field effects */
-  Kg1  = 2*csbend->hgap*(csbend->fint[csbend->e1Index]>=0 ? csbend->fint[csbend->e1Index] : csbend->fintBoth);
-  psi1 = Kg1/rho_actual/cos(e1)*(1+sqr(sin(e1)));
-  Kg2  = 2*csbend->hgap*(csbend->fint[csbend->e2Index]>=0 ? csbend->fint[csbend->e2Index] : csbend->fintBoth);
-  psi2 = Kg2/rho_actual/cos(e2)*(1+sqr(sin(e2)));
+  Kg1  = 2*csbend->hgap*(csbend->fint[csbend->e1Index]>=0 ? csbend->fint[csbend->e1Index] : csbend->fintBoth)*SIGN(rho0);
+  psi1 = Kg1/fabs(rho_actual)/cos(e1)*(1+sqr(sin(e1)));
+  Kg2  = 2*csbend->hgap*(csbend->fint[csbend->e2Index]>=0 ? csbend->fint[csbend->e2Index] : csbend->fintBoth)*SIGN(rho0);
+  psi2 = Kg2/fabs(rho_actual)/cos(e2)*(1+sqr(sin(e2)));
   if (csbend->length<0) {
     psi1 *=  -1;
     psi2 *=  -1;
@@ -921,7 +921,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if ((distributionBasedRadiation = csbend->distributionBasedRadiation)) {
     /* Sands 5.15 */
     meanPhotonsPerRadian0 = 5.0/(2.0*sqrt(3))*Po/137.0359895;  
-    meanPhotonsPerMeter0 = (5*c_mks*Po*particleMass*particleRadius)/(2*sqrt(3)*hbar_mks*rho_actual);
+    meanPhotonsPerMeter0 = (5*c_mks*Po*particleMass*particleRadius)/(2*sqrt(3)*hbar_mks*fabs(rho_actual));
     /* Critical energy normalized to reference energy, Sands 5.9 */
     normalizedCriticalEnergy0 = 3.0/2*hbar_mks*c_mks*pow3(Po)/fabs(rho_actual)/(Po*particleMass*sqr(c_mks));
     /* fprintf(stderr, "Mean photons per radian expected: %le   ECritical/E: %le\n", 
@@ -954,13 +954,15 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     sin_ttilt = sin(ttilt);
   }
 
+  dxi = dyi = dzi = 0;
+  dxf = dyf = dzf = 0;
   if (misalignmentMethod==0) {
     computeEtiltCentroidOffset(dcoord_etilt, rho0, angle, etilt, tilt);
     
     dxi = -csbend->dx;
     dzi =  csbend->dz;
     dyi = -csbend->dy;
-    
+
     /* must use the original angle here because the translation is done after
      * the final rotation back
      */
@@ -4733,7 +4735,9 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
     double normalizedCriticalEnergy;
     double nMean, dDelta, thetaRms;
     long i, nEmitted;
+    long rhoSign;
     F = sqrt(F2);
+    rhoSign = SIGN(h0);
     /* Compute the mean number of photons emitted = meanPhotonsPerMeter*meters */
     /* Note that unlike the #photons/radian, this is independent of energy */
     nMean = meanPhotonsPerMeter*dsISR*dsFactor*F;
@@ -4766,8 +4770,9 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
         dphi = thetaRms*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
         if (SDDSphotons)
           logPhoton(dDelta*Po, x, xp-dtheta/dDelta, y, yp-dphi/dDelta, theta, thetaf, 1/h0);
-        xp += dtheta;
-        yp += dphi;
+        /* rhoSign factor is for backward compatibility */
+        xp += dtheta*rhoSign;
+        yp += dphi*rhoSign;
       } else {
         if (SDDSphotons)
           logPhoton(dDelta*Po, x, xp-dtheta/dDelta, y, yp-dphi/dDelta, theta, thetaf, 1/h0);
