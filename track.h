@@ -2357,11 +2357,12 @@ extern PARAMETER csbend_param[N_CSBEND_PARAMS];
 typedef struct {
     double length, angle;
     double k1, k2, k3, k4, k5, k6, k7, k8;
-    double e[2], tilt, yaw, pitch;
+    double e[2], tilt;
     double h[2], hgap, fintBoth, fint[2];
     double dx, dy, dz, xKick, yKick;
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
     double etilt;   /* error tilt angle */
+    double eyaw, epitch;
     long nSlices;
     short etiltSign, nonlinear, synch_rad;
     short edge_effects[2], edge_order;

@@ -974,12 +974,12 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       offsetParticlesForEntranceCenteredMisalignmentExact
         (part, n_part, 
          csbend->dx, csbend->dy, csbend->dz, 
-         csbend->pitch, csbend->yaw, csbend->etilt, tilt, angle, csbend->length, 1);
+         csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
     else 
       offsetParticlesForBodyCenteredMisalignmentLinearized
         (NULL, part, n_part, 
          csbend->dx, csbend->dy, csbend->dz, 
-         csbend->pitch, csbend->yaw, csbend->etilt, tilt, angle, csbend->length, 1);
+         csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
   }
 
   i_top = n_part-1;
@@ -1231,12 +1231,12 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       offsetParticlesForEntranceCenteredMisalignmentExact
         (part, n_part, 
          csbend->dx, csbend->dy, csbend->dz, 
-         csbend->pitch, csbend->yaw, csbend->etilt, tilt, angle, csbend->length, 2);
+         csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 2);
     else 
       offsetParticlesForBodyCenteredMisalignmentLinearized
         (NULL, part, n_part, 
          csbend->dx, csbend->dy, csbend->dz, 
-         csbend->pitch, csbend->yaw, csbend->etilt, tilt, angle, csbend->length, 2);
+         csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 2);
   }
 
   if (distributionBasedRadiation) {
