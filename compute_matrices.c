@@ -1407,7 +1407,7 @@ VMATRIX *compute_matrix(
           if (kquad->dx || kquad->dy || kquad->dz || kquad->tilt || kquad->pitch || kquad->yaw)
             misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 
                             kquad->pitch, kquad->yaw, kquad->tilt, 0.0, 0.0, kquad->length,
-                            misalignmentMethod, misalignmentMethod==1?0:1);
+                            kquad->malignMethod, kquad->malignMethod==1?0:1);
         } else {
           if (kquad->trackingBasedMatrix>3)
             kquad->trackingBasedMatrix = 3;
@@ -1425,10 +1425,10 @@ VMATRIX *compute_matrix(
                                         ksext->fse, 
                                         ksext->xkick*ksext->xKickCalibration, ksext->ykick*ksext->yKickCalibration,
                                         0.0);
-        if (ksext->dx || ksext->dy || ksext->dz || ksext->tilt)
+        if (ksext->dx || ksext->dy || ksext->dz || ksext->tilt || ksext->yaw || ksext->pitch)
             misalign_matrix(elem->matrix, ksext->dx, ksext->dy, ksext->dz, 
-                            0.0, 0.0, ksext->tilt, 0.0, 0.0, ksext->length,
-                            misalignmentMethod, misalignmentMethod==1?0:1);
+                            ksext->pitch, ksext->yaw, ksext->tilt, 0.0, 0.0, ksext->length,
+                            ksext->malignMethod, ksext->malignMethod==1?0:1);
         readErrorMultipoleData(&(ksext->systematicMultipoleData),
                                   ksext->systematic_multipoles, 0);
         readErrorMultipoleData(&(ksext->randomMultipoleData),
@@ -1441,10 +1441,10 @@ VMATRIX *compute_matrix(
         if (koct->nSlices<1)
             bombElegant("n_slices must be > 0 for KOCT element", NULL);
         elem->matrix = octupole_matrix(koct->k3, koct->length, (run->default_order?run->default_order:2), koct->fse);
-        if (koct->dx || koct->dy || koct->dz || koct->tilt)
+        if (koct->dx || koct->dy || koct->dz || koct->tilt || koct->yaw || koct->pitch)
             misalign_matrix(elem->matrix, koct->dx, koct->dy, koct->dz, 
-                            0.0, 0.0, koct->tilt, 0.0, 0.0, koct->length,
-                            misalignmentMethod, misalignmentMethod==1?0:1);
+                            koct->pitch, koct->yaw, koct->tilt, 0.0, 0.0, koct->length,
+                            koct->malignMethod, koct->malignMethod==1?0:1);
         readErrorMultipoleData(&(koct->systematicMultipoleData),
                                   koct->systematic_multipoles, 0);
         readErrorMultipoleData(&(koct->randomMultipoleData),
@@ -1524,22 +1524,22 @@ VMATRIX *compute_matrix(
                                      + (csbend->xReference>0 ? csbend->f1*csbend->angle/csbend->length/csbend->xReference : 0),
                                      (csbend->use_bn ? csbend->b2/(csbend->length/csbend->angle) : csbend->k2)
                                      + (csbend->xReference>0 ? 2*csbend->f2*csbend->angle/csbend->length/sqr(csbend->xReference) : 0),
-                                     misalignmentMethod==0?csbend->tilt:0.0, 
+                                     csbend->malignMethod==0?csbend->tilt:0.0, 
                                      csbend->fint[csbend->e1Index]>=0 ? csbend->fint[csbend->e1Index] : csbend->fintBoth, 
                                      csbend->fint[csbend->e2Index]>=0 ? csbend->fint[csbend->e2Index] : csbend->fintBoth, 
                                      csbend->hgap*2, 
                                      csbend->fse + (csbend->fseCorrection?csbend->fseCorrectionValue:0),
                                      csbend->fseDipole, csbend->fseQuadrupole, 
-                                     misalignmentMethod==0?csbend->etilt*csbend->etiltSign:0.0,
+                                     csbend->malignMethod==0?csbend->etilt*csbend->etiltSign:0.0,
                                      csbend->nonlinear?2:(run->default_order?run->default_order:1),
                                      csbend->edge_order, csbend->edgeFlags, 0);
           if (csbend->dx || csbend->dy || csbend->dz || csbend->tilt || csbend->etilt || csbend->epitch || csbend->eyaw) {
             misalign_matrix(elem->matrix, csbend->dx, csbend->dy, csbend->dz, 
                             csbend->epitch, csbend->eyaw,
-                            misalignmentMethod==0?0:csbend->etiltSign*csbend->etilt, 
-                            misalignmentMethod==0?0:csbend->tilt,
+                            csbend->malignMethod==0?0:csbend->etiltSign*csbend->etilt, 
+                            csbend->malignMethod==0?0:csbend->tilt,
                             csbend->angle, csbend->length,
-                            misalignmentMethod, misalignmentMethod==1?0:1);
+                            csbend->malignMethod, csbend->malignMethod==1?0:1);
           }
         }
         break;

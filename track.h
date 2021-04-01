@@ -1042,9 +1042,9 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 15
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
-#define N_KSEXT_PARAMS 36
+#define N_KSEXT_PARAMS 39
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 55
+#define N_KQUAD_PARAMS 56
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -1055,7 +1055,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 80
+#define N_CSBEND_PARAMS 81
 #define N_MATTER_PARAMS 21
 #define N_RFMODE_PARAMS 57
 #define N_TRFMODE_PARAMS 25
@@ -1107,7 +1107,7 @@ extern char *entity_text[N_TYPES];
 #define N_EMITTANCEELEMENT_PARAMS 4
 #define N_MHISTOGRAM_PARAMS 12
 #define N_FTABLE_PARAMS 16
-#define N_KOCT_PARAMS 19
+#define N_KOCT_PARAMS 22
 #define N_MRADITEGRALS_PARAMS 1
 #define N_APPLE_PARAMS 25
 #define N_MRFDF_PARAMS 23
@@ -2043,7 +2043,7 @@ typedef struct {
 extern PARAMETER sext_param[N_SEXT_PARAMS];
 
 typedef struct {
-    double length, k2, k1, j1, tilt, bore, B;
+    double length, k2, k1, j1, tilt, pitch, yaw, bore, B;
     long n_kicks, nSlices;
     double dx, dy, dz, fse, xkick, ykick;
     double xKickCalibration, yKickCalibration;
@@ -2051,7 +2051,7 @@ typedef struct {
     char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor, steeringMultipoleFactor;
     short minMultipoleOrder[2], maxMultipoleOrder[2]; /* normal, skew */
-    short integration_order, sqrtOrder, isr, isr1Particle, expandHamiltonian;
+    short integration_order, sqrtOrder, isr, isr1Particle, expandHamiltonian, malignMethod;
     /* for internal use */
     short multipolesInitialized, totalMultipolesComputed;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -2065,11 +2065,11 @@ typedef struct {
 extern PARAMETER koct_param[N_KOCT_PARAMS];
 
 typedef struct {
-    double length, k3, tilt, bore, B;
+    double length, k3, tilt, pitch, yaw, bore, B;
     double dx, dy, dz, fse;
     long n_kicks, nSlices;
     char *systematic_multipoles, *random_multipoles;
-    short integration_order, sqrtOrder, synch_rad, isr, isr1Particle, expandHamiltonian;
+    short integration_order, sqrtOrder, synch_rad, isr, isr1Particle, expandHamiltonian, malignMethod;
     /* for internal use */
     short multipolesInitialized, totalMultipolesComputed;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -2113,7 +2113,7 @@ typedef struct {
     double fringeIntP[5], fringeIntM[5];
     short edge1Linear, edge2Linear;
     double edge1NonlinearFactor, edge2NonlinearFactor;
-    short radial, expandHamiltonian, trackingBasedMatrix;
+    short radial, expandHamiltonian, trackingBasedMatrix, malignMethod;
     /* for internal use */
     short multipolesInitialized, totalMultipolesComputed;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -2361,8 +2361,7 @@ typedef struct {
     double h[2], hgap, fintBoth, fint[2];
     double dx, dy, dz, xKick, yKick;
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
-    double etilt;   /* error tilt angle */
-    double eyaw, epitch;
+    double etilt, eyaw, epitch;   /* error tilt, yaw, pitch angle */
     long nSlices;
     short etiltSign, nonlinear, synch_rad;
     short edge_effects[2], edge_order;
@@ -2377,7 +2376,7 @@ typedef struct {
     short distributionBasedRadiation, includeOpeningAngle;
     char *photonOutputFile;
     double photonLowEnergyCutoff;
-    short referenceCorrection, trackingMatrix, fseCorrection;
+    short referenceCorrection, trackingMatrix, fseCorrection, malignMethod;
     /* for internal use only: */
     unsigned short edgeFlags;
     double b[9], c[9], fseCorrectionValue, fseCorrectionPathError;
@@ -4139,7 +4138,7 @@ void resetElementToDefaults(char *p_elem, long type);
  
 /* prototypes for malign_mat.c: */
 extern void misalign_matrix(VMATRIX *M, double dx, double dy, double dz, 
-                            double tilt, double pitch, double yaw,
+                            double pitch, double yaw, double tilt,
                             double designTilt, double thetaBend, double length, 
                             short method, short bodyCentered);
 extern VMATRIX *misalignment_matrix(MALIGN *malign, long order);
@@ -4148,6 +4147,10 @@ extern void offsetParticlesForEntranceCenteredMisalignmentExact(double **coord, 
                                                                 double dz,  double ax, double ay, double az,
                                                                 double tilt, double thetaBend, double length,
                                                                 short face);
+extern void offsetParticlesForBodyCenteredMisalignmentExact(double **coord, long np, double dx0, double dy0, double dz0,
+                                                            double ax0, double ay0, double az0,
+                                                            double tilt, double thetaBend, double length,
+                                                            short face);
 extern void offsetParticlesForEntranceCenteredMisalignmentLinearized(VMATRIX **VM, double **coord, long np, 
                                                               double dx, double dy, double dz,
                                                               double ax, double ay, double az, double tilt,

@@ -778,7 +778,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   he1 = csbend->h[csbend->e1Index];
   he2 = csbend->h[csbend->e2Index];
-  if (csbend->angle<0 && misalignmentMethod==0) {
+  if (csbend->angle<0 && csbend->malignMethod==0) {
     long i;
     angle = -csbend->angle;
     e1    = -csbend->e[csbend->e1Index];
@@ -956,7 +956,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   dxi = dyi = dzi = 0;
   dxf = dyf = dzf = 0;
-  if (misalignmentMethod==0) {
+  if (csbend->malignMethod==0) {
     computeEtiltCentroidOffset(dcoord_etilt, rho0, angle, etilt, tilt);
     
     dxi = -csbend->dx;
@@ -970,14 +970,14 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     dzf = csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
     dyf = csbend->dy;
   } else {
-    if (misalignmentMethod==1)
+    if (csbend->malignMethod==1)
       offsetParticlesForEntranceCenteredMisalignmentExact
         (part, n_part, 
          csbend->dx, csbend->dy, csbend->dz, 
          csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
     else 
-      offsetParticlesForBodyCenteredMisalignmentLinearized
-        (NULL, part, n_part, 
+      offsetParticlesForBodyCenteredMisalignmentExact
+        (part, n_part, 
          csbend->dx, csbend->dy, csbend->dz, 
          csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
   }
@@ -1007,7 +1007,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       abort();
     }
 
-    if (misalignmentMethod==0) {
+    if (csbend->malignMethod==0) {
       coord[4] += dzi*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
       coord[0]  = coord[0] + dxi + dzi*coord[1];
       coord[2]  = coord[2] + dyi + dzi*coord[3];
@@ -1205,7 +1205,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       }
     }
 
-    if (misalignmentMethod==0) {
+    if (csbend->malignMethod==0) {
       coord[0] =  x*cos_ttilt -  y*sin_ttilt + dcoord_etilt[0];
       coord[2] =  x*sin_ttilt +  y*cos_ttilt + dcoord_etilt[2];
       coord[1] = xp*cos_ttilt - yp*sin_ttilt + dcoord_etilt[1];
@@ -1226,15 +1226,15 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     }
   }
 
-  if (misalignmentMethod!=0) {
-    if (misalignmentMethod==1)
+  if (csbend->malignMethod!=0) {
+    if (csbend->malignMethod==1)
       offsetParticlesForEntranceCenteredMisalignmentExact
         (part, n_part, 
          csbend->dx, csbend->dy, csbend->dz, 
          csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 2);
     else 
-      offsetParticlesForBodyCenteredMisalignmentLinearized
-        (NULL, part, n_part, 
+      offsetParticlesForBodyCenteredMisalignmentExact
+        (part, n_part, 
          csbend->dx, csbend->dy, csbend->dz, 
          csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 2);
   }

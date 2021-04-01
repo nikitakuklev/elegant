@@ -783,7 +783,7 @@ long multipole_tracking2(
   KOCT *koct;
   static long sextWarning = 0, quadWarning = 0, octWarning = 0, quseWarning = 0;
   double lEffective = -1, lEnd = 0;
-  short doEndDrift = 0;
+  short doEndDrift = 0, malignMethod;
   
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL, *edgeMultData = NULL;
   long freeMultData=0;
@@ -814,8 +814,9 @@ long multipole_tracking2(
     bombTracking("null p_elem pointer (multipole_tracking2)");
 
   rad_coef = xkick = ykick = isr_coef = 0;
-
   pitch = yaw = tilt = 0;
+  dx = dy = dz = 0;
+  malignMethod = 0;
 
   switch (elem->type) {
   case T_KQUAD:
@@ -842,6 +843,7 @@ long multipole_tracking2(
     dx = kquad->dx;
     dy = kquad->dy;
     dz = kquad->dz;
+    malignMethod = kquad->malignMethod;
     xkick = kquad->xkick*kquad->xKickCalibration;
     ykick = kquad->ykick*kquad->yKickCalibration;
     integ_order = kquad->integration_order;
@@ -901,9 +903,12 @@ long multipole_tracking2(
       KnL[0] = ksext->k2*ksext->length*(1+ksext->fse);
     drift = ksext->length;
     tilt = ksext->tilt;
+    pitch = ksext->pitch;
+    yaw = ksext->yaw;
     dx = ksext->dx;
     dy = ksext->dy;
     dz = ksext->dz;
+    malignMethod = ksext->malignMethod;
     xkick = ksext->xkick*ksext->xKickCalibration;
     ykick = ksext->ykick*ksext->yKickCalibration;
     integ_order = ksext->integration_order;
@@ -972,9 +977,12 @@ long multipole_tracking2(
       KnL[0] = koct->k3*koct->length*(1+koct->fse);
     drift = koct->length;
     tilt = koct->tilt;
+    pitch = koct->pitch;
+    yaw = koct->yaw;
     dx = koct->dx;
     dy = koct->dy;
     dz = koct->dz;
+    malignMethod = koct->malignMethod;
     integ_order = koct->integration_order;
     if (koct->synch_rad)
       rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
@@ -1026,6 +1034,7 @@ long multipole_tracking2(
     dx = kquse->dx;
     dy = kquse->dy;
     dz = kquse->dz;
+    malignMethod = 0;
     integ_order = kquse->integration_order;
     if (kquse->synch_rad)
       rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
@@ -1085,15 +1094,15 @@ long multipole_tracking2(
 
   setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, z_start+drift/2);
   
-  if (misalignmentMethod!=0) {
+  if (malignMethod!=0) {
     if (dx || dy || dz || tilt || pitch || yaw) {
-      if (misalignmentMethod==1) {
+      if (malignMethod==1) {
         offsetParticlesForEntranceCenteredMisalignmentExact
           (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
       }
       else {
-        offsetParticlesForBodyCenteredMisalignmentLinearized
-          (NULL, particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
+        offsetParticlesForBodyCenteredMisalignmentExact
+          (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
       }
     }
   }
@@ -1168,15 +1177,15 @@ long multipole_tracking2(
     exactDrift(particle, n_part, lEnd);
   }
   
-  if (misalignmentMethod!=0) {
+  if (malignMethod!=0) {
     if (dx || dy || dz || tilt || pitch || yaw)  {
-      if (misalignmentMethod==1) {
+      if (malignMethod==1) {
         offsetParticlesForEntranceCenteredMisalignmentExact
           (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
       }
       else {
-        offsetParticlesForBodyCenteredMisalignmentLinearized
-          (NULL, particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
+        offsetParticlesForBodyCenteredMisalignmentExact
+          (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
       }
     }
   } else {

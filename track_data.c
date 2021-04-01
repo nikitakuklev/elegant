@@ -998,6 +998,8 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.k1), NULL, 0.0, 0, "geometric quadrupole strength error. See notes below!"},
     {"J1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.j1), NULL, 0.0, 0, "geometric skew quadrupole strength error. See notes below!"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"PITCH", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.pitch), NULL, 0.0, 0, "rotation about horizontal axis"},
+    {"YAW", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.yaw), NULL, 0.0, 0, "rotation about vertical axis"},
     {"BORE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.bore), NULL, 0.0, 0, "bore radius"},
     {"B", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.B), NULL, 0.0, 0, "field at pole tip (used if bore nonzero)"},
     {"N_KICKS", "", IS_LONG, PARAM_IS_DEPRECATED, (long)((char *)&ksext_example.n_kicks), NULL, 0.0, 0, "number of kicks (rounded up to next multipole of 4 if INTEGRATION_ORDER=4. Deprecated. Use N_SLICES.)"},
@@ -1029,6 +1031,7 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"ISR", "", IS_SHORT, 0, (long)((char *)&ksext_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&ksext_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"EXPAND_HAMILTONIAN", "", IS_SHORT, 0, (long)((char *)&ksext_example.expandHamiltonian), NULL, 0.0, 0, "If 1, Hamiltonian is expanded to leading order."},
+    {"MALIGN_METHOD", "", IS_SHORT, 0, (long)((char *)&ksext_example.malignMethod), NULL, 0.0, 0, "0=original, 1=new entrace-centered, 2=new body-centered"},
     };
 
 KOCT koct_example;
@@ -1037,6 +1040,8 @@ PARAMETER koct_param[N_KOCT_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&koct_example.length), NULL, 0.0, 0, "length"},
     {"K3", "1/M$a4$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.k3), NULL, 0.0, 0, "geometric strength"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"PITCH", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.pitch), NULL, 0.0, 0, "rotation about horizontal axis"},
+    {"YAW", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.yaw), NULL, 0.0, 0, "rotation about vertical axis"},
     {"BORE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.bore), NULL, 0.0, 0, "bore radius"},
     {"B", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.B), NULL, 0.0, 0, "field at pole tip (used if bore nonzero)"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.dx), NULL, 0.0, 0, "misalignment"},
@@ -1053,6 +1058,7 @@ PARAMETER koct_param[N_KOCT_PARAMS] = {
     {"ISR", "", IS_SHORT, 0, (long)((char *)&koct_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&koct_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"EXPAND_HAMILTONIAN", "", IS_SHORT, 0, (long)((char *)&koct_example.expandHamiltonian), NULL, 0.0, 0, "If 1, Hamiltonian is expanded to leading order."},
+    {"MALIGN_METHOD", "", IS_SHORT, 0, (long)((char *)&koct_example.malignMethod), NULL, 0.0, 0, "0=original, 1=new entrace-centered, 2=new body-centered"},
     };
 
 KSBEND ksbend_example;
@@ -1145,6 +1151,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"RADIAL", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.radial), NULL, 0.0, 0, "If non-zero, converts the quadrupole into a radially-focusing lens"},
     {"EXPAND_HAMILTONIAN", "", IS_SHORT, 0, (long)((char *)&kquad_example.expandHamiltonian), NULL, 0.0, 0, "If 1, Hamiltonian is expanded to leading order."},
     {"TRACKING_MATRIX", "", IS_SHORT, 0, (long)((char *)&kquad_example.trackingBasedMatrix), NULL, 0.0, 0, "If nonzero, gives order of tracking-based matrix up to third order to be used for twiss parameters etc.  If zero, 2nd-order analytical matrix is used."},
+    {"MALIGN_METHOD", "", IS_SHORT, 0, (long)((char *)&kquad_example.malignMethod), NULL, 0.0, 0, "0=original, 1=new entrace-centered, 2=new body-centered"},
     };
 
 MAGNIFY magnify_example;
@@ -1840,6 +1847,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"REFERENCE_CORRECTION", "", IS_SHORT, 0, (long)((char *)&csbend_example.referenceCorrection), NULL, 0.0, 0, "If nonzero, reference trajectory is subtracted from particle trajectories to compensate for inaccuracy in integration."},
     {"TRACKING_MATRIX", "", IS_SHORT, 0, (long)((char *)&csbend_example.trackingMatrix), NULL, 0.0, 0, "If nonzero, gives order of tracking-based matrix up to third order to be used for twiss parameters etc.  If zero, 2nd-order analytical matrix is used."},
     {"FSE_CORRECTION", "", IS_SHORT, 0, (long)((char *)&csbend_example.fseCorrection), NULL, 0.0, 0, "If nonzero, FSE is adjusted to compensate for edge effects when EDGE1_EFFECTS or EDGE2_EFFECTS = 2"},
+    {"MALIGN_METHOD", "", IS_SHORT, 0, (long)((char *)&csbend_example.malignMethod), NULL, 0.0, 0, "0=original, 1=new entrace-centered, 2=new body-centered"},
     };
 
 

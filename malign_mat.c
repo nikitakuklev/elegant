@@ -1189,3 +1189,434 @@ VMATRIX *transformMatrixBetweenMomentumAndSlopes(VMATRIX *VM)
     return VM;
   }
 }
+
+/* Algorithm due to M. Venturini, ALSU-AP-TN-2021-001. */
+/* This is a fairly literal translation of his Mathematica code, modified
+ * to perform the misalignment in the body-centered frame 
+ */
+void offsetParticlesForBodyCenteredMisalignmentExact
+(
+ double **coord, long np,
+ double dx0, double dy0, double dz0,
+ double ax0,  /* error pitch */
+ double ay0,  /* error yaw */
+ double az0,  /* error roll or tilt */
+ double tilt, /* design tilt */
+ double thetaBend,
+ double length,
+ short face /* 1 => entry, 2 => exit */
+ )
+{
+  double cx, cy, cz, sx, sy, sz;
+  static MATRIX *xAxis, *yAxis, *zAxis, *d0Vector, *OP, *OPp;
+  static MATRIX *XaxiSxyz, *YaxiSxyz, *ZaxiSxyz;
+  static MATRIX *RX, *R, *tmp, *LinMat;
+  static MATRIX *tA, *tE, *tD0;
+  static MATRIX *V1, *V2; /* working 3x1 matrix */
+  static MATRIX *M1, *M2; /* working 3x3 matrices */
+  static MATRIX *t0, *t1, *t2; /* working 6x1 matrices */
+  static MATRIX *R0, *RB, *RB2, *RBT, *RXT, *OOp, *OpPp, *OO0, *O0P0, *P0P, *MTilt;
+  static short initialized = 0;
+  double LD = 0;
+  long ip;
+  double sinThetaW, cosThetaW, tanThetaW;
+
+  static MATRIX *etaAxis, *etaPAxis, *etaPPAxis;
+  static MATRIX *csiAxis, *csiPAxis, *csiPPAxis;
+  static MATRIX *Xaxis, *Yaxis, *Zaxis;
+  static MATRIX *rA, *pA, *rD, *pD;
+  double tB1, tB2, tB3, tB4, tB5, tB6;
+  double tC1, tC2, tC3, tC4, tC5, tC6;
+  double tD1, tD2, tD3, tD4, tD5;
+  double factor1, factor2, pz, pzP, Rc;
+
+  if (!initialized) {
+    m_alloc(&tA, 6, 1);
+    m_alloc(&xAxis, 3, 1);
+    m_alloc(&yAxis, 3, 1);
+    m_alloc(&zAxis, 3, 1);
+    m_alloc(&d0Vector, 3, 1);
+    m_alloc(&OP, 3, 1);
+    m_alloc(&R, 3, 3);
+    m_alloc(&XaxiSxyz, 3, 1);
+    m_alloc(&YaxiSxyz, 3, 1);
+    m_alloc(&ZaxiSxyz, 3, 1);
+    m_alloc(&tmp, 3, 1);
+    m_alloc(&OPp, 3, 1);
+    m_alloc(&MTilt, 3, 3);
+    m_alloc(&R0, 3, 3);
+    m_alloc(&RX, 3, 3);
+    m_alloc(&RB, 3, 3);
+    m_alloc(&RB2, 3, 3);
+    m_alloc(&RBT, 3, 3);
+    m_alloc(&RXT, 3, 3);
+    m_alloc(&M1, 3, 3);
+    m_alloc(&M2, 3, 3);
+    m_alloc(&OOp, 3, 1);
+    m_alloc(&OpPp, 3, 1);
+    m_alloc(&OO0, 3, 1);
+    m_alloc(&O0P0, 3, 1);
+    m_alloc(&P0P, 3, 1);
+    m_alloc(&V1, 3, 1);
+    m_alloc(&V2, 3, 1);
+    m_alloc(&tD0, 6, 1);
+    m_alloc(&LinMat, 6, 6);
+    m_alloc(&tE, 6, 1);
+    m_alloc(&t0, 6, 1);
+    m_alloc(&t1, 6, 1);
+    m_alloc(&t2, 6, 1);
+    m_alloc(&etaAxis, 3, 1);
+    m_alloc(&etaPAxis, 3, 1);
+    m_alloc(&etaPPAxis, 3, 1);
+    m_alloc(&csiAxis, 3, 1);
+    m_alloc(&csiPAxis, 3, 1);
+    m_alloc(&csiPPAxis, 3, 1);
+    m_alloc(&Xaxis, 3, 1);
+    m_alloc(&Yaxis, 3, 1);
+    m_alloc(&Zaxis, 3, 1);
+    m_alloc(&rA, 3, 1);
+    m_alloc(&pA, 3, 1);
+    m_alloc(&rD, 3, 1);
+    m_alloc(&pD, 3, 1);
+    initialized = 1;
+  }
+
+  /* unit vectors of the xyz coordinate-system axes */
+  xAxis->a[0][0] = 1; xAxis->a[1][0] = 0; xAxis->a[2][0] = 0; 
+  yAxis->a[0][0] = 0; yAxis->a[1][0] = 1; yAxis->a[2][0] = 0; 
+  zAxis->a[0][0] = 0; zAxis->a[1][0] = 0; zAxis->a[2][0] = 1;
+
+  /* displacement-error vector in the xyz coordinate system */
+  d0Vector->a[0][0] = dx0; d0Vector->a[1][0] = dy0; d0Vector->a[2][0] = dz0;
+  if (!m_copy(OP, d0Vector))
+    bombElegant("m_copy(OP, d0Vector);", NULL);
+  if (fabs(thetaBend)>=SMALL_ANGLE)
+    Rc = length/thetaBend;
+  else
+    Rc = 0; /* not actually used */
+
+  /* rotational-error matrix in the x0y0z0 coordinate system */
+  cx = cos(ax0); cy = cos(ay0); cz = cos(az0+tilt);
+  sx = sin(ax0); sy = sin(ay0); sz = sin(az0+tilt);
+
+  R0->a[0][0] = cy*cz;
+  R0->a[0][1] = -cy*sz;
+  R0->a[0][2] = sy;
+  R0->a[1][0] = cz*sx*sy + cx*sz;
+  R0->a[1][1] = cx*cz - sx*sy*sz;
+  R0->a[1][2] = -cy*sx;
+  R0->a[2][0] = -cx*cz*sy + sx*sz;
+  R0->a[2][1] = cz*sx + cx*sy*sz;
+  R0->a[2][2] = cx*cy;
+
+  RB2->a[0][0] = cos(thetaBend/2);
+  RB2->a[0][1] = 0;
+  RB2->a[0][2] = -sin(thetaBend/2);
+  RB2->a[1][0] = 0;
+  RB2->a[1][1] = 1;
+  RB2->a[1][2] = 0;
+  RB2->a[2][0] = sin(thetaBend/2);
+  RB2->a[2][1] = 0;
+  RB2->a[2][2] = cos(thetaBend/2);
+
+  if (!m_trans(M2, RB2))
+    bombElegant("m_trans(M2, RB2);", NULL);
+  if (!m_mult(M1, R0, M2))
+    bombElegant("m_mult(M1, R0, M2);", NULL);
+  if (!m_mult(RX, RB2, M1))
+    bombElegant("m_mult(RX, RB2, M1);", NULL);
+
+  if (fabs(thetaBend)>=SMALL_ANGLE) {
+    if (!m_mult(V1, RB2, zAxis))
+      bombElegant("m_mult(V1, RB2, zAxis);", NULL);
+    if (!m_scmul(OO0, V1, Rc*sin(thetaBend/2)))
+      bombElegant("m_scmul(OO0, V1, Rc*sin(thetaBend/2));", NULL);
+    if (!m_mult(M1, RX, RB2))
+      bombElegant("m_mult(M1, RX, RB2);", NULL);
+    if (!m_mult(V1, M1, zAxis))
+      bombElegant("m_mult(V1, M1, zAxis);", NULL);
+    if (!m_scmul(P0P, V1, -Rc*sin(thetaBend/2)))
+      bombElegant("m_scmul(P0P, V1, -Rc*sin(thetaBend/2));", NULL);
+  } else {
+    if (!m_scmul(OO0, zAxis, length/2))
+      bombElegant("m_scmul(OO0, zAxis, length/2);", NULL);
+    if (!m_mult(V1, RX, zAxis))
+      bombElegant("m_mult(V1, RX, zAxis);", NULL);
+    if (!m_scmul(P0P, V1, -length/2))
+      bombElegant("m_scmul(P0P, V1, -length/2);", NULL);
+  }
+  if (!m_add(V1, OO0, P0P))
+    bombElegant("m_add(V1, OO0, P0P);", NULL);
+  if (!m_mult(V2, RB2, d0Vector))
+    bombElegant("m_mult(V2, RB2, d0Vector);", NULL);
+  if (!m_add(OP, V1, V2))
+    bombElegant("m_add(OP, V1, V2);", NULL);
+
+  if (thetaBend!=0 && tilt!=0) {
+    MTilt->a[0][0] = cos(tilt);
+    MTilt->a[0][1] = -sin(tilt);
+    MTilt->a[0][2] = 0;
+    MTilt->a[1][0] = sin(tilt);
+    MTilt->a[1][1] = cos(tilt);
+    MTilt->a[1][2] = 0;
+    MTilt->a[2][0] = 0;
+    MTilt->a[2][1] = 0;
+    MTilt->a[2][2] = 1;
+  }
+
+  if (face==1) {
+    if (!m_copy(R, RX))
+      bombElegant("m_copy(R, RX);", NULL);
+    if (!m_mult(XaxiSxyz, R, xAxis))
+      bombElegant("m_mult(XaxiSxyz, R, xAxis);", NULL);
+    if (!m_mult(YaxiSxyz, R, yAxis))
+      bombElegant("m_mult(YaxiSxyz, R, yAxis);", NULL);
+    if (!m_mult(ZaxiSxyz, R, zAxis))
+      bombElegant("m_mult(ZaxiSxyz, R, zAxis);", NULL);
+    LD = m_hproduct(ZaxiSxyz, OP);
+    if (!m_copy(tmp, OP))
+      bombElegant("m_copy(tmp, OP);", NULL);
+  } else if (face==2) {
+    RB->a[0][0] = cos(thetaBend);
+    RB->a[0][1] = 0;
+    RB->a[0][2] = -sin(thetaBend);
+    RB->a[1][0] = 0;
+    RB->a[1][1] = 1;
+    RB->a[1][2] = 0;
+    RB->a[2][0] = sin(thetaBend);
+    RB->a[2][1] = 0;
+    RB->a[2][2] = cos(thetaBend);
+
+    if (thetaBend!=0 && tilt!=0) {
+      if (!m_mult(M2, MTilt, RB))
+        bombElegant("m_mult(M2, M1, RB));", NULL);
+      if (!m_copy(RB, M2))
+        bombElegant("m_copy(RB, M2);", NULL);
+    }
+
+    /* rotational-error matrix in the x'y'z' coordinate system */
+    if (!m_trans(RBT, RB))
+      bombElegant("m_trans(RBT, RB);", NULL);
+    if (!m_trans(RXT, RX))
+      bombElegant("m_trans(RXT, RX);", NULL);
+    if (!m_mult(M1, RBT, RXT))
+      bombElegant("m_mult(M1, RBT, RXT);", NULL);
+    if (!m_mult(R, M1, RB))
+      bombElegant("m_mult(R, M1, RB);", NULL);
+    
+    /* XYZ-axes unit-vectors expressed in the x'y'z' coordinate system */
+    if (!m_mult(XaxiSxyz, RB, xAxis))
+      bombElegant("m_mult(XaxiSxyz, RB, xAxis);", NULL);
+    if (!m_mult(YaxiSxyz, RB, yAxis))
+      bombElegant("m_mult(YaxiSxyz, RB, yAxis);", NULL);
+    if (!m_mult(ZaxiSxyz, RB, zAxis))
+      bombElegant("m_mult(ZaxiSxyz, RB, zAxis);", NULL);
+
+    if (fabs(thetaBend)<SMALL_ANGLE) {
+      OPp->a[0][0] = 0;
+      OPp->a[1][0] = 0;
+      OPp->a[2][0] = length;
+    } else {
+      OPp->a[0][0] = length/thetaBend*(cos(thetaBend)-1);
+      OPp->a[1][0] = 0;
+      OPp->a[2][0] = length*sin(thetaBend)/thetaBend;
+    }
+    if (thetaBend!=0 && tilt!=0) {
+      if (!m_mult(V1, MTilt, OPp))
+        bombElegant("m_mult(V1, MTilt, OPp));", NULL);
+      m_copy(OPp, V1);
+    }
+    if (!m_mult(V1, RX, OPp))
+      bombElegant("m_mult(V1, RX, OPp);", NULL);
+    if (!m_add(OOp, V1, OP))
+      bombElegant("m_add(OOp, V1, OP);", NULL);
+    if (!m_subtract(OpPp, OPp, OOp))
+      bombElegant("m_subtract(OpPp, OPp, OOp);", NULL);
+    LD = m_hproduct(ZaxiSxyz, OpPp);
+    if (!m_copy(tmp, OpPp))
+      bombElegant("m_copy(tmp, OpPp);", NULL);
+  } else
+    bombElegantVA("Invalid face code %hd in call to offsetParticlesForMisalignment", face);
+
+  if (R->a[0][2]==0) {
+    /* R13 == 0 */
+    if (R->a[1][2]!=0) {
+      /* R23 !=0 */
+      if (!m_mult(ZaxiSxyz, R, zAxis)) 
+        bombElegant("m_mult(ZaxiSxyz, R, zAxis)", NULL);
+      if (!m_scmul(etaAxis, xAxis, -SIGN(R->a[1][2])))
+        bombElegant("m_scmul(etaAxis, xAxis, -SIGN(R->a[1][2]));", NULL);
+      if (!m_scmul(csiAxis, yAxis, SIGN(R->a[1][2])))
+        bombElegant("m_scmul(csiAxis, yAxis, SIGN(R->a[1][2]));", NULL);
+      if (!m_scmul(V1, zAxis, -SIGN(R->a[1][2])*R->a[1][2]))
+        bombElegant("m_scmul(V1, zAxis, -SIGN(R->a[1][2])*R->a[1][2)];", NULL);
+      if (!m_scmul(V2, yAxis, SIGN(R->a[1][2])*R->a[2][2]))
+        bombElegant("m_scmul(V2, yAxis, SIGN(R->a[1][2])*R->a[2][2)];", NULL);
+      if (!m_add(csiPAxis, V1, V2))
+        bombElegant("m_add(csiPAxis, V1, V)2;", NULL);
+      sinThetaW = -SIGN(R->a[1][2])*R->a[1][2];
+      cosThetaW = sqrt(1-sqr(sinThetaW));
+      tanThetaW = sinThetaW/cosThetaW;
+    } else {
+      sinThetaW = tanThetaW = 0;
+      cosThetaW = 1;
+      if (!m_copy(etaAxis, xAxis))
+        bombElegant("m_copy(etaAxis, xAxi)s;", NULL);
+      if (!m_copy(csiAxis, yAxis))
+        bombElegant("m_copy(csiAxis, yAxi)s;", NULL);
+      if (!m_copy(csiPAxis, yAxis))
+        bombElegant("m_copy(csiPAxis, yAxi)s;", NULL);
+    }
+  } else {
+    /* R13 !=0 */
+    sinThetaW = - SIGN(R->a[0][2])*sqrt(sqr(R->a[0][2]) + sqr(R->a[1][2]));
+    cosThetaW = sqrt(1-sqr(sinThetaW));
+    tanThetaW = sinThetaW/cosThetaW;
+    etaAxis->a[0][0] = R->a[1][2]/sinThetaW;
+    etaAxis->a[1][0] = -R->a[0][2]/sinThetaW;
+    etaAxis->a[2][0] = 0;
+    csiAxis->a[0][0] = -R->a[0][2]/sinThetaW;
+    csiAxis->a[1][0] = -R->a[1][2]/sinThetaW;
+    csiAxis->a[2][0] = 0;
+    csiPAxis->a[0][0] = -R->a[0][2]/tanThetaW;
+    csiPAxis->a[1][0] = -R->a[1][2]/tanThetaW;
+    csiPAxis->a[2][0] = sinThetaW;
+  }
+  if (!m_copy(etaPAxis, etaAxis))
+    bombElegant("m_copy(etaPAxis, etaAxis);", NULL);
+  if (!m_copy(etaPPAxis, etaAxis))
+    bombElegant("m_copy(etaPPAxis, etaAxis);", NULL);
+  if (!m_copy(csiPPAxis, csiPAxis)) 
+    bombElegant("m_copy(csiPPAxis, csiPAxis);", NULL);
+
+  if (!m_mult(Xaxis, R, xAxis))
+    bombElegant("m_mult(Xaxis, R, xAxis);", NULL);
+  if (!m_mult(Yaxis, R, yAxis))
+    bombElegant("m_mult(Yaxis, R, yAxis);", NULL);
+  if (!m_mult(Zaxis, R, zAxis))
+    bombElegant("m_mult(Zaxis, R, zAxis);", NULL);
+  
+  if (face==1) {
+    /* XYZ-axes unit-vectors expresed in the xyz coordinate system */
+    if (!m_copy(XaxiSxyz, Xaxis))
+      bombElegant("m_copy(XaxiSxyz, Xaxis);", NULL);
+    if (!m_copy(YaxiSxyz, Yaxis))
+      bombElegant("m_copy(YaxiSxyz, Yaxis);", NULL);
+    LD = m_hproduct(Zaxis, OP);
+    if (!m_copy(tmp, OP))
+      bombElegant("m_copy(tmp, OP);", NULL);
+  } else {
+    if (fabs(thetaBend)<SMALL_ANGLE) {
+      OPp->a[0][0] = 0;
+      OPp->a[1][0] = 0;
+      OPp->a[2][0] = length;
+    } else {
+      OPp->a[0][0] = length/thetaBend*(cos(thetaBend)-1);
+      OPp->a[1][0] = 0;
+      OPp->a[2][0] = length*sin(thetaBend)/thetaBend;
+    }
+    if (!m_mult(XaxiSxyz, RB, xAxis))
+      bombElegant("m_mult(XaxiSxyz, RB, xAxis);", NULL);
+    if (!m_mult(YaxiSxyz, RB, yAxis))
+      bombElegant("m_mult(YaxiSxyz, RB, yAxis);", NULL);
+    if (!m_mult(ZaxiSxyz, RB, zAxis))
+      bombElegant("m_mult(ZaxiSxyz, RB, zAxis);", NULL);
+    if (!m_mult(V1, RX, OPp))
+      bombElegant("m_mult(V1, Rx, OPp);", NULL);
+    if (!m_add(OOp, V1, OP))
+      bombElegant("m_add(OOp, V1, OP);", NULL);
+    if (!m_subtract(OpPp, OPp, OOp))
+      bombElegant("m_subtract(OpPp, OPp, OOp);", NULL);
+    LD = m_hproduct(ZaxiSxyz, OpPp);
+    if (!m_copy(tmp, OpPp))
+      bombElegant("m_copy(tmp, OpPp);", NULL);
+  }
+
+
+  if (coord && np!=0) {
+    double qx, qy;
+    for (ip=0; ip<np; ip++) {
+      /*
+      if (face==1) {
+        coord[ip][4] += dz*sqrt(1 + sqr(coord[ip][1]) + sqr(coord[ip][3]));
+        coord[ip][0] += -dx + dz*coord[ip][1];
+        coord[ip][2] += -dy + dz*coord[ip][3];
+      }
+      */
+
+      /* convert from (x, xp, y, yp, s, delta) to (x, qx, y, qy, s, delta) */
+      factor = (1+coord[ip][5])/sqrt(1+sqr(coord[ip][1])+sqr(coord[ip][3]));
+      qx = coord[ip][1]*factor;
+      qy = coord[ip][3]*factor;
+      
+      /* This step has different meaning for face=1 and face=2:
+         face==1 : change from xyz coordinates to csi-eta coordinates
+         face==2 : change from x'y'z' coordinates to csi-eta coordinates
+      */
+      
+      rA->a[0][0] = coord[ip][0];
+      rA->a[1][0] = coord[ip][2];
+      rA->a[2][0] = 0;
+
+      pA->a[0][0] = qx;
+      pA->a[1][0] = qy;
+      pA->a[2][0] = 0;
+      
+      tB1 = m_hproduct(csiAxis, rA);
+      tB2 = m_hproduct(csiAxis, pA);
+      tB3 = m_hproduct(etaAxis, rA);
+      tB4 = m_hproduct(etaAxis, pA);
+      tB5 = coord[ip][4];
+      tB6 = coord[ip][5];
+
+      /* wedge-drift propagation */
+      pz = sqrt(sqr(1+tB6) - sqr(tB2) - sqr(tB4));
+      factor1 = tB1/(1-tB2*tanThetaW/pz);
+      factor2 = factor1*tanThetaW/pz;
+      
+      tC1 = factor1/cosThetaW;
+      tC2 = tB2*cosThetaW + pz*sinThetaW;
+      tC3 = tB3 + tB4*factor2;
+      tC4 = tB4;
+      tC5 = tB5 + (1+tB6)*factor2;
+      tC6 = tB6;
+
+      /* conventional-drift propagation */
+      pzP = sqrt(sqr(1+tC6) - sqr(tC2) - sqr(tC4));
+      tD1 = tC1 + LD*tC2/pzP;
+      tD2 = tC2;
+      tD3 = tC3 + LD*tC4/pzP;
+      tD4 = tC4;
+      tD5 = tC5 + LD*(1+tC6)/pzP;
+
+      /* This step has different meaing for face=1 and face=2
+         face==1: change from csi''-eta'' to XYZ coordinates
+         face==2: change from csi''-eta'' to X'Y'Z' coordinates 
+      */
+      if (!m_scmul(V1, csiPPAxis, tD1))
+        bombElegant("m_scmul(V1, csiPPAxis, tD1);", NULL);
+      if (!m_scmul(V2, etaPPAxis, tD3))
+        bombElegant("m_scmul(V2, etaPPAxis, tD3);", NULL);
+      if (!m_add(rD, V1, V2))
+        bombElegant("m_add(rD, V1, V2);", NULL);
+      if (!m_scmul(V1, csiPPAxis, tD2))
+        bombElegant("m_scmul(V1, csiPPAxis, tD2);", NULL);
+      if (!m_scmul(V2, etaPPAxis, tD4))
+        bombElegant("m_scmul(V2, etaPPAxis, tD4);", NULL);
+      if (!m_add(pD, V1, V2))
+        bombElegant("m_add(pD, V1, V2);", NULL);
+
+      /* if face==2, X/Y axis are the X/Y-axis unit vectors in the x'y'z' coordinate system
+         while X/YaxiSxyz are in the xyz coordinate system
+      */
+      coord[ip][0] = m_hproduct(rD, Xaxis) - m_hproduct(tmp, XaxiSxyz);
+      coord[ip][2] = m_hproduct(rD, Yaxis) - m_hproduct(tmp, YaxiSxyz);
+      coord[ip][4] = tD5;
+      qx = m_hproduct(pD, Xaxis);
+      qy = m_hproduct(pD, Yaxis);
+      factor = 1/sqrt(sqr(1+coord[ip][5]) - sqr(qx) - sqr(qy));
+      coord[ip][1] = qx*factor;
+      coord[ip][3] = qy*factor;
+    }
+  }
+}
