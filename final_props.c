@@ -29,7 +29,7 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS (96+9+4+6+1+2+7)
+#define FINAL_PROPERTY_PARAMETERS (96+9+4+6+1+2+7+3+2*7)
 #define FINAL_PROPERTY_LONG_PARAMETERS 5
 #define FINAL_PROPERTY_OTHER_PARAMETERS 1
 #define F_SIGMA_OFFSET 0
@@ -44,9 +44,13 @@ static double tmp_safe_sqrt;
 #define F_EMIT_QUANS 5
 #define F_NEMIT_OFFSET F_EMIT_OFFSET+F_EMIT_QUANS
 #define F_NEMIT_QUANS 4
-#define F_MAXAMP_OFFSET F_NEMIT_OFFSET+F_NEMIT_QUANS
-#define F_MAXAMP_QUANS 4
-#define F_WIDTH_OFFSET F_MAXAMP_OFFSET+F_NEMIT_QUANS
+#define F_MINVALUE_OFFSET F_NEMIT_OFFSET+F_NEMIT_QUANS
+#define F_MINVALUE_QUANS 7
+#define F_MAXVALUE_OFFSET F_MINVALUE_OFFSET+F_MINVALUE_QUANS
+#define F_MAXVALUE_QUANS 7
+#define F_MAXABS_OFFSET F_MAXVALUE_OFFSET+F_MAXVALUE_QUANS
+#define F_MAXABS_QUANS 7
+#define F_WIDTH_OFFSET F_MAXABS_OFFSET+F_MAXABS_QUANS
 #define F_WIDTH_QUANS 16
 #define F_PERC_OFFSET F_WIDTH_OFFSET+F_WIDTH_QUANS
 #define F_PERC_QUANS 9
@@ -112,10 +116,27 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"eny", "&parameter name=eny, symbol=\"$ge$r$by,n$n\", type=double, units=m, description=\"normalized vertical emittance\" &end"},
     {"ecnx", "&parameter name=ecnx, symbol=\"$ge$r$bx,cn$n\", type=double, units=m, description=\"normalized horizontal emittance less dispersive contributions\" &end"},
     {"ecny", "&parameter name=ecny, symbol=\"$ge$r$by,cn$n\", type=double, units=m, description=\"normalized vertical emittance less dispersive contributions\" &end"},
+    {"min1", "&parameter name=min1, type=double, units=m, description=\"minimum value of x\" &end"},
+    {"min2", "&parameter name=min2, type=double,, description=\"minimum value of x'\" &end"},
+    {"min3", "&parameter name=min3, type=double, units=m, description=\"minimum value of y\" &end"},
+    {"min4", "&parameter name=min4, type=double, description=\"minimum value of y'\" &end"},
+    {"min5", "&parameter name=min5, type=double, units=m, description=\"minimum value of ds\" &end"},
+    {"min6", "&parameter name=min6, type=double, description=\"minimum value of delta\" &end"},
+    {"min7", "&parameter name=min7, type=double, units=s, description=\"minimum value of dt\" &end"},
+    {"max1", "&parameter name=max1, type=double, units=m, description=\"maximum value of x\" &end"},
+    {"max2", "&parameter name=max2, type=double,, description=\"maximum value of x'\" &end"},
+    {"max3", "&parameter name=max3, type=double, units=m, description=\"maximum value of y\" &end"},
+    {"max4", "&parameter name=max4, type=double, description=\"maximum value of y'\" &end"},
+    {"max5", "&parameter name=max5, type=double, units=m, description=\"maximum value of ds\" &end"},
+    {"max6", "&parameter name=max6, type=double, description=\"maximum value of delta\" &end"},
+    {"max7", "&parameter name=max7, type=double, units=s, description=\"maximum value of dt\" &end"},
     {"ma1", "&parameter name=ma1, type=double, units=m, description=\"maximum absolute value of x\" &end"},
-    {"ma2", "&parameter name=ma2, type=double,, description=\"maximum absolute value of x'\" &end"},
+    {"ma2", "&parameter name=ma2, type=double, description=\"maximum absolute value of x'\" &end"},
     {"ma3", "&parameter name=ma3, type=double, units=m, description=\"maximum absolute value of y\" &end"},
-    {"ma4", "&parameter name=ma4, type=double,, description=\"maximum absolute value of y'\" &end"},
+    {"ma4", "&parameter name=ma4, type=double, description=\"maximum absolute value of y'\" &end"},
+    {"ma5", "&parameter name=ma5, type=double, units=m, description=\"maximum absolute value of ds\" &end"},
+    {"ma6", "&parameter name=ma6, type=double, description=\"maximum absolute value of delta\" &end"},
+    {"ma7", "&parameter name=ma7, type=double, units=s, description=\"maximum absolute value of dt\" &end"},
     {"Wx", "&parameter name=Wx, type=double, units=m, symbol=\"W$bx$n\", description=\"68.26% width in x\" &end"},
     {"Wy", "&parameter name=Wy, type=double, units=m, symbol=\"W$by$n\", description=\"68.26% width in y\" &end"},
     {"Dt", "&parameter name=Dt, type=double, units=s, symbol=\"$gD$rt\", description=\"Total time-of-flight span\" &end"},
@@ -462,13 +483,18 @@ long compute_final_properties
     if (sums->beamSums2) {
       for (i=0; i<6; i++)
         data[i+F_SIGMA_OFFSET   ] = sqrt(sums->beamSums2->sigma[i][i]);
-      for (i=0; i<4; i++)
-        data[i+F_MAXAMP_OFFSET] = sums->beamSums2->maxabs[i];
+      for (i=0; i<7; i++) {
+        data[i+F_MINVALUE_OFFSET] = sums->beamSums2->min[i];
+        data[i+F_MAXVALUE_OFFSET] = sums->beamSums2->max[i];
+        data[i+F_MAXABS_OFFSET] = sums->beamSums2->maxabs[i];
+      }
     } else {
       for (i=0; i<6; i++)
         data[i+F_SIGMA_OFFSET   ] = -DBL_MAX;
-      for (i=0; i<4; i++)
-        data[i+F_MAXAMP_OFFSET] = -DBL_MAX;
+      for (i=0; i<7; i++) {
+        data[i+F_MAXABS_OFFSET] = data[i+F_MAXVALUE_OFFSET] = -DBL_MAX;
+	data[i+F_MINVALUE_OFFSET] = DBL_MAX;
+      }
     }
     offset = F_SIGMAT_OFFSET;
     /* index = 0; */
