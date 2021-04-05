@@ -1231,7 +1231,7 @@ VMATRIX *compute_matrix(
         if (quad->dx || quad->dy || quad->dz || quad->tilt || quad->pitch || quad->yaw) {
           misalign_matrix(elem->matrix, quad->dx, quad->dy, quad->dz, 
                           quad->pitch, quad->yaw, quad->tilt, 0.0, 0.0, quad->length, 
-                          misalignmentMethod, misalignmentMethod==1?0:1);
+                          quad->malignMethod, quad->malignMethod==1?0:1);
         }
         break;
       case T_SEXT:

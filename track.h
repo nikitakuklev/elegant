@@ -1004,7 +1004,7 @@ extern char *entity_text[N_TYPES];
 /* number of parameters for physical elements
  * a zero indicates an unsupported element
  */
-#define N_QUAD_PARAMS 32
+#define N_QUAD_PARAMS 33
 #define N_BEND_PARAMS 27
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 11
@@ -1242,7 +1242,7 @@ typedef struct {
     char *fringeType;
     double ffringe, lEffective;
     double fringeIntP[5], fringeIntM[5];
-    short radial;
+    short radial, malignMethod;
     } QUAD;
 
 /* names and storage structure for bending magnet physical parameters */
@@ -1637,7 +1637,7 @@ extern PARAMETER rftmez0_param[N_RFTMEZ0_PARAMS] ;
 typedef struct {
     double length, frequency, phase, Ez_peak, time_offset;
     long phase_reference;
-    double dx, dy, dzMA, eTilt, eYaw, ePitch;
+    double dx, dy, dzMA, eTilt, ePitch, eYaw;
     long n_steps;
     short radial_order, change_p0;
     char *inputFile, *zColumn, *EzColumn;
@@ -2361,7 +2361,7 @@ typedef struct {
     double h[2], hgap, fintBoth, fint[2];
     double dx, dy, dz, xKick, yKick;
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
-    double etilt, eyaw, epitch;   /* error tilt, yaw, pitch angle */
+    double etilt, epitch, eyaw;   /* error tilt, pitch, yaw angle */
     long nSlices;
     short etiltSign, nonlinear, synch_rad;
     short edge_effects[2], edge_order;

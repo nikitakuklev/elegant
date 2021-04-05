@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2021.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 2021.1\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,7 +35,7 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2021.0}
+\section{Highlights of What's New in Version 2021.1}
 
 Here is a summary of what's changed since release 2020.5.  Historical change logs are collected in Section
 \ref{sect:changeLog}.
@@ -43,7 +43,6 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
 \item The \verb|EDRIFT| element was being modeled as a regular \verb|DRIFT| element when the \verb|concat_order| parameter
   of \verb|run_setup| was set to a non-zero value. This was reported by M. Venturini (LBNL).
 \end{itemize}
@@ -67,6 +66,19 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
   \item \verb|KQUAD|, \verb|KSEXT|, \verb|KQUSE|: The \verb|N_KICKS| parameter was actually the number of total
     integrator substeps. E.g., for the fourth-order integrator, dividing \verb|N_KICKS| by 4 gave the number of slices.
   \end{itemize}
+\item \verb|CSBEND|, \verb|KQUAD|, \verb|KSEXT|,  and \verb|KOCT| have a parameter \verb|MALIGN_METHOD| that permits
+  invoking new misalignment methods based on work of M. Venturini \cite{Venturini2021}. Based on the value of this parameter, misalignment
+  calculations are changed as follows:
+  \begin{itemize}
+    \item \verb|MALIGN_METHOD=0|: use the existing method.
+      The new \verb|YAW| and \verb|PITCH| (or \verb|EYAW| and \verb|EPITCH| for \verb|CSBEND| elements)
+      parameters are ignored.
+    \item \verb|MALIGN_METHOD=1|: use M. Venturini's method, with misalignment parameters understood to be relative
+      to the magnet entrance. The new \verb|YAW| and \verb|PITCH| (or \verb|EYAW| and \verb|EPITCH| for \verb|CSBEND| elements)
+      parameters become active.
+    \item \verb|MALIGN_METHOD=2|: use M. Venturini's method, with misalignment parameters understood to be relative
+      to the magnet center. The new \verb|YAW| and \verb|PITCH| (or \verb|EYAW| and \verb|EPITCH| for \verb|CSBEND| elements)
+      parameters become active.
 \item The \verb|HMON|, \verb|VMON|, and \verb|MONI| elements can be used to store turn-by-turn BPM readings by setting
   the \verb|STORE_TURN_BY_TURN| parameter to 1. This can be used, for example, to create position-based triggers using
   \verb|modulate_elements|. 
@@ -10354,6 +10366,9 @@ Y.-P. Sun and C.-Y. Yao, ``Tracking With Space Harmonics in ELEGANT Code,'' Proc
 
 \bibitem{Mitchell-2007}
   C. E. Mitchell, ``Calculation of Realistic charged-particle transfer maps.'' Ph.D. thesis, University of Maryland, College Park, 2007. http://www.physics.umd.edu/dsat/
+
+\bibitem{Venturini2021}
+ M. Venturini, ``Particle dynamics and misaligned lattice elements,'' ALS Technical Note ALSU-AP-2021-001, Feb. 2021.
 
 \end{thebibliography}
 
