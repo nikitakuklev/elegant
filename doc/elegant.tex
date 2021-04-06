@@ -54,6 +54,10 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
   uncover the cause.
 \item The \verb|ramp_elements| and \verb|modulate_elements| commands now work correctly in conjunction
   with \verb|load_parameters| with \verb|change_defined_values=0|.
+\item The \verb|final| file, which is requested from \verb|run_setup|, now contains additional parameters giving
+  the minimum and maximum values of the particle coordinates at the end of the system; e.g., \verb|xpMaximum| gives
+  the maximum x coordinate. These quantities, like (almost) all quantities in the \verb|final| file, are available
+  for use in \verb|optimization_term| expressions.
 \end{itemize}
 
 \subsection{New and Modified Elements}
