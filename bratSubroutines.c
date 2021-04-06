@@ -1057,7 +1057,10 @@ long BRAT_lorentz_integration(
     accelCoord[2] = q[2];
     accelCoord[4] += s_start+ds;
   } else {
-    /* some accelerator coordinates are undefined */
+    /* some accelerator coordinates are unknown because a loss occurred inside
+     * the integration region and we haven't worked out how to compute the
+     * accelerator coordinates for those cases
+     */
     accelCoord[0] = accelCoord[1] = 999; /* my modest homage to fortran */
     accelCoord[4] += s_start;
   }
