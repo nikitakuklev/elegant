@@ -76,7 +76,10 @@ VMATRIX *bend_matrix(
     gamma = 0;
 
     if (hkick || vkick) {
-      /* split into 128 pieces with kicks in between */
+      /* Split into 128 pieces with kicks in between */
+      /* This approximates the effect of distributed steering kicks, but there are
+       * missing terms in the field expansion so it isn't really correct. 
+       */
       VMATRIX *Mc, *Mslice, *M1, *M2;
       M = tmalloc(sizeof(*M));
       initialize_matrices(M, order);
