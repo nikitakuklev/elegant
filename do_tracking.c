@@ -3552,7 +3552,6 @@ void scatter_ele(double **part, long np, double Po, SCATTER *scat, long iPass)
 {
   long i, ip;
   double t, P, beta;
-  double sigma[4];
 
   if (!np)
     return;
@@ -3560,29 +3559,59 @@ void scatter_ele(double **part, long np, double Po, SCATTER *scat, long iPass)
     return;
 
   log_entry("scatter");
-  sigma[0] = scat->x;
-  sigma[1] = scat->xp;
-  sigma[2] = scat->y;
-  sigma[3] = scat->yp;
-  for (ip=0; ip<np; ip++) {
-    if (scat->probability<1 && random_2(1)>scat->probability)
-      continue;
-    for (i=0; i<4; i++) {
-      if (!sigma[i])
+  if (strcasecmp(scat->distribution, "gaussian")==0) {
+    double sigma[4];
+    sigma[0] = scat->x;
+    sigma[1] = scat->xp;
+    sigma[2] = scat->y;
+    sigma[3] = scat->yp;
+    for (ip=0; ip<np; ip++) {
+      if (scat->probability<1 && random_2(1)>scat->probability)
         continue;
-      part[ip][i] += gauss_rn(0, random_2)*sigma[i];
+      for (i=0; i<4; i++) {
+        if (!sigma[i])
+          continue;
+        part[ip][i] += gauss_rn(0, random_2)*sigma[i];
+      }
+      if (scat->dp) {
+        P = (1+part[ip][5])*Po;
+        beta = P/sqrt(sqr(P)+1);
+        t = part[ip][4]/beta;
+        part[ip][5] += scat->dp*gauss_rn(0, random_2);
+        P = (1+part[ip][5])*Po;
+        beta = P/sqrt(sqr(P)+1);
+        part[ip][4] = t*beta;
+      }
     }
-    if (scat->dp) {
-      P = (1+part[ip][5])*Po;
-      beta = P/sqrt(sqr(P)+1);
-      t = part[ip][4]/beta;
-      part[ip][5] += scat->dp*gauss_rn(0, random_2);
-      P = (1+part[ip][5])*Po;
-      beta = P/sqrt(sqr(P)+1);
-      part[ip][4] = t*beta;
+  } else if (strcasecmp(scat->distribution, "uniform")==0) {
+    double u[4];
+    u[0] = scat->x;
+    u[1] = scat->xp;
+    u[2] = scat->y;
+    u[3] = scat->yp;
+    for (ip=0; ip<np; ip++) {
+      if (scat->probability<1 && random_2(1)>scat->probability)
+        continue;
+      for (i=0; i<4; i++) {
+        if (!u[i])
+          continue;
+        part[ip][i] += 2*u[i]*(random_2(1)-0.5);
+      }
+      if (scat->dp) {
+        P = (1+part[ip][5])*Po;
+        beta = P/sqrt(sqr(P)+1);
+        t = part[ip][4]/beta;
+        part[ip][5] += 2*scat->dp*(random_2(1)-0.5);
+        P = (1+part[ip][5])*Po;
+        beta = P/sqrt(sqr(P)+1);
+        part[ip][4] = t*beta;
+      }
     }
+  } else {
+    bombElegantVA("Invalid distribution value \"%s\" given for SCATTER element: use \"gaussian\" or \"uniform\"", 
+                  scat->distribution);
   }
-  
+
   log_exit("scatter");
 }
 

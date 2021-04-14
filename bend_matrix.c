@@ -38,7 +38,9 @@ VMATRIX *bend_matrix(
     long order,
     long edge_order,
     long flags,
-    long TRANSPORT             /* if nonzero, uses TRANSPORT equation for T436 of edge, which I think is incorrect... */
+    long TRANSPORT,            /* if nonzero, uses TRANSPORT equation for T436 of edge, which I think is incorrect... */
+    double hkick,              /* bend-plane steering kick */
+    double vkick               /* non-bend-plane steering kick */
     )
 {
     double n, beta, gamma;
@@ -55,7 +57,8 @@ VMATRIX *bend_matrix(
     if (angle<0) {
         /* Note that k2 gets a minus sign here because beta has a rho^3 in it. */
         M = bend_matrix(length, -angle, -ea1, -ea2, hPole1, hPole2, k1, -k2, tilt, 
-                        fint1, fint2, gap, fse, fseDipole, fseQuadrupole, etilt, order, edge_order, flags, TRANSPORT);
+                        fint1, fint2, gap, fse, fseDipole, fseQuadrupole, etilt, order, edge_order, flags, TRANSPORT,
+                        -hkick, -vkick);
         tilt_matrices(M, PI);
         log_exit("bend_matrix");
         return(M);
@@ -72,7 +75,34 @@ VMATRIX *bend_matrix(
     beta  = k2*(1+fse)/(1+fse+fseDipole)/2/pow3(h);
     gamma = 0;
 
-    M = sbend_matrix(length, h, ha, n*h, beta*sqr(h), gamma*pow3(h), order);
+    if (hkick || vkick) {
+      /* split into 128 pieces with kicks in between */
+      VMATRIX *Mc, *Mslice, *M1, *M2;
+      M = tmalloc(sizeof(*M));
+      initialize_matrices(M, order);
+      M1 = tmalloc(sizeof(*M1));
+      initialize_matrices(M1, order);
+      M2 = tmalloc(sizeof(*M2));
+      initialize_matrices(M2, order);
+
+      Mc = hvcorrector_matrix(0, hkick/129, vkick/129, 0, 0, 1, 1, 0, order);
+      Mslice = sbend_matrix(length/128, h, ha, n*h, beta*sqr(h), gamma*pow3(h), order);
+      concat_matrices(M1, Mslice, Mc, 0);    /* Mslice*Mc */
+      concat_matrices(M2, M1, M1, 0);        /* (MSlice*Mc)^2 */
+      concat_matrices(M1, M2, M2, 0);        /* (MSlice*Mc)^4 */
+      concat_matrices(M2, M1, M1, 0);        /* (MSlice*Mc)^8 */
+      concat_matrices(M1, M2, M2, 0);        /* (MSlice*Mc)^16 */
+      concat_matrices(M2, M1, M1, 0);        /* (MSlice*Mc)^32 */
+      concat_matrices(M1, M2, M2, 0);        /* (MSlice*Mc)^64 */
+      concat_matrices(M2, M1, M1, 0);        /* (MSlice*Mc)^128 */
+      concat_matrices(M, Mc, M2, 0);         /* Mc*[(MSlice*Mc)^128] */
+      free_matrices(Mc); free(Mc); 
+      free_matrices(M1); free(M1);
+      free_matrices(M2); free(M2);
+      free_matrices(Mslice); free(Mslice);
+    } else {
+      M = sbend_matrix(length, h, ha, n*h, beta*sqr(h), gamma*pow3(h), order);
+    }
 #ifdef DEBUG
     print_matrices(stdout, "pure bend matrix", M);
 #endif

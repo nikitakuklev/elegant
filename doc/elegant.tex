@@ -83,11 +83,16 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
     \item \verb|MALIGN_METHOD=2|: use M. Venturini's method, with misalignment parameters understood to be relative
       to the magnet center. The new \verb|YAW| and \verb|PITCH| (or \verb|EYAW| and \verb|EPITCH| for \verb|CSBEND| elements)
       parameters become active.
-\item The \verb|HMON|, \verb|VMON|, and \verb|MONI| elements can be used to store turn-by-turn BPM readings by setting
+    \end{itemize}
+  \item The \verb|HMON|, \verb|VMON|, and \verb|MONI| elements can be used to store turn-by-turn BPM readings by setting
   the \verb|STORE_TURN_BY_TURN| parameter to 1. This can be used, for example, to create position-based triggers using
   \verb|modulate_elements|. 
 \item The \verb|GKICKMAP| element was added, which provides a generalized kickmap that is not specific to
   undulators or wigglers (unlike \verb|UKICKMAP|).
+\item The \verb|SCATTER| element now supports uniform distributions in addition to the default gaussian distribution
+  using the new \verb|DISTRIBUTION| parameter.
+\item The \verb|CSBEND| matrix no longer requires use of the relatively slow tracking-based matrix option when
+  the steering parameters are used.
 \end{itemize}
 
 

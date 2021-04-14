@@ -1048,7 +1048,7 @@ extern char *entity_text[N_TYPES];
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
-#define N_SCATTER_PARAMS 8
+#define N_SCATTER_PARAMS 9
 #define N_NIBEND_PARAMS 24
 #define N_KPOLY_PARAMS 8
 #define N_RAMPRF_PARAMS 9
@@ -2192,10 +2192,11 @@ typedef struct {
 
 /* names and storage structure for scattering element physical parameters */
 typedef struct {
-    double x, xp, y, yp, dp, probability;
-    long startOnPass, endOnPass;
-    } SCATTER;
-
+  double x, xp, y, yp, dp, probability;
+  long startOnPass, endOnPass;
+  char *distribution;
+} SCATTER;
+  
 /* names and storage structure for distribution-based scattering element physical parameters */
 typedef struct {
   long *particleIDScattered, nParticles, group, nScattered, allScattered;
@@ -3635,7 +3636,8 @@ void adjust_arrival_time_data(double **coord, long np, double Po, long center_t,
 extern VMATRIX *bend_matrix(double length, double angle, double ea1, double ea2, double R1, double R2,
                             double k1, double k2, double tilt, double fint1, double fint2, double gap, 
                             double fse, double fseDipole, double fseQuadrupole, double etilt,
-                            long order, long edge_order, long flags, long TRANSPORT);
+                            long order, long edge_order, long flags, long TRANSPORT,
+                            double hkick, double vkick);
 extern VMATRIX *edge_matrix(double beta, double h, double Rpole, double n, long which_edge,
                             double gK, long order, long all_terms, long TRANSPORT, double length);
 extern VMATRIX *corrector_matrix(double length, double kick, double tilt, double b2, double calibration,

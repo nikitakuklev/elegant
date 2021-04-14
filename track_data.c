@@ -130,7 +130,7 @@ char *entity_text[N_TYPES] = {
     "An element that allows multiplication of phase-space coordinates of all particles by constants.",
     "An element that reduces the number of particles in the beam by interval-based or random sampling.",
     "A combined horizontal-vertical steering magnet implemented as a matrix, up to 2nd order. For time-dependent kickers, see BUMPER.",
-    "A scattering element to add gaussian random numbers to particle coordinates.",
+    "A scattering element to add random values to particle coordinates.",
     "A numerically-integrated dipole magnet with various extended-fringe-field models.",
     "A thin kick element with polynomial dependence on the coordinates in one plane.",
     "A numerically-integrated dipole magnet with a Cartesian gradient.",
@@ -1193,14 +1193,15 @@ PARAMETER hvcor_param[N_HVCOR_PARAMS] = {
 SCATTER scatter_example;
 /* scatter physical parameters */
 PARAMETER scatter_param[N_SCATTER_PARAMS] = {
-    {"X", "M", IS_DOUBLE, 0, (long)((char*)&scatter_example.x), NULL, 0.0, 0, "rms scattering level for x"},
-    {"XP", "", IS_DOUBLE, 0, (long)((char*)&scatter_example.xp), NULL, 0.0, 0, "rms scattering level for x'"},
-    {"Y", "M", IS_DOUBLE, 0, (long)((char*)&scatter_example.y), NULL, 0.0, 0, "rms scattering level for y"},
-    {"YP", "", IS_DOUBLE, 0, (long)((char*)&scatter_example.yp), NULL, 0.0, 0, "rms scattering level for y'"},
-    {"DP", "", IS_DOUBLE, 0, (long)((char*)&scatter_example.dp), NULL, 0.0, 0, "rms scattering level for (p-pCentral)/pCentral"},
+    {"X", "M", IS_DOUBLE, 0, (long)((char*)&scatter_example.x), NULL, 0.0, 0, "scattering amplitude for x"},
+    {"XP", "", IS_DOUBLE, 0, (long)((char*)&scatter_example.xp), NULL, 0.0, 0, "scattering amplitude for x'"},
+    {"Y", "M", IS_DOUBLE, 0, (long)((char*)&scatter_example.y), NULL, 0.0, 0, "scattering amplitude for y"},
+    {"YP", "", IS_DOUBLE, 0, (long)((char*)&scatter_example.yp), NULL, 0.0, 0, "scattering amplitude for y'"},
+    {"DP", "", IS_DOUBLE, 0, (long)((char*)&scatter_example.dp), NULL, 0.0, 0, "scattering amplitude for (p-pCentral)/pCentral"},
     {"PROBABILITY", "", IS_DOUBLE, 0, (long)((char*)&scatter_example.probability), NULL, 1.0, 0, "Probability that any particle will be selected for scattering."},
     {"STARTONPASS", "", IS_LONG, 0, (long)((char*)&scatter_example.startOnPass), NULL, 0.0, 0, "Pass number to start on."},
     {"ENDONPASS", "", IS_LONG, 0, (long)((char*)&scatter_example.endOnPass), NULL, 0.0, -1, "Pass number to end on (inclusive).  Ignored if negative."},
+    {"DISTRIBUTION", "", IS_STRING, 0, (long)((char *)&scatter_example.distribution), "gaussian", 0.0, 0, "may be \"gaussian\" or \"uniform\""},
     } ;
 
 DSCATTER dscatter_example;
