@@ -5,6 +5,8 @@ response matrices, this element is treated like a standard thick-lens
 quadrupole; i.e., the number of kicks and the integration order become
 irrelevant.
 
+{\bf Multipole errors}
+
 \begin{raggedright}
 Specification of systematic and random multipole errors is supported
 through the \verb|SYSTEMATIC_MULTIPOLES|, \verb|EDGE_MULTIPOLES|, and 
@@ -59,8 +61,12 @@ such sextupole contributions in the computation of the chromaticity
 via the {\tt twiss\_output} command.  However, these chromatic effects
 will be seen in tracking.
 
+{\bf Apertures}
+
 Apertures specified via an upstream \verb|MAXAMP| element or an \verb|aperture_input|
 command will be imposed inside this element.
+
+{\bf Length specificiation}
 
 As of version 29.2, this element incorporates the ability to have different values for the insertion
 and effective lengths. This is invoked when \verb|LEFFECTIVE| is positive. In this case, the
@@ -68,6 +74,8 @@ and effective lengths. This is invoked when \verb|LEFFECTIVE| is positive. In th
 a convenient way to incorporate the fact that the effective length may differ from the physical
 length and even vary with excitation, without having to modify the drift spaces on either side of
 the quadrupole element.
+
+{\bf Fringe effects}
 
 Fringe field effects  are based on publications of D.  Zhuo {\em et al.} \cite{Zhou-IPAC10} and  J. Irwin {\em et
   al.} \cite{Irwin-PAC95}, as well as unpublished work of C. X. Wang (ANL).  The fringe field is characterized by 
@@ -97,4 +105,21 @@ data giving the gradient vs s.
 The \verb|EDGE1_EFFECTS| and \verb|EDGE2_EFFECTS| parameters can be used to turn fringe field effects on and off, but also
 to control the order of the implementation.  If the value is 1, linear fringe effects are included.  If the value is 2, 
 leading-order (cubic) nonlinear effects are included.  If the value is 3 or higher, higher order effects are included.
+
+{\bf Misalignments}
+
+There are three modes for implementing alignment errors. Which is used
+is controlled by the value of the \verb|MALIGN_METHOD| parameter:
+\begin{itemize}
+\item \verb|MALIGN_METHOD=0| --- This selects the original method, which was
+  the only one available before version 2021.1. The misalignment is
+  referenced to the entrance face. The \verb|EYAW| and \verb|EPITCH| parameters
+  are ignored.
+\item \verb|MALIGN_METHOD=1| --- This selects a method based on M. Venturini's
+  work \cite{Venturini2021}, with misalignment referenced to the entrance face.
+  The \verb|EYAW| and \verb|EPITCH| parameters are implemented.
+\item \verb|MALIGN_METHOD=2| --- This selects a method based on M. Venturini's
+  work \cite{Venturini2021}, with misalignment referenced to the magnet center.
+  The \verb|EYAW| and \verb|EPITCH| parameters are implemented.
+\end{itemize}
 

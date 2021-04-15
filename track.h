@@ -1055,7 +1055,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 81
+#define N_CSBEND_PARAMS 83
 #define N_MATTER_PARAMS 21
 #define N_RFMODE_PARAMS 57
 #define N_TRFMODE_PARAMS 25
@@ -2378,6 +2378,7 @@ typedef struct {
     char *photonOutputFile;
     double photonLowEnergyCutoff;
     short referenceCorrection, trackingMatrix, fseCorrection, malignMethod;
+    short xSteering, ySteering;
     /* for internal use only: */
     unsigned short edgeFlags;
     double b[9], c[9], fseCorrectionValue, fseCorrectionPathError;

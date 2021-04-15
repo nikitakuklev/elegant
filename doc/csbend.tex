@@ -119,6 +119,21 @@ thing is to assign errors to \verb|FSE| and \verb|ETILT|.  Note that when
 adding errors to \verb|FSE|, the error is assumed to come from the power
 supply, which means that multipole strengths also change.
 
+There are three modes for implementing alignment errors. Which is used
+is controlled by the value of the \verb|MALIGN_METHOD| parameter:
+\begin{itemize}
+\item \verb|MALIGN_METHOD=0| --- This selects the original method, which was
+  the only one available before version 2021.1. The misalignment is
+  referenced to the entrance face. The \verb|EYAW| and \verb|EPITCH| parameters
+  are ignored.
+\item \verb|MALIGN_METHOD=1| --- This selects a method based on M. Venturini's
+  work \cite{Venturini2021}, with misalignment referenced to the entrance face.
+  The \verb|EYAW| and \verb|EPITCH| parameters are implemented.
+\item \verb|MALIGN_METHOD=2| --- This selects a method based on M. Venturini's
+  work \cite{Venturini2021}, with misalignment referenced to the magnet center.
+  The \verb|EYAW| and \verb|EPITCH| parameters are implemented.
+\end{itemize}
+
 {\bf Splitting dipoles}
 
 When dipoles are long, it is

@@ -91,7 +91,7 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
                              double s_start, double s_end, 
                              LINE_LIST *beamline, RUN *run, long forceQuads, long verbose);
 long add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *item, double tweek, double limit,
-                             LINE_LIST *beamline, RUN *run, long forceQuads);
+                             LINE_LIST *beamline, RUN *run, long forceQuadsBends);
 double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, double corr_tweek, char *name, char *item, RUN *run);
 double noise_value(double xamplitude, double xcutoff, long xerror_type);
 void do_response_matrix_output(char *filename, char *type, RUN *run, char *beamline_name, CORMON_DATA *CM, 
@@ -308,6 +308,12 @@ void correction_setup(
                                          _correct->CMFx->corr_limit, beamline, run, 0);
         found += add_steer_type_to_lists(&_correct->SLx, 0, T_KQUAD, item, _correct->CMFx->default_tweek, 
                                          _correct->CMFx->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_KSEXT, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
+
+        cp_str(&item, "XKICK");
+        found += add_steer_type_to_lists(&_correct->SLx, 0, T_CSBEND, item, _correct->CMFx->default_tweek, 
+                                         _correct->CMFx->corr_limit, beamline, run, 0);
         if (!found)
           bombElegant("no horizontal steering elements found", NULL);
         if (verbose)
@@ -329,6 +335,12 @@ void correction_setup(
         found += add_steer_type_to_lists(&_correct->SLy, 2, T_QUAD, item, _correct->CMFy->default_tweek, 
                                          _correct->CMFy->corr_limit, beamline, run, 0);
         found += add_steer_type_to_lists(&_correct->SLy, 2, T_KQUAD, item, _correct->CMFy->default_tweek, 
+                                         _correct->CMFy->corr_limit, beamline, run, 0);
+        found += add_steer_type_to_lists(&_correct->SLy, 2, T_KSEXT, item, _correct->CMFy->default_tweek, 
+                                         _correct->CMFy->corr_limit, beamline, run, 0);
+
+        cp_str(&item, "YKICK");
+        found += add_steer_type_to_lists(&_correct->SLy, 2, T_CSBEND, item, _correct->CMFy->default_tweek, 
                                          _correct->CMFy->corr_limit, beamline, run, 0);
         if (!found)
           bombElegant("no vertical steering elements found", NULL);
@@ -590,7 +602,7 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
                              char *element_type, double tweek, double limit, 
                              long start_occurence, long end_occurence, long occurence_step, 
                              double s_start, double s_end, 
-                             LINE_LIST *beamline, RUN *run, long forceQuads, long verbose)
+                             LINE_LIST *beamline, RUN *run, long forceQuadsBends, long verbose)
 {
   ELEMENT_LIST *context;
   long param_number, i, found, n_corr_types_start, notNeeded;
@@ -679,21 +691,21 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
     case T_QUAD:
       if (plane==0) {
         if (!((QUAD*)(context->p_elem))->xSteering)
-          ((QUAD*)(context->p_elem))->xSteering = forceQuads;
+          ((QUAD*)(context->p_elem))->xSteering = forceQuadsBends;
         notNeeded = !((QUAD*)(context->p_elem))->xSteering;
       } else if (plane==2) {
         if (!((QUAD*)(context->p_elem))->ySteering)
-          ((QUAD*)(context->p_elem))->ySteering = forceQuads;
+          ((QUAD*)(context->p_elem))->ySteering = forceQuadsBends;
         notNeeded = !((QUAD*)(context->p_elem))->ySteering;
       } else {
         if (strcmp(item, "HKICK")==0 || strcmp(item, "DX")==0) {
           if (!((QUAD*)(context->p_elem))->xSteering)
-            ((QUAD*)(context->p_elem))->xSteering = forceQuads;
+            ((QUAD*)(context->p_elem))->xSteering = forceQuadsBends;
           notNeeded = !((QUAD*)(context->p_elem))->xSteering;
         }
         if (strcmp(item, "VKICK")==0 || strcmp(item, "DY")==0) {
           if (!((QUAD*)(context->p_elem))->ySteering)
-            ((QUAD*)(context->p_elem))->ySteering = forceQuads;
+            ((QUAD*)(context->p_elem))->ySteering = forceQuadsBends;
           notNeeded = !((QUAD*)(context->p_elem))->ySteering;
         }
       }
@@ -701,22 +713,44 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
     case T_KQUAD:
       if (plane==0) {
         if (!((KQUAD*)(context->p_elem))->xSteering)
-          ((KQUAD*)(context->p_elem))->xSteering = forceQuads;
+          ((KQUAD*)(context->p_elem))->xSteering = forceQuadsBends;
         notNeeded = !((KQUAD*)(context->p_elem))->xSteering;
       } else if (plane==2) {
         if (!((KQUAD*)(context->p_elem))->ySteering)
-          ((KQUAD*)(context->p_elem))->ySteering = forceQuads;
+          ((KQUAD*)(context->p_elem))->ySteering = forceQuadsBends;
         notNeeded = !((KQUAD*)(context->p_elem))->ySteering;
       } else {
         if (strcmp(item, "HKICK")==0 || strcmp(item, "DX")==0) {
           if (!((KQUAD*)(context->p_elem))->xSteering)
-            ((KQUAD*)(context->p_elem))->xSteering = forceQuads;
+            ((KQUAD*)(context->p_elem))->xSteering = forceQuadsBends;
           notNeeded = !((KQUAD*)(context->p_elem))->xSteering;
         }
         if (strcmp(item, "VKICK")==0 || strcmp(item, "DY")==0) {
           if (!((KQUAD*)(context->p_elem))->ySteering)
-            ((KQUAD*)(context->p_elem))->ySteering = forceQuads;
+            ((KQUAD*)(context->p_elem))->ySteering = forceQuadsBends;
           notNeeded = !((KQUAD*)(context->p_elem))->ySteering;
+        }
+      }
+      break;
+    case T_CSBEND:
+      if (plane==0) {
+        if (!((CSBEND*)(context->p_elem))->xSteering)
+          ((CSBEND*)(context->p_elem))->xSteering = forceQuadsBends;
+        notNeeded = !((CSBEND*)(context->p_elem))->xSteering;
+      } else if (plane==2) {
+        if (!((CSBEND*)(context->p_elem))->ySteering)
+          ((CSBEND*)(context->p_elem))->ySteering = forceQuadsBends;
+        notNeeded = !((CSBEND*)(context->p_elem))->ySteering;
+      } else {
+        if (strcmp(item, "XKICK")==0) {
+          if (!((CSBEND*)(context->p_elem))->xSteering)
+            ((CSBEND*)(context->p_elem))->xSteering = forceQuadsBends;
+          notNeeded = !((CSBEND*)(context->p_elem))->xSteering;
+        }
+        if (strcmp(item, "YKICK")==0) {
+          if (!((CSBEND*)(context->p_elem))->ySteering)
+            ((CSBEND*)(context->p_elem))->ySteering = forceQuadsBends;
+          notNeeded = !((CSBEND*)(context->p_elem))->ySteering;
         }
       }
       break;
@@ -3242,6 +3276,16 @@ long steering_corrector(ELEMENT_LIST *eptr, long plane)
     if (plane==0)
       return ((KQUAD*)(eptr->p_elem))->xSteering;
     return ((KQUAD*)(eptr->p_elem))->ySteering;
+  case T_KSEXT:
+    if (plane==0)
+      return ((KSEXT*)(eptr->p_elem))->xSteering;
+    return ((KSEXT*)(eptr->p_elem))->ySteering;
+    break;
+  case T_CSBEND:
+    if (plane==0)
+      return ((CSBEND*)(eptr->p_elem))->xSteering;
+    return ((CSBEND*)(eptr->p_elem))->ySteering;
+    break;
   default:
     return 1;
   }

@@ -92,7 +92,9 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
 \item The \verb|SCATTER| element now supports uniform distributions in addition to the default gaussian distribution
   using the new \verb|DISTRIBUTION| parameter.
 \item The \verb|CSBEND| matrix no longer requires use of the relatively slow tracking-based matrix option when
-  the steering parameters are used.
+  the steering parameters are used. The element also supports the \verb|XSTEERING| and \verb|YSTEERING| parameters
+  to allow individual control of whether the element is used for steering.
+\item The individual-element steering parameters for \verb|KSEXT| elements are no longer ignored.
 \end{itemize}
 
 

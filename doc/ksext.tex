@@ -5,6 +5,8 @@ chromaticities, and response matrices, this element is treated like a
 standard thick-lens sextuupole; i.e., the number of kicks and the
 integration order become irrelevant.
 
+{\bf Multipole errors}
+
 \begin{raggedright}
 Specification of systematic and random multipole errors is supported
 through the \verb|SYSTEMATIC_MULTIPOLES|, \verb|EDGE_MULTIPOLES|, and 
@@ -60,5 +62,25 @@ However, the matrix analysis (e.g., for determination of tunes and beta function
 these are weak effects and high accuracy should not be expected if this is not true.
 If \verb|K1| is significant, then use of the \verb|KQUSE| element is preferred.
 
+{\bf Apertures}
+
 Apertures specified via an upstream \verb|MAXAMP| element or an \verb|aperture_input|
 command will be imposed inside this element.
+
+{\bf Misalignments}
+
+There are three modes for implementing alignment errors. Which is used
+is controlled by the value of the \verb|MALIGN_METHOD| parameter:
+\begin{itemize}
+\item \verb|MALIGN_METHOD=0| --- This selects the original method, which was
+  the only one available before version 2021.1. The misalignment is
+  referenced to the entrance face. The \verb|EYAW| and \verb|EPITCH| parameters
+  are ignored.
+\item \verb|MALIGN_METHOD=1| --- This selects a method based on M. Venturini's
+  work \cite{Venturini2021}, with misalignment referenced to the entrance face.
+  The \verb|EYAW| and \verb|EPITCH| parameters are implemented.
+\item \verb|MALIGN_METHOD=2| --- This selects a method based on M. Venturini's
+  work \cite{Venturini2021}, with misalignment referenced to the magnet center.
+  The \verb|EYAW| and \verb|EPITCH| parameters are implemented.
+\end{itemize}
+

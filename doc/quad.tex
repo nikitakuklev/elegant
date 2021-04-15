@@ -1,6 +1,7 @@
 This element simulates a quadrupole using a matrix of first, second,
 or third order.
 
+\paragraph{Length specification}
 As of version 29.2, this element incorporates the ability to have different values for the insertion
 and effective lengths. This is invoked when \verb|LEFFECTIVE| is positive. In this case, the
 \verb|L| parameter is understood to be the physical insertion length. Using \verb|LEFFECTIVE| is
@@ -8,6 +9,7 @@ a convenient way to incorporate the fact that the effective length may differ fr
 length and even vary with excitation, without having to modify the drift spaces on either side of
 the quadrupole element.
 
+\paragraph{Fringe effects}
 By default, the element has hard edges and constant field within the
 defined length, {\tt L}.  However, this element supports two different methods of implementing fringe fields.
 Which method is used is determined by the \verb|FRINGE_TYPE| parameter.
@@ -64,4 +66,22 @@ the fringe gradient reaches 50\% of the hard core value at the nominal boundarie
 of the magnet. This means that the integrated strength of the magnet does not
 change as the {\tt FFRINGE} parameter is varied. This is not the case with
 ``inset'' type fringe fields.
+
+
+{\bf Misalignments}
+
+There are three modes for implementing alignment errors. Which is used
+is controlled by the value of the \verb|MALIGN_METHOD| parameter:
+\begin{itemize}
+\item \verb|MALIGN_METHOD=0| --- This selects the original method, which was
+  the only one available before version 2021.1. The misalignment is
+  referenced to the entrance face. The \verb|EYAW| and \verb|EPITCH| parameters
+  are ignored.
+\item \verb|MALIGN_METHOD=1| --- This selects a method based on M. Venturini's
+  work \cite{Venturini2021}, with misalignment referenced to the entrance face.
+  The \verb|EYAW| and \verb|EPITCH| parameters are implemented.
+\item \verb|MALIGN_METHOD=2| --- This selects a method based on M. Venturini's
+  work \cite{Venturini2021}, with misalignment referenced to the magnet center.
+  The \verb|EYAW| and \verb|EPITCH| parameters are implemented.
+\end{itemize}
 

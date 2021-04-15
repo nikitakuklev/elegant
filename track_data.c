@@ -1790,8 +1790,8 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"XKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&csbend_example.xKick), NULL, 0.0, 0, "horizontal steering angle (approximate)"},
-    {"YKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&csbend_example.yKick), NULL, 0.0, 0, "vertical steering angle (approximate)"},
+    {"XKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&csbend_example.xKick), NULL, 0.0, 0, "bend-plane steering angle (approximate)"},
+    {"YKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&csbend_example.yKick), NULL, 0.0, 0, "non-bend-plane steering angle (approximate)"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.fse), NULL, 0.0, 0, "fractional strength error of all components"},
     {"FSE_DIPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.fseDipole), NULL, 0.0, 0, "fractional strength error of dipole component"},
     {"FSE_QUADRUPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.fseQuadrupole), NULL, 0.0, 0, "fractional strength error of quadrupole component"},
@@ -1849,6 +1849,8 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"TRACKING_MATRIX", "", IS_SHORT, 0, (long)((char *)&csbend_example.trackingMatrix), NULL, 0.0, 0, "If nonzero, gives order of tracking-based matrix up to third order to be used for twiss parameters etc.  If zero, 2nd-order analytical matrix is used."},
     {"FSE_CORRECTION", "", IS_SHORT, 0, (long)((char *)&csbend_example.fseCorrection), NULL, 0.0, 0, "If nonzero, FSE is adjusted to compensate for edge effects when EDGE1_EFFECTS or EDGE2_EFFECTS = 2"},
     {"MALIGN_METHOD", "", IS_SHORT, 0, (long)((char *)&csbend_example.malignMethod), NULL, 0.0, 0, "0=original, 1=new entrace-centered, 2=new body-centered"},
+    {"XSTEERING", "", IS_SHORT, 0, (long)((char *)&csbend_example.xSteering), NULL, 0.0, 0, "use for x steering (bend plane)?"},
+    {"YSTEERING", "", IS_SHORT, 0, (long)((char *)&csbend_example.ySteering), NULL, 0.0, 0, "use for y steering (non-bend plane)?"},
     };
 
 
