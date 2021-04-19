@@ -1396,7 +1396,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   }
 #endif
 
-  if (CM->nmon<CM->ncor) {
+  if (CM->nmon<CM->ncor && CM->minimum_SV_ratio==0 && CM->keep_largest_SVs==0 && CM->remove_smallest_SVs==0) {
     if (coord==0)
       printWarning("Trajectory correction may be unstable (consider use of SV controls).", "More correctors than monitors for x plane.");
     else
@@ -1636,7 +1636,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
   }
 
-  if (CM->nmon<CM->ncor) {
+  if (CM->nmon<CM->ncor && CM->minimum_SV_ratio==0 && CM->keep_largest_SVs==0 && CM->remove_smallest_SVs==0) {
     if (coord==0)
       printWarning("More correctors than monitors for x plane.", "Correction may be unstable (consider use of SV controls).");
     else
@@ -2476,7 +2476,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   fputc('\n', stdout);
 #endif
 
-  if (CM->nmon<CM->ncor) {
+  if (CM->nmon<CM->ncor && CM->minimum_SV_ratio==0 && CM->keep_largest_SVs==0 && CM->remove_smallest_SVs==0) {
     if (coord==0)
       printWarning("Orbit correction may be unstable (consider use of SV controls).", "More correctors than monitors for x plane.");
     else
@@ -2854,7 +2854,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
       clorb[0].centroid[i] = 0;
   }
 
-  if (CM->nmon<CM->ncor) {
+  if (CM->nmon<CM->ncor && CM->minimum_SV_ratio==0 && CM->keep_largest_SVs==0 && CM->remove_smallest_SVs==0) {
     if (coord==0)
       printWarning("Orbit correction may be unstable (consider use of SV controls).", "More correctors than monitors for x plane.");
     else
@@ -3700,7 +3700,7 @@ void compute_coupled_trajcor_matrices
   }
 #endif
 
-  if (CM->nmon<CM->ncor)
+  if (CM->nmon<CM->ncor && CM->minimum_SV_ratio==0 && CM->keep_largest_SVs==0 && CM->remove_smallest_SVs==0)
     printWarning("Coupled trajectory correction may be unstable (consider use of SV controls).",
                   "More correctors than monitors.");
   if (CM->ncor==0) {
@@ -3897,7 +3897,7 @@ long global_coupled_trajcor
     fflush(stdout);
   }
 
-  if (CM->nmon<CM->ncor) {
+  if (CM->nmon<CM->ncor && CM->minimum_SV_ratio==0 && CM->keep_largest_SVs==0 && CM->remove_smallest_SVs==0) {
     printWarning("Coupled trajectory correction may be unstable (consider use of SV controls).",
                   "More correctors than monitors.");
   }
