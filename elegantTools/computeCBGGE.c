@@ -80,7 +80,7 @@ char *option[N_OPTIONS] = {
               -normal=<output> [-skew=<output>]\n\
               [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]\n\
               [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]\n\
-              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,verbose][,log=<filename>]]\n\
+              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,increaseOnly][,verbose][,log=<filename>]]\n\
 -input       Single-page file giving (z, phi, Brho) on circular cylinder of radius rho.\n\
 -normal      Output file for normal-component generalized gradients.\n\
 -skew        Output file for skew-component generalized gradients.\n\
@@ -127,6 +127,7 @@ int main(int argc, char **argv)
   char *autoTuneLogFile = NULL;
   long iAutoTuneLog=0;
   ALL_RESIDUALS allResiduals;
+  long minMultipoles;
 
   /* Using this routine can prevent exceptions when large harmonics are used, but the data thus
      obtained is suspect.
@@ -222,6 +223,7 @@ int main(int argc, char **argv)
         if (scanned[i_arg].n_items>0 &&
             (!scanItemList(&autoTuneFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
                            "verbose", -1, NULL, 0, AUTOTUNE_VERBOSE, 
+                           "increaseonly", -1, NULL, 0, AUTOTUNE_INCRONLY,
                            "evaluate", -1, NULL, 0, AUTOTUNE_EVALONLY,
                            "significance", SDDS_DOUBLE, &autoTuneSignificance, 1, 0,
                            "minimize", SDDS_STRING, &autoTuneModeString, 1, AUTOTUNE_MODE_SET, 
@@ -312,15 +314,16 @@ int main(int argc, char **argv)
     /* no auto-tuning */
     derivatives = maxDerivatives;
 
+  minMultipoles = 1;
   for ( ; derivatives<=maxDerivatives; derivatives++) {
-    multipoles = 1;
+    multipoles = minMultipoles;
     if (autoTuneFlags&AUTOTUNE_ACTIVE) {
       if (autoTuneFlags&AUTOTUNE_EVALONLY)
         multipoles = maxMultipoles;
     } else
       /* no auto-tuning */
       multipoles = maxMultipoles;
-        
+
     for ( ; multipoles<=maxMultipoles; multipoles++) {
       if (autoTuneFlags&AUTOTUNE_ACTIVE) {
         double residual;
@@ -330,6 +333,8 @@ int main(int argc, char **argv)
           bestResidual = residual;
           bestMultipoles = multipoles;
           bestDerivatives = derivatives;
+          if (autoTuneFlags&AUTOTUNE_INCRONLY)
+            minMultipoles = bestMultipoles;
           if (autoTuneFlags&AUTOTUNE_VERBOSE) {
             printf("New best residual of %le for m=%ld, d=%ld\n", residual, multipoles, derivatives);
             fflush(stdout);
