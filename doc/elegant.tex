@@ -134,10 +134,15 @@ the serial or parallel versions and report issues to the developers.
 
 \subsection{Changes to Related Programs and Files}
 
+The {\tt elegant} distribution includes many programs and scripts that perform computations with {\tt elegant}
+output data, provide interfaces with other programs, or prepare data for use with {\tt elegant}. These
+are listed in Section \ref{sect:tools}. 
+
+Changes to these tools in this release include
 \begin{itemize}
 \item The program \verb|computeRBGGE|, which allows computation of a generalized gradient
   expansion\cite{Venturini-NIMA427-387} for use with \verb|BGGEXP| based on field data on a rectangular boundary
-  \cite{Mitchell-2007}, was improved to support automatic tuning of the number of gradients and multipoles.
+ \cite{Mitchell-2007}, was improved to support automatic tuning of the number of gradients and multipoles.
   In addition, output of the implied field map is supported.
 \item The program \verb|computeCBGGE| was added, which allows computation of a generalized gradient expansion
   based on field data on a circular-cylinder boundary \cite{Venturini-NIMA427-387}. It replaces the script
@@ -6190,7 +6195,7 @@ arithmetic.
 \end{itemize}
 
 \newpage
-\section{Specialized Tools for Use with {\tt elegant}}
+\section{Specialized Tools for Use with {\tt elegant}\label[sect:tools}}
 
 A number of specialized programs are available that work with {\tt
 elegant}. Most are SDDS-compliant, so they will also work with any
