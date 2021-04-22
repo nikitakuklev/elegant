@@ -26,6 +26,10 @@ typedef struct {
 } FIELD_MAP;
 
 typedef struct {
+  double rms, mad, max;
+} ALL_RESIDUALS;
+
+typedef struct {
   short haveData;
   short skew;          /* if non-zero, these are skew terms */
   long nz;             /* number of z points */
@@ -51,7 +55,8 @@ void FFT(COMPLEX *field, int32_t isign, int32_t npts);
 void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment, short skew);
 void freeBGGExpData(BGGEXP_DATA *bggexpData);
 double evaluateGGEFit(FIELDS_ON_BOUNDARY *fob, BGGEXP_DATA *bggexpData,
-                      long derivatives, long multipoles, double significance, unsigned long flags);
+                      long derivatives, long multipoles, double significance, unsigned long flags,
+                      ALL_RESIDUALS *allResiduals);
 void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData);
 int evaluateGGEAndOutput(char *outputFile, long nrho, long nphi, char *normalFile, char *skewFile, FIELDS_ON_BOUNDARY *fob);
 int computeGGE(FIELDS_ON_BOUNDARY *fieldsOnBoundary, char *normalOutput, char *skewOutput, 
@@ -75,7 +80,7 @@ char *option[N_OPTIONS] = {
               -normal=<output> [-skew=<output>]\n\
               [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]\n\
               [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]\n\
-              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,verbose]]\n\
+              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,verbose][,log=<filename>]]\n\
 -input       Single-page file giving (z, phi, Brho) on circular cylinder of radius rho.\n\
 -normal      Output file for normal-component generalized gradients.\n\
 -skew        Output file for skew-component generalized gradients.\n\
@@ -97,6 +102,8 @@ Circular-cylinder Boundary Generalized Gradient Expansion by Michael Borland, Ro
 #define AUTOTUNE_EVALONLY  0x0010UL
 #define AUTOTUNE_MODE_SET  0x0100UL
 #define AUTOTUNE_ACTIVE    0x0200UL
+#define AUTOTUNE_LOG       0x0400UL
+#define AUTOTUNE_INCRONLY  0x0800UL
 char *modeOption[3] = {"rms", "maximum", "mav"};
 
 int main(int argc, char **argv)
@@ -116,6 +123,10 @@ int main(int argc, char **argv)
   char *autoTuneModeString;
   char *BrhoName = "Brho", *zName = "z", *phiName = "phi", *rhoName = "rho";
   BGGEXP_DATA bggexpData[2];
+  SDDS_DATASET SDDS_autoTuneLog;
+  char *autoTuneLogFile = NULL;
+  long iAutoTuneLog=0;
+  ALL_RESIDUALS allResiduals;
 
   /* Using this routine can prevent exceptions when large harmonics are used, but the data thus
      obtained is suspect.
@@ -214,6 +225,7 @@ int main(int argc, char **argv)
                            "evaluate", -1, NULL, 0, AUTOTUNE_EVALONLY,
                            "significance", SDDS_DOUBLE, &autoTuneSignificance, 1, 0,
                            "minimize", SDDS_STRING, &autoTuneModeString, 1, AUTOTUNE_MODE_SET, 
+                           "log", SDDS_STRING, &autoTuneLogFile, 1, AUTOTUNE_LOG,
                            NULL) ||
              autoTuneSignificance<=0)) {
           fprintf(stderr, "invalid -autotune syntax\n%s\n", USAGE);
@@ -254,6 +266,27 @@ int main(int argc, char **argv)
     return (1);
   }
   
+  if (autoTuneFlags&AUTOTUNE_LOG) {
+    if (SDDS_InitializeOutput(&SDDS_autoTuneLog, SDDS_BINARY, 1, NULL, "computeRBGGE autotune output", autoTuneLogFile)!=1 ||
+        SDDS_DefineParameter(&SDDS_autoTuneLog, "OptimalMultipoles", "m$bopt$n", NULL, "Optimal number of multipoles", 
+                             NULL, SDDS_LONG, NULL)==-1 ||
+        SDDS_DefineParameter(&SDDS_autoTuneLog, "OptimalDerivatives", "d$bopt$n", NULL, "Optimal number of derivatives", 
+                             NULL, SDDS_LONG, NULL)==-1 ||
+        SDDS_DefineParameter(&SDDS_autoTuneLog, "OptimalResidual", "r$bopt$n", "T", "Optimal residual", 
+                             NULL, SDDS_DOUBLE, NULL)==-1 ||
+        !SDDS_DefineSimpleParameter(&SDDS_autoTuneLog, "OptimumLabel", NULL, SDDS_STRING) ||
+        SDDS_DefineColumn(&SDDS_autoTuneLog, "m", NULL, NULL, "Number of multipoles", NULL, SDDS_LONG, 0)==-1 ||
+        SDDS_DefineColumn(&SDDS_autoTuneLog, "d", NULL, NULL, "Number of derivatives", NULL, SDDS_LONG, 0)==-1 ||
+        SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "RmsError", "T", SDDS_DOUBLE)!=1 ||
+        SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "MaximumError", "T", SDDS_DOUBLE)!=1 ||
+        SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "MADError", "T", SDDS_DOUBLE)!= 1 || 
+        !SDDS_WriteLayout(&SDDS_autoTuneLog) ||
+        !SDDS_StartPage(&SDDS_autoTuneLog, maxMultipoles*maxDerivatives)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+    }
+  }
+
   bestResidual = DBL_MAX;
   bestDerivatives = maxDerivatives;
   bestMultipoles = maxMultipoles;
@@ -293,7 +326,7 @@ int main(int argc, char **argv)
         double residual;
         if ((residual = evaluateGGEFit(&fieldsOnBoundary, &bggexpData[0], 
                                        derivatives, multipoles,
-                                       autoTuneSignificance, autoTuneFlags))<bestResidual) {
+                                       autoTuneSignificance, autoTuneFlags, &allResiduals))<bestResidual) {
           bestResidual = residual;
           bestMultipoles = multipoles;
           bestDerivatives = derivatives;
@@ -304,6 +337,16 @@ int main(int argc, char **argv)
         } else {
           if (autoTuneFlags&AUTOTUNE_VERBOSE) {
             printf("Goodness of fit (%le) for m=%ld, d=%ld is not better\n", residual, multipoles, derivatives);
+          }
+        }
+        if (autoTuneFlags&AUTOTUNE_LOG) {
+          if (!SDDS_SetRowValues(&SDDS_autoTuneLog, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+                                 iAutoTuneLog++,
+                                 "m", multipoles*(fundamental>0?fundamental:1), "d", derivatives, "RmsError", allResiduals.rms,
+                                 "MaximumError", allResiduals.max, "MADError", allResiduals.mad,
+                                 NULL)) {
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+            return (1);
           }
         }
       }
@@ -317,6 +360,24 @@ int main(int argc, char **argv)
       computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, bestDerivatives, bestMultipoles, fundamental))
     return 1;
   
+  if (autoTuneFlags&AUTOTUNE_LOG) {
+    char buffer[1024];
+    snprintf(buffer, 1024, "m$bopt$n: %ld  d$bopt$n: %ld  r$bopt$n: %lg T", 
+             bestMultipoles, bestDerivatives, bestResidual);
+    if (SDDS_SetParameters(&SDDS_autoTuneLog, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                           "OptimalMultipoles", bestMultipoles,
+                           "OptimalDerivatives", bestDerivatives,
+                           "OptimalResidual", bestResidual,
+                           "OptimumLabel", buffer,
+                           NULL)!=1) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    }
+    if (SDDS_WritePage(&SDDS_autoTuneLog)!=1 || SDDS_Terminate(&SDDS_autoTuneLog)!=1) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return (1);
+    }
+  }
+
   if (evaluationOutput)
     evaluateGGEAndOutput(evaluationOutput, evaluation_nRho, evaluation_nPhi, 
                          normalOutputFile, skewOutputFile, &fieldsOnBoundary);
@@ -854,7 +915,8 @@ double evaluateGGEFit
  long derivatives, 
  long multipoles,
  double significance, 
- unsigned long flags
+ unsigned long flags,
+ ALL_RESIDUALS *allResiduals
  )
 {
   double Bz, Br, Bphi;
@@ -921,10 +983,14 @@ double evaluateGGEFit
     }
   }
   
+  allResiduals->rms = sqrt(residualSum2/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi));
+  allResiduals->mad = residualSum/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi);
+  allResiduals->max = residualWorst;
+
   if (flags&AUTOTUNE_RMS) {
-    residualWorst = sqrt(residualSum2/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi));
+    residualWorst = allResiduals->rms;
   } else if (flags&AUTOTUNE_MAV) {
-    residualWorst = residualSum/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi);
+    residualWorst = allResiduals->mad;
   }
 
   return residualWorst>significance ? residualWorst : 0.0;
