@@ -523,6 +523,7 @@ typedef struct {
     long combine_bunch_statistics, wrap_around, tracking_updates, final_pass; 
     long always_change_p0, stopTrackingParticleLimit, load_balancing_on, random_sequence_No, checkBeamStructure;
     long showElementTiming, monitorMemoryUsage, backtrack, lossesIncludeGlobalCoordinates;
+    double lossLimit[2]; /* loss recording only between these limits */
     char *runfile, *lattice, *acceptance, *centroid, *bpmCentroid, *sigma, 
          *final, *output, *rootname, *losses;
     APERTURE_DATA apertureData;
@@ -4588,7 +4589,7 @@ extern void dump_watch_parameters(WATCH *watch, long step, long pass, long n_pas
 extern void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles,
                            long original_particles,  double Po);
 extern void do_watch_FFT(double **data, long n_data, long slot, long window_code);
-extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particles, long step);
+extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double *sLimit, double **particle, long particles, long step);
 extern void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long bunch,
                           double p_central, short bpmsOnly);
 extern void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po,

@@ -44,6 +44,7 @@
     STRING acceptance = NULL;
     STRING losses = NULL;
     long losses_include_global_coordinates = 0;
+    double losses_s_limit[2] = {-DBL_MAX, DBL_MAX};
     STRING magnets = NULL;
     STRING semaphore_file = NULL;
     STRING parameters = NULL;

@@ -1653,9 +1653,9 @@ static int comp_IDs1(const void **coord1, const void **coord2)
   }
 #endif
 
-void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particles, long step)
+void dump_lost_particles(SDDS_TABLE *SDDS_table, double *sLimit, double **particle, long particles, long step)
 {
-  long i, badPID;
+  long i, row, badPID;
 #if USE_MPI && MPI_DEBUG
   printf("dump_lost_particles: running\n"); fflush(stdout);
 #endif
@@ -1727,27 +1727,30 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
         SDDS_SetError("Problem starting SDDS table (dump_lost_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-    for (i=0; i<particles; i++) {
+    for (i=row=0; i<particles; i++) {
 #if USE_MPI && MPI_DEBUG
       printf("Setting row values for particle %ld\n", i); fflush(stdout);
 #endif
-      if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
-                             0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
-                             4, particle[i][4], 5, particle[i][5],
-                             6, (long)particle[i][6], 7, (long) particle[i][lossPassIndex], -1)) {
-        SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      } 
-      if (globalLossCoordOffset>0) {
-        /* global loss coordinates are available */
-        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
-                               8, particle[i][globalLossCoordOffset+0], 
-                               9, particle[i][globalLossCoordOffset+1], 
-                               10, particle[i][globalLossCoordOffset+2], 
-                               -1)) {
-          SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
+      if (particle[i][4]>=sLimit[0] && particle[i][4]<=sLimit[1]) {
+	if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+			       0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
+			       4, particle[i][4], 5, particle[i][5],
+			       6, (long)particle[i][6], 7, (long) particle[i][lossPassIndex], -1)) {
+	  SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	} 
+	if (globalLossCoordOffset>0) {
+	  /* global loss coordinates are available */
+	  if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+				 8, particle[i][globalLossCoordOffset+0], 
+				 9, particle[i][globalLossCoordOffset+1], 
+				 10, particle[i][globalLossCoordOffset+2], 
+				 -1)) {
+	    SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+	}
+	row++;
       }
     }
 #if USE_MPI && MPI_DEBUG

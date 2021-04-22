@@ -719,6 +719,7 @@ char **argv;
       do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = 
         do_find_aperture = do_rf_setup = 0;
       linear_chromatic_tracking_setup_done = losses_include_global_coordinates = 0;
+      losses_s_limit[0] = -(losses_s_limit[1] = DBL_MAX);
 
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
       set_print_namelist_flags(0);
@@ -778,6 +779,8 @@ char **argv;
       run_conditions.showElementTiming = show_element_timing;
       run_conditions.monitorMemoryUsage = monitor_memory_usage;
       run_conditions.backtrack = back_tracking; 
+      if ((run_conditions.lossLimit[0]=losses_s_limit[0])>(run_conditions.lossLimit[1]=losses_s_limit[1]))
+	  bombElegant("losses_s_limit[0] can't be greater than losses_s_limit[1]", NULL);
       if ((run_conditions.lossesIncludeGlobalCoordinates = losses_include_global_coordinates)) {
         globalLossCoordOffset = COORDINATES_PER_PARTICLE + BASIC_PROPERTIES_PER_PARTICLE;
         totalPropertiesPerParticle = COORDINATES_PER_PARTICLE + BASIC_PROPERTIES_PER_PARTICLE + GLOBAL_LOSS_PROPERTIES_PER_PARTICLE;
