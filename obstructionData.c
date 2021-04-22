@@ -212,7 +212,7 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   return;
 }
 
-void logInside(double X, double Z, long particleID, short where)
+void logInside(double *part, short where)
 {
 #ifdef DEBUG
   static FILE *fpInside = NULL;
@@ -225,8 +225,14 @@ void logInside(double X, double Z, long particleID, short where)
     snprintf(buffer, 1024, "insideObstruction.sdds");
 #endif
     fpInside = fopen(buffer, "w");
-    fprintf(fpInside, "SDDS1\n&column name=Z type=double units=m &end\n");
+    fprintf(fpInside, "SDDS1\n");
+    fprintf(fpInside, "&column name=x type=double units=m &end\n");
+    fprintf(fpInside, "&column name=xp type=double &end\n");
+    fprintf(fpInside, "&column name=y type=double units=m &end\n");
+    fprintf(fpInside, "&column name=yp type=double &end\n");
+    fprintf(fpInside, "&column name=Z type=double units=m &end\n");
     fprintf(fpInside, "&column name=X type=double units=m &end\n");
+    fprintf(fpInside, "&column name=thetaX type=double units=m &end\n");
     fprintf(fpInside, "&column name=particleID type=long &end\n");
     fprintf(fpInside, "&column name=call type=short &end\n");
     fprintf(fpInside, "&column name=ElementName type=string &end\n");
@@ -234,12 +240,16 @@ void logInside(double X, double Z, long particleID, short where)
     fprintf(fpInside, "&data mode=ascii no_row_counts=1 &end\n");
   }
   getTrackingContext(&context);
-  fprintf(fpInside, "%le %le %ld %hd %s %s\n", Z, X, particleID, where, 
+  fprintf(fpInside, "%le %le %le %le %le %le %le %ld %hd %s %s\n", 
+          part[0], part[1], part[2], part[3], 
+          globalLossCoordOffset>0 ? part[globalLossCoordOffset+1] : 999.0,
+          globalLossCoordOffset>0 ? part[globalLossCoordOffset+0] : 999.0,
+          globalLossCoordOffset>0 ? part[globalLossCoordOffset+2] : 999.0,
+          (long)part[6], where, 
 	  context.element->name, entity_name[context.element->type]);
   fflush(fpInside);
 #endif
 }
-
 
 /* Returns 0 if not obstructed */
 long insideObstruction(double *part, short mode, double dz, long segment, long nSegments)
@@ -251,7 +261,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   static ELEMENT_LIST *lastEptr = NULL;
   */
   long ic, iperiod, lost;
-  double Z, X, Y;
+  double Z, X, Y, thetaX;
 
   /*
   if (!fpObs) {
@@ -291,7 +301,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   }
   */
 
-  convertLocalCoordinatesToGlobal(&Z, &X, &Y, mode, part, eptr, dz, segment, nSegments);
+  convertLocalCoordinatesToGlobal(&Z, &X, &Y, &thetaX, mode, part, eptr, dz, segment, nSegments);
   /*
     printf("Checking obstruction for x=%le, y=%le, s=%le, segment=%ld/%ld: Z=%le, X=%le, Y=%le\n",
          part[0], part[2], part[4], segment, nSegments, Z, X, Y);
@@ -336,12 +346,12 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
     }
   }
   if (lost) {
-    logInside(X, Z, (long)part[particleIDIndex], lost);
     if (globalLossCoordOffset>0) {
       part[globalLossCoordOffset+0] = X;
-      part[globalLossCoordOffset+1] = Y;
-      part[globalLossCoordOffset+2] = Z;
+      part[globalLossCoordOffset+1] = Z;
+      part[globalLossCoordOffset+2] = thetaX;
     }
+    logInside(part, lost);
     return 1;
   }
   return 0;
@@ -349,10 +359,12 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
 
 long insideObstruction_xyz
 (
- double x, /* local x coordinate */
- double y, /* local y coordinate */
+ double x, /* local x coordinates */
+ double xp, 
+ double y, 
+ double yp,
  long particleID, /* for diagnostic purposes */
- double *XYZLost, /* for return if wanted */
+ double *lossCoordinates, /* (X, Z, thetaX) for return if wanted */
  double xyTilt, /* tilt of element */
  short mode,
  double dz,
@@ -376,12 +388,14 @@ long insideObstruction_xyz
     cos_tilt = 1;
   }
   memset(&part[0], 0, sizeof(double)*MAX_PROPERTIES_PER_PARTICLE);
-  part[0] =  x*cos_tilt - y*sin_tilt;
-  part[2] =  x*sin_tilt + y*cos_tilt;
+  part[0] =  x*cos_tilt -  y*sin_tilt;
+  part[1] = xp*cos_tilt - yp*sin_tilt;
+  part[2] =  x*sin_tilt +  y*cos_tilt;
+  part[3] = xp*sin_tilt - yp*cos_tilt;
   part[particleIDIndex] = particleID;
   if (insideObstruction(part, mode, dz, segment, nSegments)) {
-    if (XYZLost && globalLossCoordOffset>0)
-      memcpy(XYZLost, part+globalLossCoordOffset, sizeof(double)*3);
+    if (lossCoordinates && globalLossCoordOffset>0)
+      memcpy(lossCoordinates, part+globalLossCoordOffset, sizeof(double)*GLOBAL_LOSS_PROPERTIES_PER_PARTICLE);
     return 1;
   } 
   return 0;
@@ -394,18 +408,20 @@ long insideObstruction_XYZ
  */
 (
  /* magnet-frame coordinates of particle */
- double X  , double Y  , double Z  , 
+ double X  , double Y  , double Z , 
  /* coordinate offsets of the nominal entrance */
  double dXi, double dYi, double dZi, 
  /* angle of the internal Z axis w.r.t. nominal incoming trajectory */
  double thetai,
- /* return of global loss coordinates (X, Y, Z) */
+ /* horizontal slope of particle in local coordinate system */
+ double xp,
+ /* return of global loss coordinates (X, Z, thetaX) */
  double *lossCoordinates
  )
 {
   TRACKING_CONTEXT context;
   double C, S;
-  double X1, Y1, Z1;
+  double X1, Y1, Z1, thetaX1;
   long ic, iperiod, lost;
 
   /*
@@ -433,12 +449,13 @@ long insideObstruction_XYZ
   getTrackingContext(&context);
   if (context.element->pred)
     thetai -= context.element->pred->floorAngle[0];
-  
+
   C = cos(thetai);
   S = sin(thetai);
   X1 =  C*X - S*Z;
   Y1 = Y;
   Z1 =  S*X + C*Z;
+  thetaX1 = -thetai + atan(xp);
   if (context.element->pred) {
     X1 += context.element->pred->floorCoord[0];
     Y1 += context.element->pred->floorCoord[1];
@@ -487,8 +504,8 @@ long insideObstruction_XYZ
   if (lost) {
     if (lossCoordinates) {
       lossCoordinates[0] = X1;
-      lossCoordinates[1] = Y1;
-      lossCoordinates[2] = Z1;
+      lossCoordinates[1] = Z1;
+      lossCoordinates[2] = thetaX1;
     }
     return 1;
   }

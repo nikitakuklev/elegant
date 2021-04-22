@@ -1328,7 +1328,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
   *dzLoss = 0;
   for (i_kick=0; i_kick<n_parts; i_kick++) {
     if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
-	insideObstruction_xyz(x, y, coord[particleIDIndex], 
+	insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex], 
 			      globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
 			      refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
       coord[0] = x;
@@ -1429,7 +1429,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
   }
   
   if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
-      insideObstruction_xyz(x, y, coord[particleIDIndex],
+      insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex],
 			    globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
 			    refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
     coord[0] = x;

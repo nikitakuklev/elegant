@@ -963,6 +963,7 @@ void getLastGlobalParticleCoordinates(double *buffer)
 void convertLocalCoordinatesToGlobal
 (
  double *Z, double *X, double *Y,
+ double *thetaX, 
  short mode, 
  double *coord, 
  ELEMENT_LIST *eptr,
@@ -973,7 +974,7 @@ void convertLocalCoordinatesToGlobal
 )
 {
   double theta1;
-  double dZ, dX, Z1, X1, length;
+  double dZ, dX, Z1, X1,  thetaX1, length;
   /* convert (s, x, y, z) coordinates to (Z, X, Y) */
   /* For now, we assume that the beamline is flat ! */
 
@@ -986,6 +987,7 @@ void convertLocalCoordinatesToGlobal
     *Z = Z1 + dX*sin(theta1);
     *X = X1 + dX*cos(theta1);
     *Y = coord[2];
+    *thetaX = eptr->floorAngle[0] + atan(coord[1]);
     return;
   }
 
@@ -1051,7 +1053,10 @@ void convertLocalCoordinatesToGlobal
     *Z = Z1 + dX*sin(theta1) + dZ*cos(theta1);
     *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
     *Y = coord[2];
+    *thetaX = theta1 - atan(coord[1]);
+    *thetaX = 888;
   } else {
+    /* Not a bending element */
     if (entity_description[eptr->type].flags&HAS_LENGTH)
       length =  *((double*)(eptr->p_elem));
     else
@@ -1064,7 +1069,7 @@ void convertLocalCoordinatesToGlobal
     } else {
       Z1 = Z0;
       X1 = X0;
-      theta1 = theta0;
+      theta1 = theta0;  /* ?? -theta0 ?? */
       /* printf("Used start: Z1 = %le, X1 = %le, theta1 = %le\n", Z1, X1, theta1); */
     }
     dZ = 0;
@@ -1091,6 +1096,7 @@ void convertLocalCoordinatesToGlobal
     *Z = Z1 + dX*sin(theta1) + dZ*cos(theta1);
     *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
     *Y = coord[2];
+    *thetaX = - theta1 + atan(coord[1]);
     if (eptr->end_pos>eptr->beg_pos && (dZ<-1e-6 || (dZ-(eptr->end_pos-eptr->beg_pos))>1e-6)) {
 #if USE_MPI
       dup2(fd, fileno(stdout));

@@ -210,7 +210,7 @@ void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lon
 
 
 #define BEAM_LOSS_COLUMNS_BASIC 8
-#define BEAM_LOSS_COLUMNS_EXTRA 2
+#define BEAM_LOSS_COLUMNS_EXTRA 3
 
 static SDDS_DEFINITION beam_loss_column[BEAM_LOSS_COLUMNS_BASIC+BEAM_LOSS_COLUMNS_EXTRA] = {
     {"x", "&column name=x, units=m, type=double &end"},
@@ -221,8 +221,9 @@ static SDDS_DEFINITION beam_loss_column[BEAM_LOSS_COLUMNS_BASIC+BEAM_LOSS_COLUMN
     {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
     {"particleID", "&column name=particleID, type=long &end"},
     {"Pass", "&column name=Pass, type=long &end"},
-    {"Z", "&column name=Z, units=m, type=double &end"},
     {"X", "&column name=X, units=m, type=double &end"},
+    {"Z", "&column name=Z, units=m, type=double &end"},
+    {"thetaX", "&column name=thetaX, type=double &end"},
     } ;
 
 void SDDS_BeamLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
@@ -1740,8 +1741,9 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
       if (globalLossCoordOffset>0) {
         /* global loss coordinates are available */
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
-                               8, particle[i][globalLossCoordOffset+2], 
-                               9, particle[i][globalLossCoordOffset+0], 
+                               8, particle[i][globalLossCoordOffset+0], 
+                               9, particle[i][globalLossCoordOffset+1], 
+                               10, particle[i][globalLossCoordOffset+2], 
                                -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

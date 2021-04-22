@@ -89,7 +89,8 @@ extern long particleIsElectron;
   /* Not used yet, except to assign place-holder values. */
 #define weightIndex (COORDINATES_PER_PARTICLE+3)
   /* These values will be determined when program is initialized */
-  /* Global loss properties are X, Y, Z of loss. Memory for these won't be allocated unless requested. */
+  /* Global loss properties are X, Z, thetaX, of loss. Memory for these won't be allocated unless requested. *
+   * NB: we presently assume that the beamline is in the Y=0 plane, so Y=y and thetaY=atan(yp) */
 #define GLOBAL_LOSS_PROPERTIES_PER_PARTICLE 3
   /* This can be used to safely over-size arrays when we don't care about saving space */
 #define MAX_PROPERTIES_PER_PARTICLE (COORDINATES_PER_PARTICLE+BASIC_PROPERTIES_PER_PARTICLE+GLOBAL_LOSS_PROPERTIES_PER_PARTICLE)
@@ -4529,7 +4530,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
 #define GLOBAL_LOCAL_MODE_DZ  2
 #define GLOBAL_LOCAL_MODE_SEG 3
 #define GLOBAL_LOCAL_MODE_END 4
-void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, short mode,
+void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *thetaX, short mode,
                                      double *coord, ELEMENT_LIST *eptr, double dZ,
                                      long segment, long nSegments);
 
@@ -4841,10 +4842,10 @@ extern void resetObstructionData(OBSTRUCTION_DATASETS *obsData);
 extern void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run);
 extern long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double P_central);
 extern long insideObstruction(double *part, short mode, double dz, long segment, long nSegments);
-extern long insideObstruction_xyz(double x, double y, long particleID, double *XYZLost,
+extern long insideObstruction_xyz(double x, double xp, double y, double yp, long particleID, double *lossCoordinates, 
 				  double tilt, short mode, double dz, long segment, long nSegments);
 extern long insideObstruction_XYZ(double X, double Y, double Z, double dXi, double dYi, double dZi, 
-                                  double thetai, double *lossCoordinates);
+                                  double thetai, double xp, double *lossCoordinates);
 
 #ifdef __cplusplus
 }

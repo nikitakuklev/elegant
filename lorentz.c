@@ -242,6 +242,10 @@ static long n_particles_done = 0;
 static double length_mult_sum = 0;
 static long n_invalid_particles = 0;
 
+/* lost particle coordinate buffer.
+                      0   1   2   3       4       5       6     7      8   9 10  11
+   In order, we have (q0, q1, q2, dq0/ds, dq1/ds, dq2/ds, path, delta, s,  X, Z, theta 
+ */
 static double lostParticleCoordinate[12] = {0,0,0,0,0,0,0,0,0,0,0};
 static long isLost = 0;
 
@@ -485,10 +489,11 @@ long do_lorentz_integration(double *coord, void *field)
       
     (*coord_transform)(q, coord, field, 1);
 
-    if (isLost)
+    if (isLost) {
       coord[4] = lostParticleCoordinate[8]; /* need z, not s */
-    if (globalLossCoordOffset>0) 
-      memcpy(coord+globalLossCoordOffset, lostParticleCoordinate+9, 3*sizeof(double));
+      if (globalLossCoordOffset>0) 
+        memcpy(coord+globalLossCoordOffset, lostParticleCoordinate+9, 3*sizeof(double));
+    }
 
 #ifdef DEBUG
     printf("length from integration routine: %le\n", s_start);
@@ -1890,7 +1895,10 @@ void bmapxyz_deriv_function(double *qp, double *q, double s)
       double zOffset, dzHardEdge;
       zOffset = (bmapxyz->fieldLength-bmapxyz->length)/2;
       if ((dzHardEdge = z - zOffset)>=0 && dzHardEdge<=bmapxyz->length) {
-        if (insideObstruction_xyz(x, y, lastParticleID, lostParticleCoordinate+9,
+        double xp, yp;
+        xp = q[4]/q[3];
+        yp = q[5]/q[3];
+        if (insideObstruction_xyz(x, xp, y, yp, lastParticleID, lostParticleCoordinate+9,
 				  bmapxyz->tilt, GLOBAL_LOCAL_MODE_DZ, dzHardEdge, 0, 0)) {
           /*static FILE *fp; */
           TRACKING_CONTEXT tcontext;
@@ -1929,8 +1937,8 @@ void bmapxyz_deriv_function(double *qp, double *q, double s)
     qp[0] = w[0];
     qp[1] = w[1];
     qp[2] = w[2];
-    qp[6] = 1;
-    qp[7] = 0;
+    qp[6] = 1; /* path length derivative */
+    qp[7] = 0; /* momentum offset doesn't change except from SR (below) */
 
     /* find field components */
     if (!interpolate_bmapxyz(&F0, &F1, &F2, bmapxyz, x, y, z)) {

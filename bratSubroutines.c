@@ -109,7 +109,7 @@ static double global_delta;
 
 static long isLost = 0;
 #ifndef ABRAT_PROGRAM
-static double lossCoordinates[3]; /* X, Y, Z */
+static double lossCoordinates[3]; /* X, Z, thetaX */
 #endif
 
 #define TOLERANCE_FACTOR 1e-14
@@ -604,7 +604,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
     iOut = ip;
     if (isLost) {
       if (globalLossCoordOffset!=-1)
-        for (ic=0; ic<3; ic++) 
+        for (ic=0; ic<GLOBAL_LOSS_PROPERTIES_PER_PARTICLE; ic++) 
           part[ip][globalLossCoordOffset+ic] = lossCoordinates[ic];
       part[ip][5] = pCentral*(1+global_delta);
       swapParticles(part[ip], part[itop]);
@@ -1668,7 +1668,7 @@ void BRAT_B_field_permuted(
 void BRAT_B_field(double *F, double *Qg)
 {
   long ix, iy, iz, j, outside;
-  double fx, fy, fz, val_z1, val_z2, f[3];
+  double fx, fy, fz, val_z1, val_z2, f[3], xSlope;
   double x, y, z, derivSign=1;
   double Q[3];
 
@@ -1727,14 +1727,18 @@ void BRAT_B_field(double *F, double *Qg)
   z = Q[0];
   x = Q[1];
   y = Q[2];
+  xSlope = 0;
+  if (Qg[3]!=0)
+    xSlope = Qg[4]/Qg[3];
   if (!isLost && 
       (z>=zNomEntry && z<=zNomExit) && 
-      insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, lossCoordinates)) {
+      insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, xSlope, lossCoordinates)) {
     /*
-      printf("Loss coordinates: X = %le, Y = %le, Z = %le\n",
-      lossCoordinates[0], lossCoordinates[1], lossCoordinates[2]);
-    */
+    printf("Loss coordinates: X = %le, Z = %le, theta = %le, Q[3] = %le, Q[4] = %le, Q[5] = %le\n",
+           lossCoordinates[0], lossCoordinates[1], lossCoordinates[2],
+           Qg[3], Qg[4], Qg[5]);
     fflush(stdout);
+    */
     isLost = 1;
   }
 #endif
