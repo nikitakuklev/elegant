@@ -111,6 +111,9 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
   while the \verb|ParameterValueString| column is used for string quantities only.
   If only \verb|ParameterValueString| is present, \verb|elegant| will attempt to scan the string values as
   needed for numerical values; this is not the preferred approach as it will degrade performance.
+\item The \verb|losses| output of the \verb|run_setup| command now provides the global coordinate angle in
+ the horizontal plane when \verb|losses_include_global_coordinates=1|. One can also now control the 
+ range of \verb|s| coordinates for recorded particles using the \verb|losses_s_limit| array.
 \item The \verb|correct_tunes| and \verb|chromaticity| commands now accept lists giving lower and upper strength limits
   for each family. In addition, the \verb|strength_log| files are now compatible with \verb|load_parameters|.
 \end{itemize}
@@ -133,6 +136,11 @@ the serial or parallel versions and report issues to the developers.
 
 \subsection{Changes to Related Programs and Files}
 
+The {\tt elegant} distribution includes many programs and scripts that perform computations with {\tt elegant}
+output data, provide interfaces with other programs, or prepare data for use with {\tt elegant}. These
+are listed in Section \ref{sect:tools}. 
+
+Changes to these tools in this release include
 \begin{itemize}
 \item The program \verb|computeRBGGE|, which allows computation of a generalized gradient
   expansion\cite{Venturini-NIMA427-387} for use with \verb|BGGEXP| based on field data on a rectangular boundary
@@ -4896,6 +4904,7 @@ in \verb|run_setup|.
     STRING acceptance = NULL;
     STRING losses = NULL;
     long losses_include_global_coordinates = 0;
+    double losses_s_limit[2] = {-DBL_MAX, DBL_MAX};
     STRING magnets = NULL;
     STRING semaphore_file = NULL;
     STRING parameters = NULL;
@@ -4952,6 +4961,8 @@ which information on lost particles will be written. Recommended
 value: ``\%s.lost''.
 \item \verb|losses_include_global_coordinates| --- If nonzero, the losses output file includes the
   global coordinates of lost particles.
+\item \verb|losses_s_limit[2]| --- Specifies the minimum and maximum \verb|s| coordinate for
+  logging of lost particles.
 \item \verb|magnets| --- The (incomplete) name of an SDDS file into
 which a magnet layout representation will be written.  Recommended
 value: ``\%s.mag''.
@@ -6214,7 +6225,7 @@ arithmetic.
 \end{itemize}
 
 \newpage
-\section{Specialized Tools for Use with {\tt elegant}}
+\section{Specialized Tools for Use with {\tt elegant}\label{sect:tools}}
 
 A number of specialized programs are available that work with {\tt
 elegant}. Most are SDDS-compliant, so they will also work with any
@@ -6538,7 +6549,7 @@ computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<column
               -normal=<output> [-skew=<output>]
               [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]
               [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]
-              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,noDecrease][,verbose]]
+              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,increaseOnly][,verbose][,log=<filename>]]
 }\end{flushleft}
 
 \item {\bf switches:}
@@ -6561,10 +6572,12 @@ computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<column
   and \verb|nphi| parameters.
 \item {\tt autotune} --- Optimizes the number of derivaties and multipoles up the to values given with the
   \verb|-derivatives| and \verb|-multipoles| options, in order to minimize the deviation of the GGE-derived
-  fields from the supplied fields on the cylinder. Differences below the \verb|significance| value are
-  ignored. By default, minimizes the maximum deviation, but user can
-  ask to minimize the rms or mean-absolute-value deviation using the \verb|minimize| qualifier.
-  The \verb|noDecrease| qualifier specifies that the scan over multipoles $m$ and derivatives $d$
+  fields from the values given in the 3D field map file. The region of evaluation is automatically limited by
+  the bounding planes, even if the 3D field map has a larger extent. By default, minimizes the maximum deviation, but user can
+  ask to minimize the rms or mean-absolute-value deviation. Differences below the \verb|significance| value are
+  ignored. The user may request verbose output to see results printed to the terminal, and also a log file
+  for a detailed record.
+  The \verb|increaseOnly| qualifier specifies that the scan over multipoles $m$ and derivatives $d$
   is restricted to never be less than the previous optimal values; for example, if the best value
   so far was obtained with $m=4$ and $d=3$, the remainder of the scan would be restricted to $m\ge 4$ and $d\ge 3$;
   this can save considerable run time.
@@ -6588,7 +6601,7 @@ boundary \cite{Mitchell-2007} for use with {\tt elegant}'s \verb|BGGEXP| element
 computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>
    -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]
    [-evaluate=<filename>]
-   [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,verbose][,log=<filename>]]
+   [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>]]
 }\end{flushleft}
 
 \item {\bf switches:}
@@ -6618,6 +6631,10 @@ computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<fil
   ask to minimize the rms or mean-absolute-value deviation. Differences below the \verb|significance| value are
   ignored. The user may request verbose output to see results printed to the terminal, and also a log file
   for a detailed record.
+  The \verb|increaseOnly| qualifier specifies that the scan over multipoles $m$ and derivatives $d$
+  is restricted to never be less than the previous optimal values; for example, if the best value
+  so far was obtained with $m=4$ and $d=3$, the remainder of the scan would be restricted to $m\ge 4$ and $d\ge 3$;
+  this can save considerable run time.
 \end{itemize}
 
 \item {\bf authors:} R. Lindberg, R. Soliday, M. Borland (ANL/APS).
