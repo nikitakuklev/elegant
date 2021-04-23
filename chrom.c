@@ -63,8 +63,27 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
       sextupoles = expand_ranges(sextupoles);
     while ((chrom->name[chrom->n_families-1]=get_token(sextupoles)))
         chrom->name = trealloc(chrom->name, sizeof(*chrom->name)*(chrom->n_families+=1));
-    if ((--chrom->n_families)<1)
+    if ((--chrom->n_families)<2)
         bombElegant("too few sextupoles given for chromaticity correction", NULL);
+
+    chrom->lowerLimit  = chrom->upperLimit = NULL;
+    if (lower_limits) {
+      long nll = 0;
+      chrom->lowerLimit = scanNumberList(lower_limits, &nll);
+      if (nll!=chrom->n_families)
+        bombElegantVA("number of items in lower_limits list (%ld) not the same as number of sextupole names (%ld)",
+                    nll, chrom->n_families);
+    }
+
+    if (upper_limits) {
+      long nul = 0;
+      chrom->upperLimit = scanNumberList(upper_limits, &nul);
+      if (nul!=chrom->n_families)
+        bombElegantVA("number of items in upper_limits list (%ld) not the same as number of sextupole names (%ld)",
+                    nul, chrom->n_families);
+    }
+
+
     chrom->exclude = NULL;
     chrom->n_exclude = 0;
     if (exclude) {
@@ -148,9 +167,11 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     if (strength_log) {
         strength_log = compose_filename(strength_log, run->rootname);
         fp_sl = fopen_e(strength_log, "w", 0);
-        fprintf(fp_sl, "SDDS1\n&column name=Step, type=long, description=\"Simulation step\" &end\n");
-        fprintf(fp_sl, "&column name=K2, type=double, units=\"1/m$a2$n\" &end\n");
-        fprintf(fp_sl, "&column name=SextupoleName, type=string  &end\n");
+        fprintf(fp_sl, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+        fprintf(fp_sl, "&column name=ElementName, type=string  &end\n");
+        fprintf(fp_sl, "&column name=ElementParameter, type=string  &end\n");
+        fprintf(fp_sl, "&column name=ElementOccurence, type=long  &end\n");
+        fprintf(fp_sl, "&column name=ParameterValue, type=double, units=\"1/m$a2$n\" &end\n");
         fprintf(fp_sl, "&data mode=ascii, no_row_counts=1 &end\n");
         fflush(fp_sl);
         }
@@ -348,7 +369,9 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     double lastError, presentError;
     char buffer[256];
     short has_wc;
-    
+    long nTotal, nLimit, nChanged;
+    double K20;
+
     log_entry("do_chromaticity_correction");
 
     if (!beamline->matrix || !beamline->twiss0) {
@@ -411,6 +434,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     
     presentError = DBL_MAX;
     for (iter=0; iter<chrom->n_iterations; iter++) {
+      nTotal = nLimit = nChanged = 0;
         K2_max = -(K2_min = DBL_MAX);
         dchromx = chrom->chromx - chromx0;
         dchromy = chrom->chromy - chromy0;
@@ -445,6 +469,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
           fflush(stdout);
           return 0;
         }
+
         for (i=0; i<chrom->n_families; i++) {
             context = NULL;
             count = 0;
@@ -460,49 +485,66 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             if (excluded)
               continue;
           }
-                if ((K2_param = confirm_parameter("K2", context->type))<0) {
-                    printf("error: element %s doesn't have K2 parameter\n",
-                            context->name);
-                    fflush(stdout);
-                    exitElegant(1);
-                    }
-                if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
-                    bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
-                K2 = (*K2ptr += chrom->correction_fraction*chrom->dK2->a[i][0]);
-                if (chrom->strengthLimit>0 && chrom->strengthLimit<fabs(K2)) {
-                  K2 = *K2ptr = SIGN(K2)*chrom->strengthLimit;
-                }
-                sprintf(buffer, "%s#%ld.K2", context->name, context->occurence);
-                rpn_store(K2, NULL, rpn_create_mem(buffer, 0));
-                if (K2>K2_max)
-                  K2_max = K2;
-                if (K2<K2_min)
-                  K2_min = K2;
-                if (context->matrix) {
-                  free_matrices(context->matrix);
-                  free(context->matrix);
-                  context->matrix = NULL;
-                  }
-                compute_matrix(context, run, NULL);
-                type = context->type;
-                count++;
-                if (has_wc && alter_defined_values) {
-                  change_defined_parameter(context->name, K2_param, type, K2, NULL, LOAD_FLAG_ABSOLUTE);
-                }
-                /* printf("new value of %s#%ld[K2] is  %.15lg 1/m^3\n", 
-                       chrom->name[i], context->occurence, K2);
-                   fflush(stdout);
-                   */
-              }
+          if ((K2_param = confirm_parameter("K2", context->type))<0) {
+            printf("error: element %s doesn't have K2 parameter\n",
+                   context->name);
+            fflush(stdout);
+            exitElegant(1);
+          }
+          if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
+            bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
+          K20 = *K2ptr;
+          K2 = (*K2ptr += chrom->correction_fraction*chrom->dK2->a[i][0]);
+          nTotal++;
+          if (chrom->strengthLimit>0 && chrom->strengthLimit<fabs(K2)) {
+            K2 = *K2ptr = SIGN(K2)*chrom->strengthLimit;
+            printf("Warning: %s#%ld is that the strength limit (K2=%le)\n",
+                   context->name, context->occurence, K2);
+            nLimit ++;
+          } else if (chrom->lowerLimit && K2<chrom->lowerLimit[i]) {
+            K2 = *K2ptr = chrom->lowerLimit[i]; 
+            printf("Warning: %s#%ld is that the lower limit (K2=%le)\n",
+                   context->name, context->occurence, K2);  
+            nLimit ++;
+          } else  if (chrom->upperLimit && K2>chrom->upperLimit[i]) {
+            K2 = *K2ptr = chrom->upperLimit[i];
+            printf("Warning: %s#%ld is that the upper limit (K2=%le)\n",
+                   context->name, context->occurence, K2);
+            nLimit ++;
+          }
+          if (K2!=K20)
+            nChanged++;
+          sprintf(buffer, "%s#%ld.K2", context->name, context->occurence);
+          rpn_store(K2, NULL, rpn_create_mem(buffer, 0));
+          if (K2>K2_max)
+            K2_max = K2;
+          if (K2<K2_min)
+            K2_min = K2;
+          if (context->matrix) {
+            free_matrices(context->matrix);
+            free(context->matrix);
+            context->matrix = NULL;
+          }
+          compute_matrix(context, run, NULL);
+          type = context->type;
+          count++;
+          if (has_wc && alter_defined_values) {
+            change_defined_parameter(context->name, K2_param, type, K2, NULL, LOAD_FLAG_ABSOLUTE);
+          }
+          /* printf("new value of %s#%ld[K2] is  %.15lg 1/m^3\n", 
+             chrom->name[i], context->occurence, K2);
+             fflush(stdout);
+          */
+            }
             if (verbosityLevel>1) {
               printf("Change for family %ld (%ld sextupoles): %e\n",
-                      i, count, chrom->correction_fraction*chrom->dK2->a[i][0]);
+                     i, count, chrom->correction_fraction*chrom->dK2->a[i][0]);
               fflush(stdout);
             }
             if (!has_wc && alter_defined_values)
               change_defined_parameter(chrom->name[i], K2_param, type, K2, NULL, LOAD_FLAG_ABSOLUTE);
-            }    
-
+        }    
+        
         if (beamline->links) {
           /* rebaseline_element_links(beamline->links, run, beamline); */
           assert_element_links(beamline->links, run, beamline, 
@@ -549,7 +591,9 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
           printf("min, max sextupole strength:  %e  %e  1/m^2\n", K2_min, K2_max);
           fflush(stdout);
         }
-      }
+        if (nLimit == nTotal || nChanged==0)
+          break;
+    }
 
     if (verbosityLevel>0)
       printf("Chromaticity correction completed after %ld iterations\n", iter);
@@ -559,6 +603,10 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
       fflush(stdout);
     
     if (fp_sl && last_iteration) {
+      if (step!=1)
+        fprintf(fp_sl, "\n%ld\n", step);
+      else
+        fprintf(fp_sl, "%ld\n", step);
         for (i=0; i<chrom->n_families; i++) {
             context = NULL;
             while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
@@ -570,10 +618,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
               }
               if (( K2_param = confirm_parameter("K2", context->type))<0)
                 bombElegant("confirm_parameter doesn't return offset for K2 parameter.\n", NULL);
-              fprintf(fp_sl, "%ld %e %s\n", 
-                      step,
-                      *((double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)),
-                      chrom->name[i]);
+              fprintf(fp_sl, "%s K2 %ld %21.15e\n", context->name, context->occurence, 
+                      *((double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)));
             }
           }
         fflush(fp_sl);

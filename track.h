@@ -3982,6 +3982,8 @@ double adjustTuneHalfPlane(double frequency, double phase0, double phase1);
 int lsf2dPolyUnweighted(double *x[2], double *y, long points, int32_t *order[2],
                         long nOrders, double *coef, double *chi, double *condition, 
                         double *diff);
+/* tune.c */
+double *scanNumberList(char *list, long *nFound);
 
 /* chrom.c */
 void computeChromaticities(double *chromx, double *chromy, 

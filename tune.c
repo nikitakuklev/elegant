@@ -58,6 +58,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     if ((--tune->n_families)<2)
         bombElegant("too few quadrupoles given for tune correction", NULL);
     
+    tune->lowerLimit  = tune->upperLimit = NULL;
     if (lower_limits) {
       long nll = 0;
       tune->lowerLimit = scanNumberList(lower_limits, &nll);
@@ -156,9 +157,11 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
         if (strength_log) {
         strength_log = compose_filename(strength_log, run->rootname);
         fp_sl = fopen_e(strength_log, "w", 0);
-        fprintf(fp_sl, "SDDS1\n&column name=Step, type=long, description=\"Simulation step\" &end\n");
-        fprintf(fp_sl, "&column name=K1, type=double, units=\"1/m$a2$n\" &end\n");
-        fprintf(fp_sl, "&column name=QuadrupoleName, type=string  &end\n");
+        fprintf(fp_sl, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+        fprintf(fp_sl, "&column name=ElementName, type=string  &end\n");
+        fprintf(fp_sl, "&column name=ElementParameter, type=string  &end\n");
+        fprintf(fp_sl, "&column name=ElementOccurence, type=long  &end\n");
+        fprintf(fp_sl, "&column name=ParameterValue, type=double, units=\"1/m$a2$n\" &end\n");
         fprintf(fp_sl, "&data mode=ascii, no_row_counts=1 &end\n");
         fflush(fp_sl);
         }
@@ -280,9 +283,9 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   ELEMENT_LIST *context;
   long i, K1_param, type=0, iter;
   double beta_x, alpha_x, eta_x, etap_x;
-  double beta_y, alpha_y, eta_y, etap_y, dtunex, dtuney, factor;
+  double beta_y, alpha_y, eta_y, etap_y, dtunex, dtuney;
+  /* double factor; */
   static long tunes_saved=0;
-  /* static double nux_orig, nuy_orig; */
   unsigned long unstable;
   double *K1ptr;
 
@@ -340,6 +343,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   gain = tune->gain;
   
   for (iter=0; iter<tune->n_iterations; iter++) {
+    long nTotal, nLimit, nChanged;
 #ifdef DEBUG
   printf("   Starting iteration %ld\n", iter);
   fflush(stdout);
@@ -383,10 +387,14 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
       return 0;
     }
 
+    /* Scan through families and find strongest for each family, check for over-limit */
+    /*
+      Don't use this code. Use the dumb pegging method instead, since it might allow correction to continue if
+      there are more than 2 families
+
     factor = 1;
     if (tune->lowerLimit || tune->upperLimit) {
       ELEMENT_LIST *limitingElement;
-      /* Scan through families and find strongest for each family, check for over-limit */
       
       limitingElement = NULL;
       for (i=0; i<tune->n_families; i++) {
@@ -451,9 +459,12 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     }
     if (factor==0)
       break;
+    */
 
+    nTotal = nLimit = nChanged = 0;
     for (i=0; i<tune->n_families; i++) {
       short has_wc;
+      double K10;
       context = NULL;
       has_wc = has_wildcards(tune->name[i]);
       K1_param = -1;
@@ -476,7 +487,18 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
 	}
 	if (!(K1ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K1_param].offset)))
 	  bombElegant("K1ptr NULL in do_tune_correction", NULL);
+        K10 = *K1ptr;
         K1 =  (*K1ptr +=  tune->dK1->a[i][0]);
+        nTotal ++;
+        if (tune->lowerLimit && K1<tune->lowerLimit[i]) {
+          K1 = *K1ptr = tune->lowerLimit[i];
+          nLimit++;
+          printf("warning: %s#%ld is at the lower limit (K1=%le).\n", context->name, context->occurence, K1);
+        } else if (tune->upperLimit && K1>tune->upperLimit[i]) {
+          K1 = *K1ptr = tune->upperLimit[i];
+          nLimit++;
+          printf("warning: %s#%ld is at the upper limit (K1=%le).\n", context->name, context->occurence, K1);
+        }
         if (context->matrix) {
           free_matrices(context->matrix);
           free(context->matrix);
@@ -487,10 +509,12 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
         if (has_wc && alter_defined_values) {
           change_defined_parameter(context->name, K1_param, type, K1, NULL, LOAD_FLAG_ABSOLUTE);
         }
-      }
-      if (tune->verbosity>1) {
-        printf("change of %s[K1] is  %.15g 1/m^3\n", tune->name[i], tune->dK1->a[i][0]);
-        fflush(stdout);
+        if (tune->verbosity>1) {
+          printf("change of %s#%ld[K1] is  %.15g 1/m^3\n", context->name, context->occurence, K1-K10);
+          fflush(stdout);
+        }
+        if (K1!=K10)
+          nChanged++;
       }
       if (!has_wc && alter_defined_values) {
         if (tune->verbosity>2) {
@@ -546,9 +570,13 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
       fflush(stdout);
     }
 
+    /*
     if (factor!=1)
       break;
-  
+    */
+
+    if (nTotal == nLimit || nChanged==0)
+      break;
   }
 
 #ifdef DEBUG
@@ -565,6 +593,10 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   
   if (fp_sl && last_iteration) {
     tunes_saved = 0;
+    if (step!=1)
+      fprintf(fp_sl, "\n%ld\n", step);
+    else
+      fprintf(fp_sl, "%ld\n", step);
     for (i=0; i<tune->n_families; i++) {
       context = NULL;
       while ((context=wfind_element(tune->name[i], &context, beamline->elem))) {
@@ -581,7 +613,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
         K1_param = confirm_parameter("K1", context->type);
 	if (!(K1ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K1_param].offset)))
 	  bombElegant("K1ptr NULL in do_tune_correction", NULL);
-	fprintf(fp_sl, "%ld %21.15e %s\n", step, *K1ptr, tune->name[i]);
+	fprintf(fp_sl, "%s K1 %ld %21.15e\n", context->name, context->occurence, *K1ptr);
       }
     }
     fflush(fp_sl);

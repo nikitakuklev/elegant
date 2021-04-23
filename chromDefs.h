@@ -15,6 +15,7 @@ extern "C" {
 /* structure for chromaticity correction information */
 typedef struct {
     double chromx, chromy;    /* desired chromaticities */
+    double *lowerLimit, *upperLimit;
     double strengthLimit;     /* maximum absolute value of strength */
     char **name;              /* names of sextupole families */
     long n_families;          /* number of families */
