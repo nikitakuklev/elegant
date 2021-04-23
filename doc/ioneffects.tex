@@ -10,7 +10,7 @@ Modeling of residual ions has these features:
 \item Arbitrary ion species, specified by a user-provided file that includes the cross sections.
 \item User-defined locations for ion generation. Each \verb|IONEFFECTS| element represents the
       ions present in a segment of the accelerator. The segments start and end half way between
-      successive \verb|IONEFFECTS| elements.
+      successive \verb|IONEFFECTS| elements.  The segment for the first element starts at the beginning of the ring, and the last element covers the end of the ring.
 \item Arbitrary fill patterns. Uniform fills can be set up using the \verb|bunched_beam| command,
       while custom fills can be set up by generating the beam externally and using the \verb|sdds_beam| command.
 \item Multiple ionization of trapped ions.  For example, a CO+ ion could multiply ionize into CO++, or dissociate into C+.
@@ -22,7 +22,7 @@ Some limitations of the model include:
   approximation.
 \item By default, fields from ions are computed based on gaussian parameters, which is often a somewhat
   poor approximation. Alternatively, a bi-gaussian form may be used, which uses a sum of two gaussians.
-  This is a much better approximation to the typical distribution, which often has a hot core and long tails.
+  This is a much better approximation to the typical distribution, which often has a hot core and long tails.  One can also use a tri-gaussian, bi-lorentzian, or tri-lorentzian fit.
 \item Ions move only transversely and exist only outside of magnets.
 \end{itemize}
 
@@ -82,11 +82,13 @@ The \verb|IONEFFECTS| element also supports multiple ionization.  In the \verb|i
 
 The kick on the ions from the beam is calculated using the
 Basetti-Erskine formula~\cite{Bassetti}, which assumes the beam is
-Gaussian in both transverse dimensions.  This may be a poor assumption for
+Gaussian in both transverse dimensions.  By default, this assumption is also used for the ion distribution.  The parameter \verb|gaussian_ion_range| gives the range (in beam sigma) over which ions are counted, for calculating the ion-beam kicks.  
+
+The Gaussian method may be a poor assumption for
 the ions, in which case the \verb|field_calculation_method| parameter can be
 set to \verb|bigaussian|, which uses a sum of two gaussians. This provides
 a much better model for the actual distribution, at the expense of a considerable
-increase in run time. The \verb|ion_bin_divisor| and \verb|ion_range_multiplier| parameters can
+increase in run time. One can also use a \verb|trigaussian| fit, as well as a \verb|bilorentzian| or \verb|trilorentzian|.  The \verb|ion_bin_divisor| and \verb|ion_range_multiplier| parameters can
 be used to control the bin size and range, respectively, of the histogram used to 
 approximate the ion charge distribution.
 The \verb|ion_bin_divisor| gives the ratio of the rms size of the electron bunch
@@ -103,7 +105,7 @@ If negative gives the range of the binned coordinates in
 units of the rms size of the ion distribution.
 
 The \verb|ion_histogram_output| parameter and related parameters can be used to 
-request output of the ion distribution and the bi-gaussian fit, which is advisable
+request output of the ion distribution and the multi-function fit, which is advisable
 when setting the binning parameters.
 
 The change in momentum of an ion due to the bunch passage is:
