@@ -111,6 +111,8 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
   while the \verb|ParameterValueString| column is used for string quantities only.
   If only \verb|ParameterValueString| is present, \verb|elegant| will attempt to scan the string values as
   needed for numerical values; this is not the preferred approach as it will degrade performance.
+\item The \verb|correct_tunes| and \verb|chromaticity| commands now accept lists giving lower and upper strength limits
+  for each family. In addition, the \verb|strength_log| files are now compatible with \verb|load_parameters|.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -1594,6 +1596,8 @@ the tracking is appropriate to simulation of dynamics from a touschek scattering
 \begin{verbatim}
 &chromaticity
     STRING sextupoles = NULL;
+    STRING lower_limits = NULL;
+    STRING upper_limits = NULL;
     STRING exclude = NULL;
     double dnux_dp = 0;
     double dnuy_dp = 0;
@@ -1617,6 +1621,17 @@ the tracking is appropriate to simulation of dynamics from a touschek scattering
   wildcards. If so, then sextupoles in each group are changed by the same amount for each iteration.
   This would typically be used when the sextupoles are nominally identical (though perhaps differing in strength because of
   introduced errors). If that's not the case, the iteration may fail to converge.
+\item \verb|lower_limits|, \verb|upper_limits| --- Lists of lower and upper limits for each family. The input style is
+  unusual for {\tt elegant}, given that lists of numbers are to be provided in a string. For example
+\begin{verbatim}
+&chromaticity
+ sextupoles = "S1 S2 S3",
+ lower_limits = "0 -1.5 0",
+ upper_limits = "1.75 0 1.25"
+ ...
+&end
+\end{verbatim}
+\item \verb|strength_limit| --- Deprecated. Limit on the absolute value of sextupole strength ($K_2$).
 \item \verb|exclude| --- List of names of elements to exclude. This may be used to exclude some sextupoles that are matched by wildcards in
   the \verb|sextupole| list.
 \item \verb|dK2_weight| --- Weighting factor that is used to minimize the mean-square changes in $K_2$ values in the
@@ -1630,12 +1645,11 @@ cases, correction is unstable at this number should be reduced.
 \item \verb|tolerance| --- Stop iterating when chromaticities are within this value of the
 desired values.
 \item \verb|strength_log| --- The (incomplete) name of an SDDS file to which the sextupole strengths will
-be written.  Recommended value: ``\%s.ssl''.
+be written.  Recommended value: ``\%s.ssl''. May be used with \verb|load_parameters|.
 \item \verb|change_defined_values| --- Changes the defined values of the sextupole strengths.
 This means that when the lattice is saved (using \verb|save_lattice|), the sextupoles will
 have the corrected values.  This would be used for correcting the chromaticity of a design
 lattice, for example, but not for correcting chromaticity of a perturbed lattice.
-\item \verb|strength_limit| --- Limit on the absolute value of sextupole strength ($K_2$).
 \item \verb|use_perturbed_matrix| --- If nonzero, requests use of the perturbed correction matrix in
 performing correction.  For difficult lattices with large errors, this may be necessary
 to obtain correction.  In general, it is not necessary and only slows the simulation.
@@ -1941,6 +1955,8 @@ matrix.
 
 &correct_tunes
     STRING quadrupoles = NULL;
+    STRING lower_limits = NULL;
+    STRING upper_limits = NULL;
     STRING exclude = NULL;
     double tune_x = 0;
     double tune_y = 0;
@@ -1963,6 +1979,16 @@ matrix.
   wildcards. If so, then quadrupoles in each group are changed by the same amount for each iteration.
   This would typically be used when the quadrupoles are nominally identical (though perhaps differing in strength because of
   introduced errors). If that's not the case, the iteration may fail to converge
+\item \verb|lower_limits|, \verb|upper_limits| --- Lists of lower and upper limits for each family. The input style is
+  unusual for {\tt elegant}, given that lists of numbers are to be provided in a string. For example
+\begin{verbatim}
+&correct_tunes
+ quadrupoles = "Q1 Q2 Q3",
+ lower_limits = "0 -1.5 0",
+ upper_limits = "1.75 0 1.25"
+ ...
+&end
+\end{verbatim}
 \item \verb|exclude| --- List of names of elements to exclude. This may be used to exclude some 
   quadrupoles that are matched by wildcards in the \verb|quadrupoles| list.
 \item \verb|dK1_weight| --- Weighting factor that is used to minimize the mean-square changes in $K_1$ values in the
@@ -1981,6 +2007,7 @@ each \verb|step_up_interval| steps.
   quadupoles. 
 \item \verb|strength_log| --- The (incomplete) name of a SDDS file to which the quadrupole 
 strengths will be written as correction proceeds.  Recommended value: ``\%s.qst''.
+May be used with \verb|load_parameters|.
 \item \verb|change_defined_values| --- Changes the defined values of the quadrupole strengths.
 This means that when the lattice is saved (using \verb|save_lattice|), the quadrupoles will
 have the corrected values.  This would be used for correcting the tunes of a design
