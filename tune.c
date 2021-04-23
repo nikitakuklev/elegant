@@ -19,6 +19,8 @@
 static FILE *fp_sl = NULL;
 static long alter_defined_values;
 
+double *scanNumberList(char *list, long *nFound);
+
 void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, TUNE_CORRECTION *tune)
 {
   /* VMATRIX *M; */
@@ -55,6 +57,23 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
         tune->name = trealloc(tune->name, sizeof(*tune->name)*(tune->n_families+=1));
     if ((--tune->n_families)<2)
         bombElegant("too few quadrupoles given for tune correction", NULL);
+    
+    if (lower_limits) {
+      long nll = 0;
+      tune->lowerLimit = scanNumberList(lower_limits, &nll);
+      if (nll!=tune->n_families)
+        bombElegantVA("number of items in lower_limits list (%ld) not the same as number of quadrupole names (%ld)",
+                    nll, tune->n_families);
+    }
+
+    if (upper_limits) {
+      long nul = 0;
+      tune->upperLimit = scanNumberList(upper_limits, &nul);
+      if (nul!=tune->n_families)
+        bombElegantVA("number of items in upper_limits list (%ld) not the same as number of quadrupole names (%ld)",
+                    nul, tune->n_families);
+    }
+
     tune->tunex = tune_x;
     tune->tuney = tune_y;
     tune->gain = correction_fraction;
@@ -261,7 +280,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   ELEMENT_LIST *context;
   long i, K1_param, type=0, iter;
   double beta_x, alpha_x, eta_x, etap_x;
-  double beta_y, alpha_y, eta_y, etap_y, dtunex, dtuney;
+  double beta_y, alpha_y, eta_y, etap_y, dtunex, dtuney, factor;
   static long tunes_saved=0;
   /* static double nux_orig, nuy_orig; */
   unsigned long unstable;
@@ -363,7 +382,76 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
       fflush(stdout);
       return 0;
     }
-    
+
+    factor = 1;
+    if (tune->lowerLimit || tune->upperLimit) {
+      ELEMENT_LIST *limitingElement;
+      /* Scan through families and find strongest for each family, check for over-limit */
+      
+      limitingElement = NULL;
+      for (i=0; i<tune->n_families; i++) {
+        context = NULL;
+        K1_param = -1;
+        while ((context=wfind_element(tune->name[i], &context, beamline->elem))) {
+          if (tune->n_exclude) {
+            long j, excluded;
+            for (j=excluded=0; j<tune->n_exclude; j++) 
+              if (wild_match(context->name, tune->exclude[j])) {
+                excluded = 1;
+                break;
+              }
+            if (excluded)
+              continue;
+          }
+          if (!(K1_param=confirm_parameter("K1", context->type))) {
+            printf("error: element %s does not have K1 parameter\n", 
+                   context->name);
+            fflush(stdout);
+            exitElegant(1);
+          }
+          if (!(K1ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K1_param].offset)))
+            bombElegant("K1ptr NULL in do_tune_correction", NULL);
+          if (tune->lowerLimit && *K1ptr<tune->lowerLimit[i]) {
+            printf("Initial quadrupole strength for %s#%ld is %le, below specified lower limit %le\n",
+                   context->name, context->occurence, *K1ptr, tune->lowerLimit[i]);
+            limitingElement = context;
+            factor = 0;
+            break;
+          }
+          if (tune->upperLimit && *K1ptr>tune->upperLimit[i]) {
+            printf("Initial quadrupole strength for %s#%ld is %le, above specified upper limit %le\n",
+                   context->name, context->occurence, *K1ptr, tune->upperLimit[i]);
+            limitingElement = context;
+            factor = 0;
+            break;
+          }
+          K1 = *K1ptr +  tune->dK1->a[i][0];
+          if (tune->lowerLimit && K1<tune->lowerLimit[i]) {
+            double factor1;
+            if ((factor1 = -(*K1ptr - tune->lowerLimit[i])/tune->dK1->a[i][0])<factor) {
+              limitingElement = context;
+              factor = factor1;
+            }
+          }
+          if (tune->upperLimit && K1>tune->upperLimit[i]) {
+            double factor1;
+            if ((factor1 = (tune->upperLimit[i] - *K1ptr)/tune->dK1->a[i][0])<factor) {
+              limitingElement = context;
+              factor = factor1;
+            }
+          }
+        }
+      }
+      if (factor!=1) {
+        printf("Tune correction is limited by strength of %s#%ld going outside allowed range (factor = %le)\n",
+               limitingElement->name, limitingElement->occurence, factor);
+        for (i=0; i<tune->n_families; i++)
+          tune->dK1->a[i][0] *= factor;
+      }
+    }
+    if (factor==0)
+      break;
+
     for (i=0; i<tune->n_families; i++) {
       short has_wc;
       context = NULL;
@@ -457,6 +545,9 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
       printf("new tunes: %e %e\n", beamline->tune[0], beamline->tune[1]);
       fflush(stdout);
     }
+
+    if (factor!=1)
+      break;
   
   }
 
@@ -502,4 +593,21 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
 #endif
 
   return 1;
+}
+
+double *scanNumberList(char *list, long *nFound)
+{
+  long nll;
+  char *ptr;
+  double *dList;
+  nll = 0;
+  dList = NULL;
+  while ((ptr=get_token(list))) {
+    dList = SDDS_Realloc(dList, sizeof(*dList)*(nll+1));
+    if (sscanf(ptr, "%le", &dList[nll])!=1)
+      return NULL;
+    nll++;
+  }
+  *nFound = nll;
+  return dList;
 }

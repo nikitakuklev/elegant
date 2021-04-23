@@ -13,6 +13,7 @@
 typedef struct {
     double tunex, tuney;    /* desired tunes */
     char **name;            /* names of quadrupole families */
+    double *lowerLimit, *upperLimit;
     long n_families;        /* number of families */
     char **exclude;
     long n_exclude;

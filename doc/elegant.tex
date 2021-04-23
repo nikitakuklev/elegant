@@ -114,6 +114,7 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
 \item The \verb|losses| output of the \verb|run_setup| command now provides the global coordinate angle in
  the horizontal plane when \verb|losses_include_global_coordinates=1|. One can also now control the 
  range of \verb|s| coordinates for recorded particles using the \verb|losses_s_limit| array.
+\item The \verb|correct_tunes| command now accepts limits on the strength of the quadrupoles.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -1949,6 +1950,8 @@ matrix.
 
 &correct_tunes
     STRING quadrupoles = NULL;
+    STRING lower_limits = NULL;
+    STRING upper_limits = NULL;
     STRING exclude = NULL;
     double tune_x = 0;
     double tune_y = 0;
@@ -1971,6 +1974,17 @@ matrix.
   wildcards. If so, then quadrupoles in each group are changed by the same amount for each iteration.
   This would typically be used when the quadrupoles are nominally identical (though perhaps differing in strength because of
   introduced errors). If that's not the case, the iteration may fail to converge
+\item \verb|lower_limit|, \verb|upper_limits| --- Optional lists of lower and upper limits for quadrupole strengths,
+  parameter to the \verb|quadrupoles| list. This is an unsual input format for {\tt elegant}, involving a list of
+  numbers stored in a string. An example:
+\begin{verbatim}
+&correct_tunes
+ quadrupoles = "Q1 Q2 Q3"
+ lower_limits = "0 -1.5 0"
+ upper_limits = "1.5 0 1.5"
+ ...
+&end
+\end{verbatim}
 \item \verb|exclude| --- List of names of elements to exclude. This may be used to exclude some 
   quadrupoles that are matched by wildcards in the \verb|quadrupoles| list.
 \item \verb|dK1_weight| --- Weighting factor that is used to minimize the mean-square changes in $K_1$ values in the
@@ -6195,7 +6209,7 @@ arithmetic.
 \end{itemize}
 
 \newpage
-\section{Specialized Tools for Use with {\tt elegant}\label[sect:tools}}
+\section{Specialized Tools for Use with {\tt elegant}\label{sect:tools}}
 
 A number of specialized programs are available that work with {\tt
 elegant}. Most are SDDS-compliant, so they will also work with any
@@ -6519,7 +6533,7 @@ computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<column
               -normal=<output> [-skew=<output>]
               [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]
               [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]
-              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,noDecrease][,verbose]]
+              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,increaseOnly][,verbose][,log=<filename>]]
 }\end{flushleft}
 
 \item {\bf switches:}
@@ -6542,10 +6556,12 @@ computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<column
   and \verb|nphi| parameters.
 \item {\tt autotune} --- Optimizes the number of derivaties and multipoles up the to values given with the
   \verb|-derivatives| and \verb|-multipoles| options, in order to minimize the deviation of the GGE-derived
-  fields from the supplied fields on the cylinder. Differences below the \verb|significance| value are
-  ignored. By default, minimizes the maximum deviation, but user can
-  ask to minimize the rms or mean-absolute-value deviation using the \verb|minimize| qualifier.
-  The \verb|noDecrease| qualifier specifies that the scan over multipoles $m$ and derivatives $d$
+  fields from the values given in the 3D field map file. The region of evaluation is automatically limited by
+  the bounding planes, even if the 3D field map has a larger extent. By default, minimizes the maximum deviation, but user can
+  ask to minimize the rms or mean-absolute-value deviation. Differences below the \verb|significance| value are
+  ignored. The user may request verbose output to see results printed to the terminal, and also a log file
+  for a detailed record.
+  The \verb|increaseOnly| qualifier specifies that the scan over multipoles $m$ and derivatives $d$
   is restricted to never be less than the previous optimal values; for example, if the best value
   so far was obtained with $m=4$ and $d=3$, the remainder of the scan would be restricted to $m\ge 4$ and $d\ge 3$;
   this can save considerable run time.
@@ -6569,7 +6585,7 @@ boundary \cite{Mitchell-2007} for use with {\tt elegant}'s \verb|BGGEXP| element
 computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>
    -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]
    [-evaluate=<filename>]
-   [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,verbose][,log=<filename>]]
+   [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>]]
 }\end{flushleft}
 
 \item {\bf switches:}
@@ -6599,6 +6615,10 @@ computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<fil
   ask to minimize the rms or mean-absolute-value deviation. Differences below the \verb|significance| value are
   ignored. The user may request verbose output to see results printed to the terminal, and also a log file
   for a detailed record.
+  The \verb|increaseOnly| qualifier specifies that the scan over multipoles $m$ and derivatives $d$
+  is restricted to never be less than the previous optimal values; for example, if the best value
+  so far was obtained with $m=4$ and $d=3$, the remainder of the scan would be restricted to $m\ge 4$ and $d\ge 3$;
+  this can save considerable run time.
 \end{itemize}
 
 \item {\bf authors:} R. Lindberg, R. Soliday, M. Borland (ANL/APS).
