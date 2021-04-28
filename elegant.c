@@ -1022,7 +1022,6 @@ char **argv;
     case TRACK:
     case ANALYZE_MAP:
     case TOUSCHEK_SCATTER:
-      soft_failure = !(run_control.terminate_on_failure);
       switch (commandCode) {
       case TRACK:
         if (!run_setuped || !run_controled || beam_type==-1) 
@@ -1069,7 +1068,10 @@ char **argv;
 	break;
       }
       firstPass = 1;
-
+      if (run_controled)
+	soft_failure = !(run_control.terminate_on_failure);
+      else
+	soft_failure = 0;
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
         /* vary_beamline asserts changes due to vary_element, error_element, and load_parameters */
         fill_double_array(starting_coord, 6, 0.0);
