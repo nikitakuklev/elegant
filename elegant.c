@@ -1022,6 +1022,7 @@ char **argv;
     case TRACK:
     case ANALYZE_MAP:
     case TOUSCHEK_SCATTER:
+      soft_failure = !(run_control.terminate_on_failure);
       switch (commandCode) {
       case TRACK:
         if (!run_setuped || !run_controled || beam_type==-1) 
@@ -1107,16 +1108,20 @@ char **argv;
           * the beamline 
           */
         if (do_closed_orbit && 
-            !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) && 
-            !soft_failure) {
-          printWarning("Closed orbit not found", ". Continuing to next step");
-          continue;
+            !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
+	  if (soft_failure) {
+	    printWarning("Closed orbit not found", ". Continuing to next step");
+	    continue;
+	  } else
+	    bombElegant("Closed orbit not found", NULL);
         }
         /* Compute twiss parameters with starting_coord as the start of the orbit */
-        if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 0) &&
-            !soft_failure) {
-          printWarning("Twiss parameters not defined", ". Continuing to next step");
-          continue;
+        if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 0)) {
+	  if (soft_failure) {
+	    printWarning("Twiss parameters not defined", ". Continuing to next step");
+	    continue;
+	  } else
+	    bombElegant("Twiss parameters not defined", NULL);
         }
         if (do_rf_setup)
           run_rf_setup(&run_conditions, beamline, 0);
@@ -1152,34 +1157,42 @@ char **argv;
             }
             if (fl_do_tune_correction) {
               if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
-                  !soft_failure) {
-                printWarning("Closed orbit not found", ". Continuing to next step");
-                failed = 1;
-                break;
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
+		if (soft_failure) {
+		  printWarning("Closed orbit not found", ". Continuing to next step");
+		  failed = 1;
+		  break;
+		} else
+		  bombElegant("Closed orbit not found", NULL);
               }
               if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
-                                      run_control.i_step, i==correction_iterations-1) &&
-                  !soft_failure) {
-                printWarning("Tune correction failed", ". Continuing to next step");
-                failed = 1;
-                break;
+                                      run_control.i_step, i==correction_iterations-1)) { 
+		if (soft_failure) {
+		  printWarning("Tune correction failed", ". Continuing to next step");
+		  failed = 1;
+		  break;
+		} else
+		  bombElegant("Tune correction failed", NULL);
               }
             }
             if (do_chromatic_correction) {
               if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
-                  !soft_failure) {
-                printWarning("Closed orbit not found", ". Continuing to next step");
-                failed = 1;
-                break;
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
+		if (soft_failure) {
+		  printWarning("Closed orbit not found", ". Continuing to next step");
+		  failed = 1;
+		  break;
+		} else
+		  bombElegant("Closed orbit not found", NULL);
               }
               if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
-                                              run_control.i_step, i==correction_iterations-1) &&
-                  !soft_failure) {
-                printWarning("Chromaticity correction failed", ". Continuing to next step");
-                failed = 1;
-                break;
+                                              run_control.i_step, i==correction_iterations-1)) {
+		if (!soft_failure) {
+		  printWarning("Chromaticity correction failed", ". Continuing to next step");
+		  failed = 1;
+		  break;
+		} else
+		  bombElegant("Chromaticity correction failed", NULL);
               }
             }
             /* correctionDone = 1; */
@@ -1205,24 +1218,33 @@ char **argv;
         perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
 
         /* Do post-correction output */
-        if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1) &&
-            !soft_failure) {
-          printWarning("Closed orbit not found", ". Continuing to next step");
-          continue;
-        }
-        if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 1) &&
-            !soft_failure) {
-          printWarning("Twiss parameters not defined", ". Continuing to next step");
-          continue;
-        }
+        if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1)) {
+	  if (soft_failure) {
+	    printWarning("Closed orbit not found", ". Continuing to next step");
+	    continue;
+	  }
+	  else 
+	    bombElegant("Closed orbit not found", NULL);
+	}
+        if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 1)) {
+	  if (soft_failure) {
+	    printWarning("Twiss parameters not defined", ". Continuing to next step");
+	    continue;
+	  }
+	  else 
+	    bombElegant("Twiss parameters not defined", NULL);
+	}
         if (do_rf_setup)
           run_rf_setup(&run_conditions, beamline, 1);
         if (do_moments_output)
           runMomentsOutput(&run_conditions, beamline, starting_coord, 1, 1);
         if (do_coupled_twiss_output &&
-            run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
-            !soft_failure) {
-          printWarning("Coupled twiss parameters computation failed", NULL);
+            run_coupled_twiss_output(&run_conditions, beamline, starting_coord)) {
+	  if (soft_failure) {
+	    printWarning("Coupled twiss parameters computation failed", NULL);
+	    continue;
+	  } else
+	    bombElegant("Coupled twiss parameters computation failed", NULL);
         }
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
@@ -1544,6 +1566,10 @@ char **argv;
         setupChaosMap(&namelist_text, &run_conditions, &run_control);
         break;
       }
+      if (run_controled)
+	soft_failure = !(run_control.terminate_on_failure);
+      else
+	soft_failure = 0;
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
 #if DEBUG
 	printf("semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
@@ -1568,67 +1594,81 @@ char **argv;
             }
             if (fl_do_tune_correction) {
               if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
-                  !soft_failure) {
-                printWarning("Closed orbit not found", ". Continuing to next step");
-                break;
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
+		if (soft_failure) {
+		  printWarning("Closed orbit not found", ". Continuing to next step");
+		  break;
+		} else
+		  bombElegant("Closed orbit not found", NULL);
               }
               if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
-                                      run_control.i_step, i==correction_iterations-1) &&
-                  !soft_failure) {
-                printWarning("Tune correction failed", ". Continuing to next step");
-                failed = 1;
-                break;
+                                      run_control.i_step, i==correction_iterations-1)) {
+		if (soft_failure) {
+		  printWarning("Tune correction failed", ". Continuing to next step");
+		  failed = 1;
+		  break;
+		} else 
+		  bombElegant("Tune correction failed", NULL);
               }
             }
             if (do_chromatic_correction) {
               if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
-                  !soft_failure) {
-                printWarning("Closed orbit not found", ". Continuing to next step\n");
-                fflush(stdout);
-                failed = 1;
-                break;
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
+		if (soft_failure) {
+		  printWarning("Closed orbit not found", ". Continuing to next step\n");
+		  fflush(stdout);
+		  failed = 1;
+		  break;
+		} else
+		  bombElegant("Closed orbit not found", NULL);
               }
               if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
-                                              run_control.i_step, i==correction_iterations-1) &&
-                  !soft_failure) {
-                printf("Chromaticity correction failed---continuing to next step\n");
-                fflush(stdout);
-                failed = 1;
-                break;
+                                              run_control.i_step, i==correction_iterations-1)) {
+		if (soft_failure) {
+		  printf("Chromaticity correction failed---continuing to next step\n");
+		  fflush(stdout);
+		  failed = 1;
+		  break;
+		} else
+		  bombElegant("Chromaticity correction failed", NULL);
               }
             }
             /* correctionDone = 1; */
-          }
-          if (failed)
-            continue;
-        }
-
+	  }
+	  if (failed)
+	    continue;
+	}
+	
         if (run_control.reset_rf_each_step)
           delete_phase_references();
         reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_RF:0);
         runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 1, 1);
         perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
         if (do_closed_orbit && 
-            !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1) &&
-            !soft_failure) {
-          printf("Closed orbit not found---continuing to next step\n");
-          fflush(stdout);
-          continue;
+            !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1)) {
+	  if (soft_failure) {
+	    printf("Closed orbit not found---continuing to next step\n");
+	    fflush(stdout);
+	    continue;
+	  } else 
+	    bombElegant("Closed orbit not found", NULL);
         }
         if (do_twiss_output && 
-            !run_twiss_output(&run_conditions, beamline, starting_coord, 1) &&
-            !soft_failure) {
-          printf("Twiss parameters not defined---continuing to next step\n");
-          fflush(stdout);
-          continue;
+            !run_twiss_output(&run_conditions, beamline, starting_coord, 1)) {
+	  if (soft_failure) {
+	    printf("Twiss parameters not defined---continuing to next step\n");
+	    fflush(stdout);
+	    continue;
+	  } else
+	    bombElegant("Twiss parameters not defined", NULL);
         }
         if (do_coupled_twiss_output &&
-            run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
-            !soft_failure) {
-          printf("Coupled twiss parameters calculation failed.\n");
-          fflush(stdout);
+            run_coupled_twiss_output(&run_conditions, beamline, starting_coord)) {
+	  if (soft_failure) {
+	    printf("Coupled twiss parameters calculation failed.\n");
+	    fflush(stdout);
+	  } else
+	    bombElegant("Coupled twiss parameters calculation failed", NULL);
         }
         run_matrix_output(&run_conditions, beamline);
         if (do_response_output)

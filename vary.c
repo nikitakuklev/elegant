@@ -67,6 +67,7 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
     _control->reset_rf_each_step = reset_rf_for_each_step;
     _control->reset_scattering_seed = reset_scattering_seed;
     _control->fiducial_flag = 0;
+    _control->terminate_on_failure = terminate_on_failure;
     if (first_is_fiducial)
       _control->fiducial_flag = FIRST_BEAM_IS_FIDUCIAL |
         (restrict_fiducialization?RESTRICT_FIDUCIALIZATION:0); 

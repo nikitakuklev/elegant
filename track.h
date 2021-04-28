@@ -562,11 +562,12 @@ typedef struct {
     long i_step;
     long n_steps;                /* number of error sets/bunches levels */
     double bunch_frequency;      /* bunch interval, if timing is varied */
-    long reset_rf_each_step;     /* whether to reset rf element phases/timing */
-    long reset_scattering_seed;  /* whether to reset random numbers for scattering for each step */
+    short reset_rf_each_step;     /* whether to reset rf element phases/timing */
+    short reset_scattering_seed;  /* whether to reset random numbers for scattering for each step */
     unsigned long fiducial_flag; /* flags for fiducial control */
     long n_passes;               /* number of times to go through beamline */
-    long new_data_read;          /* new data has been read for variation of elements */
+    short new_data_read;          /* new data has been read for variation of elements */
+    short terminate_on_failure;
     LINE_LIST *cell;             /* cell to be varied along with main beamline */
     } VARY;
 void check_VARY_structure(VARY *_control, char *caller);
