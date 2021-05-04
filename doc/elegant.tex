@@ -79,10 +79,10 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
       parameters are ignored.
     \item \verb|MALIGN_METHOD=1|: use M. Venturini's method, with misalignment parameters understood to be relative
       to the magnet entrance. The new \verb|YAW| and \verb|PITCH| (or \verb|EYAW| and \verb|EPITCH| for \verb|CSBEND| elements)
-      parameters become active.
+      parameters become active. This is presently incompatible with the \verb|moments_output| command.
     \item \verb|MALIGN_METHOD=2|: use M. Venturini's method, with misalignment parameters understood to be relative
       to the magnet center. The new \verb|YAW| and \verb|PITCH| (or \verb|EYAW| and \verb|EPITCH| for \verb|CSBEND| elements)
-      parameters become active.
+      parameters become active. This is presently incompatible with the \verb|moments_output| command.
     \end{itemize}
   \item The \verb|HMON|, \verb|VMON|, and \verb|MONI| elements can be used to store turn-by-turn BPM readings by setting
   the \verb|STORE_TURN_BY_TURN| parameter to 1. This can be used, for example, to create position-based triggers using
