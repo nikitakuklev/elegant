@@ -2813,7 +2813,7 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
       z = fmap->z[ip];
       dz = (bggexpData[ns].zMax-bggexpData[ns].zMin)/(bggexpData[ns].nz-1);
       iz = (z-bggexpData[ns].zMin)/dz + 0.5;
-      if (fabs(iz*dz+bggexpData[ns].zMin-z)>1e-4*dz || iz<0 || iz>=bggexpData[ns].nz) {
+      if (fabs(iz*dz+bggexpData[ns].zMin-z)>1e-3*dz || iz<0 || iz>=bggexpData[ns].nz) {
         fprintf(stderr, "evaluation points in the 3d field map need to be at the same z planes as the input data\n");
         fprintf(stderr, "no match for z=%15.8le, dz=%15.8le, zMin=%15.8le, iz=%ld\n", z, dz, bggexpData[ns].zMin, iz);
         exit(1);
