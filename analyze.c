@@ -1579,7 +1579,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     switch (eptr->type) {
     case T_CSBEND:
       memcpy(&csbend, (CSBEND*)eptr->p_elem, sizeof(CSBEND));
-      if (csbend.etilt && !sliceEtilted) {
+      if ((csbend.etilt || csbend.eyaw || csbend.epitch) && !sliceEtilted) {
         nSlices = 1;
       }
       csbend.isr = 0;
