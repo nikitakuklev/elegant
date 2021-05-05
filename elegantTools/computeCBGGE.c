@@ -672,7 +672,7 @@ int computeGGE
     for (n = 0; n < 2*derivatives; n+=2)  {
       for (ik=0; ik<Nz; ik++) {
         double factor;
-        factor = -ipow(-1, n/2)*ipow(k[ik], iharm+n-1)/Imp(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))*k[ik];
+        factor = -ipow(-1, n/2)*ipow(k[ik], iharm+n-1)/Imp(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))*k[ik]/Nz/(Nphi/2.0);
         c1[ik].re = Bm[iharm][ik].re*factor;
         c1[ik].im = Bm[iharm][ik].im*factor;
       }
