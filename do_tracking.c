@@ -1404,15 +1404,17 @@ long do_tracking(
               /* printf("After ECOL: nLeft = %ld, nToTrack = %ld\n", nLeft, nToTrack); */
 	      break;
 	    case T_APCONTOUR:
-	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
-		drift_beam(coord, nToTrack, ((APCONTOUR*)eptr->p_elem)->length, run->default_order);
+	      apcontour = (APCONTOUR*)eptr->p_elem;
+	      if (apcontour->cancel) 
+		apcontour = NULL;
 	      else {
-                apcontour = (APCONTOUR*)eptr->p_elem;
-                if (apcontour->cancel)
-                  apcontour = NULL;
-                else
-                  nLeft = trackThroughApContour(coord, apcontour, nToTrack, accepted, last_z, *P_central);
-              }
+		if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)) 
+		  drift_beam(coord, nToTrack, ((APCONTOUR*)eptr->p_elem)->length, run->default_order);
+		else 
+		  nLeft = trackThroughApContour(coord, apcontour, nToTrack, accepted, last_z, *P_central);
+		if (!apcontour->sticky)
+		  apcontour = NULL;
+	      }
 	      break;
 	    case T_TAPERAPC:
               taperapc = (TAPERAPC*)eptr->p_elem;
