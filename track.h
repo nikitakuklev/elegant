@@ -1129,7 +1129,7 @@ extern char *entity_text[N_TYPES];
 #define N_CCBEND_PARAMS 51
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS 19
-#define N_APCONTOUR_PARAMS 12
+#define N_APCONTOUR_PARAMS 14
 #define N_TAPERAPC_PARAMS 6
 #define N_TAPERAPE_PARAMS 12
 #define N_TAPERAPR_PARAMS 9
@@ -3463,6 +3463,7 @@ typedef struct {
   double tilt;            /* roll angle */
   double dx, dy, dz;      /* misalignments */
   double resolution;
+  double xFactor, yFactor; /* multiply x and y data by these factors */
   short invert;           /* If non-zero, the shape is an obstruction not an aperture */
   short sticky;           /* If non-zero, the shape is applied until canceled by another APCONTOUR element */
   short cancel;           /* If non-zero, cancel previous APCONTOUR. Valid even without other parameters */

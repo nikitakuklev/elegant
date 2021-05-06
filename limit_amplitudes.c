@@ -1374,7 +1374,8 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
   double z0, z1, zLost;
   short lost0, lost1, lost2;
   int lossCode;
-  
+  double *x, *y;
+
   if (!apcontour->initialized) {
     SDDS_DATASET SDDSin;
     SDDSin.parallel_io = 0;
@@ -1403,8 +1404,8 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
 	!(apcontour->y = SDDS_GetColumnInDoubles(&SDDSin, apcontour->yColumn)))
       bombElegantVA("Error: failed to get x or y data from APCONTOUR file %s\n", apcontour->filename);
     SDDS_Terminate(&SDDSin);
-    if (apcontour->resolution<=0)
-      bombElegant("Error: APCONTOUR has RESOLUTION<=0", NULL);
+    if (apcontour->resolution<=0 && apcontour->length>0)
+      bombElegant("Error: APCONTOUR has RESOLUTION<=0 and L>0", NULL);
     if (apcontour->x[0]!=apcontour->x[apcontour->nPoints-1] ||
 	apcontour->y[0]!=apcontour->y[apcontour->nPoints-1])
       bombElegantVA("Error: contour provided in file %s for APCONTOUR is not a closed shape\n", apcontour->filename);
@@ -1419,6 +1420,19 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
   if (apcontour->tilt)
     rotateBeamCoordinatesForMisalignment(coord, np, apcontour->tilt);
 
+  if (apcontour->xFactor!=1 || apcontour->yFactor!=1) {
+    long j;
+    x = tmalloc(sizeof(*x)*apcontour->nPoints);
+    y = tmalloc(sizeof(*y)*apcontour->nPoints);
+    for (j=0; j<apcontour->nPoints; j++) {
+      x[j] = apcontour->x[j]*apcontour->xFactor;
+      y[j] = apcontour->y[j]*apcontour->yFactor;
+    }
+  } else {
+    x = apcontour->x;
+    y = apcontour->y;
+  }
+
   lossCode = 0;
   if (apcontour->invert)
     lossCode = 1;
@@ -1429,18 +1443,18 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
     lost0 = lost1 = 0;
     if (pointIsInsideContour(coord[ip][0]+coord[ip][1]*z0,
 			     coord[ip][2]+coord[ip][3]*z0,
-			     apcontour->x, apcontour->y, apcontour->nPoints, NULL, 0.0)==lossCode) {
+			     x, y, apcontour->nPoints, NULL, 0.0)==lossCode) {
       lost0 = 1;
     } else if (apcontour->length>0) {
       if (pointIsInsideContour(coord[ip][0]+coord[ip][1]*z1,
 			       coord[ip][2]+coord[ip][3]*z1,
-			       apcontour->x, apcontour->y, apcontour->nPoints, NULL, 0.0)==lossCode) {
+			       x, y, apcontour->nPoints, NULL, 0.0)==lossCode) {
 	lost1 = 1;
 	while ((z1-z0)>apcontour->resolution) {
 	  zLost = (z0+z1)/2;
 	  lost2 = pointIsInsideContour(coord[ip][0]+coord[ip][1]*zLost,
 				       coord[ip][2]+coord[ip][3]*zLost,
-				       apcontour->x, apcontour->y, apcontour->nPoints, NULL, 0.0)==lossCode;
+				       x, y, apcontour->nPoints, NULL, 0.0)==lossCode;
 	  if (lost2==lost1)
 	    z1 = zLost;
 	  else if (lost2==lost0)
@@ -1468,6 +1482,11 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
   if (apcontour->dx || apcontour->dy || apcontour->dz)
     offsetBeamCoordinatesForMisalignment(coord, np, -apcontour->dx, -apcontour->dy, -apcontour->dz);
 
+  if (x!=apcontour->x)
+    free(x);
+  if (y!=apcontour->y)
+    free(y);
+  
   return i_top+1;
 }
 
