@@ -44,6 +44,7 @@ typedef struct {
 
 typedef struct {
   double rms, mad, max;
+  double fracRms, fracMad, fracMax;
 } ALL_RESIDUALS;
 
 typedef struct {
@@ -344,7 +345,10 @@ int main(int argc, char **argv)
           SDDS_DefineColumn(&SDDS_autoTuneLog, "d", NULL, NULL, "Number of derivatives", NULL, SDDS_LONG, 0)==-1 ||
           SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "RmsError", "T", SDDS_DOUBLE)!=1 ||
           SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "MaximumError", "T", SDDS_DOUBLE)!=1 ||
-          SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "MADError", "T", SDDS_DOUBLE)!= 1 || 
+          SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "MadError", "T", SDDS_DOUBLE)!= 1 || 
+          SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "FractionalRmsError", NULL, SDDS_DOUBLE)!=1 ||
+          SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "FractionalMaximumError", NULL, SDDS_DOUBLE)!=1 ||
+          SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "FractionalMadError", NULL, SDDS_DOUBLE)!= 1 || 
           !SDDS_WriteLayout(&SDDS_autoTuneLog) ||
           !SDDS_StartPage(&SDDS_autoTuneLog, maxMultipoles*maxDerivatives)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -429,7 +433,10 @@ int main(int argc, char **argv)
             if (!SDDS_SetRowValues(&SDDS_autoTuneLog, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                                    iAutoTuneLog++,
                                    "m", multipoles, "d", derivatives, "RmsError", allResiduals.rms,
-                                   "MaximumError", allResiduals.max, "MADError", allResiduals.mad,
+                                   "MaximumError", allResiduals.max, "MadError", allResiduals.mad,
+				   "FractionalRmsError", allResiduals.fracRms,
+				   "FractionalMadError", allResiduals.fracMad,
+				   "FractionalMaximumError", allResiduals.fracMax,
                                    NULL)) {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
               return (1);
@@ -2766,7 +2773,7 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
   double B[3], Br, Bphi;
   double x, y, z, r, phi, dz;
   long ip, ns, iz, ig, m, im;
-  double residualTerm, residualSum, residualSum2, residualWorst;
+  double residualTerm, residualSum, residualSum2, residualWorst, maxField, field;
   long residualCount;
 #ifdef DEBUG
   FILE *fpdeb;
@@ -2791,6 +2798,7 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
   
   residualWorst = residualSum = residualSum2 = 0;
   residualCount = 0;
+  maxField = -1;
   for (ip=0; ip<fmap->n; ip++) {
     if (fmap->x[ip]>fieldsOnPlanes->xMax || fmap->x[ip]<fieldsOnPlanes->xMin ||
         fmap->y[ip]>fieldsOnPlanes->yMax || fmap->y[ip]<fieldsOnPlanes->yMin)
@@ -2865,6 +2873,9 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
             fmap->x[ip], fmap->y[ip], iz*dz+bggexpData[0].zMin,
             B[0], B[1], B[2], fmap->Bx[ip], fmap->By[ip], fmap->Bz[ip]);
 #endif
+    field = sqrt(sqr(B[0])+sqr(B[1])+sqr(B[2]));
+    if (field>maxField)
+      maxField = field;
     if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst)
       residualWorst = residualTerm;
     residualCount ++;
@@ -2892,6 +2903,15 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
     residualWorst = allResiduals->mad;
   }
 
+  if (maxField>0) {
+    allResiduals->fracRms = allResiduals->rms/maxField;
+    allResiduals->fracMad = allResiduals->mad/maxField;
+    allResiduals->fracMax = allResiduals->max/maxField;
+  } else
+    allResiduals->fracRms = 
+      allResiduals->fracMad = 
+      allResiduals->fracMax = -DBL_MAX;
+  
   return residualWorst>significance ? residualWorst : 0.0;
 }
 

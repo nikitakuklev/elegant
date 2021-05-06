@@ -27,6 +27,7 @@ typedef struct {
 
 typedef struct {
   double rms, mad, max;
+  double fracRms, fracMad, fracMax;
 } ALL_RESIDUALS;
 
 typedef struct {
@@ -281,7 +282,10 @@ int main(int argc, char **argv)
         SDDS_DefineColumn(&SDDS_autoTuneLog, "d", NULL, NULL, "Number of derivatives", NULL, SDDS_LONG, 0)==-1 ||
         SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "RmsError", "T", SDDS_DOUBLE)!=1 ||
         SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "MaximumError", "T", SDDS_DOUBLE)!=1 ||
-        SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "MADError", "T", SDDS_DOUBLE)!= 1 || 
+        SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "MadError", "T", SDDS_DOUBLE)!= 1 || 
+	SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "FractionalRmsError", NULL, SDDS_DOUBLE)!=1 ||
+	SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "FractionalMaximumError", NULL, SDDS_DOUBLE)!=1 ||
+	SDDS_DefineSimpleColumn(&SDDS_autoTuneLog, "FractionalMadError", NULL, SDDS_DOUBLE)!= 1 || 
         !SDDS_WriteLayout(&SDDS_autoTuneLog) ||
         !SDDS_StartPage(&SDDS_autoTuneLog, maxMultipoles*maxDerivatives)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -348,7 +352,10 @@ int main(int argc, char **argv)
           if (!SDDS_SetRowValues(&SDDS_autoTuneLog, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                                  iAutoTuneLog++,
                                  "m", multipoles*(fundamental>0?fundamental:1), "d", derivatives, "RmsError", allResiduals.rms,
-                                 "MaximumError", allResiduals.max, "MADError", allResiduals.mad,
+                                 "MaximumError", allResiduals.max, "MadError", allResiduals.mad,
+				 "FractionalRmsError", allResiduals.fracRms,
+				 "FractionalMadError", allResiduals.fracMad,
+				 "FractionalMaximumError", allResiduals.fracMax,
                                  NULL)) {
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             return (1);
@@ -926,12 +933,12 @@ double evaluateGGEFit
 {
   double Bz, Br, Bphi;
   double r, phi, residual;
-  double residualWorst, residualSum, residualSum2;
+  double residualWorst, residualSum, residualSum2, maxField, field;
   long ns, ig, m, im;
   long iphi, iz;
 
   residualWorst = residualSum = residualSum2 = 0;
-
+  maxField = -1;
   r = fieldsOnBoundary->rho;
   for (iz=0; iz<fieldsOnBoundary->Nz; iz++) {
     for (iphi=0; iphi<fieldsOnBoundary->Nphi; iphi++) {
@@ -980,6 +987,9 @@ double evaluateGGEFit
           }
         }
       }
+      field = fabs(Br);
+      if (field>maxField)
+	maxField = field;
       residual = fabs(Br - fieldsOnBoundary->Brho[iz*fieldsOnBoundary->Nphi+iphi]);
       if (residual>residualWorst)
         residualWorst = residual;
@@ -991,6 +1001,14 @@ double evaluateGGEFit
   allResiduals->rms = sqrt(residualSum2/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi));
   allResiduals->mad = residualSum/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi);
   allResiduals->max = residualWorst;
+  if (maxField>0) {
+    allResiduals->fracRms = allResiduals->rms/maxField;
+    allResiduals->fracMad = allResiduals->mad/maxField;
+    allResiduals->fracMax = allResiduals->max/maxField;
+  } else
+    allResiduals->fracRms = 
+      allResiduals->fracMad = 
+      allResiduals->fracMax = -DBL_MAX;
 
   if (flags&AUTOTUNE_RMS) {
     residualWorst = allResiduals->rms;
