@@ -1280,6 +1280,11 @@ void copy_p_elem(char *target, char *source, long type)
     ((BRAT*)target)->initialized = ((BRAT*)source)->initialized;
     ((BRAT*)target)->dataIndex = ((BRAT*)source)->dataIndex;
     break;
+  case T_BGGEXP:
+    ((BGGEXP*)target)->initialized = ((BGGEXP*)source)->initialized;
+    ((BGGEXP*)target)->dataIndex[0] = ((BGGEXP*)source)->dataIndex[0];
+    ((BGGEXP*)target)->dataIndex[1] = ((BGGEXP*)source)->dataIndex[1];
+    break;
   case T_TAPERAPC:
     ((TAPERAPC*)target)->e1Index = ((TAPERAPC*)source)->e1Index;
     ((TAPERAPC*)target)->e2Index = ((TAPERAPC*)source)->e2Index;
