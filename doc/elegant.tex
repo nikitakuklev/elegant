@@ -6546,19 +6546,20 @@ boundary for use with {\tt elegant}'s \verb|BGGEXP| element.
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
-computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<columnName>][,rho=<parameterName>]
+computeCBGGE -input=<filename>[,z=<colName>][,phi=<colName>][,Brho=<colName>][,rho=<paramName>]
               -normal=<output> [-skew=<output>]
               [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]
               [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]
-              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,increaseOnly][,verbose][,log=<filename>]]
+              [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}]
+                         [,increaseOnly][,verbose][,log=<filename>]]
 }\end{flushleft}
 
 \item {\bf switches:}
 \begin{itemize}
-\item {\tt input} --- Specify name of the input file, which by default contains three colums \verb|z|, \verb|phi|, and
-  \verb|Brho| giving $B_\rho$ as a function of longitudinal coordinate $z$ and azimuthal angle $\phi$.  The \verb|z|,
+\item {\tt input} --- Specify name of the input file, which by default contains three columns giving \verb|z|, \verb|phi|, and
+  \verb|Brho|, which specify $B_\rho$ as a function of longitudinal coordinate $z$ and azimuthal angle $\phi$.  The \verb|z|,
   \verb|phi|, and \verb|Brho| options may be used to give different names for these columns.  The file by default also
-  contains a parmeter \verb|rho| giving the radius of the cylinder. The \verb|rho| option may be used to give a
+  contains a parameter \verb|rho| giving the radius of the cylinder. The \verb|rho| option may be used to give a
   different name for the parameter.  The data must form a uniform grid in $z$ and $\phi$. The $N_\phi$ values of $\phi$
   should range from $0$ to $\Delta \phi (N_\phi-1)$ where $\Delta \phi = 2\pi/N_\phi$
 \item {\tt normal} ---  Output file for normal-component generalized gradients. Supply to \verb|NORMAL_FILENAME|
@@ -6600,9 +6601,10 @@ boundary \cite{Mitchell-2007} for use with {\tt elegant}'s \verb|BGGEXP| element
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
 computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>
-   -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]
-   [-evaluate=<filename>]
-   [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>]]
+   -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] 
+   [-fundamental=<number>] [-evaluate=<filename>]
+   [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}]
+               [,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>]]
 }\end{flushleft}
 
 \item {\bf switches:}
