@@ -458,9 +458,11 @@ void run_matrix_output(
 	SDDS_SetError("Unable to erase matrix data (run_matrix_output)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
+      /*
       if (n_elem_no_matrix)
 	printf("warning: %ld elements had no matrix\n", n_elem_no_matrix);
       fflush(stdout);
+      */
     }
     if (fp_printout[i_output]) {
       if (n_elem_no_matrix)
