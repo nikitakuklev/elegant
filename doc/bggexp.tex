@@ -77,21 +77,9 @@ Users should note that the skew field sign convention used by \cite{Venturini-NI
 from that used in {\tt elegant}.  In particular, to convert a normal field to a skew field while conforming to {\tt elegant}'s
 conventions, one must use $C_{m,s}^{p} \rightarrow -C_{m,c}^{p}$.
 
-A normal-field generalized gradient file (for use with \verb|FILENAME|) can be prepared using the script {\tt
-  computeGeneralizedGradients}, which is provided with {\tt elegant}. The input file for that script must be organized
-into many pages, with each page giving $B_r(\phi)$ on radius $r=R$ for a single $z$ location. The file must contain two
-floating-point columns:
-\begin{itemize}
-\item {\bf phi} --- The angle, in radians. $\phi=0$ corresponds to $x=R$ and $y=0$, while $\phi=\pi/2$ corresponds
-  to $x=0$ and $y=R$. It is assumed that $\phi$ runs from $0$ to $2\pi - \Delta \phi$ in steps of $\Delta \phi$.
-\item {\bf Br} --- The radial field at the reference radius R, Tesla.
-\end{itemize}
-In addition, the file must contain two floating-point parameters:
-\begin{itemize}
-\item {\bf R} --- The radius, in meters. 
-\item {\bf z} --- The longitudinal coordinate, in meters. $z$ should extend from the zero-field region upstream of the magnet to 
-  the zero-field region downstream of the magnet.
-\end{itemize}
+Data for use with \verb|BGGEXP| can be prepared with the programs \verb|computeCBGGE| (section \ref{computeCBGGE})
+and \verb|computeRBGGE| (section \ref{computeRBGGE}),
+which are distributed with \verb|elegant|.
 
 Synchrotron radiation can be included by setting \verb|SYNCH_RAD=1| for classical radiation only and
 also \verb|ISR=1| for incoherent (quantum) effects. 
