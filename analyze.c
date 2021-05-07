@@ -949,7 +949,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   long nWorking=0, n_leftTotal, k, *nToTrackCounts, fiducialOnly = 0;
 #endif
   /* We'll store some of the matrices to avoid recomputing them */
-#define MAX_N_STORED_MATRICES 1000
+#define MAX_N_STORED_MATRICES 5000
   static long nStoredMatrices = 0, iStoredMatrices = -1;
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
