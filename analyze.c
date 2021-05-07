@@ -983,6 +983,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     for (i=0; i<nStoredMatrices; i++) {
       CCBEND *crbptr0, *crbptr1;
       BRAT *brat0, *brat1;
+      BGGEXP *bgg0, *bgg1;
       short copied = 0;
       if (eptr->type==storedElement[i]->type && compareElements(storedElement[i], eptr)==0 &&
 	  storedMatrix[i] && storedMatrix[i]->order>0) {
@@ -1040,6 +1041,17 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 		 storedElement[i]->name, storedElement[i]->occurence);
 	  fflush(stdout);
           */
+	  break;
+	case T_BGGEXP:
+	  bgg0 = (BGGEXP*)storedElement[i]->p_elem;
+	  bgg1 = (BGGEXP*)eptr->p_elem;
+	  bgg1->initialized = bgg0->initialized;
+	  bgg1->dataIndex[0] = bgg0->dataIndex[0];
+	  bgg1->dataIndex[1] = bgg0->dataIndex[1];
+	  copied = 1;
+	  printf("Using stored matrix for BGGEXP %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
+		 storedElement[i]->name, storedElement[i]->occurence);
+          fflush(stdout);                         
 	  break;
         case T_FMULT:
           /*
@@ -1438,7 +1450,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 
   if (shareTrackingBasedMatrices) {
     if (eptr->type==T_CCBEND || eptr->type==T_BRAT || eptr->type==T_BMAPXY || eptr->type==T_BMAPXYZ || 
-        eptr->type==T_CSBEND || eptr->type==T_FMULT || eptr->type==T_KQUAD) {
+        eptr->type==T_CSBEND || eptr->type==T_FMULT || eptr->type==T_KQUAD || eptr->type==T_BGGEXP) {
       ELEMENT_LIST *eptrCopy;
       VMATRIX *matrixCopy;
       
