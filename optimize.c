@@ -1850,7 +1850,7 @@ static long floorStat_mem[6] = {
   -1, -1, -1, -1, -1, -1,
 };
 
-static char *tuneFootprintName[18] = {
+static char *tuneFootprintName[20] = {
   "FP.nuxSpreadChrom", "FP.nuySpreadChrom",
   "FP.deltaLimit",
   "FP.nuxSpreadAmp", "FP.nuySpreadAmp",
@@ -1862,11 +1862,13 @@ static char *tuneFootprintName[18] = {
   "FP.nuyChromMin", "FP.nuyChromMax",
   "FP.nuxAmpMin", "FP.nuxAmpMax",
   "FP.nuyAmpMin", "FP.nuyAmpMax",
+  "FP.chromx1", "FP.chromy1",
 };
-static long tuneFootprintMem[18] = {
+static long tuneFootprintMem[20] = {
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, 
   -1, -1, -1, -1, 
+  -1, -1, 
 };
 
 int showTwissMemories(FILE *fp)
@@ -2319,7 +2321,7 @@ double optimization_function(double *value, long *invalid)
     printMessageAndTime(stdout, "Done computing tune footprint\n");
 #endif
     if (tuneFootprintMem[0]==-1) {
-      for (i=0; i<18; i++)
+      for (i=0; i<20; i++)
         tuneFootprintMem[i] = rpn_create_mem(tuneFootprintName[i], 0);
     }
     rpn_store(tuneFP.chromaticTuneRange[0], NULL, tuneFootprintMem[0]);
@@ -2340,10 +2342,13 @@ double optimization_function(double *value, long *invalid)
     rpn_store(tuneFP.nuxAmpLimit[1], NULL, tuneFootprintMem[15]);
     rpn_store(tuneFP.nuyAmpLimit[0], NULL, tuneFootprintMem[16]);
     rpn_store(tuneFP.nuyAmpLimit[1], NULL, tuneFootprintMem[17]);
+    rpn_store(tuneFP.chrom1[0], NULL, tuneFootprintMem[18]);
+    rpn_store(tuneFP.chrom1[1], NULL, tuneFootprintMem[19]);
     if (optimization_data->verbose>1) {
-      for (i=0; i<18; i++)
+      for (i=0; i<20; i++)
         printf("%s = %le\n", tuneFootprintName[i], rpn_recall(tuneFootprintMem[i]));
     }
+
 #if DEBUG
     printf("Done setting values from tune footprint\n");
     fflush(stdout);

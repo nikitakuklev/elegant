@@ -27,5 +27,6 @@
     long immediate = 0;
     long filtered_output = 1;
     long ignore_half_integer = 0;
+    long chromaticity_fit_order = 5;
 #end
 

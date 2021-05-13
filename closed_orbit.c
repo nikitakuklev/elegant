@@ -16,7 +16,7 @@
 #include "track.h"
 #include "matlib.h"
 
-long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, 
+long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, double clorb_acc_req, long clorb_iter, LINE_LIST *beamline, 
                                 VMATRIX *M, RUN *run, double dp, long start_from_recirc, double *starting_point, 
                                 double change_fraction, double change_fraction_multiplier, long multiplier_interval, double *deviation, long n_turns);
 
@@ -91,6 +91,8 @@ long setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         output = compose_filename(output, run->rootname);
     if (closed_orbit_accuracy<=0)
         bombElegant("closed_orbit_accuracy <= 0", NULL);
+    if (closed_orbit_accuracy_requirement<=0)
+        bombElegant("closed_orbit_accuracy_requirement <= 0", NULL);
     if (closed_orbit_iterations<1)
         bombElegant("closed_orbit_iterations < 1", NULL);
     if (iteration_fraction<0 || iteration_fraction>1)
@@ -177,7 +179,8 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     else 
         M = full_matrix(beamline->elem, run, 1);
 
-    bad_orbit = !find_closed_orbit(clorb, closed_orbit_accuracy, closed_orbit_iterations, beamline, M, 
+    bad_orbit = !find_closed_orbit(clorb, closed_orbit_accuracy, closed_orbit_accuracy_requirement,
+                                   closed_orbit_iterations, beamline, M, 
                                    run, dp, start_from_recirc, fixed_length, 
                                    starting_coord, iteration_fraction,
                                    fraction_multiplier, multiplier_interval,
@@ -292,7 +295,8 @@ void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviat
     log_exit("dump_closed_orbit");
     }
 
-long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, VMATRIX *M, RUN *run, 
+long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, double clorb_acc_requirement,
+                       long clorb_iter, LINE_LIST *beamline, VMATRIX *M, RUN *run, 
                        double dp, long start_from_recirc, long fixed_length, double *starting_point, double change_fraction,
                        double fraction_multiplier, long multiplier_interval,
                        double *deviation, long n_turns)
@@ -312,7 +316,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   log_entry("find_closed_orbit");
 
   if (fixed_length)
-    return findFixedLengthClosedOrbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp,
+    return findFixedLengthClosedOrbit(clorb, clorb_acc, clorb_acc_requirement, clorb_iter, beamline, M, run, dp,
                                       start_from_recirc, starting_point, change_fraction, fraction_multiplier, multiplier_interval, deviation,
                                       n_turns);
 
@@ -487,9 +491,9 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         one_part[0][4] = 0;
         one_part[0][5] = dp;
       } while (++n_iter<clorb_iter);
-      if (n_iter>=clorb_iter && error>clorb_acc)  {
+      if (n_iter>=clorb_iter && error>clorb_acc_requirement)  {
         printf("error: closed orbit did not converge to better than %e after %ld iterations (requirement is %e)\n",
-                error, n_iter, clorb_acc);
+                error, n_iter, clorb_acc_requirement);
         fflush(stdout);
         if (isnan(error) || isinf(error)) {
           return 0;
@@ -573,7 +577,8 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   return(1);
 }
 
-long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, VMATRIX *M, RUN *run, 
+long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, double clorb_acc_req,
+                                long clorb_iter, LINE_LIST *beamline, VMATRIX *M, RUN *run, 
                                 double dp, long start_from_recirc, double *starting_point, double change_fraction,
                                 double change_fraction_multiplier, long multiplier_interval,
                                 double *deviation, long n_turns)
@@ -617,7 +622,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
            starting_point?starting_point[4]:-1,
            starting_point?starting_point[5]:-1);
 #endif
-    if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, start_from_recirc,
+    if (!find_closed_orbit(clorb, clorb_acc, clorb_acc_req, clorb_iter, beamline, M, run, dp, start_from_recirc,
                            0, 
                            iterationsDone==0?starting_point:startingPoint,
                            change_fraction, change_fraction_multiplier, multiplier_interval, deviation, n_turns)) {
@@ -698,7 +703,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
   printf("%ld iterations done for delta in fixed-length orbit computation\ndelta convergence error was %le\ndelta=%le, length error was %le\n", 
           iterationsDone, last_dp-dp, dp, ds);
 #endif
-  if (iterationsDone<iterationsLeft)
+  if (iterationsDone<iterationsLeft || error<clorb_acc_req)
     return 1;
   printWarning("closed_orbit: fixed length orbit iteration didn't converge", NULL);
   printf("error is %le, dp = %le, %le\n", error, dp, last_dp);

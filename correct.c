@@ -59,8 +59,9 @@ long one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
 long thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
             LINE_LIST *beamline, double *starting_coord, BEAM *beam, long verbose);
 long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, 
-                  long n_iterations, double accuracy,
-                  long clorb_iter, double clorb_iter_frac, double clorb_frac_mult, long clorb_mult_interval, long clorb_track_for_orbit,
+                  long n_iterations, double accuracy, double acc_req,
+                  long clorb_iter, double clorb_iter_frac, double clorb_frac_mult, 
+                  long clorb_mult_interval, long clorb_track_for_orbit,
                   RUN *run, LINE_LIST *beamline, double *closed_orbit, double *Cdp, ELEMENT_LIST **newly_pegged);
 ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_index,
 				     ELEMENT_LIST ***umoni, ELEMENT_LIST ***ucorr, double **kick_coef, long **sl_index, 
@@ -209,10 +210,13 @@ void correction_setup(
         setup_corrector_output(corrector_output=compose_filename(corrector_output, run->rootname), run);
     if (closed_orbit_accuracy<=0)
         bombElegant("closed_orbit_accuracy must be > 0", NULL);
+    if (closed_orbit_accuracy_requirement<=0)
+        bombElegant("closed_orbit_accuracy_requirement must be > 0", NULL);
     if (closed_orbit_iteration_fraction<=0 ||
         closed_orbit_iteration_fraction>1)
       bombElegant("closed_orbit_iteration_fraction must be on (0, 1]", NULL);
     _correct->clorb_accuracy = closed_orbit_accuracy;
+    _correct->clorb_accuracy_requirement = closed_orbit_accuracy_requirement;
     _correct->clorb_iter_fraction = closed_orbit_iteration_fraction;
     _correct->clorb_fraction_multiplier = closed_orbit_fraction_multiplier;
     _correct->clorb_multiplier_interval = closed_orbit_multiplier_interval;
@@ -1212,6 +1216,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
           if ((n_x_iter_taken = orbcor_plane(correct->CMx, 
                                              &correct->SLx,
                                              0, correct->traj, correct->n_iterations, correct->clorb_accuracy, 
+                                             correct->clorb_accuracy_requirement,
                                              correct->clorb_iterations, 
                                              correct->clorb_iter_fraction,
                                              correct->clorb_fraction_multiplier,
@@ -1285,6 +1290,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                                              &correct->SLy, 
                                              2, correct->traj+1, 
                                              correct->n_iterations, correct->clorb_accuracy, 
+                                             correct->clorb_accuracy_requirement,
                                              correct->clorb_iterations, 
                                              correct->clorb_iter_fraction,
                                              correct->clorb_fraction_multiplier,
@@ -2713,7 +2719,8 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     compute_matrix(corr, run, NULL);
 
     /* find closed orbit with tweaked corrector */
-    if (!find_closed_orbit(clorb1, correct->clorb_accuracy, correct->clorb_iterations, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
+    if (!find_closed_orbit(clorb1, correct->clorb_accuracy, correct->clorb_accuracy_requirement,
+                           correct->clorb_iterations, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
                            correct->clorb_iter_fraction, correct->clorb_fraction_multiplier, correct->clorb_multiplier_interval, NULL,
                            correct->clorb_track_for_orbit)) {
       printf("Failed to find perturbed closed orbit.\n");
@@ -2725,7 +2732,8 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     *((double*)(corr->p_elem+kick_offset)) = kick0 - corr_tweek;
     compute_matrix(corr, run, NULL);
     /* find closed orbit with tweaked corrector */
-    if (!find_closed_orbit(clorb0, correct->clorb_accuracy, correct->clorb_iterations, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
+    if (!find_closed_orbit(clorb0, correct->clorb_accuracy, correct->clorb_accuracy_requirement,
+                           correct->clorb_iterations, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
                            correct->clorb_iter_fraction, correct->clorb_fraction_multiplier, correct->clorb_multiplier_interval, NULL,
                            correct->clorb_track_for_orbit)) {
       printf("Failed to find perturbed closed orbit.\n");
@@ -2809,7 +2817,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 }
 
 long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, long n_iterations, 
-                  double clorb_acc, long clorb_iter, double clorb_iter_frac, double clorb_frac_mult, 
+                  double clorb_acc, double clorb_acc_req, long clorb_iter, double clorb_iter_frac, double clorb_frac_mult, 
                   long clorb_mult_interval, long clorb_track_for_orbit,
                   RUN *run, LINE_LIST *beamline, double *closed_orbit, double *Cdp,
 		  ELEMENT_LIST **newly_pegged)
@@ -2879,7 +2887,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
     if (iteration==1)
       for (i=0; i<6; i++)
         orbit[1][0].centroid[i] = orbit[0][0].centroid[i];
-    if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, 
+    if (!find_closed_orbit(clorb, clorb_acc, clorb_acc_req, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, 
                            clorb_iter_frac, clorb_frac_mult, clorb_mult_interval, NULL, clorb_track_for_orbit)) {
       printf("Failed to find closed orbit.\n");
       fflush(stdout);

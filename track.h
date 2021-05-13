@@ -3796,9 +3796,10 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
 void setMonitorCalibration(ELEMENT_LIST *elem, double calib, long coord);
 double getMonitorCalibration(ELEMENT_LIST *elem, long coord);
 
-extern long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, 
+extern long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, double clorb_acc_req, long clorb_iter, LINE_LIST *beamline, 
                               VMATRIX *M, RUN *run, double dp, long start_from_recirc, long fixed_length, 
-                              double *starting_point, double iter_fraction, double iteration_multiplier, long multiplier_interval, double *deviation,
+                              double *starting_point, double iter_fraction, double iteration_multiplier, long multiplier_interval, 
+                              double *deviation,
                               long track_for_orbit);
 extern void rotate_xy(double *x, double *y, double angle);
 extern void setupRotate3Matrix(void **Rv, double roll, double yaw, double pitch);
@@ -4010,6 +4011,7 @@ typedef struct {
   double xyArea;
   double nuxChromLimit[2], nuyChromLimit[2];
   double nuxAmpLimit[2], nuyAmpLimit[2];
+  double chrom1[2];
 } TUNE_FOOTPRINTS;
 long setupTuneFootprint(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 long doTuneFootprint(RUN *run, VARY *control, double *referenceCoord,

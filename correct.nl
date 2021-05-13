@@ -40,6 +40,7 @@
     long start_from_centroid = 1;
     long use_actual_beam = 0;
     double closed_orbit_accuracy = 1e-12;
+    double closed_orbit_accuracy_requirement = 1e-7;
     long closed_orbit_iterations = 40;
     double closed_orbit_iteration_fraction = 0.9;
     double closed_orbit_fraction_multiplier = 1.05;

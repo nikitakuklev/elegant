@@ -62,12 +62,18 @@ int deltaTfDataCompare(const void *delta1c, const void *delta2c)
 }
 
 void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double *tuneRange, double *deltaRange, 
-				 double *diffusionRateMax, double *nuxLimit, double *nuyLimit)
+				 double *diffusionRateMax, double *chrom1, double *nuxLimit, double *nuyLimit)
 {
-  long id, id0, id1, id2, coord;
+  long id, id0, id1, id2, coord, idKept;
   /* double delta0; */
   double delta1, delta2, nu0[2];
   double nuMin, nuMax;
+  double *delta, *nuxy;
+  double *coef, *s_coef, chi;
+
+  /* Used for fitting to find linear chormaticities */
+  delta = tmalloc(sizeof(*delta)*nDelta);
+  nuxy = tmalloc(sizeof(*nuxy)*nDelta);
 
   /* Find dividing point between positive and negative delta */
   id0 = -1;
@@ -162,7 +168,25 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
       }
     }
     tuneRange[coord] = nuMax - nuMin;
+
+    idKept = 0;
+    for (id=id1; id<=id2; id++) {
+      delta[idKept] = deltaTfData[id].delta;
+      nuxy[idKept] = deltaTfData[id].nu[coord];
+      idKept++;
+    }
+
+    coef = tmalloc(sizeof(*coef)*(chromaticity_fit_order+1));
+    s_coef = tmalloc(sizeof(*s_coef)*(chromaticity_fit_order+1));
+    lsfn(delta, nuxy, NULL, idKept, chromaticity_fit_order, coef, s_coef, &chi, NULL);
+    chrom1[coord] = coef[1];
+    free(coef);
+    free(s_coef);
+    coef = s_coef = NULL;
   }
+  free(delta);
+  free(nuxy);
+  delta = nuxy = NULL;
 
   *diffusionRateMax = -DBL_MAX;
   for (id1=0; id<=id2; id++) {
@@ -318,9 +342,9 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
 MPI_Datatype xyTfDataType, deltaTfDataType, tfReturnDataType;
 void setupTuneFootprintDataTypes ()
 {
-  MPI_Datatype oldType[9];
-  int blockLength[9];
-  MPI_Aint offset[9];
+  MPI_Datatype oldType[10];
+  int blockLength[10];
+  MPI_Aint offset[10];
   XY_TF_DATA xyTfExample;
   DELTA_TF_DATA deltaTfExample;
   TUNE_FOOTPRINTS tfExample;
@@ -358,6 +382,7 @@ void setupTuneFootprintDataTypes ()
   blockLength[6] = 2;
   blockLength[7] = 2;
   blockLength[8] = 2;
+  blockLength[9] = 2;
   MPI_Get_address(&tfExample.chromaticTuneRange, &offset[0]);
   MPI_Get_address(&tfExample.deltaRange, &offset[1]);
   MPI_Get_address(&tfExample.amplitudeTuneRange, &offset[2]);
@@ -367,9 +392,10 @@ void setupTuneFootprintDataTypes ()
   MPI_Get_address(&tfExample.nuyChromLimit, &offset[6]);
   MPI_Get_address(&tfExample.nuxAmpLimit, &offset[7]);
   MPI_Get_address(&tfExample.nuyAmpLimit, &offset[8]);
-  for (i=8; i>=0; i--)
+  MPI_Get_address(&tfExample.chrom1, &offset[9]);
+  for (i=9; i>=0; i--)
     offset[i] -= offset[0];
-  MPI_Type_create_struct(9, blockLength, offset, oldType, &tfReturnDataType);
+  MPI_Type_create_struct(10, blockLength, offset, oldType, &tfReturnDataType);
   MPI_Type_commit(&tfReturnDataType);
 }
 #endif
@@ -454,7 +480,7 @@ long doTuneFootprint(
   DELTA_TF_DATA *deltaTfData;
   long my_nxy, my_ndelta;
   double chromTuneRange[2], chromDeltaRange[2], xyTuneRange[2], xyPositionRange[2], diffusionRateMax, xyArea;
-  double nuxLimit[2], nuyLimit[2];
+  double nuxLimit[2], nuyLimit[2], chrom1[2];
   unsigned long ctftFlags;
 
 #ifdef DEBUG
@@ -705,12 +731,13 @@ long doTuneFootprint(
 #if USE_MPI
     }
 #endif
-      
-    determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange, &diffusionRateMax, nuxLimit, nuyLimit);
+
+    determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange, &diffusionRateMax, 
+                                chrom1, nuxLimit, nuyLimit);
     if (verbosity)
-      printf("nux/chromatic: tune range=%le (%le, %le) delta range = %le\nnuy/chromatic: tune range=%le (%le, %le) delta range = %le\n",
-             chromTuneRange[0], nuxLimit[0], nuxLimit[1], chromDeltaRange[0],
-             chromTuneRange[1], nuyLimit[0], nuyLimit[1], chromDeltaRange[1]);
+      printf("nux/chromatic: tune range=%le (%le, %le) delta range = %le, chrom1 = %le\nnuy/chromatic: tune range=%le (%le, %le) delta range = %le, chrom1 = %le\n",
+             chromTuneRange[0], nuxLimit[0], nuxLimit[1], chromDeltaRange[0], chrom1[0],
+             chromTuneRange[1], nuyLimit[0], nuyLimit[1], chromDeltaRange[1], chrom1[1]);
     if (tfReturn) {
       memcpy(tfReturn->chromaticTuneRange, chromTuneRange, sizeof(*chromTuneRange)*2);
       memcpy(tfReturn->deltaRange, chromDeltaRange, sizeof(*chromDeltaRange)*2);
@@ -718,6 +745,8 @@ long doTuneFootprint(
       memcpy(tfReturn->nuyChromLimit, nuyLimit, sizeof(*nuyLimit)*2);
       tfReturn->chromaticDiffusionMaximum = diffusionRateMax;
       tfReturn->deltaRange[2] = MIN(tfReturn->deltaRange[0], tfReturn->deltaRange[1]);
+      tfReturn->chrom1[0] = chrom1[0];
+      tfReturn->chrom1[1] = chrom1[1];
     }
   }
 

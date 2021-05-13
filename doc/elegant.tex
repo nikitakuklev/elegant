@@ -117,7 +117,12 @@ Here is a summary of what's changed since release 2020.5.  Historical change log
  range of \verb|s| coordinates for recorded particles using the \verb|losses_s_limit| array.
 \item The \verb|correct_tunes| and \verb|chromaticity| commands now accept lists giving lower and upper strength limits
   for each family. In addition, the \verb|strength_log| files are now compatible with \verb|load_parameters|.
+\item The \verb|closed_orbit| and \verb|correct| commands now have a control that allows accepting a
+  closed orbit results that exceeds the accuracy target, rather than considering this an error.
+  This will allow correction or other computations to proceed in spite of poor convergence of the 
+  closed orbit.
 \end{itemize}
+
 
 \subsection{Changes Specific to the MPI Parallel Version}
 
@@ -1689,6 +1694,7 @@ to obtain correction.  In general, it is not necessary and only slows the simula
     long start_from_centroid = 1;
     long start_from_dp_centroid = 0;
     double closed_orbit_accuracy = 1e-12;
+    double closed_orbit_accuracy_requirement = 1e-7;
     long closed_orbit_iterations = 40;
     long fixed_length = 0;
     long start_from_recirc = 0;
@@ -1721,7 +1727,10 @@ this command doesn't force the algorithm to start from the beam
 transverse centroids.
 \item \verb|closed_orbit_accuracy| --- The desired accuracy of the
 closed orbit, in terms of the difference between the start and end
-coordinates, in meters.
+coordinates, in meters. Iteration will terminate when this value is achieved.
+\item \verb|closed_orbit_accuracy_requirement| --- The required accuracy of the
+closed orbit. If not achieved, the closed orbit calculation is considered to 
+have failed.
 \item \verb|closed_orbit_iterations| --- The number of iterations to
 take in finding the closed orbit.
 \item \verb|iteration_fraction| --- Fraction of computed change that
@@ -1743,7 +1752,7 @@ during the computations.
 \item \verb|fraction_multiplier| --- Multiplier to apply to the iteration fraction if
   iteration is converging.
 \item \verb|multiplier_interval| --- Interval in number of iterations at which to adjust
-  the interation fraction.
+  the iteration fraction.
 \item \verb|output_monitors_only|  --- If non-zero, output file contains data only at beam position monitors,
   i.e., at \verb|MONI|, \verb|HMON|, and \verb|VMON| elements.
 \item \verb|tracking_turns| --- If non-zero, the number of turns to track for detemination 
@@ -1800,8 +1809,11 @@ during the computations.
     long start_from_centroid = 1;
     long use_actual_beam = 0;
     double closed_orbit_accuracy = 1e-12;
-    long closed_orbit_iterations = 10;
-    double closed_orbit_iteration_fraction = 1;
+    double closed_orbit_accuracy_requirement = 1e-7;
+    long closed_orbit_iterations = 40;
+    double closed_orbit_iteration_fraction = 0.9;
+    double closed_orbit_fraction_multiplier = 1.05;
+    double closed_orbit_multiplier_interval = 5;
     double closed_orbit_tracking_turns = 0;
     long use_perturbed_matrix = 0;
     long disable = 0;
@@ -1880,10 +1892,15 @@ beam momentum centroid is relevant.
 \item \verb|use_actual_beam| --- Flag indicating that correction
 should employ tracking of the beam distribution rather than a single
 particle.  This is valid for trajectory correction only.
-\item \verb|closed_orbit_accuracy| --- Accuracy of closed orbit computation.
+\item \verb|closed_orbit_accuracy| --- Target accuracy of closed orbit computation.
+\item \verb|closed_orbit_accuracy_requirement| --- Required accuracy of closed orbit computation.
 \item \verb|closed_orbit_iterations| --- Number of iterations of closed orbit computation.
 \item \verb|closed_orbit_iteration_fraction| --- Fraction of change in closed orbit to
 use at each iteration.
+\item \verb|closed_orbit_fraction_multiplier| --- Multiplier to apply to the iteration fraction if
+  iteration is converging.
+\item \verb|closed_orbit_multiplier_interval| --- Interval in number of iterations at which to adjust
+  the iteration fraction.
 \item \verb|closed_orbit_tracking_turns| --- If non-zero, the absolute value gives the number of turns to track for detemination 
   of the closed orbit by averaging. This may be useful if the regular closed orbit algorithm
   complains about convergence issues. If less than zero, then {\em only} this method is used. If greater than zero, 
@@ -5672,6 +5689,7 @@ where $N$ is the number of turns tracked to determine each tune (equal to half o
   \end{itemize}
 \item \verb|filtered_output| --- If nonzero, output is only provided for particles inside the stable footprint.
 \item \verb|ignore_half_integer| --- If nonzero, half-integer resonances are ignored in determining the tune footprint.
+\item \verb|chromaticity_fit_order| --- Order of polynomial fits used to obtain chromaticities.
 \end{itemize}
 
 This command makes available the following quantities for optimization. All quantities are limited by 
@@ -5688,6 +5706,7 @@ particle survival, crossing of integer and half-integer resonances,  and the dif
 \item \verb|FP.xyArea| --- Area of the limited x-y region, comparable to a dynamic acceptance. However, this area is determined from a
 fixed grid and is not suitabl to optimization by itself.
 \item \verb|FP.diffusionRateMaxChrom|, \verb|FP.diffusionRateMaxAmp| --- Maximum diffusion rates in chromatic and amplitude scans.
+\item \verb|FP.chromx1|, \verb|FP.chromy1| --- Linear chromaticities from fits to data.
 \end{itemize}
 Typically, one strives to minimize \verb|FP.nuxSpreadChrom|,\verb|FP.nuySpreadChrom|, 
 \verb|FP.nuxSpreadAmp|, \verb|FP.nuySpreadAmp|, \verb|FP.diffusionRateMaxChrom|, 

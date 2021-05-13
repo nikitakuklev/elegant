@@ -10,6 +10,7 @@
     long start_from_centroid = 1;
     long start_from_dp_centroid = 0;
     double closed_orbit_accuracy = 1e-12;
+    double closed_orbit_accuracy_requirement = 1e-7;
     long closed_orbit_iterations = 40;
     long fixed_length = 0;
     long start_from_recirc = 0;
