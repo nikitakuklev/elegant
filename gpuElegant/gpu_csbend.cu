@@ -733,14 +733,14 @@ extern "C"
 
     he1 = csbend->h[csbend->e1Index];
     he2 = csbend->h[csbend->e2Index];
-    if (csbend->angle < 0)
+    if (csbend->angle < 0 && csbend->malignMethod==0)
       {
         long i;
         angle = -csbend->angle;
         e1 = -csbend->e[csbend->e1Index];
         e2 = -csbend->e[csbend->e2Index];
         etilt = csbend->etilt*csbend->etiltSign;
-        tilt = csbend->tilt + PI; /* work in rotated system */
+        tilt = csbend->tilt + PI;
         rho0 = csbend->length / angle;
         for (i = 1; i < 9; i += 2)
           {
@@ -759,7 +759,7 @@ extern "C"
       }
     setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start + csbend->length / 2);
 
-    if (rho0 > 1e6)
+    if (fabs(rho0) > 1e6)
       {
         if (csbend->k2 != 0)
           bombElegant("Error: One or more CSBENDs have radius > 1e6 but non-zero K2. Best to convert this to KQUSE or KSEXT.\n", NULL);
@@ -855,10 +855,10 @@ extern "C"
       }
 
     /* angles for fringe-field effects */
-    Kg1 = 2 * csbend->hgap * (csbend->fint[csbend->e1Index] >= 0 ? csbend->fint[csbend->e1Index] : csbend->fintBoth);
-    psi1 = Kg1 / rho_actual / cos(e1) * (1 + sqr(sin(e1)));
-    Kg2 = 2 * csbend->hgap * (csbend->fint[csbend->e2Index] >= 0 ? csbend->fint[csbend->e2Index] : csbend->fintBoth);
-    psi2 = Kg2 / rho_actual / cos(e2) * (1 + sqr(sin(e2)));
+    Kg1 = 2 * csbend->hgap * (csbend->fint[csbend->e1Index] >= 0 ? csbend->fint[csbend->e1Index] : csbend->fintBoth)*SIGN(rho0);
+    psi1 = Kg1 / fabs(rho_actual) / cos(e1) * (1 + sqr(sin(e1)));
+    Kg2 = 2 * csbend->hgap * (csbend->fint[csbend->e2Index] >= 0 ? csbend->fint[csbend->e2Index] : csbend->fintBoth)*SIGN(rho0);
+    psi2 = Kg2 / fabs(rho_actual) / cos(e2) * (1 + sqr(sin(e2)));
     if (csbend->length<0) {
       psi1 *=  -1;
       psi2 *=  -1;
@@ -882,7 +882,7 @@ extern "C"
       {
         /* Sands 5.15 */
         meanPhotonsPerRadian0 = 5.0 / (2.0 * sqrt(3)) * Po / 137.0359895;
-        meanPhotonsPerMeter0 = (5 * c_mks * Po * particleMass * particleRadius) / (2 * sqrt(3) * hbar_mks * rho_actual);
+        meanPhotonsPerMeter0 = (5 * c_mks * Po * particleMass * particleRadius) / (2 * sqrt(3) * hbar_mks * fabs(rho_actual));
         /* Critical energy normalized to reference energy, Sands 5.9 */
         normalizedCriticalEnergy0 = 3.0 / 2 * hbar_mks * c_mks * pow(Po, 3.0) / fabs(rho_actual) / (Po * particleMass * sqr(c_mks));
         /* fprintf(stderr, "Mean photons per radian expected: %le   ECritical/E: %le\n", 
@@ -920,19 +920,36 @@ extern "C"
         sin_ttilt = sin(ttilt);
       }
 
-    computeEtiltCentroidOffset(dcoord_etilt, rho0, angle, etilt, tilt);
+    dxi = dyi = dzi = 0;
+    dxf = dyf = dzf = 0;
+    if (csbend->malignMethod==0) {
+      computeEtiltCentroidOffset(dcoord_etilt, rho0, angle, etilt, tilt);
+    
+      dxi = -csbend->dx;
+      dzi =  csbend->dz;
+      dyi = -csbend->dy;
 
-    dxi = -csbend->dx;
-    dzi = csbend->dz;
-    dyi = -csbend->dy;
-
-    /* must use the original angle here because the translation is done after
-     * the final rotation back
-     */
-    dxf = csbend->dx * cos(csbend->angle) + csbend->dz * sin(csbend->angle);
-    dzf = csbend->dx * sin(csbend->angle) - csbend->dz * cos(csbend->angle);
-    dyf = csbend->dy;
-
+      /* must use the original angle here because the translation is done after
+       * the final rotation back
+       */
+      dxf = csbend->dx*cos(csbend->angle) + csbend->dz*sin(csbend->angle);
+      dzf = csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
+      dyf = csbend->dy;
+    } else {
+      bombElegant("Non zero MALIGN_METHOD not supported in the GPU version (track_through_csbend)", NULL);
+      /*
+      if (csbend->malignMethod==1)
+        offsetParticlesForEntranceCenteredMisalignmentExact
+          (part, n_part, 
+           csbend->dx, csbend->dy, csbend->dz, 
+           csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
+      else 
+        offsetParticlesForBodyCenteredMisalignmentExact
+          (part, n_part, 
+           csbend->dx, csbend->dy, csbend->dz, 
+           csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
+      */
+    }
 #if !defined(PARALLEL)
     multipoleKicksDone += n_part * csbend->nSlices * (csbend->integration_order == 4 ? 4 : 1);
 #endif
@@ -1007,6 +1024,9 @@ extern "C"
         cudaMemcpy(refTrajectoryData[0], d_refTrajectoryData,
                    5 * refTrajectoryPoints, cudaMemcpyHostToDevice);
       }
+    if (csbend->malignMethod!=0) {
+      bombElegant("Non zero MALIGN_METHOD not supported in the GPU version (track_through_csbend)", NULL);
+    }
 
     n_part = killParticles(n_part, d_sortIndex, accepted,
                            gpu_track_through_csbend_kernel(d_sortIndex, d_sigmaDelta2,
@@ -2126,7 +2146,7 @@ extern "C"
                                angle / csbend->nSlices, 0.0, 0.0,
                                0.0, 0.0, csbend->b[1] * h, 0.0,
                                0.0, 0.0, 0.0, 0.0, csbend->fse, 0.0, 0.0,
-                               csbend->etilt*csbend->etiltSign, 1, 1, 0, 0);
+                               csbend->etilt*csbend->etiltSign, 1, 1, 0, 0, 0.0, 0.0);
         Me2 = edge_matrix(e2, 1. / (rho0 / (1 + csbend->fse)), 0.0, n, 1, Kg, 1, 0, 0, csbend->length);
       }
     computeCSBENDFieldCoefficients(csbend->b, csbend->c, h, csbend->nonlinear, csbend->expansionOrder);
@@ -4384,7 +4404,9 @@ __device__ void gpu_dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
                   double normalizedCriticalEnergy;
                   double nMean, dDelta, thetaRms;
                   long i, nEmitted;
+                  long rhoSign;
                   F = sqrt(F2);
+                  rhoSign = SIGN(h0);
                   /* Compute the mean number of photons emitted = meanPhotonsPerMeter*meters */
                   /* Note that unlike the #photons/radian, this is independent of energy */
                   nMean = meanPhotonsPerMeter * dsISR * dsFactor * F;
@@ -4426,8 +4448,9 @@ __device__ void gpu_dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
                             if (SDDSphotonsGPU)
                             gpu_logPhoton(dDelta*Po, x, xp-dtheta/dDelta, y, yp-dphi/dDelta, theta, thetaf, 1/h0);
                           */
-                          xp += dtheta;
-                          yp += dphi;
+                          /* rhoSign factor is for backward compatibility */
+                          xp += dtheta*rhoSign;
+                          yp += dphi*rhoSign;
                         }
                     }
                   f = (1 + *dPoP) / sqrt(sqr(1 + x * h0) + sqr(xp) + sqr(yp));

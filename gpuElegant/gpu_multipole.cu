@@ -265,7 +265,7 @@ class gpu_multipole_tracking2_kernel
             return 0;
           }
         /* obstructions are not implemented in GPU code
-        if (insideObstruction_xyz(x, y, coord[particleIDIndex], 
+        if (insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex], 
 			                            globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
 			                            refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_kicks))
          {
@@ -384,7 +384,7 @@ class gpu_multipole_tracking2_kernel
         return 0;
       }
     /* obstructions are not implemented in GPU code
-    if (insideObstruction_xy(x, y, coord[particleIDIndex], 
+    if (insideObstruction_xy(x, xp, y, yp, coord[particleIDIndex], 
 			                       globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
 			                       refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts))
       {
@@ -467,14 +467,14 @@ extern "C"
     long i_top, nSlices;
     double *coef;
     double drift(0);
-    double tilt, rad_coef, isr_coef, xkick, ykick;
+    double tilt, pitch, yaw, rad_coef, isr_coef, xkick, ykick;
     KQUAD *kquad = NULL;
     KSEXT *ksext = NULL;
     KQUSE *kquse = NULL;
     KOCT *koct = NULL;
     static long sextWarning = 0, quadWarning = 0, octWarning = 0, quseWarning = 0;
     double lEffective = -1, lEnd = 0;
-    short doEndDrift = 0;
+    short doEndDrift = 0, malignMethod;
     unsigned long d_multipoleKicksDone;
 
     MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL, *edgeMultData = NULL;
@@ -493,6 +493,9 @@ extern "C"
       bombTracking("null p_elem pointer (multipole_tracking2)");
 
     rad_coef = xkick = ykick = isr_coef = 0;
+    pitch = yaw = tilt = 0;
+    dx = dy = dz = 0;
+    malignMethod = 0;
     /*order2 = 0;
       KnL2 = 0;*/
 
@@ -518,9 +521,12 @@ extern "C"
           KnL[0] = kquad->k1 * lEffective * (1 + kquad->fse);
         drift = lEffective;
         tilt = kquad->tilt;
+        pitch = kquad->pitch;
+        yaw = kquad->yaw;
         dx = kquad->dx;
         dy = kquad->dy;
         dz = kquad->dz;
+        malignMethod = kquad->malignMethod;
         xkick = kquad->xkick * kquad->xKickCalibration;
         ykick = kquad->ykick * kquad->yKickCalibration;
         integ_order = kquad->integration_order;
@@ -584,9 +590,12 @@ extern "C"
           KnL[0] = ksext->k2 * ksext->length * (1 + ksext->fse);
         drift = ksext->length;
         tilt = ksext->tilt;
+        pitch = ksext->pitch;
+        yaw = ksext->yaw;
         dx = ksext->dx;
         dy = ksext->dy;
         dz = ksext->dz;
+        malignMethod = ksext->malignMethod;
         xkick = ksext->xkick * ksext->xKickCalibration;
         ykick = ksext->ykick * ksext->yKickCalibration;
         integ_order = ksext->integration_order;
@@ -661,9 +670,12 @@ extern "C"
           KnL[0] = koct->k3 * koct->length * (1 + koct->fse);
         drift = koct->length;
         tilt = koct->tilt;
+        pitch = koct->pitch;
+        yaw = koct->yaw;
         dx = koct->dx;
         dy = koct->dy;
         dz = koct->dz;
+        malignMethod = koct->malignMethod;
         integ_order = koct->integration_order;
         if (koct->synch_rad)
           rad_coef = sqr(particleCharge) * pow(Po, 3.) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
@@ -719,6 +731,7 @@ extern "C"
         dx = kquse->dx;
         dy = kquse->dy;
         dz = kquse->dz;
+        malignMethod = 0;
         integ_order = kquse->integration_order;
         if (kquse->synch_rad)
           rad_coef = sqr(particleCharge) * pow(Po, 3.) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
@@ -790,10 +803,27 @@ extern "C"
     unsigned int particlePitch = gpuBase->gpu_array_pitch;
     unsigned int *d_sortIndex = gpuBase->d_tempu_alpha;
 
-    if (dx || dy || dz)
-      gpu_offsetBeamCoordinatesForMisalignment(n_part, dx, dy, dz);
-    if (tilt)
-      gpu_rotateBeamCoordinatesForMisalignment(n_part, tilt);
+    if (malignMethod!=0) {
+      if (dx || dy || dz || tilt || pitch || yaw) {
+        bombTracking("gpu_multipole_tracking2: Non zero MALIGN_METHOD not supported in the GPU version.");
+        /*
+        if (malignMethod==1) {
+          gpu_offsetParticlesForEntranceCenteredMisalignmentExact
+            (n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
+        }
+        else {
+          gpu_offsetParticlesForBodyCenteredMisalignmentExact
+            (n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
+        }
+        */
+      }
+    }
+    else {
+      if (dx || dy || dz)
+        gpu_offsetBeamCoordinatesForMisalignment(n_part, dx, dy, dz);
+      if (tilt)
+        gpu_rotateBeamCoordinatesForMisalignment(n_part, tilt);
+    }
 
     if (doEndDrift)
       {
@@ -932,10 +962,26 @@ extern "C"
         gpu_exactDrift(n_part, lEnd);
       }
 
-    if (tilt)
-      gpu_rotateBeamCoordinatesForMisalignment(n_part, -tilt);
-    if (dx || dy || dz)
-      gpu_offsetBeamCoordinatesForMisalignment(n_part, -dx, -dy, -dz);
+    if (malignMethod!=0) {
+      if (dx || dy || dz || tilt || pitch || yaw)  {
+        bombTracking("gpu_multipole_tracking2: Non zero MALIGN_METHOD not supported in the GPU version.");
+        /*
+        if (malignMethod==1) {
+          gpu_offsetParticlesForEntranceCenteredMisalignmentExact
+            (n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
+        }
+        else {
+          gpu_offsetParticlesForBodyCenteredMisalignmentExact
+            (n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
+        }
+        */
+      }
+    } else {
+      if (tilt)
+        gpu_rotateBeamCoordinatesForMisalignment(n_part, -tilt);
+      if (dx || dy || dz)
+        gpu_offsetBeamCoordinatesForMisalignment(n_part, -dx, -dy, -dz);
+    }
 
     if (freeMultData && !multData->copy)
       {
