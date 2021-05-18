@@ -182,6 +182,7 @@ STATIC_BUILD=NO
 PROD_HOST += csrImpedance
 csrImpedance_CFLAGS = -DUSE_GSL
 sddsmatchmoments_CFLAGS = -DUSE_GSL
+computeCBGGE_CFLAGS = -DUSE_GSL
 else
 
 #No GSL library found. Build without it.
