@@ -252,7 +252,7 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
         if (accepted) {
           if (!accepted[i_top]) {
             printf(
-                    "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+                    "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (trackThroughExactCorrector)\n",
                     i_part, i_top);
             fflush(stdout);
             abort();
