@@ -372,7 +372,7 @@ void setupTuneFootprintDataTypes ()
   MPI_Type_commit(&deltaTfDataType);
 
   oldType[0] = oldType[1] = oldType[2] = oldType[3] = oldType[4] = oldType[5] =
-    oldType[6] = oldType[7] = oldType[8] = MPI_DOUBLE;
+    oldType[6] = oldType[7] = oldType[8] = oldType[9] = MPI_DOUBLE;
   blockLength[0] = 2;
   blockLength[1] = 3;
   blockLength[2] = 2;
