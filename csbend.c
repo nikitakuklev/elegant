@@ -51,9 +51,9 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
                       double normalizedCriticalEnergy, double Po);
 double pickNormalizedPhotonEnergy(double RN);
 
-long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
+long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long i, double rho0, double p0,
                            double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order);
-long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
+long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long i, double rho0, double p0,
                                     double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order);
 void convertFromCSBendCoords(double **part, long np, double rho0, 
 			     double cos_ttilt, double sin_ttilt, long ctMode);
@@ -599,7 +599,13 @@ void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlin
 
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
                           double z_start, double *sigmaDelta2, char *rootname, MAXAMP *maxamp, 
-                          APCONTOUR *apContour, APERTURE_DATA *apFileData)
+                          APCONTOUR *apContour, APERTURE_DATA *apFileData, 
+                          /* If iSlice non-negative, we do one step. The caller is responsible 
+                           * for handling the coordinates appropriately outside this routine. 
+                           * The element must have been previously optimized to determine FSE and X offsets.
+                           */
+                          long iSlice
+                          )
 {
   double h;
   long i_part, i_top, particle_lost, j;
@@ -644,6 +650,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (!csbend)
     bombElegant("null CSBEND pointer (track_through_csbend)", NULL);
 
+  if (iSlice>=0 && csbend->referenceCorrection && csbend->refTrajectoryChangeSet==0)
+    bombElegant("One-step CSBEND tracking invoked but reference correction not completed first, which is a bug.", NULL);
+
   setUpCsbendPhotonOutputFile(csbend, rootname, n_part);
   
   if (csbend->edge_order>1 && (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2) && csbend->hgap==0)
@@ -681,7 +690,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       /* This forces us into the next branch on the next call to this routine */
       csbend0.refTrajectoryChangeSet = 1;
       setTrackingContext("csbend0", 0, T_CSBEND, "none", NULL);
-      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apContour, apFileData);
+      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apContour, apFileData, -1);
       csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
 
       csbend->refSlices = csbend->nSlices;
@@ -842,7 +851,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       kquad.isr1Particle = csbend->isr1Particle;
       kquad.nSlices = csbend->nSlices;
       kquad.integration_order = csbend->integration_order;
-      return multipole_tracking2(part, n_part, &elem, p_error, Po, accepted, z_start, maxamp, NULL, apFileData, sigmaDelta2);
+      return multipole_tracking2(part, n_part, &elem, p_error, Po, accepted, z_start, maxamp, NULL, apFileData, sigmaDelta2, -1);
     } else {
       if (!largeRhoWarning) {
 #if USE_MPI
@@ -962,7 +971,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     dxi = -csbend->dx;
     dzi =  csbend->dz;
     dyi = -csbend->dy;
-
+    
     /* must use the original angle here because the translation is done after
      * the final rotation back
      */
@@ -970,18 +979,20 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     dzf = csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
     dyf = csbend->dy;
   } else {
-    if (csbend->malignMethod==1)
-      offsetParticlesForEntranceCenteredMisalignmentExact
-        (part, n_part, 
-         csbend->dx, csbend->dy, csbend->dz, 
-         csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
-    else 
-      offsetParticlesForBodyCenteredMisalignmentExact
-        (part, n_part, 
-         csbend->dx, csbend->dy, csbend->dz, 
-         csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
+    if (iSlice<=0) {
+      if (csbend->malignMethod==1)
+        offsetParticlesForEntranceCenteredMisalignmentExact
+          (part, n_part, 
+           csbend->dx, csbend->dy, csbend->dz, 
+           csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
+      else 
+        offsetParticlesForBodyCenteredMisalignmentExact
+          (part, n_part, 
+           csbend->dx, csbend->dy, csbend->dz, 
+           csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
+    }
   }
-
+  
   i_top = n_part-1;
 #if !defined(PARALLEL)
   multipoleKicksDone += n_part*csbend->nSlices*(csbend->integration_order==4?4:1);
@@ -1007,7 +1018,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       abort();
     }
 
-    if (csbend->malignMethod==0) {
+    if (csbend->malignMethod==0 && iSlice<=0) {
       coord[4] += dzi*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
       coord[0]  = coord[0] + dxi + dzi*coord[1];
       coord[2]  = coord[2] + dyi + dzi*coord[3];
@@ -1026,79 +1037,86 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       s  = coord[4];
       dp = dp0 = coord[5];
     }
-
-    if (csbend->edgeFlags&BEND_EDGE1_EFFECTS) {
-      if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e1Index]==1) {
-        /* apply edge focusing, nonsymplectic method */
-        rho = (1+dp)*rho_actual;
-        delta_xp = tan(e1)/rho*x;
-        if (e1_kick_limit>0 && fabs(delta_xp)>e1_kick_limit)
-          delta_xp = SIGN(delta_xp)*e1_kick_limit;
-        xp += delta_xp;
-        yp -= tan(e1-psi1/(1+dp))/rho*y;
-      } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e1Index]==1) {
-        /* apply edge focusing, nonsymplectic method */
-        rho = (1+dp)*rho_actual;
-        apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, he1, psi1*(1+dp), -1);
-      } else if (csbend->edge_effects[csbend->e1Index]==2) {
-        /* K. Hwang's approach */
-        /* load input coordinates into arrays */
-        Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-        convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
-        dipoleFringeKHwang(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[1]/rho0, e1, 2*csbend->hgap, 
-                        csbend->fint[csbend->e1Index]>=0?csbend->fint[csbend->e1Index]:csbend->fintBoth,
-                        csbend->h[csbend->e1Index]);
-        /* retrieve coordinates from arrays */
-        convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
-        x  = Qf[0];  
-        xp = Qf[1];  
-        y  = Qf[2];  
-        yp = Qf[3];  
-        dp = Qf[5];
-      } else if (csbend->edge_effects[csbend->e1Index]==3) {
-        /* simple-minded symplectic approach */
-        applySimpleDipoleEdgeKick(&xp, &yp, x, y, dp, rho_actual, e1, psi1, e1_kick_limit, csbend->expandHamiltonian);
-      } else if (csbend->edge_effects[csbend->e1Index]==4) {
-        /* K. Hwang's approach as symplectified by R. Lindberg */
-        /* load input coordinates into arrays */
-        Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-        convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
-        dipoleFringeKHwangRLindberg(Qf, Qi, rho_actual, -1., csbend->b[1]/rho0, e1,
-				    2*csbend->hgap,
+    
+    if (iSlice<=0) {
+      if (csbend->edgeFlags&BEND_EDGE1_EFFECTS) {
+        if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e1Index]==1) {
+          /* apply edge focusing, nonsymplectic method */
+          rho = (1+dp)*rho_actual;
+          delta_xp = tan(e1)/rho*x;
+          if (e1_kick_limit>0 && fabs(delta_xp)>e1_kick_limit)
+            delta_xp = SIGN(delta_xp)*e1_kick_limit;
+          xp += delta_xp;
+          yp -= tan(e1-psi1/(1+dp))/rho*y;
+        } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e1Index]==1) {
+          /* apply edge focusing, nonsymplectic method */
+          rho = (1+dp)*rho_actual;
+          apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, he1, psi1*(1+dp), -1);
+        } else if (csbend->edge_effects[csbend->e1Index]==2) {
+          /* K. Hwang's approach */
+          /* load input coordinates into arrays */
+          Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
+          convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
+          dipoleFringeKHwang(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[1]/rho0, e1, 2*csbend->hgap, 
+                             csbend->fint[csbend->e1Index]>=0?csbend->fint[csbend->e1Index]:csbend->fintBoth,
+                             csbend->h[csbend->e1Index]);
+          /* retrieve coordinates from arrays */
+          convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
+          x  = Qf[0];  
+          xp = Qf[1];  
+          y  = Qf[2];  
+          yp = Qf[3];  
+          dp = Qf[5];
+        } else if (csbend->edge_effects[csbend->e1Index]==3) {
+          /* simple-minded symplectic approach */
+          applySimpleDipoleEdgeKick(&xp, &yp, x, y, dp, rho_actual, e1, psi1, e1_kick_limit, csbend->expandHamiltonian);
+        } else if (csbend->edge_effects[csbend->e1Index]==4) {
+          /* K. Hwang's approach as symplectified by R. Lindberg */
+          /* load input coordinates into arrays */
+          Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
+          convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
+          dipoleFringeKHwangRLindberg(Qf, Qi, rho_actual, -1., csbend->b[1]/rho0, e1,
+                                      2*csbend->hgap,
 				    csbend->fint[csbend->e1Index]>=0?csbend->fint[csbend->e1Index]:csbend->fintBoth,
-				    csbend->h[csbend->e1Index]);
-        /* retrieve coordinates from arrays */
-        convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
-        x  = Qf[0];  
-        xp = Qf[1];  
-        y  = Qf[2];  
-        yp = Qf[3];  
-        dp = Qf[5];
+                                      csbend->h[csbend->e1Index]);
+          /* retrieve coordinates from arrays */
+          convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
+          x  = Qf[0];  
+          xp = Qf[1];  
+          y  = Qf[2];  
+          yp = Qf[3];  
+          dp = Qf[5];
+        }
       }
     }
 
     /* load input coordinates into arrays */
     Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
 
-    if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && e1!=0 && rad_coef) {
-      /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
-      computeCSBENDFields(&Fx, &Fy, x, y);
+    if (iSlice<=0) {
+      if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && e1!=0 && rad_coef) {
+        /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
+        computeCSBENDFields(&Fx, &Fy, x, y);
+        
+        dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*sqrt(sqr(1+x/rho0)+sqr(xp)+sqr(yp));
+        Qi[5] -= dp_prime*x*tan(e1);
+      }
 
-      dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*sqrt(sqr(1+x/rho0)+sqr(xp)+sqr(yp));
-      Qi[5] -= dp_prime*x*tan(e1);
+      convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
     }
-
-    convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
     
     if (csbend->expandHamiltonian)
-      particle_lost = !integrate_csbend_ordn_expanded(Qf, Qi, sigmaDelta2, csbend->length, csbend->nSlices, rho0, Po, &dz_lost,
+      particle_lost = !integrate_csbend_ordn_expanded(Qf, Qi, sigmaDelta2, csbend->length, csbend->nSlices, iSlice, rho0, Po, &dz_lost,
                                                       &apertureData, csbend->integration_order);
     else
-      particle_lost = !integrate_csbend_ordn(Qf, Qi, sigmaDelta2, csbend->length, csbend->nSlices, rho0, Po, &dz_lost,
+      particle_lost = !integrate_csbend_ordn(Qf, Qi, sigmaDelta2, csbend->length, csbend->nSlices, iSlice, rho0, Po, &dz_lost,
                                              &apertureData, csbend->integration_order);
-    if (csbend->fseCorrection==1)
-      Qf[4] -= csbend->fseCorrectionPathError;
-    convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
+
+    if (iSlice<0 || iSlice==(csbend->nSlices-1) || particle_lost) {
+      if (csbend->fseCorrection==1)
+        Qf[4] -= csbend->fseCorrectionPathError;
+      convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
+    }
 
     if (particle_lost) {
       if (!part[i_top]) {
@@ -1128,84 +1146,89 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       continue;
     }
 
-    if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && e2!=0 && rad_coef) {
-      /* post-adjust dp/p to correct error made by integrating over entire sector */
-      x = Qf[0];
-      xp = Qf[1];
-      y = Qf[2];
-      yp = Qf[3];
-      dp = Qf[5];
+    if (iSlice<0 || iSlice==(csbend->nSlices-1)) {
+      if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && e2!=0 && rad_coef) {
+        /* post-adjust dp/p to correct error made by integrating over entire sector */
+        x = Qf[0];
+        xp = Qf[1];
+        y = Qf[2];
+        yp = Qf[3];
+        dp = Qf[5];
+        
+        computeCSBENDFields(&Fx, &Fy, x, y);
+        
+        dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*sqrt(sqr(1+x/rho0)+sqr(xp)+sqr(yp));
+        Qf[5] -= dp_prime*x*tan(e2);
+      }
 
-      computeCSBENDFields(&Fx, &Fy, x, y);
-
-      dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*sqrt(sqr(1+x/rho0)+sqr(xp)+sqr(yp));
-      Qf[5] -= dp_prime*x*tan(e2);
-    }
-
-    /* get final coordinates */
-    if (rad_coef || isrConstant) {
-      double p0, p1;
-      double beta0, beta1;
-      /* fix previous distance information to reflect new velocity--since distance
-       * is really time-of-flight at the current velocity 
-       */
-      p0 = Po*(1+dp0);
-      beta0 = p0/sqrt(sqr(p0)+1);
-      p1 = Po*(1+Qf[5]);
-      beta1 = p1/sqrt(sqr(p1)+1);
-      s = beta1*s/beta0 + Qf[4];
-    }
-    else
-      s += Qf[4];
+      /* get final coordinates */
+      if (rad_coef || isrConstant) {
+        double p0, p1;
+        double beta0, beta1;
+        /* fix previous distance information to reflect new velocity--since distance
+         * is really time-of-flight at the current velocity 
+         */
+        p0 = Po*(1+dp0);
+        beta0 = p0/sqrt(sqr(p0)+1);
+        p1 = Po*(1+Qf[5]);
+        beta1 = p1/sqrt(sqr(p1)+1);
+        s = beta1*s/beta0 + Qf[4];
+      }
+      else
+        s += Qf[4];
+    } else
+        s += Qf[4];
     x = Qf[0];  xp = Qf[1];  y = Qf[2];  yp = Qf[3];  dp = Qf[5];
 
-    if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
-      /* apply edge focusing */
-      if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e2Index]==1) {
-        rho = (1+dp)*rho_actual;
-        delta_xp = tan(e2)/rho*x;
-        if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
-          delta_xp = SIGN(delta_xp)*e2_kick_limit;
-        xp += delta_xp;
-        yp -= tan(e2-psi2/(1+dp))/rho*y;
-      } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e2Index]==1) {
-        rho = (1+dp)*rho_actual;
-        apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, he2, psi2*(1+dp), 1);
-      } else if (csbend->edge_effects[csbend->e2Index]==2) {
-        /* load input coordinates into arrays */
-        Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-        convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
-        dipoleFringeKHwang(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[1]/rho0, e2, 2*csbend->hgap, 
-                        csbend->fint[csbend->e2Index]>=0?csbend->fint[csbend->e2Index]:csbend->fintBoth, 
-                        csbend->h[csbend->e2Index]);
-        /* retrieve coordinates from arrays */
-        convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
-        x  = Qf[0];  
-        xp = Qf[1];  
-        y  = Qf[2];  
-        yp = Qf[3];  
-        dp = Qf[5];
-      } else if (csbend->edge_effects[csbend->e2Index]==3) {
-        applySimpleDipoleEdgeKick(&xp, &yp, x, y, dp, rho_actual, e2, psi2, e2_kick_limit, csbend->expandHamiltonian);
-      } else if (csbend->edge_effects[csbend->e2Index]==4) {
-        /* K. Hwang's approach as symplectified by R. Lindberg */
-        /* load input coordinates into arrays */
-        Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-        convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
-        dipoleFringeKHwangRLindberg(Qf, Qi, rho_actual, 1., csbend->b[1]/rho0, e2, 2*csbend->hgap, 
-                        csbend->fint[csbend->e2Index]>=0?csbend->fint[csbend->e2Index]:csbend->fintBoth, 
-                        csbend->h[csbend->e2Index]);
-        /* retrieve coordinates from arrays */
-        convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
-        x  = Qf[0];  
-        xp = Qf[1];  
-        y  = Qf[2];  
-        yp = Qf[3];  
-        dp = Qf[5];
+    if (iSlice<0 || iSlice==(csbend->nSlices-1)) {
+      if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
+        /* apply edge focusing */
+        if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e2Index]==1) {
+          rho = (1+dp)*rho_actual;
+          delta_xp = tan(e2)/rho*x;
+          if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
+            delta_xp = SIGN(delta_xp)*e2_kick_limit;
+          xp += delta_xp;
+          yp -= tan(e2-psi2/(1+dp))/rho*y;
+        } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e2Index]==1) {
+          rho = (1+dp)*rho_actual;
+          apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, he2, psi2*(1+dp), 1);
+        } else if (csbend->edge_effects[csbend->e2Index]==2) {
+          /* load input coordinates into arrays */
+          Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
+          convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
+          dipoleFringeKHwang(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[1]/rho0, e2, 2*csbend->hgap, 
+                             csbend->fint[csbend->e2Index]>=0?csbend->fint[csbend->e2Index]:csbend->fintBoth, 
+                             csbend->h[csbend->e2Index]);
+          /* retrieve coordinates from arrays */
+          convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
+          x  = Qf[0];  
+          xp = Qf[1];  
+          y  = Qf[2];  
+          yp = Qf[3];  
+          dp = Qf[5];
+        } else if (csbend->edge_effects[csbend->e2Index]==3) {
+          applySimpleDipoleEdgeKick(&xp, &yp, x, y, dp, rho_actual, e2, psi2, e2_kick_limit, csbend->expandHamiltonian);
+        } else if (csbend->edge_effects[csbend->e2Index]==4) {
+          /* K. Hwang's approach as symplectified by R. Lindberg */
+          /* load input coordinates into arrays */
+          Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
+          convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
+          dipoleFringeKHwangRLindberg(Qf, Qi, rho_actual, 1., csbend->b[1]/rho0, e2, 2*csbend->hgap, 
+                                      csbend->fint[csbend->e2Index]>=0?csbend->fint[csbend->e2Index]:csbend->fintBoth, 
+                                      csbend->h[csbend->e2Index]);
+          /* retrieve coordinates from arrays */
+          convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
+          x  = Qf[0];  
+          xp = Qf[1];  
+          y  = Qf[2];  
+          yp = Qf[3];  
+          dp = Qf[5];
+        }
       }
     }
 
-    if (csbend->malignMethod==0) {
+    if (csbend->malignMethod==0 && (iSlice<0 || iSlice==(csbend->nSlices-1))) {
       coord[0] =  x*cos_ttilt -  y*sin_ttilt + dcoord_etilt[0];
       coord[2] =  x*sin_ttilt +  y*cos_ttilt + dcoord_etilt[2];
       coord[1] = xp*cos_ttilt - yp*sin_ttilt + dcoord_etilt[1];
@@ -1226,17 +1249,19 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     }
   }
 
-  if (csbend->malignMethod!=0) {
-    if (csbend->malignMethod==1)
-      offsetParticlesForEntranceCenteredMisalignmentExact
-        (part, n_part, 
-         csbend->dx, csbend->dy, csbend->dz, 
-         csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 2);
-    else 
-      offsetParticlesForBodyCenteredMisalignmentExact
-        (part, n_part, 
-         csbend->dx, csbend->dy, csbend->dz, 
-         csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 2);
+  if (iSlice<0 || iSlice==(csbend->nSlices-1)) {
+    if (csbend->malignMethod!=0) {
+      if (csbend->malignMethod==1)
+        offsetParticlesForEntranceCenteredMisalignmentExact
+          (part, n_part, 
+           csbend->dx, csbend->dy, csbend->dz, 
+           csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 2);
+      else 
+        offsetParticlesForBodyCenteredMisalignmentExact
+          (part, n_part, 
+           csbend->dx, csbend->dy, csbend->dz, 
+           csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 2);
+    }
   }
 
   if (distributionBasedRadiation) {
@@ -1292,8 +1317,21 @@ void convertFromDipoleCanonicalCoordinates(double *Qi, long expanded)
 
 
 
-long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
-                           double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order)
+long integrate_csbend_ordn
+(
+ double *Qf,                  /* final coordinates */
+ double *Qi,                  /* initial coordinates */
+ double *sigmaDelta2,         /* accumulate the energy spread increase for propagation of radiation matrix */
+ double s,                    /* arc length */
+ long n,                      /* number of slices */
+ long iSlice,                 /* If <0, integrate the full magnet. If >=0, integrate just a single part and return.               
+                               * This is needed to allow propagation of the radiation matrix. */
+ double rho0,                 /* nominal bending radius */
+ double p0,                   /* central momentum */
+ double *dz_lost,             /* return of loss position */
+ MULT_APERTURE_DATA *apData,  /* aperture data */
+ short integration_order      /* 2, 4, or 6 */
+)
 {
   long i;
   double factor, f, phi, ds, dsh, dist;
@@ -1452,6 +1490,8 @@ long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s
       QY -= refTrajectoryData[i][3];
       dist -= refTrajectoryData[i][4];
     }
+    if (iSlice>=0)
+      break;
   }
   if ((apData && !checkMultAperture(X, Y, apData)) ||
       insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
@@ -1464,7 +1504,7 @@ long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s
 }
 
 
-long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
+long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long iSlice, double rho0, double p0,
                                     double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order)
 /* The Hamiltonian in this case is approximated as
  * H = Hd + Hf, where Hd is the drift part and Hf is the field part.
@@ -1608,10 +1648,12 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       QY -= refTrajectoryData[i][3];
       dist -= refTrajectoryData[i][4];
     }
+    if (iSlice>=0)
+      break;
   }
-  *dz_lost = n*s;
   if ((apData && !checkMultAperture(X, Y, apData)) ||
       insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
+    *dz_lost = n*s;
     return 0;
   }
 
@@ -1936,7 +1978,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csbend->particleFileActive = 1;
     csbend->particleOutputFile = compose_filename(csbend->particleOutputFile, rootname);
     csbend->SDDSpart = tmalloc(sizeof(*(csbend->SDDSpart)));
-    if (!SDDS_InitializeOutput(csbend->SDDSpart, SDDS_BINARY, 1, 
+    if (!SDDS_InitializeOutputElegant(csbend->SDDSpart, SDDS_BINARY, 1, 
                                NULL, NULL, csbend->particleOutputFile) ||
         0>SDDS_DefineParameter(csbend->SDDSpart, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
         !SDDS_DefineSimpleParameter(csbend->SDDSpart, "Pass", NULL, SDDS_LONG) ||
@@ -1964,7 +2006,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csbend->wakeFileActive = 1;
     csbend->histogramFile = compose_filename(csbend->histogramFile, rootname);
     csbend->SDDSout = tmalloc(sizeof(*(csbend->SDDSout)));
-    if (!SDDS_InitializeOutput(csbend->SDDSout, SDDS_BINARY, 1, NULL, NULL, csbend->histogramFile) ||
+    if (!SDDS_InitializeOutputElegant(csbend->SDDSout, SDDS_BINARY, 1, NULL, NULL, csbend->histogramFile) ||
         0>SDDS_DefineParameter(csbend->SDDSout, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
         !SDDS_DefineSimpleParameter(csbend->SDDSout, "Pass", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(csbend->SDDSout, "Kick", NULL, SDDS_LONG) ||
@@ -2144,7 +2186,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             Qi[5] = DP;
             convertToDipoleCanonicalCoordinates(Qi, 0);
             
-            particleLost = !integrate_csbend_ordn(Qf, Qi, NULL, csbend->length/csbend->nSlices, 1, rho0, Po, &dz_lost, &apertureData, csbend->integration_order);
+            particleLost = !integrate_csbend_ordn(Qf, Qi, NULL, csbend->length/csbend->nSlices, 1, -1, rho0, Po, &dz_lost, &apertureData, csbend->integration_order);
 
             /* retrieve coordinates from arrays */
             convertFromDipoleCanonicalCoordinates(Qf, 0);
@@ -3993,7 +4035,7 @@ void DumpStupakovOutput(char *filename, SDDS_DATASET *SDDSout, long *active,
 {
   long i;
   if (!*active) {
-    if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 1, NULL, NULL, filename) ||
+    if (!SDDS_InitializeOutputElegant(SDDSout, SDDS_BINARY, 1, NULL, NULL, filename) ||
         0>SDDS_DefineParameter(SDDSout, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
         !SDDS_DefineSimpleParameter(SDDSout, "z", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(SDDSout, "CaseC", "#", SDDS_LONG) ||
@@ -5039,7 +5081,7 @@ void setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np)
   if (!csbend->photonFileActive) {
     csbend->photonOutputFile = compose_filename(csbend->photonOutputFile, rootname);
     csbend->SDDSphotons = tmalloc(sizeof(SDDS_DATASET));
-    if (!SDDS_InitializeOutput(csbend->SDDSphotons, SDDS_BINARY, 1, NULL, NULL, csbend->photonOutputFile) ||
+    if (!SDDS_InitializeOutputElegant(csbend->SDDSphotons, SDDS_BINARY, 1, NULL, NULL, csbend->photonOutputFile) ||
         0>SDDS_DefineParameter(csbend->SDDSphotons, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL) ||
         0>SDDS_DefineParameter(csbend->SDDSphotons, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
         0>SDDS_DefineParameter(csbend->SDDSphotons, "Particles", NULL, NULL, "Number of charged particles", NULL, SDDS_LONG, NULL) ||
@@ -5117,7 +5159,7 @@ double csbend_fse_adjustment_penalty(double *value, long *invalid)
 
   csbendWorking.fseCorrectionValue = *value;
   optimizationEvaluations ++;
-  if (!track_through_csbend(optParticle, 1, &csbendWorking, 0, 1e3, NULL, 0.0, NULL, NULL, NULL, NULL, NULL)) {
+  if (!track_through_csbend(optParticle, 1, &csbendWorking, 0, 1e3, NULL, 0.0, NULL, NULL, NULL, NULL, NULL, -1)) {
     *invalid = 1;
     return 0.0;
   }

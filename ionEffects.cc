@@ -198,7 +198,7 @@ void setUpIonEffectsOutputFiles(long nPasses)
 #endif
       if (!SDDS_beamOutput) {
         SDDS_beamOutput = (SDDS_DATASET*)tmalloc(sizeof(*SDDS_beamOutput));
-        if (!SDDS_InitializeOutput(SDDS_beamOutput, SDDS_BINARY, 1, "electron beam output", NULL, beam_output)) {
+        if (!SDDS_InitializeOutputElegant(SDDS_beamOutput, SDDS_BINARY, 1, "electron beam output", NULL, beam_output)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
         }
@@ -233,7 +233,7 @@ void setUpIonEffectsOutputFiles(long nPasses)
 #endif
       if (!SDDS_ionDensityOutput) {
         SDDS_ionDensityOutput = (SDDS_DATASET*)tmalloc(sizeof(*SDDS_ionDensityOutput));
-        if (!SDDS_InitializeOutput(SDDS_ionDensityOutput, SDDS_BINARY, 1, "ion density output", NULL, ion_density_output)) {
+        if (!SDDS_InitializeOutputElegant(SDDS_ionDensityOutput, SDDS_BINARY, 1, "ion density output", NULL, ion_density_output)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
         }
@@ -301,7 +301,7 @@ void setUpIonEffectsOutputFiles(long nPasses)
 #endif
       if (!SDDS_ionHistogramOutput) {
         SDDS_ionHistogramOutput = (SDDS_DATASET*)tmalloc(sizeof(*SDDS_ionHistogramOutput));
-        if (!SDDS_InitializeOutput(SDDS_ionHistogramOutput, SDDS_BINARY, 1,
+        if (!SDDS_InitializeOutputElegant(SDDS_ionHistogramOutput, SDDS_BINARY, 1,
 				   "ion histogram output", NULL, ion_histogram_output)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);

@@ -406,7 +406,7 @@ void track_through_mkicker(
     multipoleOrder[0] = kicker->order;
 
     integrate_kick_multipole_ordn(part[ip], kicker->dx, kicker->dy, 0.0, 0.0, p_central, 0.0, 0.0,
-                                  multipoleOrder, KnL, skew, n_parts,
+                                  multipoleOrder, KnL, skew, n_parts, -1,
                                   kicker->length, 4, NULL, NULL, NULL, NULL, &dummy, NULL, 0, 0.0);
   }
 

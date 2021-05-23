@@ -7,6 +7,7 @@
 
 #namelist global_settings static
      long inhibit_fsync = 0;
+     long allow_overwrite = 1;
      long echo_namelists = 1;
      long mpi_randomization_mode = 3;
      long exact_normalized_emittance = 0;

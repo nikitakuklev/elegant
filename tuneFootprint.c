@@ -968,7 +968,7 @@ void outputTuneFootprint(VARY *control)
     if (myid==0) {
 #endif
       if (!deltaFileInitialized) {
-        if (!SDDS_InitializeOutput(&sddsOut_delta, SDDS_BINARY, 0, NULL, NULL, delta_output) ||
+        if (!SDDS_InitializeOutputElegant(&sddsOut_delta, SDDS_BINARY, 0, NULL, NULL, delta_output) ||
             SDDS_DefineColumn(&sddsOut_delta, "delta", "$gd$r", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&sddsOut_delta, "nux", "$gn$r$bx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&sddsOut_delta, "nuy", "$gn$r$by$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
@@ -1025,7 +1025,7 @@ void outputTuneFootprint(VARY *control)
     if (myid==0) {
 #endif
       if (!xyFileInitialized) {
-        if (!SDDS_InitializeOutput(&sddsOut_xy, SDDS_BINARY, 0, NULL, NULL, xy_output) ||
+        if (!SDDS_InitializeOutputElegant(&sddsOut_xy, SDDS_BINARY, 0, NULL, NULL, xy_output) ||
             SDDS_DefineColumn(&sddsOut_xy, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&sddsOut_xy, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&sddsOut_xy, "nux", "$gn$r$bx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||

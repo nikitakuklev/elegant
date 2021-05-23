@@ -31,6 +31,7 @@ htab *load_hash;
 
 /* various user-controlled global flags and settings (global_settings namelist) */
 long inhibitFileSync = 0;
+long allowOverwrite = 1;
 long echoNamelists = 1;
 long mpiRandomizationMode = 3;
 long exactNormalizedEmittance = 0;

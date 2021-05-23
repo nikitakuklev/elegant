@@ -162,7 +162,7 @@ long ramped_rf_cavity(
     if (!debugInitialized) {
         debugInitialized = 1;
         debugCount = 0;
-        if (!SDDS_InitializeOutput(&debugTable, SDDS_BINARY, 0, NULL, NULL, "rampedrf.debug") ||
+        if (!SDDS_InitializeOutputElegant(&debugTable, SDDS_BINARY, 0, NULL, NULL, "rampedrf.debug") ||
             SDDS_DefineColumn(&debugTable, "t", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&debugTable, "t0", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&debugTable, "dphase", NULL, "rad", NULL, NULL, SDDS_DOUBLE, 0)<0 ||

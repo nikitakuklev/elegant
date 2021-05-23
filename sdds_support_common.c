@@ -264,3 +264,28 @@ void reorganizeFTABLE(double **F, double **Ftmp, long nx, long ny, long nz)
   *Ftmp = Fsave;
 }
 
+
+int32_t SDDS_InitializeOutputElegant(SDDS_DATASET *SDDS_dataset, int32_t data_mode,
+                                            int32_t lines_per_row, const char *description,
+                                            const char *contents, const char *filename)
+{
+  char *s;
+  if (allowOverwrite || !fexists(filename))
+    return SDDS_InitializeOutput(SDDS_dataset, data_mode, lines_per_row, description,
+                                        contents, filename);
+  s = tmalloc(sizeof(*filename)*(strlen(filename)+1000));
+  sprintf(s, "Unable to write to %s --- file exists", filename);
+  SDDS_SetError(s);
+  return 0;
+}
+
+int32_t SDDS_Parallel_InitializeOutputElegant(SDDS_DATASET *SDDS_dataset, const char *description, const char *contents, const char *filename)
+{
+  char *s;
+  if (allowOverwrite || !fexists(filename))
+    return SDDS_Parallel_InitializeOutput(SDDS_dataset, description, contents, filename);
+  s = tmalloc(sizeof(*filename)*(strlen(filename)+1000));
+  sprintf(s, "Unable to write to %s --- file exists", filename);
+  SDDS_SetError(s);
+  return 0;
+}

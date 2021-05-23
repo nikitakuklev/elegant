@@ -476,7 +476,7 @@ void chprint1(book1 *bName, char *filename, char *description, char *frequencyUn
     if (verbosity)
       fprintf( stdout, "Opening \"%s\" for writing...\n", filename);
 
-    if (!SDDS_InitializeOutput(&outPage, SDDS_BINARY, 1, 
+    if (!SDDS_InitializeOutputElegant(&outPage, SDDS_BINARY, 1, 
                                description, description, filename))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     for (i=0; i<n_parameters; i++) {
@@ -572,7 +572,7 @@ void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *
     /* Open file for writting */
     if (verbosity)
       fprintf( stdout, "Opening \"%s\" for writing...\n", filename);
-    if (!SDDS_InitializeOutput(&outPage, SDDS_BINARY, 1, 
+    if (!SDDS_InitializeOutputElegant(&outPage, SDDS_BINARY, 1, 
                                description, description, filename))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
@@ -683,7 +683,7 @@ void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION 
     /* Open file for writting */
     if (verbosity)
       fprintf( stdout, "Opening \"%s\" for writing...\n", filename);
-    if (!SDDS_InitializeOutput(&outPage, SDDS_BINARY, 1, 
+    if (!SDDS_InitializeOutputElegant(&outPage, SDDS_BINARY, 1, 
                                description, description, filename))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
  
@@ -807,7 +807,7 @@ void chprint1m(book1m *bName, char *filename, char *description, SDDS_DEFINITION
     /* Open file for writting */
     if (verbosity)
       fprintf( stdout, "Opening \"%s\" for writing...\n", filename);
-    if (!SDDS_InitializeOutput(&outPage, SDDS_BINARY, 1, 
+    if (!SDDS_InitializeOutputElegant(&outPage, SDDS_BINARY, 1, 
                                description, description, filename))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 

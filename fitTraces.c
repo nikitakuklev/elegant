@@ -471,7 +471,7 @@ void fit_trace_writeTraceOutput
   long iTrace, iBPM, row;
   double x, y;
   
-  if (!SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 0, NULL, NULL,
+  if (!SDDS_InitializeOutputElegant(&SDDSout, SDDS_BINARY, 0, NULL, NULL,
                              filename) ||
       0>SDDS_DefineColumn(&SDDSout, "xFit", NULL, "m", "Predicted x coordinate",
                           NULL, SDDS_DOUBLE, 0) ||
@@ -1096,7 +1096,7 @@ FIT_OUTPUT_DATA *fit_trace_setUpOutputFile(char *filename,
     exitElegant(1);
   }
   
-  if (!SDDS_InitializeOutput(&outputData->SDDStable, SDDS_BINARY, 0, NULL, NULL,
+  if (!SDDS_InitializeOutputElegant(&outputData->SDDStable, SDDS_BINARY, 0, NULL, NULL,
                              filename) ||
       0>SDDS_DefineColumn(&outputData->SDDStable, "Iteration", NULL, NULL, 
                           "Major iteration number",

@@ -660,7 +660,7 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
     tfbd->outputFile = compose_filename(tfbd->outputFile, rootname);
     if (!tfbd->SDDSout)
       tfbd->SDDSout = (SDDS_DATASET *)tmalloc(sizeof(*(tfbd->SDDSout)));
-    if (!SDDS_InitializeOutput(tfbd->SDDSout, SDDS_BINARY, 1, NULL, NULL, tfbd->outputFile) ||
+    if (!SDDS_InitializeOutputElegant(tfbd->SDDSout, SDDS_BINARY, 1, NULL, NULL, tfbd->outputFile) ||
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "Pass", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "Bunch", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "PickupOutput", NULL, SDDS_DOUBLE) ||

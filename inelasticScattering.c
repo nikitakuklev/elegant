@@ -246,7 +246,7 @@ void setupInelasticScattering(
   sprintf(description, "Inelastic scattering tracking");
 
   if (myid==0) {
-    if (!SDDS_InitializeOutput(&SDDSsa, SDDS_BINARY, 1, description, "Inelastic scattering aperture",  losses)) {
+    if (!SDDS_InitializeOutputElegant(&SDDSsa, SDDS_BINARY, 1, description, "Inelastic scattering aperture",  losses)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }

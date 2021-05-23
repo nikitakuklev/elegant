@@ -49,10 +49,10 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
         sprintf(description, "%s--input: %s  lattice: %s", contents, command_file, lattice_file);
 #if SDDS_MPI_IO
 	/* We still need serial IO for some operations */
-	if ((SDDS_table->parallel_io && (!SDDS_Parallel_InitializeOutput(SDDS_table, description, contents, filename))) ||
-	    (!SDDS_table->parallel_io && (!SDDS_InitializeOutput(SDDS_table, mode, 1, description, contents, filename))))
+	if ((SDDS_table->parallel_io && (!SDDS_Parallel_InitializeOutputElegant(SDDS_table, description, contents, filename))) ||
+	    (!SDDS_table->parallel_io && (!SDDS_InitializeOutputElegant(SDDS_table, mode, 1, description, contents, filename))))
 #else
-        if (!SDDS_InitializeOutput(SDDS_table, mode, 1, description, contents, filename)) 
+        if (!SDDS_InitializeOutputElegant(SDDS_table, mode, 1, description, contents, filename)) 
 #endif
 	{
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);

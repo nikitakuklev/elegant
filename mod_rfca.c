@@ -78,7 +78,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
     if (!debugInitialized) {
         debugInitialized = 1;
         debugCount = 0;
-        if (!SDDS_InitializeOutput(&debugTable, SDDS_BINARY, 0, NULL, NULL, "modrf.debug") ||
+        if (!SDDS_InitializeOutputElegant(&debugTable, SDDS_BINARY, 0, NULL, NULL, "modrf.debug") ||
             SDDS_DefineColumn(&debugTable, "t", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&debugTable, "phase", NULL, "rad", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&debugTable, "V", NULL, "V", NULL, NULL, SDDS_DOUBLE, 0)<0 ||

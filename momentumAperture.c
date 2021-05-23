@@ -122,19 +122,19 @@ void setupMomentumApertureSearch(
 #if SDDS_MPI_IO
   if (output_mode!=2) {
     SDDS_MPI_Setup(&SDDSma, 1, n_processors, myid, MPI_COMM_WORLD, 1);
-    if (!SDDS_Parallel_InitializeOutput(&SDDSma, description, "momentum aperture",  output)) {
+    if (!SDDS_Parallel_InitializeOutputElegant(&SDDSma, description, "momentum aperture",  output)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
   } else if (myid==0) {
     /* master only writes */
-    if (!SDDS_InitializeOutput(&SDDSma, SDDS_BINARY, 1, description, "momentum aperture",  output)) {
+    if (!SDDS_InitializeOutputElegant(&SDDSma, SDDS_BINARY, 1, description, "momentum aperture",  output)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
   }
 #else
-  if (!SDDS_InitializeOutput(&SDDSma, SDDS_BINARY, 1, description, "momentum aperture",  output)) {
+  if (!SDDS_InitializeOutputElegant(&SDDSma, SDDS_BINARY, 1, description, "momentum aperture",  output)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
   }

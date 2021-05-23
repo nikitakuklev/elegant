@@ -36,7 +36,7 @@ int main(int argc, char **argv)
       !SDDS_Terminate(&SDDSin))
     SDDS_Bomb("Problem with input file");
 
-  if (!SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 1, NULL, NULL, output) ||
+  if (!SDDS_InitializeOutputElegant(&SDDSout, SDDS_BINARY, 1, NULL, NULL, output) ||
       SDDS_DefineColumn(&SDDSout, "y", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       !SDDS_WriteLayout(&SDDSout) ||
       !SDDS_StartPage(&SDDSout, rows))

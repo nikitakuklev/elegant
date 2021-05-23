@@ -160,7 +160,7 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
                 type, fixed_length?"":"non-");
         }
 
-    if (!SDDS_InitializeOutput(&respOutput->SDDSout, SDDS_BINARY, 0, s, t, filename)) {
+    if (!SDDS_InitializeOutputElegant(&respOutput->SDDSout, SDDS_BINARY, 0, s, t, filename)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exitElegant(1);
         }

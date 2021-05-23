@@ -44,6 +44,7 @@
 
 void traceback_handler(int code);
 void createSemaphoreFile(char *filename);
+void manageSemaphoreFiles(char *semaphore_file, char *rootname, char *semaphoreFile[3]);
 void readApertureInput(NAMELIST_TEXT *nltext, RUN *run);
 void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *error_control, CORRECTION *correct, 
                            BEAM *beam, OUTPUT_FILES *output_data, OPTIMIZATION_DATA *optimize,
@@ -85,18 +86,18 @@ void showUsageOrGreeting (unsigned long mode)
 #if USE_MPI
  #if HAVE_GPU
   char *USAGE="usage: mpirun -np <number of processes> gpu-Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is gpu-Pelegant 2021.1.0 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is gpu-Pelegant 2021.2Beta1 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #else
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is elegant 2021.1.0 "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 2021.2Beta1 "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #endif
 #else
  #if HAVE_GPU
   char *USAGE="usage: gpu-elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is gpu-elegant 2021.1.0 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is gpu-elegant 2021.2Beta1 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is elegant 2021.1.0, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 2021.2Beta1, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #endif
 #endif
   time_t timeNow;
@@ -887,32 +888,9 @@ char **argv;
       else {
         magnets = semaphore_file = parameters = rfc_reference_output = NULL;
       }
-      
-      if (semaphore_file && fexists(semaphore_file))
-        remove(semaphore_file);
-		
-      if (semaphoreFile[0]) {
-        /* "started" */
-	char *lastSem;
-	cp_str(&lastSem, semaphoreFile[0]);
-        semaphoreFile[0] = compose_filename(semaphoreFile[0], rootname);
-	if (strcmp(lastSem, semaphoreFile[0]))
-	  createSemaphoreFile(semaphoreFile[0]);
-	free(lastSem);
-      }
-      if (semaphoreFile[1]) {
-        /* "done" */
-        semaphoreFile[1] = compose_filename(semaphoreFile[1], rootname);
-        if (fexists(semaphoreFile[1]))
-          remove(semaphoreFile[1]);
-      }
-      if (semaphoreFile[2]) {
-        /* "failed" */
-        semaphoreFile[2] = compose_filename(semaphoreFile[2], rootname);
-        if (fexists(semaphoreFile[2]))
-          remove(semaphoreFile[2]);
-      }
-      
+
+      manageSemaphoreFiles(semaphore_file, rootname, semaphoreFile);
+     
       /* output the magnet layout */
       if (magnets)
         output_magnets(magnets, lattice, beamline);
@@ -2930,6 +2908,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
 
   misalignmentMethod = malign_method;
   inhibitFileSync = inhibit_fsync;
+  allowOverwrite = allow_overwrite;
   echoNamelists = echo_namelists;
   mpiRandomizationMode = mpi_randomization_mode;
   srGaussianLimit = SR_gaussian_limit;
@@ -3198,4 +3177,50 @@ void process_change_start(NAMELIST_TEXT *nltext, CHANGE_START_SPEC *css)
   css->active = 1;
   css->elementName = change_start_struct.element_name;
   css->ringMode = change_start_struct.ring_mode;
+}
+
+void manageSemaphoreFiles(char *semaphore_file, char *rootname, char *semaphoreFile[3])
+{
+  char *lastSem;
+  long i;
+
+  if (semaphore_file && fexists(semaphore_file)) {
+    if (allowOverwrite) 
+      remove(semaphore_file);
+    else {
+      printf("Error: file %s already exists\n", semaphore_file);
+      exit(1);
+    }
+  }
+    
+  if (semaphoreFile[0]) {
+    /* "started" */
+    cp_str(&lastSem, semaphoreFile[0]);
+    semaphoreFile[0] = compose_filename(semaphoreFile[0], rootname);
+  }
+  if (semaphoreFile[1]) {
+    /* "done" */
+    semaphoreFile[1] = compose_filename(semaphoreFile[1], rootname);
+  }
+  if (semaphoreFile[2]) {
+    /* "failed" */
+    semaphoreFile[2] = compose_filename(semaphoreFile[2], rootname);
+  }
+
+  for (i=0; i<3; i++) 
+    if (semaphoreFile[i] && strlen(semaphoreFile[i]) && fexists(semaphoreFile[i])) {
+      if (allowOverwrite)
+        remove(semaphoreFile[i]);
+      else {
+        printf("Error: file %s already exists\n", semaphoreFile[i]);
+        exit(1);
+      }
+    }
+  
+  if (semaphoreFile[0]) {
+    /* "started" */
+    if (strcmp(lastSem, semaphoreFile[0]))
+      createSemaphoreFile(semaphoreFile[0]);
+    free(lastSem);
+  }
 }

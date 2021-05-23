@@ -277,7 +277,7 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
 
     sasefelOutput->filename = compose_filename(output, run->rootname);
     SDDSout = &(sasefelOutput->SDDSout);
-    if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 0, NULL, NULL, sasefelOutput->filename) ||
+    if (!SDDS_InitializeOutputElegant(SDDSout, SDDS_BINARY, 0, NULL, NULL, sasefelOutput->filename) ||
         !SDDS_DefineSimpleParameter(SDDSout, "Step", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(SDDSout, "undulatorK", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(SDDSout, "undulatorPeriod", "m", SDDS_DOUBLE)) {

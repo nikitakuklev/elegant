@@ -596,7 +596,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     if (!trfmode->perParticleOutput && trfmode->binless) {
       if (!trfmode->SDDSrec)
         trfmode->SDDSrec = tmalloc(sizeof(*(trfmode->SDDSrec)));
-      if (!SDDS_InitializeOutput(trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
+      if (!SDDS_InitializeOutputElegant(trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
 	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
 	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "VxMax", "V", SDDS_DOUBLE) ||
@@ -610,7 +610,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     } else {
       if (!trfmode->SDDSrec)
         trfmode->SDDSrec = tmalloc(sizeof(*(trfmode->SDDSrec)));
-      if (!SDDS_InitializeOutput(trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
+      if (!SDDS_InitializeOutputElegant(trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
 	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
 	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "Vx", "V", SDDS_DOUBLE) ||

@@ -27,7 +27,7 @@ void sdds_strength_output(char *output, LINE_LIST *beamline, char *input)
 
     sprintf(s, "Magnet strengths for beamline %s of file %s",
             beamline->name, input);
-    if (!SDDS_InitializeOutput(&SDDS_table, SDDS_ASCII, 1, s, 
+    if (!SDDS_InitializeOutputElegant(&SDDS_table, SDDS_ASCII, 1, s, 
                                "magnet strengths", output) ||
         SDDS_DefineParameter(&SDDS_table, "Beamline", NULL, NULL, "Beamline name", NULL, SDDS_STRING,
                              beamline->name)<0 ||

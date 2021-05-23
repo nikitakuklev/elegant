@@ -2251,7 +2251,7 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
   dZ = MIN(rftmEz0->dZ, rftmEz0->dZSol)/2;
   nz = 2*(rftmEz0->nz>rftmEz0->nzSol ? rftmEz0->nz : rftmEz0->nzSol);
   rftmEz0->fieldTestFile = compose_filename(rftmEz0->fieldTestFile, context.rootname);
-  if (!SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 0, NULL, NULL, rftmEz0->fieldTestFile) ||
+  if (!SDDS_InitializeOutputElegant(&SDDSout, SDDS_BINARY, 0, NULL, NULL, rftmEz0->fieldTestFile) ||
       !SDDS_DefineSimpleColumn(&SDDSout, (char*)"z", (char*)"m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, (char*)"ExRFOverr", (char*)"V/m/m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, (char*)"EyRFOverr", (char*)"V/m/m", SDDS_DOUBLE) ||

@@ -326,7 +326,7 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
     if (cwiggler->fieldOutput) {
       if (!cwiggler->SDDSFieldOutput)
         cwiggler->SDDSFieldOutput = tmalloc(sizeof(*(cwiggler->SDDSFieldOutput)));
-      if (!SDDS_InitializeOutput(cwiggler->SDDSFieldOutput, SDDS_BINARY, 0, NULL, NULL, cwiggler->fieldOutput) ||
+      if (!SDDS_InitializeOutputElegant(cwiggler->SDDSFieldOutput, SDDS_BINARY, 0, NULL, NULL, cwiggler->fieldOutput) ||
           !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "x", "m", SDDS_FLOAT) ||
           !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "y", "m", SDDS_FLOAT) ||
           !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "z", "m", SDDS_FLOAT) ||

@@ -814,7 +814,7 @@ long do_tracking(
       }
 #ifdef DEBUG_CRASH 
       printMessageAndTime(stdout, "do_tracking checkpoint 1: ");
-      printf("element %s#%ld, %ld particles\n", eptr->name, eptr->occurence, nToTrack);
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
       fflush(stdout);
 #endif
       if (run->showElementTiming)
@@ -822,7 +822,9 @@ long do_tracking(
       if (run->monitorMemoryUsage)
 	memoryBefore = memoryUsage();
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 2\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 2: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
       if (trackingOmniWedgeFunction) {
 #ifdef HAVE_GPU
@@ -837,7 +839,9 @@ long do_tracking(
         (*trackingWedgeFunction)(coord, nToTrack, i_pass, P_central);
       }
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 3\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 3: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
       classFlags = entity_description[eptr->type].flags;
@@ -857,7 +861,9 @@ long do_tracking(
         abort();
       }
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 3.1\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.1: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
       if (!eptr->p_elem && !run->concat_order) {
         printf("element %s has NULL p_elem pointer", eptr->name);
@@ -865,7 +871,9 @@ long do_tracking(
         exitElegant(1);
       }
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 3.2\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.2: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
       if (eptr->type<=0 || eptr->type>=N_TYPES) {
         printf("element %s has type %ld--not recognized/not allowed\n", eptr->name, eptr->type);
@@ -874,7 +882,9 @@ long do_tracking(
       }
       log_exit("do_tracking.2.2.0");
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 3.3\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.3: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
       log_entry("do_tracking.2.2.1");
@@ -913,7 +923,9 @@ long do_tracking(
         }
 #endif   
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 3.4\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.4: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
       if (sums_vs_z && *sums_vs_z && (!run->final_pass || i_pass==n_passes-1) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
         if (i_sums<0)
@@ -938,7 +950,9 @@ long do_tracking(
         i_sums++;
       }
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 3.5\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.5: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 #if USE_MPI
       if (notSinglePart) {
@@ -1044,7 +1058,9 @@ long do_tracking(
       } 
 #endif
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 3.6\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 3.6: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
 #if defined(BEAM_SUMS_DEBUG)
@@ -1072,12 +1088,16 @@ long do_tracking(
       log_exit("do_tracking.2.2.1");
       if (eptr->p_elem || eptr->matrix) {
 #ifdef DEBUG_CRASH 
-	printMessageAndTime(stdout, "do_tracking checkpoint 4.0\n");
+	printMessageAndTime(stdout, "do_tracking checkpoint 4.0: ");
+        printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
         if ((run->print_statistics>0 || (run->print_statistics<0 && (-run->print_statistics)<=(i_pass+1))) && !(flags&TEST_PARTICLES)) {
           char buffer[16384];
 #ifdef DEBUG_CRASH 
-	  printMessageAndTime(stdout, "do_tracking checkpoint 4.1\n");
+	  printMessageAndTime(stdout, "do_tracking checkpoint 4.1: ");
+          printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 #if USE_MPI
 	  if (!partOnMaster && notSinglePart) {
@@ -1087,7 +1107,9 @@ long do_tracking(
 	  }
 #endif
 #ifdef DEBUG_CRASH 
-	  printMessageAndTime(stdout, "do_tracking checkpoint 4.2\n");
+	  printMessageAndTime(stdout, "do_tracking checkpoint 4.2: ");
+          printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
           snprintf(buffer, 16384, "Starting %s#%ld at s=%le to %le m, pass %ld, %ld particles, memory %ld kB\n", 
                  eptr->name, eptr->occurence, 
@@ -1103,7 +1125,9 @@ long do_tracking(
           fflush(stdout);
 	}
 #ifdef DEBUG_CRASH 
-	printMessageAndTime(stdout, "do_tracking checkpoint 4.3\n");
+	printMessageAndTime(stdout, "do_tracking checkpoint 4.3: ");
+        printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
         /* show_dE = 0; */
         nLeft = nToTrack;  /* in case it isn't set by the element tracking */
@@ -1172,7 +1196,9 @@ long do_tracking(
         else if (entity_description[eptr->type].flags&MATRIX_TRACKING &&
 		 !(flags&IBS_ONLY_TRACKING)) {
 #ifdef DEBUG_CRASH 
-	  printMessageAndTime(stdout, "do_tracking checkpoint 5.0\n");
+	  printMessageAndTime(stdout, "do_tracking checkpoint 5.0: ");
+          printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
           if (!(entity_description[eptr->type].flags&HAS_MATRIX))
             bombElegant("attempt to matrix-multiply for element with no matrix!",  NULL);
@@ -1231,7 +1257,9 @@ long do_tracking(
         else { /* normal tracking ends up here */
           long type;
 #ifdef DEBUG_CRASH 
-	  printMessageAndTime(stdout, "do_tracking checkpoint 6.0\n");
+	  printMessageAndTime(stdout, "do_tracking checkpoint 6.0: ");
+          printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
           if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
             printf("Tracking element: ");
@@ -1873,7 +1901,7 @@ long do_tracking(
 
 	      nLeft = track_through_csbend(coord, nToTrack, (CSBEND*)eptr->p_elem, 0.0,
 					   *P_central, accepted, last_z, NULL, run->rootname, maxamp, apcontour,
-					   &(run->apertureData));
+					   &(run->apertureData), -1);
 	      if (flags&TEST_PARTICLES)
 		((CSBEND*)eptr->p_elem)->isr = saveISR;	  
 	      break;
@@ -1929,7 +1957,7 @@ long do_tracking(
               }
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
                                           *P_central, accepted, last_z, maxamp, apcontour,
-                                          &(run->apertureData), NULL);
+                                          &(run->apertureData), NULL, -1);
               if (flags&TEST_PARTICLES)
                 ((KQUAD*)eptr->p_elem)->isr = saveISR;
               break;
@@ -1940,7 +1968,7 @@ long do_tracking(
               }
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
                                           *P_central, accepted, last_z, maxamp, apcontour,
-                                          &(run->apertureData), NULL);
+                                          &(run->apertureData), NULL, -1);
               if (flags&TEST_PARTICLES)
                 ((KSEXT*)eptr->p_elem)->isr = saveISR;
 	      break;
@@ -1951,7 +1979,7 @@ long do_tracking(
               }
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
                                           *P_central, accepted, last_z, maxamp, apcontour,
-                                          &(run->apertureData), NULL);
+                                          &(run->apertureData), NULL, -1);
               if (flags&TEST_PARTICLES)
                 ((KOCT*)eptr->p_elem)->isr = saveISR;
 	      break;
@@ -1967,7 +1995,7 @@ long do_tracking(
                 }
                 nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
                                             *P_central, accepted, last_z, maxamp, apcontour,
-                                            &(run->apertureData), NULL);
+                                            &(run->apertureData), NULL, -1);
                 if (flags&TEST_PARTICLES)
                   ((KQUSE*)eptr->p_elem)->isr = saveISR;
               }
@@ -2379,7 +2407,9 @@ long do_tracking(
           }
         }
 #ifdef DEBUG_CRASH 
-        printMessageAndTime(stdout, "do_tracking checkpoint 10\n");
+        printMessageAndTime(stdout, "do_tracking checkpoint 10: ");
+        printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
         if (run->print_statistics>0 && !(flags&TEST_PARTICLES)) {
 	  if (run->print_statistics>1) {
@@ -2398,7 +2428,9 @@ long do_tracking(
         fflush(stdout);
       }
 #ifdef DEBUG_CRASH 
-        printMessageAndTime(stdout, "do_tracking checkpoint 11\n");
+        printMessageAndTime(stdout, "do_tracking checkpoint 11: ");
+        printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
       if (flags&FIRST_BEAM_IS_FIDUCIAL) {
         if (!(flags&FIDUCIAL_BEAM_SEEN)) {
@@ -2425,7 +2457,9 @@ long do_tracking(
       } else if (!(flags&FIDUCIAL_BEAM_SEEN))
         eptr->Pref_output_fiducial = *P_central;
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 12\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 12: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
       if (eptr->Pref_output_fiducial==0)
         bombElegant("problem with fiducialization. Seek expert help!", NULL);
@@ -2462,7 +2496,9 @@ long do_tracking(
         i_traj++;
       }
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 13\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 13: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
       if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->active && !sliceAnalysis->finalValuesOnly) {
 #if USE_MPI
@@ -2483,7 +2519,9 @@ long do_tracking(
 	sliceAnDone = 1;
       }
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 14\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 14: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 #if USE_MPI
       if (notSinglePart) {
@@ -2505,7 +2543,9 @@ long do_tracking(
       }
 #endif
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 15\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 15: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
       if ((!USE_MPI || !notSinglePart) || (USE_MPI && active)) {
         nLeft = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nLeft, accepted, z, *P_central, 0, 0);
@@ -2530,29 +2570,39 @@ long do_tracking(
       }
 
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 16\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 16: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
 #if USE_MPI
       if (flags&ALLOW_MPI_ABORT_TRACKING && !runInSinglePartMode) {
 #ifdef DEBUG_CRASH 
         printMessageAndTime(stdout, "do_tracking checkpoint 16.1, mpiAbort=");
-	printf("%d\n", mpiAbort);
+	printf("%d: ", mpiAbort);
+        printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 	fflush(stdout);
 #endif
 	/* When performing regular parallel tracking, certain elements with MPALGORITHM=0 may need to abort, but master has no way 
 	   to know because it doesn't run the procedure. Here we check for setting of the mpiAbort variable on any processor */
 	MPI_Barrier(MPI_COMM_WORLD);
 #ifdef DEBUG_CRASH 
-        printMessageAndTime(stdout, "do_tracking checkpoint 16.2\n");
+        printMessageAndTime(stdout, "do_tracking checkpoint 16.2: ");
+        printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 	MPI_Allreduce(&mpiAbort, &mpiAbortGlobal, 1, MPI_SHORT, MPI_MAX, MPI_COMM_WORLD);
 #ifdef DEBUG_CRASH 
-        printMessageAndTime(stdout, "do_tracking checkpoint 16.3\n");
+        printMessageAndTime(stdout, "do_tracking checkpoint 16.3: ");
+        printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 	if (mpiAbortGlobal) {
 #ifdef DEBUG_CRASH 
-          printMessageAndTime(stdout, "do_tracking checkpoint 16.4\n");
+          printMessageAndTime(stdout, "do_tracking checkpoint 16.4: ");
+          printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+      fflush(stdout);
 #endif
           if (mpiAbortGlobal<N_MPI_ABORT_TYPES)
             printf("Run aborted by error in %s: %s\n", eptr->name, mpiAbortDescription[mpiAbortGlobal]);
@@ -2583,7 +2633,9 @@ long do_tracking(
 #endif
 
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 16.5\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 16.5: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
       
       if (run->showElementTiming && last_type>=0 && last_type<=N_TYPES) {
@@ -2599,7 +2651,9 @@ long do_tracking(
       }
     } /* end of the while loop */
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 17\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 17: ");
+      printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
     if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->active && !sliceAnalysis->finalValuesOnly) {
 #if USE_MPI
@@ -2632,7 +2686,9 @@ long do_tracking(
     }
 
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 18\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 18: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
     log_exit("do_tracking.2.2");
@@ -2732,7 +2788,9 @@ long do_tracking(
     }
  
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 19\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 19: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
     if (sums_vs_z && (*sums_vs_z) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES) &&
@@ -2756,7 +2814,9 @@ long do_tracking(
     }
  
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 20\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 20: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
 #if USE_MPI
@@ -2829,13 +2889,17 @@ long do_tracking(
 #endif
     }
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 21\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 21: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 #endif
   } /* end of the for loop for n_passes*/
 
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 22\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 22: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
 #ifdef SORT   /* Sort the particles when the particles are lost at the very last element */
@@ -2861,7 +2925,9 @@ long do_tracking(
 #endif 
 
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 23\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 23: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
 #if USE_MPI 
@@ -2893,7 +2959,9 @@ long do_tracking(
 #endif
 
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 24\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 24: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
   /* do this here to get report of CSR drift normalization */
@@ -2955,7 +3023,9 @@ long do_tracking(
   }
 
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 25\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 25: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
 #ifdef HAVE_GPU      
@@ -2989,7 +3059,9 @@ long do_tracking(
   }
    
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 26\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 26: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
   log_exit("do_tracking.3");
@@ -3018,7 +3090,9 @@ long do_tracking(
   }
 
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 27\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 27: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
 #ifdef MPI_DEBUG  
@@ -3057,7 +3131,9 @@ long do_tracking(
   }
 
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 28\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 28: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
 #endif
 
   if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
@@ -3074,7 +3150,9 @@ long do_tracking(
   }
 
 #ifdef DEBUG_CRASH 
-    printMessageAndTime(stdout, "do_tracking checkpoint 29\n");
+    printMessageAndTime(stdout, "do_tracking checkpoint 29: ");
+    printf("element %s#%ld, %ld particles, %ld left\n", eptr?eptr->name:"?", eptr?eptr->occurence:-1, nToTrack, nLeft);
+      fflush(stdout);
     printf("returning with nToTrack = %ld\n", nToTrack);
     fflush(stdout);
 #endif

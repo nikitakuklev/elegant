@@ -67,7 +67,7 @@ void setup_coupled_twiss_output(
   }
 
   if (filename) {
-    if (!SDDS_InitializeOutput(&SDDScoupled, SDDS_BINARY, 0, NULL, NULL, filename) ||
+    if (!SDDS_InitializeOutputElegant(&SDDScoupled, SDDS_BINARY, 0, NULL, NULL, filename) ||
         !SDDS_DefineSimpleColumn(&SDDScoupled, "ElementName", NULL, SDDS_STRING) ||
         !SDDS_DefineSimpleColumn(&SDDScoupled, "s", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&SDDScoupled, "Sx", "m", SDDS_DOUBLE) ||

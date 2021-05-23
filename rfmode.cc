@@ -1175,7 +1175,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
       if (myid == 0) 
 #endif
         if (!(rfmode->SDDSrec=(SDDS_DATASET*)tmalloc(sizeof(*(rfmode->SDDSrec)))) ||
-            !SDDS_InitializeOutput(rfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, rfmode->record) ||
+            !SDDS_InitializeOutputElegant(rfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, rfmode->record) ||
             SDDS_DefineParameter(rfmode->SDDSrec, (char*)"SVNVersion", NULL, NULL, (char*)"SVN version number", NULL, SDDS_STRING, (char*)SVN_VERSION)<0 ||
             SDDS_DefineColumn(rfmode->SDDSrec, (char*)"Bunch", NULL, NULL, (char*)"Bunch number", NULL, SDDS_LONG, 0)<0 ||
             SDDS_DefineColumn(rfmode->SDDSrec, (char*)"Pass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
@@ -1204,7 +1204,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
       if (myid == 1) 
 #endif
         if (!(rfmode->SDDSfbrec=(SDDS_DATASET*)tmalloc(sizeof(*(rfmode->SDDSfbrec)))) ||
-            !SDDS_InitializeOutput(rfmode->SDDSfbrec, SDDS_BINARY, 1, NULL, NULL, rfmode->feedbackRecordFile) ||
+            !SDDS_InitializeOutputElegant(rfmode->SDDSfbrec, SDDS_BINARY, 1, NULL, NULL, rfmode->feedbackRecordFile) ||
             SDDS_DefineParameter(rfmode->SDDSfbrec, (char*)"SVNVersion", NULL, NULL, (char*)"SVN version number", NULL, SDDS_STRING, (char*)SVN_VERSION)<0 ||
             SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"Pass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
             SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"t", NULL, (char*)"s", (char*)"Time", NULL, SDDS_DOUBLE, 0)<0 ||

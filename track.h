@@ -103,6 +103,7 @@ extern size_t sizeOfParticle;
 
 /* various user-controlled global flags and settings (global_settings namelist) */
 extern long inhibitFileSync;
+extern long allowOverwrite;
 extern long echoNamelists;
 extern long mpiRandomizationMode;
 extern long exactNormalizedEmittance;
@@ -4216,13 +4217,14 @@ extern int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, 
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);
 extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, 
                                 double Po, double **accepted, double z_start,
-                                MAXAMP *maxamp, APCONTOUR *apcontour, APERTURE_DATA *apData, double *sigmaDelta2);
+                                MAXAMP *maxamp, APCONTOUR *apcontour, APERTURE_DATA *apData, double *sigmaDelta2,
+                                long iSlice);
 extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipole,
                                 double p_error, double Po, double **accepted, double z_start);
 int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
                                   long *order, double *KnL,  short *skew,
-                                  long n_parts, double drift,
+                                  long n_parts, long i_part, double drift,
                                   long integration_order,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
@@ -4513,7 +4515,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                              APCONTOUR *apContour, APERTURE_DATA *apFileData);
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
                           double z_start, double *sigmaDelta2, char *rootname, MAXAMP *maxamp, 
-                          APCONTOUR *apContour, APERTURE_DATA *apFileData);
+                          APCONTOUR *apContour, APERTURE_DATA *apFileData, long iSlice);
 void csbend_update_fse_adjustment(CSBEND *csbend);
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, 
@@ -4584,6 +4586,12 @@ extern void SDDS_SigmaMatrixSetup(SDDS_TABLE *SDDS_table, char *filename, long m
 extern void SDDS_WatchPointSetup(WATCH *waatch, long mode, long lines_per_row,
                                  char *command_file, char *lattice_file, char *caller, char *qualifier, 
                                  char *previousElementName);
+extern int32_t SDDS_InitializeOutputElegant(SDDS_DATASET *SDDS_dataset, int32_t data_mode,
+                                            int32_t lines_per_row, const char *description,
+                                            const char *contents, const char *filename);
+extern int32_t SDDS_Parallel_InitializeOutputElegant(SDDS_DATASET *SDDS_dataset, const char *description,
+                                              const char *contents, const char *filename);
+
 void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
                          char *command_file, char *lattice_file, char *caller);
 void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double **particle, long particles, 
@@ -4781,7 +4789,7 @@ void finishMomentsOutput(void);
 long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long tune_corrected, 
                       long writeToFile);
 void fillSigmaPropagationMatrix(double **Ms, double **R);
-long getMoments(double M[6][6], long matched0, long equilibrium0, long radiation0);
+long getMoments(double M[6][6], double C[6], long matched0, long equilibrium0, long radiation0);
 
 /* The sigma matrix s[i][j] is stored in a 21-element array.  These indices give the i and j values 
  * corresponding to an element the array.  We have i<=j (upper triangular).  Values are filled in

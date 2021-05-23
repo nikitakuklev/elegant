@@ -105,6 +105,7 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 } ;
 
 static double savedFinalMoments[6][6];
+static double savedFinalCentroid[6];
 
 void dumpBeamMoments(
   LINE_LIST *beamline,
@@ -424,6 +425,7 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
       long j;
       for (j=0; j<6; j++)
         savedFinalMoments[i][j] = beamline->elem->sigmaMatrix->sigma[sigmaIndex3[i][j]];
+      savedFinalCentroid[i] = beamline->elem->Mld->C[i];
     }
   }
 
@@ -932,7 +934,7 @@ void MatrixPrintout1(char *string, double *AA, int Nrow, int Ncol)
   printf("\n");
 }
 
-long getMoments(double M[6][6], long matched0, long equilibrium0, long radiation0)
+long getMoments(double M[6][6], double C[6], long matched0, long equilibrium0, long radiation0)
 {
   long i, j;
 
@@ -945,6 +947,8 @@ long getMoments(double M[6][6], long matched0, long equilibrium0, long radiation
   for (i=0; i<6; i++)
     for (j=0; j<6; j++)
       M[i][j] = savedFinalMoments[i][j];
-  
+  for (i=0; i<6; i++)
+    C[i] = savedFinalCentroid[i];
+
   return 1;
 }

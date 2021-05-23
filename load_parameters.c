@@ -901,7 +901,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline, long s
   
   SDDSout = &SDDS_dumpLattice;
   if (!dumpingLatticeParameters) {
-    if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 0, NULL, NULL, filename) ||
+    if (!SDDS_InitializeOutputElegant(SDDSout, SDDS_BINARY, 0, NULL, NULL, filename) ||
         (iElementName=SDDS_DefineColumn(SDDSout, Element_ColumnName, NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
         (iElementParameter=SDDS_DefineColumn(SDDSout, Parameter_ColumnName, NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
         (iParameterValue=SDDS_DefineColumn(SDDSout, Value_ColumnName, NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
@@ -1044,7 +1044,7 @@ void dumpRfcReferenceData(char *filename, RUN *run, LINE_LIST *beamline)
 
   SDDSout = &SDDS_rfcData;
   if (!dumpingRfcData) {
-    if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 0, NULL, NULL, filename) ||
+    if (!SDDS_InitializeOutputElegant(SDDSout, SDDS_BINARY, 0, NULL, NULL, filename) ||
         (iElementName=SDDS_DefineColumn(SDDSout, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
         (iElementParameter=SDDS_DefineColumn(SDDSout, "ElementParameter", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
         (iParameterValue=SDDS_DefineColumn(SDDSout, "ParameterValue", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||

@@ -1430,7 +1430,7 @@ long generateBunchForMoments(double **particle, long np, long symmetrize,
                              long *haltonID, long haltonOpt, double cutoff)
 {
   long ip, i, j;
-  double Mm[6][6], ptemp[6];
+  double Mm[6][6], Cm[6], ptemp[6];
   gsl_matrix *M;
 
 #if USE_MPI
@@ -1463,7 +1463,7 @@ long generateBunchForMoments(double **particle, long np, long symmetrize,
   }
 
   /* Get moments matrix to which we want to match the distribution */
-  if (!getMoments(Mm, 1, 1, 1))
+  if (!getMoments(Mm, Cm, 1, 1, 1))
     bombElegant("Error: use_moments_output_values is nonzero in bunched_beam command, but (appropriate) moments_output command was not given.\n", NULL);
 
   /* Perform Cholesky decomposition */
@@ -1487,6 +1487,8 @@ long generateBunchForMoments(double **particle, long np, long symmetrize,
       particle[ip][i] = 0;
       for (j=0; j<=i; j++)
         particle[ip][i] += Mm[i][j]*ptemp[j];
+      if (i!=4)
+        particle[ip][i] += Cm[i];
     }
   }
 

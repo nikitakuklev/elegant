@@ -883,7 +883,7 @@ void lorentz_setup(
               bmapxyz->SDDSpo = tmalloc(sizeof(*(bmapxyz->SDDSpo)));
               bmapxyz->poRow = 0;
               bmapxyz->particleOutputFile = compose_filename(bmapxyz->particleOutputFile, tcontext.rootname);
-              if (!SDDS_InitializeOutput(bmapxyz->SDDSpo, SDDS_BINARY, 1, 
+              if (!SDDS_InitializeOutputElegant(bmapxyz->SDDSpo, SDDS_BINARY, 1, 
                                          NULL, NULL, bmapxyz->particleOutputFile) ||
                   0>SDDS_DefineParameter(bmapxyz->SDDSpo, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
                   !SDDS_DefineSimpleParameter(bmapxyz->SDDSpo, "particleID", NULL, SDDS_LONG) ||

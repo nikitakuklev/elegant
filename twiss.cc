@@ -1739,7 +1739,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   if (writePermitted) {
 #endif 
   if (s_dependent_driving_terms_file) {
-    if (!SDDS_InitializeOutput(&SDDS_SDrivingTerms, SDDS_ASCII, 1L, NULL, NULL, s_dependent_driving_terms_file)) {
+    if (!SDDS_InitializeOutputElegant(&SDDS_SDrivingTerms, SDDS_ASCII, 1L, NULL, NULL, s_dependent_driving_terms_file)) {
       SDDS_SetError((char*)"Unable set up SDDS file (s_dependent_driving_terms_file)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
@@ -3313,7 +3313,7 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run)
   if (tune_shift_with_amplitude_struct.tune_output) {
     char *filename_inner_scope;
     filename_inner_scope = compose_filename(tune_shift_with_amplitude_struct.tune_output, run->rootname);
-    if (!SDDS_InitializeOutput(&SDDSTswaTunes, SDDS_BINARY, 0, NULL, NULL, 
+    if (!SDDS_InitializeOutputElegant(&SDDSTswaTunes, SDDS_BINARY, 0, NULL, NULL, 
 			       filename_inner_scope) ||
 	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"x", (char*)"m", SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"y", (char*)"m", SDDS_DOUBLE) ||

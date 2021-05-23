@@ -750,7 +750,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ltmp2 = ((CSBEND*)eptr->p_elem)->synch_rad;
     ((CSBEND*)eptr->p_elem)->isr = ((CSBEND*)eptr->p_elem)->synch_rad = 0;
     track_through_csbend(coord, n_track, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
-                         NULL, NULL, NULL, NULL, NULL);
+                         NULL, NULL, NULL, NULL, NULL, -1);
     ((CSBEND*)eptr->p_elem)->isr = ltmp1;
     ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
@@ -1170,7 +1170,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       ltmp2 = ((CSBEND*)eptr->p_elem)->synch_rad;
       ((CSBEND*)eptr->p_elem)->isr = ((CSBEND*)eptr->p_elem)->synch_rad = 0;
       n_left = track_through_csbend(finalCoord+my_offset, my_nTrack, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
-                                    NULL, NULL, NULL, NULL, NULL);
+                                    NULL, NULL, NULL, NULL, NULL, -1);
       ((CSBEND*)eptr->p_elem)->isr = ltmp1;
       ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
       break;
@@ -1293,7 +1293,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       ltmp2 = ((KQUAD*)eptr->p_elem)->synch_rad;
       ((KQUAD*)eptr->p_elem)->isr = 0;
       ((KQUAD*)eptr->p_elem)->synch_rad = 0;
-      multipole_tracking2(finalCoord+my_offset, my_nTrack, eptr, 0, run->p_central, NULL, 0.0, NULL, NULL, NULL, NULL);
+      multipole_tracking2(finalCoord+my_offset, my_nTrack, eptr, 0, run->p_central, NULL, 0.0, NULL, NULL, NULL, NULL, -1);
       ((KQUAD*)eptr->p_elem)->isr = ltmp1;
       ((KQUAD*)eptr->p_elem)->synch_rad = ltmp2;
       break;
@@ -1569,19 +1569,58 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 
   nSlices0 = nSlices;
 
-  /* NB: CWIGGLER will be used in single-step mode, which is why this slicing ends up
-   * sub-dividing the periods 
-   */
-  if (eptr->type==T_CWIGGLER)
+  switch (eptr->type) {
+  case T_CWIGGLER:
+    /* NB: CWIGGLER will be used in single-step mode, which is why this slicing ends up
+     * sub-dividing the periods 
+     */
     nSlices = ((CWIGGLER*)eptr->p_elem)->periods*((CWIGGLER*)eptr->p_elem)->stepsPerPeriod;
-  else if (eptr->type==T_WIGGLER)
+    break;
+  case T_WIGGLER:
     nSlices *= (((WIGGLER*)eptr->p_elem)->poles/2);
-  else if (eptr->type==T_CCBEND) {
-    if (nSlices > ((CCBEND*)eptr->p_elem)->nSlices)
+    break;
+  case T_CCBEND:
+    nSlices = fabs(((CCBEND*)eptr->p_elem)->angle/0.005)+1;
+    if (((CCBEND*)eptr->p_elem)->nSlices > nSlices)
       nSlices = ((CCBEND*)eptr->p_elem)->nSlices;
+    break;
+  case T_CSBEND:
+    nSlices = fabs(((CSBEND*)eptr->p_elem)->angle/0.005)+1;
+    if (((CSBEND*)eptr->p_elem)->nSlices > nSlices)
+      nSlices = ((CSBEND*)eptr->p_elem)->nSlices;
+    break;
+  case T_SBEN:
+    nSlices = fabs(((BEND*)eptr->p_elem)->angle/0.005)+1;
+    break;
+  case T_CSRCSBEND:
+    nSlices = fabs(((CSRCSBEND*)eptr->p_elem)->angle/0.005)+1;
+    if (((CSRCSBEND*)eptr->p_elem)->nSlices > nSlices)
+      nSlices = ((CSRCSBEND*)eptr->p_elem)->nSlices;
+    break;
+  case T_KQUAD:
+    nSlices = fabs(((KQUAD*)eptr->p_elem)->k1*((KQUAD*)eptr->p_elem)->length*10);
+    if (nSlices<((KQUAD*)eptr->p_elem)->nSlices)
+      nSlices = ((KQUAD*)eptr->p_elem)->nSlices;
+    break;
+  case T_QUAD:
+    nSlices = fabs(((QUAD*)eptr->p_elem)->k1*((QUAD*)eptr->p_elem)->length*10);
+    break;
+  case T_KSEXT:
+    nSlices = fabs(((KSEXT*)eptr->p_elem)->k2*((KSEXT*)eptr->p_elem)->length*10);
+    if (nSlices<((KSEXT*)eptr->p_elem)->nSlices)
+      nSlices = ((KSEXT*)eptr->p_elem)->nSlices;
+    break;
+  case T_SEXT:
+    nSlices = fabs(((SEXT*)eptr->p_elem)->k2*((SEXT*)eptr->p_elem)->length*10);
+    break;
+  default:
+    break;
   }
+  if (nSlices<nSlices0)
+    nSlices = nSlices0;
+
   z = 0;
-  
+
   elem.end_pos = eptr->end_pos;
   elem.name = NULL;
   elem.occurence = 0;
@@ -1590,27 +1629,14 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   for (slice=0; slice<nSlices; slice++) {
     switch (eptr->type) {
     case T_CSBEND:
-      memcpy(&csbend, (CSBEND*)eptr->p_elem, sizeof(CSBEND));
-      if ((csbend.etilt || csbend.eyaw || csbend.epitch) && !sliceEtilted) {
-        nSlices = 1;
+      if (slice==0) {
+        memcpy(&csbend, (CSBEND*)eptr->p_elem, sizeof(CSBEND));
+        csbend.isr = 0;
+        csbend.nSlices = nSlices;
+        elem.type = T_CSBEND;
+        elem.p_elem = (void*)&csbend;
+        csbend.integration_order = 6;
       }
-      csbend.isr = 0;
-      csbend.angle /= nSlices;
-      length = (csbend.length /= nSlices);
-      csbend.xKick /= nSlices;
-      csbend.yKick /= nSlices;
-      csbend.nSlices = fabs(csbend.angle/0.005) + 1;
-      csbend.refTrajectoryChangeSet = 0;
-      csbend.refLength = 0;
-      csbend.refAngle = 0;
-      csbend.refTrajectoryChange = NULL;
-      csbend.referenceCorrection = 0;
-      if (slice!=0)
-        csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
-      if (slice!=nSlices-1) 
-        csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
-      elem.type = T_CSBEND;
-      elem.p_elem = (void*)&csbend;
       break;
     case T_CCBEND:
       if (slice==0) {
@@ -1619,181 +1645,158 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         ccbend.nSlices = nSlices;
         elem.type = T_CCBEND;
         elem.p_elem = (void*)&ccbend;
+        csbend.integration_order = 6;
       }
       break;
     case T_SBEN:
-      if (slice!=0)
-        csbend.edge_effects[0] = 0;
-      if (slice!=nSlices-1)
-        csbend.edge_effects[0] = 0;
-      elem.type = T_CSBEND;
-      elem.p_elem = (void*)&csbend;
-      sbend = (BEND*)eptr->p_elem;
-      memset(&csbend, 0, sizeof(csbend));
-      csbend.isr = 0;
-      csbend.synch_rad = 1;
-      if (sbend->etilt && !sliceEtilted) {
-        nSlices = 1;
+      if (slice==0)  {
+        elem.type = T_CSBEND;
+        elem.p_elem = (void*)&csbend;
+        sbend = (BEND*)eptr->p_elem;
+        memset(&csbend, 0, sizeof(csbend));
+        csbend.isr = 0;
+        csbend.synch_rad = 1;
+        csbend.length = sbend->length;
+        csbend.angle = sbend->angle;
+        csbend.k1 = sbend->k1;
+        csbend.e[0] = sbend->e[0];
+        csbend.e[1] = sbend->e[1];
+        csbend.k2 = sbend->k2;
+        csbend.h[0] = sbend->h[0];
+        csbend.h[1] = sbend->h[1];
+        csbend.hgap = sbend->hgap;
+        csbend.fintBoth = sbend->fint;
+        csbend.dx = sbend->dx;
+        csbend.dy = sbend->dy;
+        csbend.dz = sbend->dz;
+        csbend.fse = sbend->fse;
+        csbend.tilt = sbend->tilt;
+        csbend.etilt = sbend->etilt;
+        csbend.edge_effects[0] = sbend->edge_effects[0];
+        csbend.edge_effects[1] = sbend->edge_effects[1];
+        csbend.edge_order = sbend->edge_order;
+        csbend.edgeFlags = sbend->edgeFlags;
+        csbend.refTrajectoryChangeSet = 0;
+        csbend.refLength = 0;
+        csbend.refAngle = 0;
+        csbend.refTrajectoryChange = NULL;
+        csbend.e1Index = sbend->e1Index;
+        csbend.e2Index = sbend->e2Index;
+        csbend.integration_order = 6;
+        csbend.nSlices = nSlices;
       }
-      length = csbend.length = sbend->length/nSlices;
-      csbend.angle = sbend->angle/nSlices;
-      csbend.k1 = sbend->k1;
-      csbend.e[0] = sbend->e[0];
-      csbend.e[1] = sbend->e[1];
-      csbend.k2 = sbend->k2;
-      csbend.h[0] = sbend->h[0];
-      csbend.h[1] = sbend->h[1];
-      csbend.hgap = sbend->hgap;
-      csbend.fintBoth = sbend->fint;
-      csbend.dx = sbend->dx;
-      csbend.dy = sbend->dy;
-      csbend.dz = sbend->dz;
-      csbend.fse = sbend->fse;
-      csbend.tilt = sbend->tilt;
-      csbend.etilt = sbend->etilt;
-      csbend.edge_effects[0] = sbend->edge_effects[0];
-      csbend.edge_effects[1] = sbend->edge_effects[1];
-      csbend.edge_order = sbend->edge_order;
-      csbend.edgeFlags = sbend->edgeFlags;
-      csbend.refTrajectoryChangeSet = 0;
-      csbend.refLength = 0;
-      csbend.refAngle = 0;
-      csbend.refTrajectoryChange = NULL;
-      csbend.e1Index = sbend->e1Index;
-      csbend.e2Index = sbend->e2Index;
-      if (slice!=0)
-        csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
-      if (slice!=nSlices-1)
-        csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
-      csbend.k1 = sbend->k1;
-      csbend.k2 = sbend->k2;
-      csbend.nSlices = fabs(csbend.angle/0.005) + 1;
-      csbend.integration_order = 4;
       break;
     case T_CSRCSBEND:
-      if (slice!=0)
-        csbend.edge_effects[0] = 0;
-      if (slice!=nSlices-1)
-        csbend.edge_effects[1] = 0;
-      elem.type = T_CSBEND;
-      elem.p_elem = (void*)&csbend;
-      csrcsbend = (CSRCSBEND*)eptr->p_elem;
-      if (csrcsbend->etilt && !sliceEtilted) {
-        nSlices = 1;
+      if (slice==0)  {
+        elem.type = T_CSBEND;
+        elem.p_elem = (void*)&csbend;
+        csrcsbend = (CSRCSBEND*)eptr->p_elem;
+        memset(&csbend, 0, sizeof(csbend));
+        csbend.isr = 0;
+        csbend.synch_rad = 1;
+        csbend.length = csrcsbend->length;
+        csbend.angle = csrcsbend->angle;
+        csbend.k1 = csrcsbend->k1;
+        csbend.e[0] = csrcsbend->e[0];
+        csbend.e[1] = csrcsbend->e[1];
+        csbend.k2 = csrcsbend->k2;
+        csbend.h[0] = csrcsbend->h[0];
+        csbend.h[1] = csrcsbend->h[1];
+        csbend.hgap = csrcsbend->hgap;
+        csbend.fintBoth = csrcsbend->fint;
+        csbend.dx = csrcsbend->dx;
+        csbend.dy = csrcsbend->dy;
+        csbend.dz = csrcsbend->dz;
+        csbend.fse = csrcsbend->fse;
+        csbend.tilt = csrcsbend->tilt;
+        csbend.etilt = csrcsbend->etilt;
+        csbend.edge_effects[0] = csrcsbend->edge_effects[0];
+        csbend.edge_effects[1] = csrcsbend->edge_effects[1];
+        csbend.edge_order = csrcsbend->edge_order;
+        csbend.edgeFlags = csrcsbend->edgeFlags;
+        csbend.refTrajectoryChangeSet = 0;
+        csbend.refLength = 0;
+        csbend.refAngle = 0;
+        csbend.refTrajectoryChange = NULL;
+        csbend.e1Index = csrcsbend->e1Index;
+        csbend.e2Index = csrcsbend->e2Index;
+        csbend.integration_order = 6;
+        if ((csbend.nSlices = fabs(csbend.angle/0.005) + 1)<nSlices0)
+          csbend.nSlices = nSlices0;
       }
-      memset(&csbend, 0, sizeof(csbend));
-      csbend.isr = 0;
-      csbend.synch_rad = 1;
-      length = csbend.length = csrcsbend->length/nSlices;
-      csbend.angle = csrcsbend->angle/nSlices;
-      csbend.k1 = csrcsbend->k1;
-      csbend.e[0] = csrcsbend->e[0];
-      csbend.e[1] = csrcsbend->e[1];
-      csbend.k2 = csrcsbend->k2;
-      csbend.h[0] = csrcsbend->h[0];
-      csbend.h[1] = csrcsbend->h[1];
-      csbend.hgap = csrcsbend->hgap;
-      csbend.fintBoth = csrcsbend->fint;
-      csbend.dx = csrcsbend->dx;
-      csbend.dy = csrcsbend->dy;
-      csbend.dz = csrcsbend->dz;
-      csbend.fse = csrcsbend->fse;
-      csbend.tilt = csrcsbend->tilt;
-      csbend.etilt = csrcsbend->etilt;
-      csbend.edge_effects[0] = csrcsbend->edge_effects[0];
-      csbend.edge_effects[1] = csrcsbend->edge_effects[1];
-      csbend.edge_order = csrcsbend->edge_order;
-      csbend.edgeFlags = csrcsbend->edgeFlags;
-      csbend.refTrajectoryChangeSet = 0;
-      csbend.refLength = 0;
-      csbend.refAngle = 0;
-      csbend.refTrajectoryChange = NULL;
-      csbend.e1Index = csrcsbend->e1Index;
-      csbend.e2Index = csrcsbend->e2Index;
-      if (slice!=0)
-        csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
-      if (slice!=nSlices-1)
-        csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
-      csbend.k1 = csrcsbend->k1;
-      csbend.k2 = csrcsbend->k2;
-      csbend.nSlices = fabs(csbend.angle/0.005) + 1;
-      csbend.integration_order = 4;
       break;
     case T_KQUAD:
-      memcpy(&kquad, (KQUAD*)eptr->p_elem, sizeof(KQUAD));
-      kquad.isr = 0;
-      kquad.xkick /= nSlices;
-      kquad.ykick /= nSlices;
-      length = (kquad.length /= nSlices);
-      kquad.n_kicks = 4 + (long)(fabs(kquad.k1)*sqr(kquad.length));
-      if (slice!=0)
-	kquad.edge1_effects = 0;
-      if (slice!=nSlices-1)
-	kquad.edge2_effects = 0;
-      elem.type = T_KQUAD;
-      elem.p_elem = (void*)&kquad;
+      if (slice==0) {
+        memcpy(&kquad, (KQUAD*)eptr->p_elem, sizeof(KQUAD));
+        kquad.isr = 0;
+        kquad.nSlices = nSlices;
+        kquad.n_kicks = 0;
+        elem.type = T_KQUAD;
+        elem.p_elem = (void*)&kquad;
+        kquad.integration_order = 6;
+      }
       break;
     case T_QUAD:
-      quad = (QUAD*)eptr->p_elem;
-      memset(&kquad, 0, sizeof(KQUAD));
-      kquad.isr = 0;
-      kquad.synch_rad = 1;
-      length = (kquad.length = quad->length/nSlices);
-      kquad.k1 = quad->k1;
-      kquad.tilt = quad->tilt;
-      if (quad->ffringe)
-        bombElegant("Can't perform radiation matrix calculations when QUAD has nonzero FFRINGE parameter", NULL);
-      kquad.dx = quad->dx;
-      kquad.dy = quad->dy;
-      kquad.dz = quad->dz;
-      kquad.fse = quad->fse;
-      kquad.xkick = quad->xkick;
-      kquad.ykick = quad->ykick;
-      kquad.xKickCalibration = quad->xKickCalibration;
-      kquad.yKickCalibration = quad->yKickCalibration;
-      kquad.n_kicks = 4 + (long)(fabs(kquad.k1)*sqr(kquad.length));
-      kquad.integration_order = 4;
-      if (slice!=0)
-	kquad.edge1_effects = 0;
-      if (slice!=nSlices-1)
-	kquad.edge2_effects = 0;
-      elem.type = T_KQUAD;
-      elem.p_elem = (void*)&kquad;
+      if (slice==0) {
+        quad = (QUAD*)eptr->p_elem;
+        memset(&kquad, 0, sizeof(KQUAD));
+        kquad.isr = 0;
+        kquad.synch_rad = 1;
+        kquad.length = quad->length;
+        kquad.k1 = quad->k1;
+        kquad.tilt = quad->tilt;
+        if (quad->ffringe)
+          bombElegant("Can't perform radiation matrix calculations when QUAD has nonzero FFRINGE parameter", NULL);
+        kquad.dx = quad->dx;
+        kquad.dy = quad->dy;
+        kquad.dz = quad->dz;
+        kquad.fse = quad->fse;
+        kquad.xkick = quad->xkick;
+        kquad.ykick = quad->ykick;
+        kquad.xKickCalibration = quad->xKickCalibration;
+        kquad.yKickCalibration = quad->yKickCalibration;
+        kquad.nSlices = nSlices;
+        kquad.integration_order = 6;
+        elem.type = T_KQUAD;
+        elem.p_elem = (void*)&kquad;
+      }
       break;
     case T_KSEXT:
-      memcpy(&ksext, (KSEXT*)eptr->p_elem, sizeof(KSEXT));
-      ksext.isr = 0;
-      ksext.xkick /= nSlices;
-      ksext.ykick /= nSlices;
-      length = (ksext.length /= nSlices);
-      ksext.n_kicks = 4 + (long)(fabs(ksext.k2)*pow(ksext.length,3));
-      if (length<1e-6) {
-	ignoreRadiation = 1;
-	ksext.synch_rad = 0;
+      if (slice==0) {
+        memcpy(&ksext, (KSEXT*)eptr->p_elem, sizeof(KSEXT));
+        ksext.isr = 0;
+        ksext.n_kicks = 0;
+        ksext.nSlices = nSlices;
+        if (length<1e-6) {
+          ignoreRadiation = 1;
+          ksext.synch_rad = 0;
+        }
+        elem.type = T_KSEXT;
+        elem.p_elem = (void*)&ksext;
       }
-      elem.type = T_KSEXT;
-      elem.p_elem = (void*)&ksext;
       break;
     case T_SEXT:
-      sext = (SEXT*)eptr->p_elem;
-      memset(&ksext, 0, sizeof(KSEXT));
-      ksext.isr = 0;
-      ksext.synch_rad = 1;
-      length = (ksext.length = sext->length/nSlices);
-      if (length<1e-6) {
-	ignoreRadiation = 1;
-	ksext.synch_rad = 0;
+      if (slice==0) {
+        sext = (SEXT*)eptr->p_elem;
+        memset(&ksext, 0, sizeof(KSEXT));
+        ksext.isr = 0;
+        ksext.synch_rad = 1;
+        ksext.length = sext->length;
+        if (length<1e-6) {
+          ignoreRadiation = 1;
+          ksext.synch_rad = 0;
+        }
+        ksext.k2 = sext->k2;
+        ksext.tilt = sext->tilt;
+        ksext.dx = sext->dx;
+        ksext.dy = sext->dy;
+        ksext.dz = sext->dz;
+        ksext.fse = sext->fse;
+        ksext.nSlices = nSlices;
+        ksext.integration_order = 6;
+        elem.type = T_KSEXT;
+        elem.p_elem = (void*)&ksext;
       }
-      ksext.k2 = sext->k2;
-      ksext.tilt = sext->tilt;
-      ksext.dx = sext->dx;
-      ksext.dy = sext->dy;
-      ksext.dz = sext->dz;
-      ksext.fse = sext->fse;
-      ksext.n_kicks = 4;
-      ksext.integration_order = 4;
-      elem.type = T_KSEXT;
-      elem.p_elem = (void*)&ksext;
       break;
     case T_RFCA:
       nSlices = 1;
@@ -2034,7 +2037,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   case T_CSBEND:
     csbend = (CSBEND*)elem->p_elem;
     track_through_csbend(coord, n_track, csbend, 0, run->p_central, NULL, elem->end_pos-csbend->length, 
-                         &sigmaDelta2, run->rootname, NULL, NULL, NULL);
+                         &sigmaDelta2, run->rootname, NULL, NULL, NULL, iSlice);
     break;
   case T_CCBEND:
     ccbend = (CCBEND*)elem->p_elem;
@@ -2042,17 +2045,18 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
                          run->rootname, NULL, NULL, NULL, iSlice, -1);
     break;
   case T_SBEN:
+    bombElegant("This shouldn't happen", NULL);
     track_particles(coord, elem->matrix, coord, n_track);
     break;
   case T_KQUAD:
     kquad = (KQUAD*)elem->p_elem;
     multipole_tracking2(coord, n_track, elem, 0.0, run->p_central, NULL, elem->end_pos-kquad->length,
-                        NULL, NULL, NULL, &sigmaDelta2);
+                        NULL, NULL, NULL, &sigmaDelta2, iSlice);
     break;
   case T_KSEXT:
     ksext = (KSEXT*)elem->p_elem;
     multipole_tracking2(coord, n_track, elem, 0.0, run->p_central, NULL, elem->end_pos-ksext->length,
-                        NULL, NULL, NULL, &sigmaDelta2);
+                        NULL, NULL, NULL, &sigmaDelta2, iSlice);
     break;
   case T_RFCA:
     pCentral = run->p_central;

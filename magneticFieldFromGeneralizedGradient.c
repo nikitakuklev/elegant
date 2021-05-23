@@ -284,7 +284,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     if (bgg->particleOutputFile && !bgg->SDDSpo) {
       bgg->SDDSpo = tmalloc(sizeof(*(bgg->SDDSpo)));
       bgg->particleOutputFile = compose_filename(bgg->particleOutputFile, tcontext.rootname);
-      if (!SDDS_InitializeOutput(bgg->SDDSpo, SDDS_BINARY, 1, 
+      if (!SDDS_InitializeOutputElegant(bgg->SDDSpo, SDDS_BINARY, 1, 
                                  NULL, NULL, bgg->particleOutputFile) ||
           0>SDDS_DefineParameter(bgg->SDDSpo, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
           !SDDS_DefineSimpleParameter(bgg->SDDSpo, "particleID", NULL, SDDS_LONG) ||

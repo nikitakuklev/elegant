@@ -578,7 +578,7 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
     filename = compose_filename(rfmode->outputFile, context.rootname);
     if (!(rfmode->SDDSout))
       rfmode->SDDSout = tmalloc(sizeof(*(rfmode->SDDSout)));
-    if (!SDDS_InitializeOutput(rfmode->SDDSout, SDDS_BINARY, 0, NULL, NULL, filename) ||
+    if (!SDDS_InitializeOutputElegant(rfmode->SDDSout, SDDS_BINARY, 0, NULL, NULL, filename) ||
         !SDDS_DefineSimpleColumn(rfmode->SDDSout, "Pass", NULL, SDDS_LONG)) {
       fprintf(stderr, "Problem initializing file %s for FRFMODE element\n", filename);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);

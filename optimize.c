@@ -1704,7 +1704,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       if (term_log_file && strlen(term_log_file) && optimization_data->terms) {
         SDDS_DATASET termLog;
         long i, iterm, ivalue;
-        if (!SDDS_InitializeOutput(&termLog, SDDS_BINARY, 0, NULL, NULL, term_log_file) ||
+        if (!SDDS_InitializeOutputElegant(&termLog, SDDS_BINARY, 0, NULL, NULL, term_log_file) ||
             (iterm=SDDS_DefineColumn(&termLog, "Term", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
             (ivalue=SDDS_DefineColumn(&termLog, "Contribution", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
             !SDDS_WriteLayout(&termLog) ||
@@ -2993,7 +2993,7 @@ void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm) {
 void SDDS_PopulationSetup(char *population_log, SDDS_TABLE *popLogPtr, OPTIM_VARIABLES *optim, OPTIM_COVARIABLES *co_optim) {
   if (isMaster) {
     if (population_log && strlen(population_log)) {
-      if (!SDDS_InitializeOutput(popLogPtr, SDDS_BINARY, 1, NULL, NULL, population_log) ||
+      if (!SDDS_InitializeOutputElegant(popLogPtr, SDDS_BINARY, 1, NULL, NULL, population_log) ||
           0>SDDS_DefineParameter(popLogPtr, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "Iteration", NULL, SDDS_LONG) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "ElapsedTime", "s", SDDS_DOUBLE) ||

@@ -454,7 +454,7 @@ long fmultipole_tracking(
 
     is_lost = 0;
     if (!integrate_kick_multipole_ordn(coord, multipole->dx, multipole->dy, 0.0, 0.0, Po, rad_coef, 0.0,
-                                       order, KnL, skew, nSlices, drift, 4, &multData, NULL, NULL, NULL, 
+                                       order, KnL, skew, nSlices, -1, drift, 4, &multData, NULL, NULL, NULL, 
                                        &dzLoss, NULL, 0, multipole->tilt))
       is_lost = 1;
     
@@ -720,7 +720,6 @@ long multipole_tracking(
     }
 
 
-
 double *expansion_coefficients(long n)
 {
   static double **expansion_coef=NULL;
@@ -765,7 +764,9 @@ long multipole_tracking2(
                          /* from aperture_data command */
                          APERTURE_DATA *apFileData,
                          /* For return of accumulated change in sigmaDelta^2 */
-                         double *sigmaDelta2
+                         double *sigmaDelta2,
+                         /* if iSlice>=0, used for slice-by-slice integration */
+                         long iSlice
                          )
 {
   double KnL[3] = {0, 0, 0};
@@ -1093,41 +1094,43 @@ long multipole_tracking2(
     multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
 
   setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, z_start+drift/2);
-  
-  if (malignMethod!=0) {
-    if (dx || dy || dz || tilt || pitch || yaw) {
-      if (malignMethod==1) {
-        offsetParticlesForEntranceCenteredMisalignmentExact
-          (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
-      }
-      else {
-        offsetParticlesForBodyCenteredMisalignmentExact
-          (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
+
+  if (iSlice<=0) {
+    if (malignMethod!=0) {
+      if (dx || dy || dz || tilt || pitch || yaw) {
+        if (malignMethod==1) {
+          offsetParticlesForEntranceCenteredMisalignmentExact
+            (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
+        }
+        else {
+          offsetParticlesForBodyCenteredMisalignmentExact
+            (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
+        }
       }
     }
-  }
-  else {
-    if (dx || dy || dz) 
-      offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
-    if (tilt)
-      rotateBeamCoordinatesForMisalignment(particle, n_part, tilt);
+    else {
+      if (dx || dy || dz) 
+        offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
+      if (tilt)
+        rotateBeamCoordinatesForMisalignment(particle, n_part, tilt);
+    }
+    
+    if (doEndDrift) {
+      exactDrift(particle, n_part, lEnd);
+    }
+
+    /* Fringe treatment, if any */
+    switch (elem->type) {
+    case T_KQUAD:
+      if (kquad->edge1_effects>0)
+        quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, kquad->length<0, -1, 
+                   kquad->edge1_effects, kquad->edge1Linear, kquad->edge1NonlinearFactor);
+      break;
+    default:
+      break;
+    }
   }
 
-  if (doEndDrift) {
-    exactDrift(particle, n_part, lEnd);
-  }
-
-  /* Fringe treatment, if any */
-  switch (elem->type) {
-  case T_KQUAD:
-    if (kquad->edge1_effects>0)
-      quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, kquad->length<0, -1, 
-                 kquad->edge1_effects, kquad->edge1Linear, kquad->edge1NonlinearFactor);
-    break;
-  default:
-    break;
-  }
-  
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
   for (i_part=0; i_part<=i_top; i_part++) {
@@ -1145,7 +1148,7 @@ long multipole_tracking2(
     if (!integrate_kick_multipole_ordn(coord, dx, dy, xkick, ykick,
                                        Po, rad_coef, isr_coef, 
                                        order, KnL, skew,
-                                       nSlices, drift, integ_order,
+                                       nSlices, iSlice, drift, integ_order,
                                        multData, edgeMultData, steeringMultData,
                                        &apertureData, &dzLoss, sigmaDelta2,
                                        elem->type==T_KQUAD?kquad->radial:0, tilt)) {
@@ -1162,37 +1165,39 @@ long multipole_tracking2(
   if (sigmaDelta2)
     *sigmaDelta2 /= i_top+1;
 
-  /* Fringe treatment, if any */
-  switch (elem->type) {
-  case T_KQUAD:
-    if (kquad->edge2_effects>0)
-      quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, kquad->length<0, 1, 
-                 kquad->edge2_effects, kquad->edge2Linear, kquad->edge2NonlinearFactor);
-    break;
-  default:
-    break;
-  }
-
-  if (doEndDrift) {
-    exactDrift(particle, n_part, lEnd);
-  }
-  
-  if (malignMethod!=0) {
-    if (dx || dy || dz || tilt || pitch || yaw)  {
-      if (malignMethod==1) {
-        offsetParticlesForEntranceCenteredMisalignmentExact
-          (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
-      }
-      else {
-        offsetParticlesForBodyCenteredMisalignmentExact
-          (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
-      }
+  if (iSlice<0 || iSlice==(nSlices-1)) {
+    /* Fringe treatment, if any */
+    switch (elem->type) {
+    case T_KQUAD:
+      if (kquad->edge2_effects>0)
+        quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, kquad->length<0, 1, 
+                   kquad->edge2_effects, kquad->edge2Linear, kquad->edge2NonlinearFactor);
+      break;
+    default:
+      break;
     }
-  } else {
-    if (tilt)
-      rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
-    if (dx || dy || dz)
-      offsetBeamCoordinatesForMisalignment(particle, n_part, -dx, -dy, -dz);
+    
+    if (doEndDrift) {
+      exactDrift(particle, n_part, lEnd);
+    }
+    
+    if (malignMethod!=0) {
+      if (dx || dy || dz || tilt || pitch || yaw)  {
+        if (malignMethod==1) {
+          offsetParticlesForEntranceCenteredMisalignmentExact
+            (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
+        }
+        else {
+          offsetParticlesForBodyCenteredMisalignmentExact
+            (particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
+        }
+      }
+    } else {
+      if (tilt)
+        rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
+      if (dx || dy || dz)
+        offsetBeamCoordinatesForMisalignment(particle, n_part, -dx, -dy, -dz);
+    }
   }
 
   if (freeMultData && multData->copy) {
@@ -1214,7 +1219,7 @@ long multipole_tracking2(
 int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
                                   long *order, double *KnL,  short *skew,
-                                  long n_parts, double drift,
+                                  long n_parts, long i_part, double drift,
                                   long integration_order,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, 
@@ -1307,18 +1312,21 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
   xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
   ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
 
-  if (edgeMultData && edgeMultData->orders) {
-    fillPowerArray(x, xpow, maxOrder);
-    fillPowerArray(y, ypow, maxOrder);
-    for (imult=0; imult<edgeMultData->orders; imult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[imult], 
-                                      edgeMultData->KnL[imult], 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[imult], 
-                                      edgeMultData->JnL[imult], 1);
+  if (i_part<=0) {
+    if (edgeMultData && edgeMultData->orders) {
+      fillPowerArray(x, xpow, maxOrder);
+      fillPowerArray(y, ypow, maxOrder);
+      for (imult=0; imult<edgeMultData->orders; imult++) {
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                        edgeMultData->order[imult], 
+                                        edgeMultData->KnL[imult], 0);
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                        edgeMultData->order[imult], 
+                                        edgeMultData->JnL[imult], 1);
+      }
     }
   }
+
   /* We must do this in case steering or edge multipoles were run. We do it even if not in order
    * to avoid numerical precision issues that may subtly change the results
    */
@@ -1426,8 +1434,10 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
           return 0;
       }
     }
+    if (i_part>=0)
+      break;
   }
-  
+
   if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
       insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex],
 			    globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
@@ -1436,19 +1446,22 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
     coord[2] = y;
     return 0;
   }
-  
-  if (edgeMultData && edgeMultData->orders) {
-    fillPowerArray(x, xpow, maxOrder);
-    fillPowerArray(y, ypow, maxOrder);
-    for (imult=0; imult<edgeMultData->orders; imult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[imult], 
-                                      edgeMultData->KnL[imult], 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[imult], 
-                                      edgeMultData->JnL[imult], 1);
+
+  if (i_part<0 || i_part==(n_parts-1)) {
+    if (edgeMultData && edgeMultData->orders) {
+      fillPowerArray(x, xpow, maxOrder);
+      fillPowerArray(y, ypow, maxOrder);
+      for (imult=0; imult<edgeMultData->orders; imult++) {
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                        edgeMultData->order[imult], 
+                                        edgeMultData->KnL[imult], 0);
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                        edgeMultData->order[imult], 
+                                        edgeMultData->JnL[imult], 1);
+      }
     }
   }
+
   if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
     return 0;
 

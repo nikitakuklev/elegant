@@ -224,7 +224,7 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
     if (boa->particleOutputFile && !boa->SDDSpo) {
       boa->SDDSpo = tmalloc(sizeof(*(boa->SDDSpo)));
       boa->particleOutputFile = compose_filename(boa->particleOutputFile, tcontext.rootname);
-      if (!SDDS_InitializeOutput(boa->SDDSpo, SDDS_BINARY, 1, 
+      if (!SDDS_InitializeOutputElegant(boa->SDDSpo, SDDS_BINARY, 1, 
                                  NULL, NULL, boa->particleOutputFile) ||
           0>SDDS_DefineParameter(boa->SDDSpo, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
           !SDDS_DefineSimpleParameter(boa->SDDSpo, "particleID", NULL, SDDS_LONG) ||
