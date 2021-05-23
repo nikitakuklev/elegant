@@ -16,6 +16,9 @@
 void exitElegant(long status);
 void bombElegant(char *error, char *usage);
 void printWarning(char *s1, char *s2);
+int32_t SDDS_InitializeOutputElegant(SDDS_DATASET *SDDS_dataset, int32_t data_mode,
+                                            int32_t lines_per_row, const char *description,
+                                            const char *contents, const char *filename);
 
 void findBit (long value, long *Bit, long inc, long length);
 
