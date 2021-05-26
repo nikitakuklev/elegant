@@ -636,7 +636,6 @@ char **argv;
     if (_setmode(_fileno(stdin), _O_BINARY) == -1)
       bombElegant("unable to set stdin to binary mode", NULL);
 #endif
-    fp_in = stdin;
     inputfile = "stdin";
   } else {
     if (!inputfile) {
@@ -674,8 +673,11 @@ char **argv;
 
   iInput = 0;
   while (iInput<2 && (inputfile=inputFileArray[iInput++])!=NULL) {
-    fp_in = fopen_e(inputfile, "r", 0);
-  commandCode = -1;
+    if (strcmp(inputfile, "stdin")==0) 
+      fp_in = stdin;
+    else
+      fp_in = fopen_e(inputfile, "r", 0);
+    commandCode = -1;
   while (get_namelist_e(s, NAMELIST_BUFLEN, fp_in, &namelistErrorCode)) {
     if (namelistErrorCode!=NAMELIST_NO_ERROR)
       break;
