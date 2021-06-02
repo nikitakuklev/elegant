@@ -1171,6 +1171,8 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
             break;
           case IS_LONG:
             lvalue = *(long *)(eptr->p_elem+parameter[j].offset);
+	    if (strcmp(parameter[j].name, "PHASE_REFERENCE")==0 && lvalue>LONG_MAX/2)
+	      lvalue = 0;
             if (!suppress_defaults || lvalue!=parameter[j].integer) {
               /* value is not the default, so add to output */
               sprintf(t, "%s=%ld", parameter[j].name, lvalue);
@@ -1253,6 +1255,8 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
               break;
             case IS_LONG:
               lvalue = *(long *)(eptr->p_elem+parameter[j].offset);
+	      if (strcmp(parameter[j].name, "PHASE_REFERENCE")==0 && lvalue>LONG_MAX/2)
+		lvalue = 0;
               if (!suppress_defaults || lvalue!=parameter[j].integer) {
                 /* value is not the default, so add to output */
                 sprintf(t, "%s=%ld", parameter[j].name, lvalue);
