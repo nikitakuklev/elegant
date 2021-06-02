@@ -21,5 +21,6 @@
     long output_monitors_only = 0;
     long tracking_turns = 0;
     long disable = 0;
+    long immediate = 0;
 #end
 

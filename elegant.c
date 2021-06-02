@@ -1496,6 +1496,11 @@ char **argv;
     case CLOSED_ORBIT:
       do_closed_orbit = setup_closed_orbit(&namelist_text, &run_conditions, beamline);
       beamline->flags |= BEAMLINE_MATRICES_NEEDED;
+      if (do_closed_orbit==2) {
+	/* immediate mode */
+	run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1);
+	do_closed_orbit = 0;
+      }
       /*
       if (correction_setuped)
         printWarning("You've asked to do both closed-orbit calculation and orbit correction, which may duplicate effort.\n");

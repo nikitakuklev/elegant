@@ -112,7 +112,7 @@ long setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       bombElegant("change_t is nonzero on one or more RF cavities. This is incompatible with fixed-length orbit computations.", NULL);
     
     log_exit("setup_closed_orbit");
-    return 1;
+    return 1+immediate;
 }
 
 long checkChangeT(LINE_LIST *beamline) {
