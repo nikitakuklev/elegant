@@ -65,6 +65,8 @@ Here is a summary of what's changed since release 2021.1.  Historical change log
 \begin{itemize}
 \item The \verb|global_settings| command has a new parameter, \verb|allow_overwriting| which controls whether 
   \verb|elegant| is allowed to overwrite existing files. By default, it is allowed.
+\item The \verb|closed_orbit| command has a new parameter, \verb|immediate|, which allows requesting immediate
+  computation of the closed orbit rather than the default computation as part of the major action.
 \end{itemize}
 
 
@@ -1617,7 +1619,7 @@ to obtain correction.  In general, it is not necessary and only slows the simula
 \subsection{closed\_orbit \label{subsec:closedorbit}}
 
 \begin{itemize}
-\item type: setup command.
+\item type: setup/action command.
 \item function: set up for computation of the closed orbit.
 \item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
@@ -1640,6 +1642,7 @@ to obtain correction.  In general, it is not necessary and only slows the simula
     long output_monitors_only = 0;
     long tracking_turns = 0;
     long disable = 0;
+    long immediate = 0;
 &end
 \end{verbatim}
 
@@ -1694,6 +1697,8 @@ during the computations.
   of the closed orbit by averaging. This may be useful if the regular closed orbit algorithm
   complains about convergence issues.
 \item \verb|disable| --- If non-zero, disables the command.
+\item \verb|immediate| --- If non-zero, computations are done immediately, so the command acts as an
+  action command.
 \end{itemize}
 
 %\begin{latexonly}
