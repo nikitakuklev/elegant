@@ -3,7 +3,7 @@
 #include "scan.h"
 #include "fftpackC.h"
 #include "gsl/gsl_sf_bessel.h"
-
+#define DEBUG 1
 #define TWOPI 6.28318530717958647692528676656
 
 typedef struct COMPLEX
@@ -13,7 +13,7 @@ typedef struct COMPLEX
 } COMPLEX;
 
 typedef struct {
-  double *Brho; /* won't be changed once read */
+  double *Brho, *Bz; /* won't be changed once read */
   long Nphi, Nz;
   double dphi, dz, rho;
   double zMin;
@@ -46,11 +46,11 @@ typedef struct {
 } BGGEXP_DATA;
 
 int ReadInputFile(FIELDS_ON_BOUNDARY *fieldsOnBoundary, char *inputFile, 
-                  char *zName, char *phiName, char *BrhoName, char *rhoName);
+                  char *zName, char *phiName, char *BrhoName, char *BzName, char *rhoName);
 void freeFieldsOnBoundary(FIELDS_ON_BOUNDARY *fob);
 double BesIn(double x, long order);
 int SetUpOutputFile(SDDS_DATASET *SDDSout, char *filename, long skew, long derivatives);
-int StartPage(SDDS_DATASET *SDDSout, FIELDS_ON_BOUNDARY *fob, long m );
+int StartPage(SDDS_DATASET *SDDSout, FIELDS_ON_BOUNDARY *fob, long m, char *type);
 void FFT(COMPLEX *field, int32_t isign, int32_t npts);
 
 void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment, short skew);
@@ -77,12 +77,13 @@ char *option[N_OPTIONS] = {
   "input", "normal", "skew", "derivatives", "multipoles", "fundamental", "autotune", "evaluate",
 };
 
-#define USAGE "computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<columnName>][,rho=<parameterName>]\n\
+#define USAGE "computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<columnName>][,rho=<parameterName>][,Bz=<columnName>]\n\
               -normal=<output> [-skew=<output>]\n\
               [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]\n\
               [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]\n\
               [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,increaseOnly][,verbose][,log=<filename>]]\n\
 -input       Single-page file giving (z, phi, Brho) on circular cylinder of radius rho.\n\
+             If solenoidal fields are desired, file can also include Bz, but column must be named with Bz qualifier.\n\
 -normal      Output file for normal-component generalized gradients.\n\
 -skew        Output file for skew-component generalized gradients.\n\
 -derivatives Number of derivatives vs z desired in output. Default: 7\n\
@@ -122,7 +123,7 @@ int main(int argc, char **argv)
   long bestMultipoles, bestDerivatives;
   unsigned long autoTuneFlags = 0, dummyFlags;
   char *autoTuneModeString;
-  char *BrhoName = "Brho", *zName = "z", *phiName = "phi", *rhoName = "rho";
+  char *BrhoName = "Brho", *zName = "z", *phiName = "phi", *rhoName = "rho", *BzName=NULL;
   BGGEXP_DATA bggexpData[2];
   SDDS_DATASET SDDS_autoTuneLog;
   char *autoTuneLogFile = NULL;
@@ -156,6 +157,7 @@ int main(int argc, char **argv)
                           "Brho", SDDS_STRING, &BrhoName, 1, 0,
                           "phi", SDDS_STRING, &phiName, 1, 0,
                           "rho", SDDS_STRING, &rhoName, 1, 0,
+                          "Bz", SDDS_STRING, &BzName, 1, 0,
                           NULL)) {
           fprintf(stderr, "invalid -input syntax\n%s\n", USAGE);
           return 1;
@@ -298,7 +300,7 @@ int main(int argc, char **argv)
   bestMultipoles = maxMultipoles;
 
   memset(&fieldsOnBoundary, 0, sizeof(fieldsOnBoundary));
-  if (ReadInputFile(&fieldsOnBoundary, inputFile, zName, phiName, BrhoName, rhoName))
+  if (ReadInputFile(&fieldsOnBoundary, inputFile, zName, phiName, BrhoName, BzName, rhoName))
     SDDS_Bomb("unable to read input file");
 
   if (computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, maxDerivatives, maxMultipoles, fundamental)) 
@@ -405,6 +407,7 @@ int ReadInputFile
  char *zName, 
  char *phiName, 
  char *BrhoName, 
+ char *BzName,
  char *rhoName
 )
 {
@@ -426,6 +429,11 @@ int ReadInputFile
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     return (1);
   }
+  if (BzName && strlen(BzName) && 
+      SDDS_CheckColumn(&SDDSin, BzName, "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    return (1);
+  }
   if (SDDS_ReadPage(&SDDSin) != 1) {
     fprintf(stderr, "Unable to read SDDS page\n");
     return (1);
@@ -434,6 +442,12 @@ int ReadInputFile
   if (!(fieldsOnBoundary->Brho = SDDS_GetColumnInDoubles(&SDDSin, BrhoName)) ||
       !(phi = SDDS_GetColumnInDoubles(&SDDSin, phiName)) ||
       !(z = SDDS_GetColumnInDoubles(&SDDSin, zName))) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    return (1);
+  }
+  fieldsOnBoundary->Bz = NULL;
+  if (BzName && 
+      !(fieldsOnBoundary->Bz = SDDS_GetColumnInDoubles(&SDDSin, BzName))) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     return (1);
   }
@@ -537,10 +551,10 @@ int computeGGE
  long fundamental
 )
 {
-  COMPLEX **Brho, **Bm, *c1;
+  COMPLEX **Brho, **Bz, **Bm, **Bmz, *c1;
   double *k;
   double rho, dk;
-  long ik, n, iphi, iz, Nz, Nphi, offset, m, iharm;
+  long ik, n, iphi, iz, Nz, Nphi, offsetN, offsetS, m, iharm;
   SDDS_DATASET SDDSnormal, SDDSskew;
 #ifdef DEBUG
   FILE *fp;
@@ -550,8 +564,31 @@ int computeGGE
   Nphi = fieldsOnBoundary->Nphi;
   rho = fieldsOnBoundary->rho;
 
+#ifdef DEBUG
+  if (fieldsOnBoundary->Bz) {
+    fp = fopen("gge0.sdds", "w");
+    fprintf(fp, "SDDS1\n");
+    fprintf(fp, "&parameter name = phi, type = double, units = m &end\n");
+    fprintf(fp, "&column name = z, type = double  &end\n");
+    fprintf(fp, "&column name = Bz, type = double  &end\n");
+    fprintf(fp, "&data mode = ascii, &end\n");
+    for (iphi=0; iphi<Nphi; iphi++) {
+      fprintf(fp, "%le\n", PIx2*iphi/Nphi);
+      fprintf(fp, "%ld\n", Nz);
+      for (iz=0; iz<Nz; iz++)
+        fprintf(fp, "%le %le\n", fieldsOnBoundary->zMin + iz*fieldsOnBoundary->dz, fieldsOnBoundary->Bz[iphi+iz*Nphi]);
+    }
+    fclose(fp);
+  }
+#endif
+
   /* Take FFT of Brho values vs phi for each z plane */
+  /* Optionally take FFT of Bz values vs phi for each z plane */
   Brho = malloc(sizeof(*Brho)*Nz);
+  if (fieldsOnBoundary->Bz)
+    Bz = malloc(sizeof(*Bz)*Nz);
+  else
+    Bz = NULL;
   for (iz=0; iz<Nz; iz++) {
     Brho[iz] = malloc(sizeof(**Brho)*Nphi);
     for (iphi=0; iphi<Nphi; iphi++) {
@@ -559,23 +596,33 @@ int computeGGE
       Brho[iz][iphi].im = 0;
     }
     FFT(Brho[iz], -1, Nphi);
+    if (Bz) {
+      Bz[iz] = malloc(sizeof(**Bz)*Nphi);
+      for (iphi=0; iphi<Nphi; iphi++) {
+        Bz[iz][iphi].re = fieldsOnBoundary->Bz[iphi+iz*Nphi];
+        Bz[iz][iphi].im = 0;
+      }
+      FFT(Bz[iz], -1, Nphi);
+    }
   }
 
 #ifdef DEBUG
-  fp = fopen("gge1.sdds", "w");
-  fprintf(fp, "SDDS1\n");
-  fprintf(fp, "&parameter name = z, type = double, units = m &end\n");
-  fprintf(fp, "&column name = m, type = long &end\n");
-  fprintf(fp, "&column name = ReFFT, type = double  &end\n");
-  fprintf(fp, "&column name = ImFFT, type = double  &end\n");
-  fprintf(fp, "&data mode = ascii, &end\n");
-  for (iz=0; iz<Nz; iz++) {
-    fprintf(fp, "%le\n", fieldsOnBoundary->zMin + iz*fieldsOnBoundary->dz);
-    fprintf(fp, "%ld\n", Nphi);
-    for (iphi=0 ; iphi<Nphi; iphi++) 
-      fprintf(fp, "%ld %le %le\n", iphi, Brho[iz][iphi].re, Brho[iz][iphi].im);
+  if (Bz) {
+    fp = fopen("gge1.sdds", "w");
+    fprintf(fp, "SDDS1\n");
+    fprintf(fp, "&parameter name = z, type = double, units = m &end\n");
+    fprintf(fp, "&column name = m, type = long &end\n");
+    fprintf(fp, "&column name = ReFFT, type = double  &end\n");
+    fprintf(fp, "&column name = ImFFT, type = double  &end\n");
+    fprintf(fp, "&data mode = ascii, &end\n");
+    for (iz=0; iz<Nz; iz++) {
+      fprintf(fp, "%le\n", fieldsOnBoundary->zMin + iz*fieldsOnBoundary->dz);
+      fprintf(fp, "%ld\n", Nphi);
+      for (iphi=0 ; iphi<Nphi; iphi++) 
+        fprintf(fp, "%ld %le %le\n", iphi, Bz[iz][iphi].re, Bz[iz][iphi].im);
+    }
+    fclose(fp);
   }
-  fclose(fp);
 #endif
 
   /* Reorganize data to give array of FFT for each frequency as a function of z, then take FFT vs z */
@@ -588,31 +635,52 @@ int computeGGE
     }
   }
 
-#ifdef DEBUG
-  fp = fopen("gge2.sdds", "w");
-  fprintf(fp, "SDDS1\n");
-  fprintf(fp, "&parameter name = m, type = long &end\n");
-  fprintf(fp, "&column name = z, type = double &end\n");
-  fprintf(fp, "&column name = ReFFT, type = double  &end\n");
-  fprintf(fp, "&column name = ImFFT, type = double  &end\n");
-  fprintf(fp, "&data mode = ascii, &end\n");
-  for (iphi=0; iphi<Nphi; iphi++) {
-    fprintf(fp, "%ld\n%ld\n", iphi, Nz);
-    for (iz=0; iz<Nz; iz++) 
-      fprintf(fp, "%le %le %le\n", 
-              fieldsOnBoundary->zMin + iz*fieldsOnBoundary->dz,
-              Bm[iphi][iz].re, Bm[iphi][iz].im);
+  Bmz = NULL;
+  if (Bz) {
+    Bmz = malloc(sizeof(*Bmz)*Nphi);
+    for (iphi=0; iphi<Nphi; iphi++) {
+      Bmz[iphi] = tmalloc(sizeof(**Bmz)*Nz);
+      for (iz=0; iz<Nz; iz++) {
+        Bmz[iphi][iz].re = Bz[iz][iphi].re;
+        Bmz[iphi][iz].im = Bz[iz][iphi].im;
+      }
+    }
   }
-  fclose(fp);
+#ifdef DEBUG
+  if (Bz) {
+    fp = fopen("gge2.sdds", "w");
+    fprintf(fp, "SDDS1\n");
+    fprintf(fp, "&parameter name = m, type = long &end\n");
+    fprintf(fp, "&column name = z, type = double &end\n");
+    fprintf(fp, "&column name = ReFFT, type = double  &end\n");
+    fprintf(fp, "&column name = ImFFT, type = double  &end\n");
+    fprintf(fp, "&data mode = ascii, &end\n");
+    for (iphi=0; iphi<Nphi; iphi++) {
+      fprintf(fp, "%ld\n%ld\n", iphi, Nz);
+      for (iz=0; iz<Nz; iz++) 
+        fprintf(fp, "%le %le %le\n", 
+                fieldsOnBoundary->zMin + iz*fieldsOnBoundary->dz,
+                Bmz[iphi][iz].re, Bmz[iphi][iz].im);
+    }
+    fclose(fp);
+  }
 #endif
 
   for (iphi=0; iphi<Nphi; iphi++) 
     FFT(Bm[iphi], -1, Nz);
+  if (Bmz)
+    for (iphi=0; iphi<Nphi; iphi++) 
+      FFT(Bmz[iphi], -1, Nz);
 
   /* clean up memory */
   for (iz=0; iz<Nz; iz++)
     free(Brho[iz]);
   free(Brho);
+  if (Bz) {
+    for (iz=0; iz<Nz; iz++)
+      free(Bz[iz]);
+    free(Bz);
+  }
 
   /* Compute k values. Upper half of the array has negative k values */
   dk = TWOPI / (fieldsOnBoundary->dz * Nz);
@@ -623,86 +691,169 @@ int computeGGE
   for (ik = Nz / 2; ik < Nz; ik++)
     k[ik] = -dk * (Nz - ik);
 
+#ifdef DEBUG
+  if (Bz) {
+    fp = fopen("gge3.sdds", "w");
+    fprintf(fp, "SDDS1\n");
+    fprintf(fp, "&parameter name = m, type = long &end\n");
+    fprintf(fp, "&column name = k, type = double, units=1/m &end\n");
+    fprintf(fp, "&column name = ReFFTFFT, type = double  &end\n");
+    fprintf(fp, "&column name = ImFFTFFT, type = double  &end\n");
+    fprintf(fp, "&data mode = ascii, &end\n");
+    for (iphi=0; iphi<Nphi; iphi++) {
+      fprintf(fp, "%ld\n%ld\n", iphi, Nz);
+      for (ik=Nz/2; ik<Nz; ik++) 
+        fprintf(fp, "%le %le %le\n", 
+                k[ik],
+                Bmz[iphi][ik].re, Bmz[iphi][ik].im);
+      for (ik=0; ik<Nz/2; ik++) 
+        fprintf(fp, "%le %le %le\n", 
+                k[ik],
+                Bmz[iphi][ik].re, Bmz[iphi][ik].im);
+    }
+    fclose(fp);
+  }
+#endif
+
+
   if (normalOutput && SetUpOutputFile(&SDDSnormal, normalOutput, 0, derivatives)) 
     return 1;
   if (skewOutput && SetUpOutputFile(&SDDSskew, skewOutput, 1, derivatives)) 
     return 1;
 
   c1 = malloc(Nz*sizeof(*c1));
-  offset = 1;
-  for (m=0; m<multipoles; m++) {
+  offsetN = 1;
+  offsetS = 1;
+  for (m=(Bmz?-1:0); m<multipoles; m++) {
     if (fundamental)
       iharm = fundamental*(2*m+1);
     else 
       iharm = m + 1;
-    if (normalOutput) {
-      offset = SDDS_GetColumnIndex(&SDDSnormal, "CnmS0");
-      StartPage(&SDDSnormal, fieldsOnBoundary, iharm);
+    if (normalOutput && m>=0) {
+      offsetN = SDDS_GetColumnIndex(&SDDSnormal, "CnmS0");
+      StartPage(&SDDSnormal, fieldsOnBoundary, iharm, "Normal");
     }
     if (skewOutput) {
-      offset = SDDS_GetColumnIndex(&SDDSnormal, "CnmC0");
-      StartPage(&SDDSskew, fieldsOnBoundary, iharm);
+      offsetS = SDDS_GetColumnIndex(&SDDSskew, "CnmC0");
+      StartPage(&SDDSskew, fieldsOnBoundary, iharm, "Skew");
     }
-    
-    for (n = 0; n < 2*derivatives; n+=2)  {
-      for (ik=0; ik<Nz; ik++) {
-        double factor;
-        factor = ipow(-1, n/2)*ipow(k[ik], iharm+n-1)/Imp(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm));
-        c1[ik].re = -Bm[iharm][ik].im*factor;
-        c1[ik].im = Bm[iharm][ik].re*factor;
-      }
-      FFT(c1, 1, Nz);
-      for (iz=0; iz<Nz; iz++) {
-        if (normalOutput && 
-            !SDDS_SetRowValues(&SDDSnormal, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
-                               offset  , c1[iz].re/(0.5*Nz*Nphi),
-                               -1)) {
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-          return (1);
-        }
-        if (skewOutput && 
-            !SDDS_SetRowValues(&SDDSskew, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
-                               offset  , c1[iz].im/(0.5*Nz*Nphi),
-                               -1)) {
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-          return (1);
-        }
-      }
-      offset++;
-    }
+#ifdef DEBUG
+    printf("GGE m=%ld, iharm=%ld, offsetN = %ld, offsetS = %ld\n",
+           m, iharm, offsetN, offsetS);
+#endif
 
-    if (normalOutput)
-      offset = SDDS_GetColumnIndex(&SDDSnormal, "dCnmS0/dz");
-    if (skewOutput)
-      offset = SDDS_GetColumnIndex(&SDDSnormal, "dCnmC0/dz");
-
-    for (n = 0; n < 2*derivatives; n+=2)  {
-      for (ik=0; ik<Nz; ik++) {
-        double factor;
-        factor = -ipow(-1, n/2)*ipow(k[ik], iharm+n-1)/Imp(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))*k[ik]/Nz/(Nphi/2.0);
-        c1[ik].re = Bm[iharm][ik].re*factor;
-        c1[ik].im = Bm[iharm][ik].im*factor;
-      }
-      FFT(c1, 1, Nz);
-      for (iz=0; iz<Nz; iz++) {
-        if (normalOutput && 
-            !SDDS_SetRowValues(&SDDSnormal, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
-                               offset, c1[iz].re,
-                               -1)) {
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-          return (1);
+    if (m>=0) {
+      for (n = 0; n < 2*derivatives; n+=2)  {
+        for (ik=0; ik<Nz; ik++) {
+          double factor;
+          factor = ipow(-1, n/2)*ipow(k[ik], iharm+n-1)/Imp(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))/(0.5*Nz*Nphi);
+          c1[ik].re = -Bm[iharm][ik].im*factor;
+          c1[ik].im = Bm[iharm][ik].re*factor;
         }
-        if (skewOutput && 
-            !SDDS_SetRowValues(&SDDSskew, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
-                               offset, c1[iz].im,
-                               -1)) {
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-          return (1);
+        FFT(c1, 1, Nz);
+        for (iz=0; iz<Nz; iz++) {
+          if (normalOutput && 
+              !SDDS_SetRowValues(&SDDSnormal, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+                                 offsetN, c1[iz].re,
+                                 -1)) {
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+            return (1);
+          }
+          if (skewOutput && 
+              !SDDS_SetRowValues(&SDDSskew, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+                                 offsetS, c1[iz].im,
+                                 -1)) {
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+            return (1);
+          }
         }
+        offsetN++;
+        offsetS++;
       }
-      offset++;
+      
+      if (normalOutput)
+        offsetN = SDDS_GetColumnIndex(&SDDSnormal, "dCnmS0/dz");
+      if (skewOutput)
+        offsetS = SDDS_GetColumnIndex(&SDDSskew, "dCnmC0/dz");
+      
+#ifdef DEBUG
+      printf("dGGE m=%ld, offsetN = %ld, offsetS = %ld\n",
+             m, offsetN, offsetS);
+#endif
+      for (n = 0; n < 2*derivatives; n+=2)  {
+        for (ik=0; ik<Nz; ik++) {
+          double factor;
+          factor = -ipow(-1, n/2)*ipow(k[ik], iharm+n-1)/Imp(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))*k[ik]/Nz/(Nphi/2.0);
+          c1[ik].re = Bm[iharm][ik].re*factor;
+          c1[ik].im = Bm[iharm][ik].im*factor;
+        }
+        FFT(c1, 1, Nz);
+        for (iz=0; iz<Nz; iz++) {
+          if (normalOutput &&
+              !SDDS_SetRowValues(&SDDSnormal, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+                                 offsetN, c1[iz].re,
+                                 -1)) {
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+            return (1);
+          }
+          if (skewOutput &&
+              !SDDS_SetRowValues(&SDDSskew, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+                                 offsetS, c1[iz].im,
+                                 -1)) {
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+            return (1);
+          }
+        }
+        offsetN++;
+        offsetS++;
+      }
     }
-    if (normalOutput && SDDS_WritePage(&SDDSnormal) != 1) {
+      
+    if (skewOutput && Bmz) {
+      /* solenoidal terms will be included here */
+      offsetS = SDDS_GetColumnIndex(&SDDSskew, "CnmC0");
+      for (n = 0; n < 2*derivatives; n+=2)  {
+        if ((iharm+n)>0) {
+          for (ik=0; ik<Nz; ik++) {
+            double factor;
+            factor = -ipow(-1, n/2)*ipow(k[ik], iharm+n-1)/Imp(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))/(0.5*Nz*Nphi);
+            c1[ik].re = -Bmz[iharm][ik].im*factor;
+            c1[ik].im = Bmz[iharm][ik].re*factor;
+          }
+          FFT(c1, 1, Nz);
+          for (iz=0; iz<Nz; iz++) {
+            if (!SDDS_SetRowValues(&SDDSskew, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+                                   offsetS, c1[iz].im,
+                                   -1)) {
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              return (1);
+            }
+          }
+        }
+        offsetS++;
+      }
+      offsetS = SDDS_GetColumnIndex(&SDDSskew, "dCnmC0/dz");
+      for (n = 0; n < 2*derivatives; n+=2)  {
+        for (ik=0; ik<Nz; ik++) {
+          double factor;
+          factor = -ipow(-1, n/2)*ipow(k[ik], iharm+n)/Imp(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))/(0.5*Nz*Nphi);
+          c1[ik].re = Bmz[iharm][ik].re*factor;
+          c1[ik].im = Bmz[iharm][ik].im*factor;
+        }
+        FFT(c1, 1, Nz);
+        for (iz=0; iz<Nz; iz++) {
+          if (skewOutput && 
+              !SDDS_SetRowValues(&SDDSskew, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+                                 offsetS, c1[iz].im,
+                                 -1)) {
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+            return (1);
+          }
+        }
+        offsetS++;
+      }
+    } 
+    if (normalOutput && m>=0 && SDDS_WritePage(&SDDSnormal) != 1) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
@@ -711,7 +862,7 @@ int computeGGE
       return (1);
     }
   }
-
+  
   if (normalOutput && SDDS_Terminate(&SDDSnormal) != 1) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     return (1);
@@ -720,6 +871,11 @@ int computeGGE
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     return (1);
   }
+
+#ifdef DEBUG
+  printf("Finished writing GGE output files\n");
+  fflush(stdout);
+#endif
   
   return (0);
 }
@@ -1199,7 +1355,8 @@ int StartPage
 (
  SDDS_DATASET *SDDSout,
  FIELDS_ON_BOUNDARY *fob,
- long m
+ long m,
+ char *type
  )
 {
   long iz, index;
@@ -1214,6 +1371,10 @@ int StartPage
     return (1);
   }
   index = SDDS_GetColumnIndex(SDDSout, "z");
+#ifdef DEBUG
+  printf("StartPage %s: dz = %le, Nz = %ld, column index = %ld\n",
+         type, fob->dz, fob->Nz, index);
+#endif
   for (iz=0; iz<fob->Nz; iz++) {
     if (!SDDS_SetRowValues(SDDSout, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
                            iz, index, iz*fob->dz+fob->zMin, -1)) {
