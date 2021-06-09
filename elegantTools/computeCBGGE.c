@@ -3,7 +3,7 @@
 #include "scan.h"
 #include "fftpackC.h"
 #include "gsl/gsl_sf_bessel.h"
-#define DEBUG 1
+
 #define TWOPI 6.28318530717958647692528676656
 
 typedef struct COMPLEX
