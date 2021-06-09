@@ -93,7 +93,8 @@ are listed in Section \ref{sect:tools}.
 
 Changes to these tools in this release include
 \begin{itemize}
-\item None.
+\item \verb|computeCBGGE| can now compute the expansion for solenoidal fields if provided with $B_z$ data on 
+  a cylinder. Ryan Lindber (APS) provided the theoretical basis and helped with debugging.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -6508,7 +6509,7 @@ boundary for use with {\tt elegant}'s \verb|BGGEXP| element.
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
-computeCBGGE -input=<filename>[,z=<colName>][,phi=<colName>][,Brho=<colName>][,rho=<paramName>]
+computeCBGGE -input=<filename>[,z=<colName>][,phi=<colName>][,Brho=<colName>][,Bz=<columnName>][,rho=<paramName>]
               -normal=<output> [-skew=<output>]
               [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]
               [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]
@@ -6524,6 +6525,7 @@ computeCBGGE -input=<filename>[,z=<colName>][,phi=<colName>][,Brho=<colName>][,r
   contains a parameter \verb|rho| giving the radius of the cylinder. The \verb|rho| option may be used to give a
   different name for the parameter.  The data must form a uniform grid in $z$ and $\phi$. The $N_\phi$ values of $\phi$
   should range from $0$ to $\Delta \phi (N_\phi-1)$ where $\Delta \phi = 2\pi/N_\phi$
+  If the \verb|Bz| qualifier is provided, the named data is used for computation of the solenoidal fields.
 \item {\tt normal} ---  Output file for normal-component generalized gradients. Supply to \verb|NORMAL_FILENAME|
   parameter of \verb|BGGEXP|.
 \item {\tt skew} ---  Output file for skew-component generalized gradients. Supply to \verb|SKEW_FILENAME|
