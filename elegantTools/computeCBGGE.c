@@ -551,7 +551,7 @@ int computeGGE
  long fundamental
 )
 {
-  COMPLEX **Brho, **Bz, **Bm, **Bmz, *c1;
+  COMPLEX **Brho, *Bz, **Bm, *c1;
   double *k;
   double rho, dk;
   long ik, n, iphi, iz, Nz, Nphi, offsetN, offsetS, m, iharm;
@@ -583,12 +583,7 @@ int computeGGE
 #endif
 
   /* Take FFT of Brho values vs phi for each z plane */
-  /* Optionally take FFT of Bz values vs phi for each z plane */
   Brho = malloc(sizeof(*Brho)*Nz);
-  if (fieldsOnBoundary->Bz)
-    Bz = malloc(sizeof(*Bz)*Nz);
-  else
-    Bz = NULL;
   for (iz=0; iz<Nz; iz++) {
     Brho[iz] = malloc(sizeof(**Brho)*Nphi);
     for (iphi=0; iphi<Nphi; iphi++) {
@@ -596,34 +591,19 @@ int computeGGE
       Brho[iz][iphi].im = 0;
     }
     FFT(Brho[iz], -1, Nphi);
-    if (Bz) {
-      Bz[iz] = malloc(sizeof(**Bz)*Nphi);
-      for (iphi=0; iphi<Nphi; iphi++) {
-        Bz[iz][iphi].re = fieldsOnBoundary->Bz[iphi+iz*Nphi];
-        Bz[iz][iphi].im = 0;
-      }
-      FFT(Bz[iz], -1, Nphi);
-    }
   }
 
-#ifdef DEBUG
-  if (Bz) {
-    fp = fopen("gge1.sdds", "w");
-    fprintf(fp, "SDDS1\n");
-    fprintf(fp, "&parameter name = z, type = double, units = m &end\n");
-    fprintf(fp, "&column name = m, type = long &end\n");
-    fprintf(fp, "&column name = ReFFT, type = double  &end\n");
-    fprintf(fp, "&column name = ImFFT, type = double  &end\n");
-    fprintf(fp, "&data mode = ascii, &end\n");
+  if (fieldsOnBoundary->Bz) {
+    /* Optionally average Bz over phi for each z plane */
+    Bz = malloc(sizeof(*Bz)*Nz);
     for (iz=0; iz<Nz; iz++) {
-      fprintf(fp, "%le\n", fieldsOnBoundary->zMin + iz*fieldsOnBoundary->dz);
-      fprintf(fp, "%ld\n", Nphi);
-      for (iphi=0 ; iphi<Nphi; iphi++) 
-        fprintf(fp, "%ld %le %le\n", iphi, Bz[iz][iphi].re, Bz[iz][iphi].im);
+      Bz[iz].re = Bz[iz].im = 0;
+      for (iphi=0; iphi<Nphi; iphi++)
+        Bz[iz].re += fieldsOnBoundary->Bz[iphi+iz*Nphi];
+      Bz[iz].re /= Nphi;
     }
-    fclose(fp);
-  }
-#endif
+  } else
+    Bz = NULL;
 
   /* Reorganize data to give array of FFT for each frequency as a function of z, then take FFT vs z */
   Bm = malloc(sizeof(*Bm)*Nphi);
@@ -633,54 +613,16 @@ int computeGGE
       Bm[iphi][iz].re = Brho[iz][iphi].re;
       Bm[iphi][iz].im = Brho[iz][iphi].im;
     }
-  }
-
-  Bmz = NULL;
-  if (Bz) {
-    Bmz = malloc(sizeof(*Bmz)*Nphi);
-    for (iphi=0; iphi<Nphi; iphi++) {
-      Bmz[iphi] = tmalloc(sizeof(**Bmz)*Nz);
-      for (iz=0; iz<Nz; iz++) {
-        Bmz[iphi][iz].re = Bz[iz][iphi].re;
-        Bmz[iphi][iz].im = Bz[iz][iphi].im;
-      }
-    }
-  }
-#ifdef DEBUG
-  if (Bz) {
-    fp = fopen("gge2.sdds", "w");
-    fprintf(fp, "SDDS1\n");
-    fprintf(fp, "&parameter name = m, type = long &end\n");
-    fprintf(fp, "&column name = z, type = double &end\n");
-    fprintf(fp, "&column name = ReFFT, type = double  &end\n");
-    fprintf(fp, "&column name = ImFFT, type = double  &end\n");
-    fprintf(fp, "&data mode = ascii, &end\n");
-    for (iphi=0; iphi<Nphi; iphi++) {
-      fprintf(fp, "%ld\n%ld\n", iphi, Nz);
-      for (iz=0; iz<Nz; iz++) 
-        fprintf(fp, "%le %le %le\n", 
-                fieldsOnBoundary->zMin + iz*fieldsOnBoundary->dz,
-                Bmz[iphi][iz].re, Bmz[iphi][iz].im);
-    }
-    fclose(fp);
-  }
-#endif
-
-  for (iphi=0; iphi<Nphi; iphi++) 
     FFT(Bm[iphi], -1, Nz);
-  if (Bmz)
-    for (iphi=0; iphi<Nphi; iphi++) 
-      FFT(Bmz[iphi], -1, Nz);
+  }
+
+  if (Bz)
+    FFT(Bz, -1, Nz);
 
   /* clean up memory */
   for (iz=0; iz<Nz; iz++)
     free(Brho[iz]);
   free(Brho);
-  if (Bz) {
-    for (iz=0; iz<Nz; iz++)
-      free(Bz[iz]);
-    free(Bz);
-  }
 
   /* Compute k values. Upper half of the array has negative k values */
   dk = TWOPI / (fieldsOnBoundary->dz * Nz);
@@ -691,31 +633,6 @@ int computeGGE
   for (ik = Nz / 2; ik < Nz; ik++)
     k[ik] = -dk * (Nz - ik);
 
-#ifdef DEBUG
-  if (Bz) {
-    fp = fopen("gge3.sdds", "w");
-    fprintf(fp, "SDDS1\n");
-    fprintf(fp, "&parameter name = m, type = long &end\n");
-    fprintf(fp, "&column name = k, type = double, units=1/m &end\n");
-    fprintf(fp, "&column name = ReFFTFFT, type = double  &end\n");
-    fprintf(fp, "&column name = ImFFTFFT, type = double  &end\n");
-    fprintf(fp, "&data mode = ascii, &end\n");
-    for (iphi=0; iphi<Nphi; iphi++) {
-      fprintf(fp, "%ld\n%ld\n", iphi, Nz);
-      for (ik=Nz/2; ik<Nz; ik++) 
-        fprintf(fp, "%le %le %le\n", 
-                k[ik],
-                Bmz[iphi][ik].re, Bmz[iphi][ik].im);
-      for (ik=0; ik<Nz/2; ik++) 
-        fprintf(fp, "%le %le %le\n", 
-                k[ik],
-                Bmz[iphi][ik].re, Bmz[iphi][ik].im);
-    }
-    fclose(fp);
-  }
-#endif
-
-
   if (normalOutput && SetUpOutputFile(&SDDSnormal, normalOutput, 0, derivatives)) 
     return 1;
   if (skewOutput && SetUpOutputFile(&SDDSskew, skewOutput, 1, derivatives)) 
@@ -724,7 +641,7 @@ int computeGGE
   c1 = malloc(Nz*sizeof(*c1));
   offsetN = 1;
   offsetS = 1;
-  for (m=(Bmz?-1:0); m<multipoles; m++) {
+  for (m=(Bz?-1:0); m<multipoles; m++) {
     if (fundamental)
       iharm = fundamental*(2*m+1);
     else 
@@ -810,16 +727,16 @@ int computeGGE
     }
       
 
-    if (m<0 && skewOutput && Bmz) {
+    if (m<0 && skewOutput && Bz) {
       /* solenoidal terms will be included here */
       offsetS = SDDS_GetColumnIndex(&SDDSskew, "CnmC0");
       for (n = 0; n < 2*derivatives; n+=2)  {
         if ((iharm+n)>0) {
           for (ik=0; ik<Nz; ik++) {
             double factor;
-            factor = -ipow(-1, n/2)*ipow(k[ik], iharm+n-1)/BesIn(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))/(Nz*Nphi);
-            c1[ik].re = -Bmz[iharm][ik].im*factor;
-            c1[ik].im = Bmz[iharm][ik].re*factor;
+            factor = -ipow(-1, n/2)*ipow(k[ik], iharm+n-1)/BesIn(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))/(Nz);
+            c1[ik].re = -Bz[ik].im*factor;
+            c1[ik].im = Bz[ik].re*factor;
           }
           FFT(c1, 1, Nz);
           for (iz=0; iz<Nz; iz++) {
@@ -837,9 +754,9 @@ int computeGGE
       for (n = 0; n < 2*derivatives; n+=2)  {
         for (ik=0; ik<Nz; ik++) {
           double factor;
-          factor = ipow(-1, n/2)*ipow(k[ik], iharm+n)/BesIn(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))/(Nz*Nphi);
-          c1[ik].re = Bmz[iharm][ik].re*factor;
-          c1[ik].im = Bmz[iharm][ik].im*factor;
+          factor = ipow(-1, n/2)*ipow(k[ik], iharm+n)/BesIn(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))/(Nz);
+          c1[ik].re = Bz[ik].re*factor;
+          c1[ik].im = Bz[ik].im*factor;
         }
         FFT(c1, 1, Nz);
         for (iz=0; iz<Nz; iz++) {
@@ -877,7 +794,13 @@ int computeGGE
   printf("Finished writing GGE output files\n");
   fflush(stdout);
 #endif
-  
+
+  if (Bz)
+    free(Bz);
+  for (iphi=0; iphi<Nphi; iphi++)
+    free(Bm[iphi]);
+  free(Bm);
+
   return (0);
 }
 
