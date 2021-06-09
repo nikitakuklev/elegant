@@ -809,21 +809,22 @@ int computeGGE
       }
     }
       
-    if (skewOutput && Bmz) {
+
+    if (m<0 && skewOutput && Bmz) {
       /* solenoidal terms will be included here */
       offsetS = SDDS_GetColumnIndex(&SDDSskew, "CnmC0");
       for (n = 0; n < 2*derivatives; n+=2)  {
         if ((iharm+n)>0) {
           for (ik=0; ik<Nz; ik++) {
             double factor;
-            factor = -ipow(-1, n/2)*ipow(k[ik], iharm+n-1)/Imp(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))/(0.5*Nz*Nphi);
+            factor = -ipow(-1, n/2)*ipow(k[ik], iharm+n-1)/BesIn(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))/(Nz*Nphi);
             c1[ik].re = -Bmz[iharm][ik].im*factor;
             c1[ik].im = Bmz[iharm][ik].re*factor;
           }
           FFT(c1, 1, Nz);
           for (iz=0; iz<Nz; iz++) {
             if (!SDDS_SetRowValues(&SDDSskew, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
-                                   offsetS, c1[iz].im,
+                                   offsetS, c1[iz].re,
                                    -1)) {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
               return (1);
@@ -836,7 +837,7 @@ int computeGGE
       for (n = 0; n < 2*derivatives; n+=2)  {
         for (ik=0; ik<Nz; ik++) {
           double factor;
-          factor = -ipow(-1, n/2)*ipow(k[ik], iharm+n)/Imp(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))/(0.5*Nz*Nphi);
+          factor = ipow(-1, n/2)*ipow(k[ik], iharm+n)/BesIn(k[ik]*rho, iharm)/(ipow(2, iharm)*dfactorial(iharm))/(Nz*Nphi);
           c1[ik].re = Bmz[iharm][ik].re*factor;
           c1[ik].im = Bmz[iharm][ik].im*factor;
         }
@@ -844,7 +845,7 @@ int computeGGE
         for (iz=0; iz<Nz; iz++) {
           if (skewOutput && 
               !SDDS_SetRowValues(&SDDSskew, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
-                                 offsetS, c1[iz].im,
+                                 offsetS, c1[iz].re,
                                  -1)) {
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             return (1);
