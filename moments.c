@@ -252,6 +252,7 @@ void setupMomentsOutput(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   if (filename)
     filename = compose_filename(filename, run->rootname);
   *doMomentsOutput = output_at_each_step;
+  trackingBasedDiffusionMatrixParticles = tracking_based_diffusion_matrix_particles;
   
   if (reference_file && matched)
     bombElegant("reference_file and matched=1 are incompatible", NULL);

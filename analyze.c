@@ -1945,8 +1945,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 
     /* Step 1: determine effective R matrix for this element, as well as the diffusion matrix */
     determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2, ignoreRadiation, &z, slice); 
-    /* printf("z = %le ", z);
-     print_matrices(stdout, "matrix1:", Ml1);*/
+    /*
+    printf("z = %le ", z);
+    print_matrices(stdout, "matrix1:", Ml1);
+    */
 
     /* Step 2: Propagate the diffusion matrix */
     fillSigmaPropagationMatrix(Ms->a, Ml1->R);
@@ -1989,8 +1991,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     BEAM_SUMS sums;
     long nPart;
     /* track an ensemble to get approximation to total diffusion matrix */
-    bggexp.isr = 1;
     double **part;
+    bggexp.isr = 1;
     nPart = trackingBasedDiffusionMatrixParticles;
 #if USE_MPI
     nPart = nPart/n_processors;
@@ -2014,7 +2016,12 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       for (j=0; j<6; j++)
         Dr[sigmaIndex3[i][j]] = sums.beamSums2->sigma[i][j];
     /*
-    printf("Done performing tracking-based determination of BGGEXP diffusion matrix\n");
+    printf("Tracking-based BGGEXP diffusion matrix:\n");
+    for (i=0; i<6; i++) {
+      for (j=0; j<6; j++)
+        printf("%13.6e ", Dr[sigmaIndex3[i][j]]);
+      printf("\n");
+    }
     fflush(stdout);
     */
   }
@@ -2158,7 +2165,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     /* Compute R[i][j] */
     for (j=0; j<6; j++) {
       /* j indexes the initial coordinate value */
-      R[i][j] = (coord[2*j][i]-coord[2*j+1][i])/(2*stepSize[j]);
+      R[i][j] = (coord[2*j][i]-coord[2*j+1][i])/(2*stepSize[j]*trackingMatrixStepFactor);
     }
   }
 

@@ -16,6 +16,7 @@
     long radiation = 1;
     long n_slices = 10;
     long slice_etilted = 1;
+    long tracking_based_diffusion_matrix_particles = 1000;
     double emit_x = 0;
     double beta_x = 0;
     double alpha_x = 0;
