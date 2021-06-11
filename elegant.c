@@ -2922,6 +2922,8 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
   exactNormalizedEmittance = exact_normalized_emittance;
   inhibitRandomSeedPermutation(inhibit_seed_permutation);
   shareTrackingBasedMatrices = share_tracking_based_matrices;
+  trackingBasedMatricesStoreLimit = tracking_based_matrices_store_limit;
+  trackingBasedDiffusionMatrixParticles = tracking_based_diffusion_matrix_particles;
   warningCountLimit = warning_limit;
   trackingMatrixStepFactor = tracking_matrix_step_factor;
   trackingMatrixPoints = tracking_matrix_points;

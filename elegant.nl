@@ -16,6 +16,8 @@
      STRING log_file = NULL;
      STRING error_log_file = NULL;
      long share_tracking_based_matrices = 1;
+     long tracking_based_matrices_store_limit = 5000;
+     long tracking_based_diffusion_matrix_particles = 1000;
      long parallel_tracking_based_matrices = 1;
      long mpi_io_force_file_sync = 0;
      long mpi_io_read_buffer_size = 0;

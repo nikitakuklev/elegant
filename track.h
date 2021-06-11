@@ -108,6 +108,8 @@ extern long echoNamelists;
 extern long mpiRandomizationMode;
 extern long exactNormalizedEmittance;
 extern long shareTrackingBasedMatrices;
+extern long trackingBasedMatricesStoreLimit;
+extern long trackingBasedDiffusionMatrixParticles;
 extern long parallelTrackingBasedMatrices;
 extern double trackingMatrixStepFactor;
 extern long trackingMatrixPoints;

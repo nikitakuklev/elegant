@@ -949,7 +949,6 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   long nWorking=0, n_leftTotal, k, *nToTrackCounts, fiducialOnly = 0;
 #endif
   /* We'll store some of the matrices to avoid recomputing them */
-#define MAX_N_STORED_MATRICES 5000
   static long nStoredMatrices = 0, iStoredMatrices = -1;
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
@@ -976,8 +975,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 #endif
   if (shareTrackingBasedMatrices) {
     if (storedElement==NULL) {
-      storedElement = tmalloc(sizeof(*storedElement)*MAX_N_STORED_MATRICES);
-      storedMatrix = tmalloc(sizeof(*storedMatrix)*MAX_N_STORED_MATRICES);
+      storedElement = tmalloc(sizeof(*storedElement)*trackingBasedMatricesStoreLimit);
+      storedMatrix = tmalloc(sizeof(*storedMatrix)*trackingBasedMatricesStoreLimit);
     }
     
     for (i=0; i<nStoredMatrices; i++) {
@@ -1454,7 +1453,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       ELEMENT_LIST *eptrCopy;
       VMATRIX *matrixCopy;
       
-      if (nStoredMatrices<MAX_N_STORED_MATRICES) {
+      if (nStoredMatrices<trackingBasedMatricesStoreLimit) {
 	iStoredMatrices++;
 	nStoredMatrices++;
       } else {
@@ -1985,6 +1984,40 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   }
   for (i=0; i<21; i++)
     Dr[i] = accumD1[i];
+
+  if (eptr->type==T_BGGEXP && trackingBasedDiffusionMatrixParticles>1) {
+    BEAM_SUMS sums;
+    long nPart;
+    /* track an ensemble to get approximation to total diffusion matrix */
+    bggexp.isr = 1;
+    double **part;
+    nPart = trackingBasedDiffusionMatrixParticles;
+#if USE_MPI
+    nPart = nPart/n_processors;
+#endif
+    if (nPart<10)
+      nPart = 10; /* why 10? */
+    /*
+    printf("Performing tracking-based determination of BGGEXP diffusion matrix with %ld particles per core\n", nPart);
+    fflush(stdout);
+    */
+    part = (double**)czarray_2d(sizeof(**part), nPart, totalPropertiesPerParticle);
+    for (i=0; i<nPart; i++)
+      for (j=0; j<6; j++)
+        part[i][j] = 0;
+    trackBGGExpansion(part, nPart, &bggexp,  run->p_central, NULL, NULL);
+    sums.beamSums2 = tmalloc(sizeof(*(sums.beamSums2)));
+    zero_beam_sums(&sums, 1);
+    accumulate_beam_sums(&sums, part, nPart, run->p_central, 0.0, NULL, 0.0, 0.0, -1, -1, BEAM_SUMS_NOMINMAX);
+    free_czarray_2d((void**)part, nPart, totalPropertiesPerParticle);
+    for (i=0; i<6; i++)
+      for (j=0; j<6; j++)
+        Dr[sigmaIndex3[i][j]] = sums.beamSums2->sigma[i][j];
+    /*
+    printf("Done performing tracking-based determination of BGGEXP diffusion matrix\n");
+    fflush(stdout);
+    */
+  }
 
   free(accumD1);
   free(accumD2);
