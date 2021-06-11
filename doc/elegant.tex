@@ -47,6 +47,9 @@ Here is a summary of what's changed since release 2021.1.  Historical change log
   \verb|CSBEND|, \verb|CSRCSBEND|, \verb|KQUAD|, \verb|KSEXT|, \verb|QUAD|, \verb|SBEND|,  and \verb|SEXT|
   elements in the presence of misalignments. Previously, if the misalignments were large the results would
   be unreliable.
+\item Beam moments computations for \verb|BGGEXP| have been improved to use a tracking-based method for
+  determination of the diffusion matrix. This can be turned off by setting \verb|tracking_based_diffusion_matrix_particles|
+  to \verb|0| in the \verb|global_settings| command.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -65,6 +68,8 @@ Here is a summary of what's changed since release 2021.1.  Historical change log
 \begin{itemize}
 \item The \verb|global_settings| command has a new parameter, \verb|allow_overwriting| which controls whether 
   \verb|elegant| is allowed to overwrite existing files. By default, it is allowed.
+\item The \verb|global_settings| command now provides control of how many tracking-based matrices can be
+  stored for reuse, via the \verb|tracking_based_matrices_store_limit| parameter.
 \item The \verb|closed_orbit| command has a new parameter, \verb|immediate|, which allows requesting immediate
   computation of the closed orbit rather than the default computation as part of the major action.
 \end{itemize}
@@ -2599,9 +2604,11 @@ programs such as TRACY and MAD \cite{BuesingPC}.
     long mpi_io_write_buffer_size = 0;
     long parallel_tracking_based_matrices = 1;
     long share_tracking_based_matrices = 1;
+    long tracking_based_matrices_store_limit = 5000;
     double tracking_matrix_step_factor = 1;
     double tracking_matrix_points = 9;
     double tracking_matrix_step_size[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
+    long tracking_based_diffusion_matrix_particles = 1000;
 &end
 \end{verbatim}
 
@@ -2658,6 +2665,7 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   N.B.: This is set to zero when using \verb|parallel_optimization_setup|.
 \item \verb|share_tracking_based_matrices| --- If non-zero, then the matrices determined by tracking for various elements
   (e.g., \verb|BRAT|, \verb|BGGEXP|, \verb|CCBEND|) are computed only once for a set of identical elements, then shared.
+\item \verb|tracking_based_matrices_store_limit| ---  The maximum number of matrices that will be stored for possible sharing.
 \item \verb|tracking_matrix_step_factor| --- The default step size for tracking-based matrices is $5 \times 10^{-5}$ 
   (in the appropriate units for each corodinate). This can be increased or decreased by supplying a value for 
   \verb|tracking_matrix_step_factor|.
@@ -2666,6 +2674,11 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   (The run time scales approximately as the sixth power of this value.)
 \item \verb|tracking_matrix_step_size| --- Sets the step sizes, in each of the six coordinates,
   used for tracking-based matrix determination
+\item \verb|tracking_based_diffusion_matrix_particles| --- For most elements, the diffusion matrix determined by 
+  \verb|moments_output| is computing used matrix concatenation. For some elements, this doesn't work well because of
+  possible internal coordinate transformations. For these elements, the diffusion matrix is determined approximately
+  by tracking an ensemble of \verb|tracking_based_diffusion_matrix_particles| particles. Setting this parameter to \verb|0|
+  will disable this feature.
 \end{itemize}
 
 
