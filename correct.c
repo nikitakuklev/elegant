@@ -2941,7 +2941,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
       fflush(stdout);
       return(-1);
     }
-    if (rms_pos>best_rms_pos*1.01) {
+    if (rms_pos>clorb_acc && rms_pos>best_rms_pos*1.01) {
       if (corr_fraction==1 || corr_fraction==0)
         break;            
       printf("orbit diverging on iteration %ld: RMS=%e m (was %e m)--redoing with correction fraction of %e\n", 
