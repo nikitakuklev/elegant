@@ -2015,6 +2015,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     for (i=0; i<6; i++)
       for (j=0; j<6; j++)
         Dr[sigmaIndex3[i][j]] = sums.beamSums2->sigma[i][j];
+    free(sums.beamSums2);
     /*
     printf("Tracking-based BGGEXP diffusion matrix:\n");
     for (i=0; i<6; i++) {
