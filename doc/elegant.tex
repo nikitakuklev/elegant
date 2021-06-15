@@ -57,6 +57,8 @@ Here is a summary of what's changed since release 2021.1.  Historical change log
 \item The \verb|bunched_beam| and \verb|bunched_beam_moments| commands previously did not use the centroids
  from \verb|moments_output| when \verb|use_moments_output_values=1|. This was fixed.
 \item The \verb|-pipe|  commandline option was broken, as reported by V. Sajaev (APS). This was fixed.
+\item The \verb|correct| command no longer complains about diverging orbits and no longer adjusts the
+  iteration fraction if the orbit is smaller than the accuracy requirement.
 \end{itemize}
 
 \subsection{New and Modified Elements}
