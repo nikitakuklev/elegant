@@ -511,9 +511,11 @@ long expand_phys(
   
   printf("no expansion for entity %s\n", entity);
   fflush(stdout);
+  /*
   printf("known elements are:\n");
   fflush(stdout);
   print_elem_names(stdout, elem0, 100);
+  */
 #if USE_MPI
   MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
 #endif
