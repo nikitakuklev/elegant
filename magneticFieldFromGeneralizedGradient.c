@@ -900,7 +900,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
 #if !USE_MPI
       if (bgg->SDDSpo && np<1000) {
-        if (!SDDS_StartPage(bgg->SDDSpo, bggData[0]->nz+1) ||
+        if (!SDDS_StartPage(bgg->SDDSpo, (bggData[0] ? bggData[0]->nz : bggData[1]->nz) +1) ||
             !SDDS_SetParameters(bgg->SDDSpo, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                 "particleID", (long)(part[ip][6]), "pCentral", pCentral, NULL)) {
           SDDS_SetError("Problem setting up particle output page for BGGEXP");
