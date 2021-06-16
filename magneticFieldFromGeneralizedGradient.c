@@ -491,12 +491,16 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         for (ns=0; ns<2; ns++) {
           /* ns=0 => normal, ns=1 => skew */
           if (bggData[ns]) {
+            double mfactor;
             if ((bggData[ns]->xMax>0 && fabs(x)>bggData[ns]->xMax) &&
                 (bggData[ns]->yMax>0 && fabs(y)>bggData[ns]->yMax))
               isLost = 1;
             for (im=0; im<bggData[ns]->nm; im++) {
               double mfact, term, rDeriv, phiDeriv, sin_m1phi, cos_m1phi, sin_mphi, cos_mphi;
               m = bggData[ns]->m[im];
+              mfactor = 1;
+              if (m<4)
+                mfactor = bgg->multipoleFactor[m];
               if (bgg->mMaximum>0 && m>bgg->mMaximum)
                 continue;
               mfact = dfactorial(m);
@@ -509,24 +513,24 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 		for (ig=0; ig<igLimit[ns]; ig++) {
 		  term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m)/(2.0*ipow(4, ig)*factorial(ig)*factorial(ig+m+1));
 
-		  Ax += term*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		  Ay += term*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
+		  Ax += term*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz]*mfactor;
+		  Ay += term*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz]*mfactor;
 
 		  rDeriv = (2*ig+m+1)*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
 		  phiDeriv = -(m+1)*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		  dAx_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv);
-		  dAx_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv);
+		  dAx_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv)*mfactor;
+		  dAx_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv)*mfactor;
 
 		  rDeriv = (2*ig+m+1)*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
 		  phiDeriv = (m+1)*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		  dAy_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv);
-		  dAy_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv);
+		  dAy_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv)*mfactor;
+		  dAy_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv)*mfactor;
 
 		  term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
 		  rDeriv = -(2*ig+m)*cos_mphi*bggData[ns]->Cmn[im][ig][iz];
 		  phiDeriv = m*sin_mphi*bggData[ns]->Cmn[im][ig][iz];
-		  dAz_dx += term*( cos_phi*rDeriv - sin_phi*phiDeriv );
-		  dAz_dy += term*( sin_phi*rDeriv + cos_phi*phiDeriv );
+		  dAz_dx += term*( cos_phi*rDeriv - sin_phi*phiDeriv )*mfactor;
+		  dAz_dy += term*( sin_phi*rDeriv + cos_phi*phiDeriv )*mfactor;
 		}
               } else {
                 /* skew components in symmetric Coulomb gauge */
@@ -535,25 +539,25 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 		  //dGenGrad_s = bggData->dCmns_dz[im][ig][iz];
 		  //GenGrad_s = bggData->Cmns[im][ig][iz];
 
-		  Ax -= term*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		  Ay += term*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
+		  Ax -= term*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz]*mfactor;
+		  Ay += term*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz]*mfactor;
 
 		  rDeriv = -(2*ig+m+1)*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
 		  phiDeriv = -(m+1)*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		  dAx_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv);
-		  dAx_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv);
+		  dAx_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv)*mfactor;
+		  dAx_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv)*mfactor;
 
 		  rDeriv = (2*ig+m+1)*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
 		  phiDeriv = -(m+1)*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		  dAy_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv);
-		  dAy_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv);
+		  dAy_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv)*mfactor;
+		  dAy_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv)*mfactor;
 
 		  if (m>0) {
 		    term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
 		    rDeriv = (2*ig+m)*sin_mphi*bggData[ns]->Cmn[im][ig][iz];
 		    phiDeriv = m*cos_mphi*bggData[ns]->Cmn[im][ig][iz];
-		    dAz_dx += term*( cos_phi*rDeriv - sin_phi*phiDeriv );
-		    dAz_dy += term*( sin_phi*rDeriv + cos_phi*phiDeriv );
+		    dAz_dx += term*( cos_phi*rDeriv - sin_phi*phiDeriv )*mfactor;
+		    dAz_dy += term*( sin_phi*rDeriv + cos_phi*phiDeriv )*mfactor;
 		  }
 		}
 	      }
@@ -611,24 +615,24 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 		  for (ig=0; ig<igLimit[ns]; ig++) {
 		    term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m)/(2.0*ipow(4, ig)*factorial(ig)*factorial(ig+m+1));
 
-		    Ax += term*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		    Ay += term*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
+		    Ax += term*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz]*mfactor;
+		    Ay += term*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz]*mfactor;
 
 		    rDeriv = (2*ig+m+1)*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
 		    phiDeriv = -(m+1)*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		    dAx_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv);
-		    dAx_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv);
+		    dAx_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv)*mfactor;
+		    dAx_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv)*mfactor;
 
 		    rDeriv = (2*ig+m+1)*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
 		    phiDeriv = (m+1)*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		    dAy_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv);
-		    dAy_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv);
+		    dAy_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv)*mfactor;
+		    dAy_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv)*mfactor;
 
 		    term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
 		    rDeriv = -(2*ig+m)*cos_mphi*bggData[ns]->Cmn[im][ig][iz];
 		    phiDeriv = m*sin_mphi*bggData[ns]->Cmn[im][ig][iz];
-		    dAz_dx += term*( cos_phi*rDeriv - sin_phi*phiDeriv );
-		    dAz_dy += term*( sin_phi*rDeriv + cos_phi*phiDeriv );
+		    dAz_dx += term*( cos_phi*rDeriv - sin_phi*phiDeriv )*mfactor;
+		    dAz_dy += term*( sin_phi*rDeriv + cos_phi*phiDeriv )*mfactor;
 		  }
 		} else {
 		  /* skew components in symmetric Coulomb gauge */
@@ -637,25 +641,25 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 		    //dGenGrad_s = bggData->dCmns_dz[im][ig][iz];
 		    //GenGrad_s = bggData->Cmns[im][ig][iz];
 
-		    Ax -= term*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		    Ay += term*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
+		    Ax -= term*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz]*mfactor;
+		    Ay += term*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz]*mfactor;
 
 		    rDeriv = -(2*ig+m+1)*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
 		    phiDeriv = -(m+1)*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		    dAx_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv);
-		    dAx_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv);
+		    dAx_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv)*mfactor;
+		    dAx_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv)*mfactor;
 
 		    rDeriv = (2*ig+m+1)*cos_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
 		    phiDeriv = -(m+1)*sin_m1phi*bggData[ns]->dCmn_dz[im][ig][iz];
-		    dAy_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv);
-		    dAy_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv);
+		    dAy_dx += term*(cos_phi*rDeriv - sin_phi*phiDeriv)*mfactor;
+		    dAy_dy += term*(sin_phi*rDeriv + cos_phi*phiDeriv)*mfactor;
 
 		    if (m>0) {
 		      term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
 		      rDeriv = (2*ig+m)*sin_mphi*bggData[ns]->Cmn[im][ig][iz];
 		      phiDeriv = m*cos_mphi*bggData[ns]->Cmn[im][ig][iz];
-		      dAz_dx += term*( cos_phi*rDeriv - sin_phi*phiDeriv );
-		      dAz_dy += term*( sin_phi*rDeriv + cos_phi*phiDeriv );
+		      dAz_dx += term*( cos_phi*rDeriv - sin_phi*phiDeriv )*mfactor;
+		      dAz_dy += term*( sin_phi*rDeriv + cos_phi*phiDeriv )*mfactor;
 		    }
 		  }
 		}
@@ -714,24 +718,23 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 		  /* normal */
 		  for (ig=0; ig<igLimit[ns]; ig++) {
 		    term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
-		    Bx += term*( (2*ig+m)*cos_phi*sin_mphi - m*sin_phi*cos_mphi )*bggData[ns]->Cmn[im][ig][iz];
-		    By += term*( (2*ig+m)*sin_phi*sin_mphi + m*cos_phi*cos_mphi )*bggData[ns]->Cmn[im][ig][iz];
+		    Bx += term*( (2*ig+m)*cos_phi*sin_mphi - m*sin_phi*cos_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
+		    By += term*( (2*ig+m)*sin_phi*sin_mphi + m*cos_phi*cos_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
 		  }
 		} else {
 		  /* skew */
 		  if (m==0) {
 		    for (ig=1; ig<igLimit[ns]; ig++) {
 		      term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m));
-		      Bx += term*( (2*ig+m)*cos_phi*cos_mphi + m*sin_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz];
-		      By += term*( (2*ig+m)*sin_phi*cos_mphi - m*cos_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz];
+		      Bx += term*( (2*ig+m)*cos_phi*cos_mphi + m*sin_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
+		      By += term*( (2*ig+m)*sin_phi*cos_mphi - m*cos_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
 		    } 
 		  } else {
 		    for (ig=0; ig<igLimit[ns]; ig++) {
 		      term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
-		      Bx += term*( (2*ig+m)*cos_phi*cos_mphi + m*sin_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz];
-		      By += term*( (2*ig+m)*sin_phi*cos_mphi - m*cos_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz];
-		     
-		    }
+		      Bx += term*( (2*ig+m)*cos_phi*cos_mphi + m*sin_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
+		      By += term*( (2*ig+m)*sin_phi*cos_mphi - m*cos_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
+                    }
 		  }
 		}
 	      }
@@ -971,27 +974,27 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                 /* normal */
                 for (ig=0; ig<igLimit[ns]; ig++) {
                   term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-                  B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*sin_mphi;
+                  B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*sin_mphi*mfactor;
                   term *= bggData[ns]->Cmn[im][ig][iz];
-                  Br   += term*(2*ig+m)*sin_mphi;
-                  Bphi += m*term*cos_mphi;
+                  Br   += term*(2*ig+m)*sin_mphi*mfactor;
+                  Bphi += m*term*cos_mphi*mfactor;
                 }
               } else {
                 /* skew */
                 if (m==0) {
-		  B[2] += bggData[ns]->dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
+		  B[2] += bggData[ns]->dCmn_dz[im][0][iz]*mfactor;  // on-axis Bz from m=ig=0 term
 		  for (ig=1; ig<igLimit[ns]; ig++) {
 		    term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz]*r;
-		    Br   += term*(2*ig+m)*bggData[ns]->Cmn[im][ig][iz];
+		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*mfactor;
+		    Br   += term*(2*ig+m)*bggData[ns]->Cmn[im][ig][iz]*mfactor;
 		  }
 		} else {
 		  for (ig=0; ig<igLimit[ns]; ig++) {
 		    term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*cos_mphi;
+		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*cos_mphi*mfactor;
 		    term *= bggData[ns]->Cmn[im][ig][iz];
-		    Br   += term*(2*ig+m)*cos_mphi;
-		    Bphi -= m*term*sin_mphi;
+		    Br   += term*(2*ig+m)*cos_mphi*mfactor;
+		    Bphi -= m*term*sin_mphi*mfactor;
 		  }
                 }
               }
@@ -1037,27 +1040,27 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                 /* normal */
                 for (ig=0; ig<igLimit[ns]; ig++) {
                   term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-                  B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz+1]*r*sin_mphi;
+                  B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz+1]*r*sin_mphi*mfactor;
                   term *= bggData[ns]->Cmn[im][ig][iz+1];
-                  Br   += term*(2*ig+m)*sin_mphi;
-                  Bphi += m*term*cos_mphi;
+                  Br   += term*(2*ig+m)*sin_mphi*mfactor;
+                  Bphi += m*term*cos_mphi*mfactor;
                 }
               } else {
                 /* skew */
 		if (m==0) {
-		  B[2] += bggData[ns]->dCmn_dz[im][0][iz+1]*cos_mphi;  // on-axis Bz from m=ig=0 term
+		  B[2] += bggData[ns]->dCmn_dz[im][0][iz+1]*cos_mphi*mfactor;  // on-axis Bz from m=ig=0 term
 		  for (ig=1; ig<igLimit[ns]; ig++) {
 		    term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz+1]*r;
-		    Br   += term*(2*ig+m)*bggData[ns]->Cmn[im][ig][iz+1];
+		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz+1]*r*mfactor;
+		    Br   += term*(2*ig+m)*bggData[ns]->Cmn[im][ig][iz+1]*mfactor;
 		  }
 		} else {
 		  for (ig=0; ig<igLimit[ns]; ig++) {
 		    term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz+1]*r*cos_mphi;
+		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz+1]*r*cos_mphi*mfactor;
 		    term *= bggData[ns]->Cmn[im][ig][iz+1];
-		    Br   += term*(2*ig+m)*cos_mphi;
-		    Bphi -= m*term*sin_mphi;
+		    Br   += term*(2*ig+m)*cos_mphi*mfactor;
+		    Bphi -= m*term*sin_mphi*mfactor;
 		  }
 		}
               }
