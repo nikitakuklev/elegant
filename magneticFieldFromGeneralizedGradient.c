@@ -590,11 +590,15 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
          /** Calculate vector potential A and its relevant derivatives from the generalized gradients **/
           Ax = dAx_dx = dAx_dy = Ay = dAy_dx = dAy_dy = dAz_dx = dAz_dy = 0.0;
 	  for (ns=0; ns<2; ns++) {
+	    double mfactor;
 	    /* ns=0 => normal, ns=1 => skew */
 	    if (bggData[ns]) {
 	      for (im=0; im<bggData[ns]->nm; im++) {
 		double mfact, term, rDeriv, phiDeriv, sin_m1phi, cos_m1phi, sin_mphi, cos_mphi;
 		m = bggData[ns]->m[im];
+		mfactor = 1;
+		if (m<4)
+		  mfactor = bgg->multipoleFactor[m];
 		if (bgg->mMaximum>0 && m>bgg->mMaximum)
 		  continue;
 		mfact = dfactorial(m);
@@ -692,11 +696,15 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           By = bgg->By;
 
 	  for (ns=0; ns<2; ns++) {
+	    double mfactor;
 	    /* ns=0 => normal, ns=1 => skew */
 	    if (bggData[ns]) {
 	      for (im=0; im<bggData[ns]->nm; im++) {
 		double mfact, term, sin_mphi, cos_mphi;
 		m = bggData[ns]->m[im];
+		mfactor = 1;
+		if (m<4)
+		  mfactor = bgg->multipoleFactor[m];
 		if (bgg->mMaximum>0 && m>bgg->mMaximum)
 		  continue;
 		mfact = dfactorial(m);
@@ -942,6 +950,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         /* Compute fields */
         Br = Bphi = B[2] = 0;
         for (ns=0; ns<2; ns++) {
+	  double mfactor;
           /* ns=0 => normal, ns=1 => skew */
           if (bggData[ns]) {
             if ((bggData[ns]->xMax>0 && fabs(x)>bggData[ns]->xMax) &&
@@ -950,6 +959,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
             for (im=0; im<bggData[ns]->nm; im++) {
               double mfact, term, sin_mphi, cos_mphi;
               m = bggData[ns]->m[im];
+	      mfactor = 1;
+	      if (m<4)
+		mfactor = bgg->multipoleFactor[m];
               if (bgg->mMaximum>0 && m>bgg->mMaximum)
                 continue;
               mfact = dfactorial(m);
@@ -1007,11 +1019,15 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         Br = Bphi = B[2] = 0;
         Br = Bphi = B[2] = 0;
         for (ns=0; ns<2; ns++) {
+	  double mfactor;
           /* ns=0 => normal, ns=1 => skew */
           if (bggData[ns]) {
             for (im=0; im<bggData[ns]->nm; im++) {
               double mfact, term, sin_mphi, cos_mphi;
               m = bggData[ns]->m[im];
+	      mfactor = 1;
+	      if (m<4)
+		mfactor = bgg->multipoleFactor[m];
               if (bgg->mMaximum>0 && m>bgg->mMaximum)
                 continue;
               mfact = dfactorial(m);
