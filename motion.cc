@@ -1125,9 +1125,9 @@ void derivatives_mapSolenoid(
   
   /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
   Pp = qp+3;
-  Pp[0] = P[1]*BOverGamma[2]-P[2]*BOverGamma[1];
-  Pp[1] = P[2]*BOverGamma[0]-P[0]*BOverGamma[2];
-  Pp[2] = P[0]*BOverGamma[1]-P[1]*BOverGamma[0]; 
+  Pp[0] = -(P[1]*BOverGamma[2]-P[2]*BOverGamma[1]);
+  Pp[1] = -(P[2]*BOverGamma[0]-P[0]*BOverGamma[2]);
+  Pp[2] = -(P[0]*BOverGamma[1]-P[1]*BOverGamma[0]);
   /* Since the field components and momenta are in the lab frame, 
    * I don't need to perform a rotation of the forces. 
    */
