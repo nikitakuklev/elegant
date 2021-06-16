@@ -50,6 +50,8 @@ Here is a summary of what's changed since release 2021.1.  Historical change log
 \item Beam moments computations for \verb|BGGEXP| have been improved to use a tracking-based method for
   determination of the diffusion matrix. This can be turned off by setting \verb|tracking_based_diffusion_matrix_particles|
   to \verb|0| in the \verb|moments_output| command.
+\item The \verb|MAPSOLENOID| element contained a global sign error in using the magnetic fields. To restore the 
+  previous (incorrect) behavior, multiply the \verb|FACTOR| parameter by -1.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
