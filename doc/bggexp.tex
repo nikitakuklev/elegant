@@ -99,6 +99,11 @@ nor is the setup of rf cavities for storage rings via the \verb|rf_setup| comman
   Note that these values are multiplied by the \verb|STRENGTH| factor before being applied to the beam.
 \end{enumerate}
 
+In addition to the \verb|STRENGTH| factor, there are five parameters that can be used to scale multipoles
+of different orders: \verb|FACTOR0|, \verb|FACTOR1|, \verb|FACTOR2|, \verb|FACTOR3|, and \verb|FACTOR4| scale the
+solenoidal, dipolar, quadrupolar, sextupolar, and octupolar fields, respectively.
+Note that in a real magnet, it is not necessarily possible to scale these fields fully independently.
+
 If \verb|IS_BEND| is non-zero, the magnet is assumed to be a bending magnet, in which case additional
 parameters are required.
 \begin{itemize}
