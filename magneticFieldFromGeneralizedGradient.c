@@ -24,6 +24,9 @@ static STORED_BGGEXP_DATA *storedBGGExpData = NULL;
 static long nBGGExpDataSets = 0;
 static htab *fileHashTable = NULL;
 
+long computeGGEMagneticFields(double *Bx, double *By, double *Bz, 
+                              double x, double y, long iz, BGGEXP *bgg, STORED_BGGEXP_DATA *bggData[2], long igLimit[2]);
+
 #define BUFSIZE 16834
 
 long addBGGExpData(char *filename, char *nameFragment, short skew)
@@ -196,7 +199,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   long ip, ig, im, iz, irow, m, igLimit[2], ns, nz;
   /* long izLast; */
   STORED_BGGEXP_DATA *bggData[2];
-  double ds, dz, x, y, xp, yp, delta, s, r, phi, denom;
+  double ds, dz, x, y, xp, yp, delta, s, phi, denom;
   /* double gamma; */
   double step,  length;
   TRACKING_CONTEXT tcontext;
@@ -461,6 +464,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       x -= 0.5*step*bgg->zInterval*px*denom;
       y -= 0.5*step*bgg->zInterval*py*denom;
       s -= 0.5*step*bgg->zInterval*(1.0 + delta)*denom;
+
      /* Integrate through the magnet */
       for (iz=irow=0; iz<bggData[0]->nz; iz+=bgg->zInterval) {
 #if !USE_MPI
@@ -499,7 +503,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
               double mfact, term, rDeriv, phiDeriv, sin_m1phi, cos_m1phi, sin_mphi, cos_mphi;
               m = bggData[ns]->m[im];
               mfactor = 1;
-              if (m<4)
+              if (m<5)
                 mfactor = bgg->multipoleFactor[m];
               if (bgg->mMaximum>0 && m>bgg->mMaximum)
                 continue;
@@ -601,7 +605,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 		double mfact, term, rDeriv, phiDeriv, sin_m1phi, cos_m1phi, sin_mphi, cos_mphi;
 		m = bggData[ns]->m[im];
 		mfactor = 1;
-		if (m<4)
+		if (m<5)
 		  mfactor = bgg->multipoleFactor[m];
 		if (bgg->mMaximum>0 && m>bgg->mMaximum)
 		  continue;
@@ -696,53 +700,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         if (bgg->synchRad || bgg->SDDSpo) {
 	  ds = step*bgg->zInterval*(1.0 + delta)*denom;
 	  /* compute Bx, By */
-	  Bx = bgg->Bx;
-          By = bgg->By;
-
-	  for (ns=0; ns<2; ns++) {
-	    double mfactor;
-	    /* ns=0 => normal, ns=1 => skew */
-	    if (bggData[ns]) {
-	      for (im=0; im<bggData[ns]->nm; im++) {
-		double mfact, term, sin_mphi, cos_mphi;
-		m = bggData[ns]->m[im];
-		mfactor = 1;
-		if (m<4)
-		  mfactor = bgg->multipoleFactor[m];
-		if (bgg->mMaximum>0 && m>bgg->mMaximum)
-		  continue;
-		mfact = dfactorial(m);
-		sin_mphi = sin(m*phi);
-		cos_mphi = cos(m*phi);
-		if (ns==0) {
-		  /* normal */
-		  for (ig=0; ig<igLimit[ns]; ig++) {
-		    term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
-		    Bx += term*( (2*ig+m)*cos_phi*sin_mphi - m*sin_phi*cos_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
-		    By += term*( (2*ig+m)*sin_phi*sin_mphi + m*cos_phi*cos_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
-		  }
-		} else {
-		  /* skew */
-		  if (m==0) {
-		    for (ig=1; ig<igLimit[ns]; ig++) {
-		      term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m));
-		      Bx += term*( (2*ig+m)*cos_phi*cos_mphi + m*sin_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
-		      By += term*( (2*ig+m)*sin_phi*cos_mphi - m*cos_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
-		    } 
-		  } else {
-		    for (ig=0; ig<igLimit[ns]; ig++) {
-		      term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
-		      Bx += term*( (2*ig+m)*cos_phi*cos_mphi + m*sin_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
-		      By += term*( (2*ig+m)*sin_phi*cos_mphi - m*cos_phi*sin_mphi )*bggData[ns]->Cmn[im][ig][iz]*mfactor;
-                    }
-		  }
-		}
-	      }
-            }
-          }
-          Bx *= bgg->strength;
-          By *= bgg->strength;
-          Bz = bgg->strength*(dAy_dx - dAx_dy);
+          computeGGEMagneticFields(&Bx, &By, &Bz, x, y, iz, bgg, bggData, igLimit);
+          
           if (bgg->synchRad) {
             double deltaTemp, B2, F;
             /* This is only valid for ultra-relatistic particles that radiate a small fraction of its energy in any step */
@@ -856,7 +815,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     }
   } else { 
     /* Non-symplectic */
-    double B[3], p[3], Bphi, Br, B2Max, pErr[3];
+    double B[3], p[3], B2Max, pErr[3];
     double pOrig;
     double xpTemp, ypTemp, xpNew, ypNew;
     double xTemp, yTemp, xNew, yNew, preFactorDz, deltaTemp;
@@ -923,7 +882,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       /* Integrate through the magnet */
       B[0] = B[1] = B[2] = 0;
       isLost = 0;
-      for (iz=irow=0; iz<nz-1; iz+=bgg->zInterval) {
+      for (iz=irow=0; iz<nz-1 && !isLost; iz+=bgg->zInterval) {
+        if ((isLost += computeGGEMagneticFields(&B[0], &B[1], &B[2], x, y, iz, bgg, bggData, igLimit)))
+          break;
 	denom = sqrt(1 + sqr(xp) + sqr(yp));
 	p[2] = pCentral*(1+delta)/denom;
 	p[0] = xp*p[2];
@@ -947,64 +908,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
 #endif
-        r = sqrt(sqr(x)+sqr(y));
-        phi = atan2(y, x);
+        /* r = sqrt(sqr(x)+sqr(y)); */
+        /* phi = atan2(y, x); */
 
-        /* Compute fields */
-        Br = Bphi = B[2] = 0;
-        for (ns=0; ns<2; ns++) {
-	  double mfactor;
-          /* ns=0 => normal, ns=1 => skew */
-          if (bggData[ns]) {
-            if ((bggData[ns]->xMax>0 && fabs(x)>bggData[ns]->xMax) &&
-                (bggData[ns]->yMax>0 && fabs(y)>bggData[ns]->yMax))
-              isLost = 1;
-            for (im=0; im<bggData[ns]->nm; im++) {
-              double mfact, term, sin_mphi, cos_mphi;
-              m = bggData[ns]->m[im];
-	      mfactor = 1;
-	      if (m<4)
-		mfactor = bgg->multipoleFactor[m];
-              if (bgg->mMaximum>0 && m>bgg->mMaximum)
-                continue;
-              mfact = dfactorial(m);
-              sin_mphi = sin(m*phi);
-              cos_mphi = cos(m*phi);
-              if (ns==0) {
-                /* normal */
-                for (ig=0; ig<igLimit[ns]; ig++) {
-                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-                  B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*sin_mphi*mfactor;
-                  term *= bggData[ns]->Cmn[im][ig][iz];
-                  Br   += term*(2*ig+m)*sin_mphi*mfactor;
-                  Bphi += m*term*cos_mphi*mfactor;
-                }
-              } else {
-                /* skew */
-                if (m==0) {
-		  B[2] += bggData[ns]->dCmn_dz[im][0][iz]*mfactor;  // on-axis Bz from m=ig=0 term
-		  for (ig=1; ig<igLimit[ns]; ig++) {
-		    term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*mfactor;
-		    Br   += term*(2*ig+m)*bggData[ns]->Cmn[im][ig][iz]*mfactor;
-		  }
-		} else {
-		  for (ig=0; ig<igLimit[ns]; ig++) {
-		    term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*cos_mphi*mfactor;
-		    term *= bggData[ns]->Cmn[im][ig][iz];
-		    Br   += term*(2*ig+m)*cos_mphi*mfactor;
-		    Bphi -= m*term*sin_mphi*mfactor;
-		  }
-                }
-              }
-            }
-          }
-        }
-        B[0] = (bgg->Bx + (Br*cos(phi) - Bphi*sin(phi)))*bgg->strength;
-        B[1] = (bgg->By + (Br*sin(phi) + Bphi*cos(phi)))*bgg->strength;
-        B[2] *= bgg->strength;
-        
 	dz = dz*bgg->zInterval;
 	preFactorDz = -dz*particleCharge*particleRelSign/(pCentral*particleMass*c_mks*(1.0+delta));
 	preFactorDz =  preFactorDz*sqrt(1.0 + xp*xp + yp*yp);
@@ -1015,65 +921,17 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 	ypTemp = yp + preFactorDz*( ((1.0+yp*yp)*B[0] - xp*B[2]) - xp*yp*B[1] );
 	ds = dz*sqrt(1+sqr(xp)+sqr(yp));
 
-        r = sqrt(sqr(xTemp)+sqr(yTemp));
-        phi = atan2(yTemp, xTemp);
+        /* r = sqrt(sqr(xTemp)+sqr(yTemp)); */
+        /* phi = atan2(yTemp, xTemp); */
 
         /* Compute fields at next z location */
-        Br = Bphi = B[2] = 0;
-        Br = Bphi = B[2] = 0;
-        for (ns=0; ns<2; ns++) {
-	  double mfactor;
-          /* ns=0 => normal, ns=1 => skew */
-          if (bggData[ns]) {
-            for (im=0; im<bggData[ns]->nm; im++) {
-              double mfact, term, sin_mphi, cos_mphi;
-              m = bggData[ns]->m[im];
-	      mfactor = 1;
-	      if (m<4)
-		mfactor = bgg->multipoleFactor[m];
-              if (bgg->mMaximum>0 && m>bgg->mMaximum)
-                continue;
-              mfact = dfactorial(m);
-              sin_mphi = sin(m*phi);
-              cos_mphi = cos(m*phi);
-              if (ns==0) {
-                /* normal */
-                for (ig=0; ig<igLimit[ns]; ig++) {
-                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-                  B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz+1]*r*sin_mphi*mfactor;
-                  term *= bggData[ns]->Cmn[im][ig][iz+1];
-                  Br   += term*(2*ig+m)*sin_mphi*mfactor;
-                  Bphi += m*term*cos_mphi*mfactor;
-                }
-              } else {
-                /* skew */
-		if (m==0) {
-		  B[2] += bggData[ns]->dCmn_dz[im][0][iz+1]*cos_mphi*mfactor;  // on-axis Bz from m=ig=0 term
-		  for (ig=1; ig<igLimit[ns]; ig++) {
-		    term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz+1]*r*mfactor;
-		    Br   += term*(2*ig+m)*bggData[ns]->Cmn[im][ig][iz+1]*mfactor;
-		  }
-		} else {
-		  for (ig=0; ig<igLimit[ns]; ig++) {
-		    term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-		    B[2] += term*bggData[ns]->dCmn_dz[im][ig][iz+1]*r*cos_mphi*mfactor;
-		    term *= bggData[ns]->Cmn[im][ig][iz+1];
-		    Br   += term*(2*ig+m)*cos_mphi*mfactor;
-		    Bphi -= m*term*sin_mphi*mfactor;
-		  }
-		}
-              }
-            }
-          }
-        }
-        B[0] = (Br*cos(phi) - Bphi*sin(phi))*bgg->strength;
-        B[1] = (Br*sin(phi) + Bphi*cos(phi))*bgg->strength;
-        B[2] *= bgg->strength;
-
+        if ((isLost += computeGGEMagneticFields(&B[0], &B[1], &B[2], xTemp, yTemp, iz+1, bgg, bggData, igLimit)))
+          break;
+        
 	dz = dz*bgg->zInterval;
 	preFactorDz = -dz*particleCharge*particleRelSign/(pCentral*particleMass*c_mks*(1.0+delta));
 	preFactorDz =  preFactorDz*sqrt(1.0 + xpTemp*xpTemp + ypTemp*ypTemp);
+
 	/* Apply correction step */
 	xNew = 0.5*(x + xTemp + dz*xpTemp);
 	yNew = 0.5*(y + yTemp + dz*ypTemp);
@@ -1215,3 +1073,70 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   return np;
 }
 
+long computeGGEMagneticFields(double *Bx, double *By, double *Bz, 
+                              double x, double y, long iz, BGGEXP *bgg, STORED_BGGEXP_DATA *bggData[2], long igLimit[2])
+{
+  double Br, Bphi, mfactor;
+  long isLost, ns, im, m, ig;
+  double r, phi;
+
+  Br = Bphi = *Bx = *By = *Bz = 0;
+  isLost = 0;
+  r = sqrt(sqr(x)+sqr(y));
+  phi = atan2(y, x);
+
+  for (ns=0; ns<2; ns++) {
+    /* ns=0 => normal, ns=1 => skew */
+    if (bggData[ns]) {
+      if ((bggData[ns]->xMax>0 && fabs(x)>bggData[ns]->xMax) &&
+          (bggData[ns]->yMax>0 && fabs(y)>bggData[ns]->yMax)) {
+        isLost = 1;
+        break;
+      }
+      for (im=0; im<bggData[ns]->nm; im++) {
+        double mfact, term, sin_mphi, cos_mphi;
+        m = bggData[ns]->m[im];
+        mfactor = 1;
+        if (m<5)
+          mfactor = bgg->multipoleFactor[m];
+        if (bgg->mMaximum>0 && m>bgg->mMaximum)
+          continue;
+        mfact = dfactorial(m);
+        sin_mphi = sin(m*phi);
+        cos_mphi = cos(m*phi);
+        if (ns==0) {
+          /* normal */
+          for (ig=0; ig<igLimit[ns]; ig++) {
+            term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+            *Bz += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*sin_mphi*mfactor;
+            term *= bggData[ns]->Cmn[im][ig][iz];
+            Br   += term*(2*ig+m)*sin_mphi*mfactor;
+            Bphi += m*term*cos_mphi*mfactor;
+          }
+        } else {
+          /* skew */
+          if (m==0) {
+            *Bz += bggData[ns]->dCmn_dz[im][0][iz]*mfactor;  // on-axis Bz from m=ig=0 term
+            for (ig=1; ig<igLimit[ns]; ig++) {
+              term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+              *Bz += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*mfactor;
+              Br   += term*(2*ig+m)*bggData[ns]->Cmn[im][ig][iz]*mfactor;
+            }
+          } else {
+            for (ig=0; ig<igLimit[ns]; ig++) {
+              term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+              *Bz += term*bggData[ns]->dCmn_dz[im][ig][iz]*r*cos_mphi*mfactor;
+              term *= bggData[ns]->Cmn[im][ig][iz];
+              Br   += term*(2*ig+m)*cos_mphi*mfactor;
+              Bphi -= m*term*sin_mphi*mfactor;
+            }
+          }
+        }
+      }
+    }
+  }
+  *Bx = (bgg->Bx + (Br*cos(phi) - Bphi*sin(phi)))*bgg->strength;
+  *By = (bgg->By + (Br*sin(phi) + Bphi*cos(phi)))*bgg->strength;
+  *Bz *= bgg->strength;
+  return isLost;
+}

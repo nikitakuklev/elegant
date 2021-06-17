@@ -1668,7 +1668,10 @@ void BRAT_B_field_permuted(
 void BRAT_B_field(double *F, double *Qg)
 {
   long ix, iy, iz, j, outside;
-  double fx, fy, fz, val_z1, val_z2, f[3], xSlope;
+  double fx, fy, fz, val_z1, val_z2, f[3];
+#ifndef BRAT_PROGRAM
+  double xSlope;
+#endif
   double x, y, z, derivSign=1;
   double Q[3];
 

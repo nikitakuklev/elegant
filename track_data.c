@@ -3381,6 +3381,7 @@ PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"FACTOR1", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.multipoleFactor[1]), NULL, 1.0, 0, "factor by which to multiply field from m=1 (dipole) terms"},
     {"FACTOR2", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.multipoleFactor[2]), NULL, 1.0, 0, "factor by which to multiply field from m=2 (quadrupole) terms"},
     {"FACTOR3", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.multipoleFactor[3]), NULL, 1.0, 0, "factor by which to multiply field from m=3 (sextupole) terms"},
+    {"FACTOR4", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.multipoleFactor[4]), NULL, 1.0, 0, "factor by which to multiply field from m=4 (octupole) terms"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dy), NULL, 0.0, 0, "misalignment"},

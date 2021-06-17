@@ -1124,7 +1124,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHVCOR_PARAMS 17
 #define N_BMAPXYZ_PARAMS 19
 #define N_BRAT_PARAMS 28
-#define N_BGGEXP_PARAMS 30
+#define N_BGGEXP_PARAMS 31
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 14
@@ -3072,7 +3072,7 @@ typedef struct {
   char *normalFilename;   /* filename for normal-orientation GG vs z */
   char *skewFilename;     /* filename for skew-orientation GG vs z */
   double strength;        /* multiply fields by a factor */
-  double multipoleFactor[4]; /* for solenoid, dipole, quadrupole, sextupole terms */
+  double multipoleFactor[5]; /* for solenoid, dipole, quadrupole, sextupole, octupole terms */
   double tilt;            /* roll angle */
   double dx, dy, dz;      /* misalignments */
   double Bx, By;          /* stray field */
