@@ -399,16 +399,18 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
     double magnet_s;
 
+    /*
     if (!bggData[0])
       bombElegantVA("No normal data supplied for BGGEXP %s in symplectic mode. Don't know what to do since skew has not been implemented.",
                     tcontext.elementName);
+    */
 
     scaleA = -bgg->strength*particleCharge*particleRelSign/(pCentral*particleMass*c_mks);  /** [factor in parentheses of a = (q/p_0)*A] **/
     /* Element body */
     for (ip=0; ip<np; ip++) {
 #if !USE_MPI
       if (bgg->SDDSpo && np<1000) {
-        if (!SDDS_StartPage(bgg->SDDSpo, bggData[0]->nz+1) ||
+        if (!SDDS_StartPage(bgg->SDDSpo, (bggData[0]? bggData[0]->nz : bggData[1]->nz) +1) ||
             !SDDS_SetParameters(bgg->SDDSpo, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                 "particleID", (long)(part[ip][6]), "pCentral", pCentral, NULL)) {
           SDDS_SetError("Problem setting up particle output page for BGGEXP");
