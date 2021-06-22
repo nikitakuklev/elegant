@@ -2551,7 +2551,11 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
       *F1 = bmapxyz->strength*(1+bmapxyz->fse)*Freturn[1];
       *F2 = bmapxyz->strength*(1+bmapxyz->fse)*Freturn[2];
     }
-    
+
+    *F1 *= bmapxyz->BFactor[0];
+    *F2 *= bmapxyz->BFactor[1];
+    *F0 *= bmapxyz->BFactor[2];
+
     /*
     if (!fpdeb) {
       fpdeb = fopen("bmapxyz.deb", "w");

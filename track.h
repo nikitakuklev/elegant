@@ -1122,9 +1122,9 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 15
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
-#define N_BMAPXYZ_PARAMS 19
+#define N_BMAPXYZ_PARAMS 22
 #define N_BRAT_PARAMS 28
-#define N_BGGEXP_PARAMS 31
+#define N_BGGEXP_PARAMS 34
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 14
@@ -3030,7 +3030,7 @@ typedef struct {
 typedef struct {
   double length;
   double dxError, dyError, dzError, tilt;
-  double fieldLength, strength, fse, accuracy;
+  double fieldLength, strength, fse, BFactor[3], accuracy;
   char *method, *filename;
   short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridExcess, singlePrecision;
   char *particleOutputFile;
@@ -3073,6 +3073,7 @@ typedef struct {
   char *skewFilename;     /* filename for skew-orientation GG vs z */
   double strength;        /* multiply fields by a factor */
   double multipoleFactor[5]; /* for solenoid, dipole, quadrupole, sextupole, octupole terms */
+  double BFactor[3];         /* Bx, By, Bz factors */
   double tilt;            /* roll angle */
   double dx, dy, dz;      /* misalignments */
   double Bx, By;          /* stray field */

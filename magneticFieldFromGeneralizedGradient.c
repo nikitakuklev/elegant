@@ -990,9 +990,9 @@ long computeGGEMagneticFields(double *Bx, double *By, double *Bz,
       }
     }
   }
-  *Bx = (bgg->Bx + (Br*cos(phi) - Bphi*sin(phi)))*bgg->strength;
-  *By = (bgg->By + (Br*sin(phi) + Bphi*cos(phi)))*bgg->strength;
-  *Bz *= bgg->strength;
+  *Bx = ((bgg->Bx + (Br*cos(phi) - Bphi*sin(phi)))*bgg->strength)*bgg->BFactor[0];
+  *By = ((bgg->By + (Br*sin(phi) + Bphi*cos(phi)))*bgg->strength)*bgg->BFactor[1];
+  *Bz *= bgg->strength*bgg->BFactor[2];
   return isLost;
 }
 
