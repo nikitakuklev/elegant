@@ -378,11 +378,10 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
       for (i=0; i<_control->n_indices; i++)
         printf("%4ld ", _control->index[i]);
       fflush(stdout);
-      printf("\nvalues advanced: ");
+      printf("\nvalues advanced: \n");
       fflush(stdout);
       for (i=0; i<_control->n_elements_to_vary; i++)
-        printf("%e ", _control->varied_quan_value[i]);
-      fflush(stdout);
+        printf("        %s: %e\n", _control->varied_quan_name[i], _control->varied_quan_value[i]);
       printf("\n");
       fflush(stdout);
       assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
