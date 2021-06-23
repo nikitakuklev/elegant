@@ -563,7 +563,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
             /* It only uses Bx, By and ignores opening angle effects ~1/\gamma */
             B2 = sqr(Bx) + sqr(By);
             deltaTemp = delta - radCoef*pCentral*sqr(1.0+delta)*B2*ds;
-            F = isrCoef*pCentral*(1.0 + delta)*sqrt(ds)*pow(B2, 3./4.);
+            F = isrCoef*pCentral*sqr(1.0 + delta)*sqrt(ds)*pow(B2, 3./4.);
             if (bgg->isr && np!=1)
               deltaTemp += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
             if (sigmaDelta2)
@@ -819,7 +819,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           if (B2>B2Max)
             B2Max = B2;
 	  deltaTemp = delta - radCoef*pCentral*sqr(1.0+delta)*B2*ds;
-          F = isrCoef*pCentral*(1.0 + delta)*sqrt(ds)*pow(B2, 3./4.);
+          F = isrCoef*pCentral*sqr(1.0 + delta)*sqrt(ds)*pow(B2, 3./4.);
           if (bgg->isr && np!=1)
             deltaTemp += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
           if (sigmaDelta2)
