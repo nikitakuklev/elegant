@@ -50,6 +50,8 @@ Here is a summary of what's changed since release 2021.1.  Historical change log
 \item Beam moments computations for \verb|BGGEXP| have been improved to use a tracking-based method for
   determination of the diffusion matrix. This can be turned off by setting \verb|tracking_based_diffusion_matrix_particles|
   to \verb|0| in the \verb|moments_output| command.
+\item Radiation calculations for \verb|BGGEXP| have been changed to correct the dependence of energy loss and
+  energy spread on energy offset.
 \item The \verb|MAPSOLENOID| element contained a global sign error in using the magnetic fields. To restore the 
   previous (incorrect) behavior, multiply the \verb|FACTOR| parameter by -1.
 \end{itemize}
@@ -68,6 +70,9 @@ Here is a summary of what's changed since release 2021.1.  Historical change log
 \item The \verb|BGGEXP| element has five new parameters, \verb|FACTOR0|, \verb|FACTOR1|, \verb|FACTOR2|, 
   \verb|FACTOR3|, and \verb|FACTOR4| which permit scaling the solenoidal, dipolar, quadrupolar, sextupolar, and
   octupolar field components independently.
+\item The \verb|BGGEXP| and \verb|BMXYZ| elements have three new parameters, \verb|BXFACTOR|, \verb|BYFACTOR|,
+  and \verb|BZFACTOR|, which allow multiplying the indicated field components by the given factors.
+  This may be unphysical, but can provide helpful diagnostics.
 \end{itemize}
 
 \subsection{New and Modified Commands}
