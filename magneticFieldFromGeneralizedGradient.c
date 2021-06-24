@@ -568,6 +568,10 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
               deltaTemp += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
             if (sigmaDelta2)
               *sigmaDelta2 += sqr(F);
+            px *= (1+deltaTemp)/(1+delta);
+            py *= (1+deltaTemp)/(1+delta);
+            ux *= (1+deltaTemp)/(1+delta);
+            uy *= (1+deltaTemp)/(1+delta);
             delta = deltaTemp;
           }
         }
