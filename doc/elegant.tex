@@ -51,7 +51,8 @@ Here is a summary of what's changed since release 2021.1.  Historical change log
   determination of the diffusion matrix. This can be turned off by setting \verb|tracking_based_diffusion_matrix_particles|
   to \verb|0| in the \verb|moments_output| command.
 \item Radiation calculations for \verb|BGGEXP| have been changed to correct the dependence of energy loss and
-  energy spread on energy offset.
+  energy spread on energy offset, as well as to correctly model direct effects on transverse momenta when the
+  symplectic integrator is used.
 \item The \verb|MAPSOLENOID| element contained a global sign error in using the magnetic fields. To restore the 
   previous (incorrect) behavior, multiply the \verb|FACTOR| parameter by -1.
 \end{itemize}
