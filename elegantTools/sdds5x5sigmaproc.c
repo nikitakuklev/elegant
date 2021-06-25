@@ -405,7 +405,7 @@ int main(
     for (iSet=0; iSet<nErrorSets; iSet++) {
       double beta[2], alpha[2], eta[2], etap[2], emit[2];
       double Sbeta[4][4];
-      short goodResult;
+      short goodResult, trialLimit=100;
 
       goodResult = 0;
       do {
@@ -421,19 +421,20 @@ int main(
         goodResult = 1;
         for (i=0; i<5; i++) {
           if (Sij[i][i]<0) {
-            fprintf(stderr, "Sij[%ld][%ld] = %le, <0 !\n", i, i, Sij[i][i]);
             goodResult = 0;
             break;
           }
           for (j=0; j<5; j++) {
             if (isnan(Sij[i][j]) || isinf(Sij[i][j])) {
-              fprintf(stderr, "Sij[%ld][%ld] = %le !\n", i, j, Sij[i][j]);
               goodResult = 0;
               break;
             }
           }
         }
-      } while (!goodResult);
+        trialLimit--;
+      } while (trialLimit>0 && !goodResult);
+      if (!goodResult)
+        SDDS_Bomb("Failed to find any good solutions after 100 trials");
 
       for (i=0; i<nConfigs; i++) {
         S11FitSum[i] += S11Fit[i];
