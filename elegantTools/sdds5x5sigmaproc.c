@@ -105,6 +105,7 @@ USAGE,
 "    to use in estimating errors in the sigma-matrix determination.",
 "    Error levels are given by columns S11StDev, S33StDev, and S13StDev, giving"
 "    the standard deviation of the measured S11, S33, and S13 values for a given row.",
+"    If set to zero (the default), then errors are ignored.",
 "-limitMode is used to specify what to do if a randomized measurement lies",
 "    too far from the fit.",
 "-deviationLimit is used to define what \"too far\" from the fit means.",
@@ -259,8 +260,11 @@ int main(
     seed = (int)time(NULL);
   random_1(-seed);
 
-  if (nErrorSets<=2)  
-    SDDS_Bomb("number of error sets must be >2");
+  if (nErrorSets>0) {
+    if (nErrorSets<=2)  
+      SDDS_Bomb("number of error sets must be >2 if nonzero");
+  } else
+    nErrorSets = 1; /* no errors */
 
   if (!SDDS_InitializeInput(&SDDSin, input))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -281,51 +285,55 @@ int main(
       !SDDS_DefineSimpleParameter(&SDDSout, "S26", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "S36", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "S46", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S11Sigma", "m$a2$n", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S12Sigma", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S22Sigma", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S66Sigma", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S33Sigma", "m$a2$n", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S34Sigma", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S44Sigma", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S13Sigma", "m$a2$n", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S14Sigma", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S23Sigma", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S24Sigma", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S16Sigma", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S26Sigma", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S36Sigma", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "S46Sigma", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "goodFits", "", SDDS_LONG) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "averageFitPoints", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "ex", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "ey", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "Sdelta", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "exSigma", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "eySigma", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "SdeltaSigma", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "betax", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "betay", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "betaxSigma", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "betaySigma", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "alphax", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "alphay", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "alphaxSigma", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "alphaySigma", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "etax", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "etay", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "etaxSigma", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "etaySigma", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "etaxp", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(&SDDSout, "etayp", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "etaxpSigma", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(&SDDSout, "etaypSigma", "", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "S11Data", "m$a2$n", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "S11Fit", "m$a2$n", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "S33Data", "m$a2$n", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "S33Fit", "m$a2$n", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "S13Data", "m$a2$n", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "S13Fit", "m$a2$n", SDDS_DOUBLE)) {
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+
+  if (nErrorSets>2 &&
+      (!SDDS_DefineSimpleParameter(&SDDSout, "S11Sigma", "m$a2$n", SDDS_DOUBLE) ||
+       !SDDS_DefineSimpleParameter(&SDDSout, "S12Sigma", "m", SDDS_DOUBLE) ||
+       !SDDS_DefineSimpleParameter(&SDDSout, "S22Sigma", "", SDDS_DOUBLE) ||
+       !SDDS_DefineSimpleParameter(&SDDSout, "S66Sigma", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S33Sigma", "m$a2$n", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S34Sigma", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S44Sigma", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S13Sigma", "m$a2$n", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S14Sigma", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S23Sigma", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S24Sigma", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S16Sigma", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S26Sigma", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S36Sigma", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S46Sigma", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "goodFits", "", SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "averageFitPoints", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "exSigma", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "eySigma", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "SdeltaSigma", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "betaxSigma", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "betaySigma", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "alphaxSigma", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "alphaySigma", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "etaxSigma", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "etaySigma", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "etaxpSigma", "", SDDS_DOUBLE) ||
+       !SDDS_DefineSimpleParameter(&SDDSout, "etaypSigma", "", SDDS_DOUBLE))) {
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
 
@@ -340,9 +348,10 @@ int main(
       SDDS_GetColumnIndex(&SDDSin, "R26")<0)
     SDDS_Bomb("input file missing required quantities. Need S11, S33, S13, R11, R12, R33, R34, R16, and R26.");
   
-  if (SDDS_GetColumnIndex(&SDDSin, "S11StDev")<0 ||
-      SDDS_GetColumnIndex(&SDDSin, "S33StDev")<0 ||
-      SDDS_GetColumnIndex(&SDDSin, "S13StDev")<0 )
+  if (nErrorSets>2 && 
+      (SDDS_GetColumnIndex(&SDDSin, "S11StDev")<0 ||
+       SDDS_GetColumnIndex(&SDDSin, "S33StDev")<0 ||
+       SDDS_GetColumnIndex(&SDDSin, "S13StDev")<0))
     SDDS_Bomb("input file missing required quantities. Need S11StDev, S33StDev, and S13StDev.");
   
   if (!SDDS_WriteLayout(&SDDSout))
@@ -355,6 +364,9 @@ int main(
 
   while (SDDS_ReadTable(&SDDSin)>0) {
     nConfigs = SDDS_CountRowsOfInterest(&SDDSin);
+    if (nConfigs<4)
+      continue;
+
     if (!(R11 = SDDS_GetColumn(&SDDSin, "R11")) ||
         !(R12 = SDDS_GetColumn(&SDDSin, "R12")) ||
         !(R33 = SDDS_GetColumn(&SDDSin, "R33")) ||
@@ -368,14 +380,12 @@ int main(
         !(S13 = SDDS_GetColumn(&SDDSin, "S13")) )
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
-    if (!(S11StDev = SDDS_GetColumn(&SDDSin, "S11StDev")) || 
-        !(S33StDev = SDDS_GetColumn(&SDDSin, "S33StDev")) ||
-        !(S13StDev = SDDS_GetColumn(&SDDSin, "S13StDev")) )
+    if (nErrorSets>2 &&
+        (!(S11StDev = SDDS_GetColumn(&SDDSin, "S11StDev")) || 
+         !(S33StDev = SDDS_GetColumn(&SDDSin, "S33StDev")) ||
+         !(S13StDev = SDDS_GetColumn(&SDDSin, "S13StDev"))))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
-    if (nConfigs<4)
-      continue;
-
     if (!SDDS_StartPage(&SDDSout, nConfigs) || !SDDS_CopyColumns(&SDDSout, &SDDSin)) 
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
@@ -405,19 +415,37 @@ int main(
     for (iSet=0; iSet<nErrorSets; iSet++) {
       double beta[2], alpha[2], eta[2], etap[2], emit[2];
       double Sbeta[4][4];
-      short goodResult, trialLimit=100;
+      short goodResult, trialLimit;
+
+      for (i=0; i<4; i++)
+        for (j=0; j<4; j++)
+          Sbeta[i][j] = 0;
 
       goodResult = 0;
+      if (nErrorSets>2)
+        trialLimit = 100;
+      else
+        trialLimit = 1;
       do {
         for (iConfig=0; iConfig<nConfigs; iConfig++) {
-          S11e[iConfig] = S11[iConfig] + gauss_rn_lim(0.0, S11StDev[iConfig], 2, random_1);
-          S13e[iConfig] = S13[iConfig] + gauss_rn_lim(0.0, S13StDev[iConfig], 2, random_1);
-          S33e[iConfig] = S33[iConfig] + gauss_rn_lim(0.0, S33StDev[iConfig], 2, random_1);
+          if (nErrorSets>2) {
+            S11e[iConfig] = S11[iConfig] + gauss_rn_lim(0.0, S11StDev[iConfig], 2, random_1);
+            S13e[iConfig] = S13[iConfig] + gauss_rn_lim(0.0, S13StDev[iConfig], 2, random_1);
+            S33e[iConfig] = S33[iConfig] + gauss_rn_lim(0.0, S33StDev[iConfig], 2, random_1);
+          } else {
+            S11e[iConfig] = S11[iConfig];
+            S13e[iConfig] = S13[iConfig];
+            S33e[iConfig] = S33[iConfig];
+          }
         }
 
-        solveForSigmaMatrix(1, 1, S11e, S11StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S11Fit, energySpread);
-        solveForSigmaMatrix(3, 3, S33e, S33StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S33Fit, energySpread);
-        solveForSigmaMatrix(1, 3, S13e, S13StDev, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S13Fit, energySpread);
+        for (i=0; i<5; i++)
+          for (j=0; j<5; j++)
+            Sij[i][j] = -1;
+
+        solveForSigmaMatrix(1, 1, S11e, nErrorSets>2?S11StDev:NULL, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S11Fit, energySpread);
+        solveForSigmaMatrix(3, 3, S33e, nErrorSets>2?S33StDev:NULL, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S33Fit, energySpread);
+        solveForSigmaMatrix(1, 3, S13e, nErrorSets>2?S13StDev:NULL, R11, R12, R33, R34, R16, R26, nConfigs, Sij, S13Fit, energySpread);
         goodResult = 1;
         for (i=0; i<5; i++) {
           if (Sij[i][i]<0) {
@@ -434,7 +462,7 @@ int main(
         trialLimit--;
       } while (trialLimit>0 && !goodResult);
       if (!goodResult)
-        SDDS_Bomb("Failed to find any good solutions after 100 trials");
+        SDDS_Bomb("Failed to find any good solutions.");
 
       for (i=0; i<nConfigs; i++) {
         S11FitSum[i] += S11Fit[i];
@@ -489,28 +517,34 @@ int main(
     if (!SDDS_SetParameters
         (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
          "ex", emitSum[0]/nErrorSets, 
-         "exSigma", sqrt(emitSum2[0]/nErrorSets-sqr(emitSum[0]/nErrorSets)),
          "ey", emitSum[1]/nErrorSets, 
-         "eySigma", sqrt(emitSum2[1]/nErrorSets-sqr(emitSum[1]/nErrorSets)),
          "betax", betaSum[0]/nErrorSets, 
-         "betaxSigma", sqrt(betaSum2[0]/nErrorSets-sqr(betaSum[0]/nErrorSets)),
          "betay", betaSum[1]/nErrorSets, 
-         "betaySigma", sqrt(betaSum2[1]/nErrorSets-sqr(betaSum[1]/nErrorSets)),
          "alphax", alphaSum[0]/nErrorSets, 
-         "alphaxSigma", sqrt(alphaSum2[0]/nErrorSets-sqr(alphaSum[0]/nErrorSets)),
          "alphay", alphaSum[1]/nErrorSets, 
-         "alphaySigma", sqrt(alphaSum2[1]/nErrorSets-sqr(alphaSum[1]/nErrorSets)),
          "etax", etaSum[0]/nErrorSets,
-         "etaxSigma", sqrt(etaSum2[0]/nErrorSets-sqr(etaSum[0]/nErrorSets)),
          "etay", etaSum[1]/nErrorSets,
-         "etaySigma", sqrt(etaSum2[1]/nErrorSets-sqr(etaSum[1]/nErrorSets)),
          "etaxp", etapSum[0]/nErrorSets,
-         "etaxpSigma", sqrt(etapSum2[0]/nErrorSets-sqr(etapSum[0]/nErrorSets)),
          "etayp", etapSum[1]/nErrorSets,
-         "etaypSigma", sqrt(etapSum2[1]/nErrorSets-sqr(etapSum[1]/nErrorSets)),
          "Sdelta", sqrt(SijSum[4][4]/nErrorSets), 
-         "SdeltaSigma", sqrt(SijSum2[4][4]/nErrorSets-sqr(SijSum[4][4]/nErrorSets)),
          NULL)) 
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
+    if (nErrorSets>2 &&
+        !SDDS_SetParameters
+        (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+         "exSigma", sqrt(emitSum2[0]/nErrorSets-sqr(emitSum[0]/nErrorSets)),
+         "eySigma", sqrt(emitSum2[1]/nErrorSets-sqr(emitSum[1]/nErrorSets)),
+         "betaxSigma", sqrt(betaSum2[0]/nErrorSets-sqr(betaSum[0]/nErrorSets)),
+         "betaySigma", sqrt(betaSum2[1]/nErrorSets-sqr(betaSum[1]/nErrorSets)),
+         "alphaxSigma", sqrt(alphaSum2[0]/nErrorSets-sqr(alphaSum[0]/nErrorSets)),
+         "alphaySigma", sqrt(alphaSum2[1]/nErrorSets-sqr(alphaSum[1]/nErrorSets)),
+         "etaxSigma", sqrt(etaSum2[0]/nErrorSets-sqr(etaSum[0]/nErrorSets)),
+         "etaySigma", sqrt(etaSum2[1]/nErrorSets-sqr(etaSum[1]/nErrorSets)),
+         "etaxpSigma", sqrt(etapSum2[0]/nErrorSets-sqr(etapSum[0]/nErrorSets)),
+         "etaypSigma", sqrt(etapSum2[1]/nErrorSets-sqr(etapSum[1]/nErrorSets)),
+         "SdeltaSigma", sqrt(SijSum2[4][4]/nErrorSets-sqr(SijSum[4][4]/nErrorSets)),
+         NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
     if (!SDDS_SetParameters
@@ -519,7 +553,8 @@ int main(
          NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
-    if (!SDDS_SetParameters
+    if (nErrorSets>2 &&
+        !SDDS_SetParameters
         (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
          "S11Sigma", sqrt(SijSum2[0][0]/nErrorSets - sqr(SijSum[0][0]/nErrorSets)), 
          "S12Sigma", sqrt(SijSum2[0][1]/nErrorSets - sqr(SijSum[0][1]/nErrorSets)), 
@@ -533,7 +568,8 @@ int main(
          NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
-    if (!SDDS_SetParameters
+    if (nErrorSets>2 &&
+        !SDDS_SetParameters
         (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
          "S16Sigma", sqrt(SijSum2[0][4]/nErrorSets - sqr(SijSum[0][4]/nErrorSets)), 
          "S26Sigma", sqrt(SijSum2[1][4]/nErrorSets - sqr(SijSum[0][4]/nErrorSets)), 
@@ -547,7 +583,8 @@ int main(
          NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
-    if (!SDDS_SetParameters
+    if (nErrorSets>2 &&
+        !SDDS_SetParameters
         (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
          "S33Sigma", sqrt(SijSum2[2][2]/nErrorSets - sqr(SijSum[2][2]/nErrorSets)), 
          "S34Sigma", sqrt(SijSum2[2][3]/nErrorSets - sqr(SijSum[2][3]/nErrorSets)), 
@@ -562,7 +599,8 @@ int main(
          NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
-    if (!SDDS_SetParameters
+    if (nErrorSets>2 &&
+        !SDDS_SetParameters
         (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
          "S13Sigma", sqrt(SijSum2[0][2]/nErrorSets - sqr(SijSum[0][2]/nErrorSets)), 
          "S14Sigma", sqrt(SijSum2[0][3]/nErrorSets - sqr(SijSum[0][3]/nErrorSets)), 
@@ -577,13 +615,14 @@ int main(
          NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
-    if (!SDDS_SetParameters
+    if (nErrorSets>2 &&
+        !SDDS_SetParameters
         (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
          "S36Sigma", sqrt(SijSum2[2][4]/nErrorSets - sqr(SijSum[2][4]/nErrorSets)), 
          "S46Sigma", sqrt(SijSum2[3][4]/nErrorSets - sqr(SijSum[3][4]/nErrorSets)), 
          NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-
+    
     for (i=0; i<nConfigs; i++) {
       S11FitSum[i] /= nErrorSets;
       S13FitSum[i] /= nErrorSets;
@@ -597,7 +636,21 @@ int main(
         !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, S13FitSum, nConfigs, "S13Fit") ||
         !SDDS_WritePage(&SDDSout))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-
+    
+    free(R11);
+    free(R12);
+    free(R33);
+    free(R34);
+    free(R16);
+    free(R26);
+    free(S11);
+    free(S33);
+    free(S13);
+    if (nErrorSets>2) {
+      free(S11StDev);
+      free(S33StDev);
+      free(S13StDev);
+    }
     free(S11Fit);
     free(S33Fit);
     free(S13Fit);
@@ -680,8 +733,13 @@ void solveForSigmaMatrix(int i, int j,
 
   /* Setup covariance matrix */
   m_zero(K);
-  for (iConfig=0; iConfig<nConfigs; iConfig++) 
-    K->a[iConfig][iConfig] = 1/sqr(2*SStDev[iConfig]);
+  if (SStDev) {
+    for (iConfig=0; iConfig<nConfigs; iConfig++) 
+      K->a[iConfig][iConfig] = 1/sqr(2*SStDev[iConfig]);
+  } else {
+    for (iConfig=0; iConfig<nConfigs; iConfig++) 
+      K->a[iConfig][iConfig] = 1;
+  }
 
   for (iConfig=0; iConfig<nConfigs; iConfig++) {
     M->a[iConfig][0] = SMeasured[iConfig];
