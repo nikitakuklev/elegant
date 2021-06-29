@@ -119,8 +119,6 @@ NULL
 #define N_INCREMENT 10
 
 double solve_normal_form(MATRIX *F, MATRIX *sF, MATRIX *P, MATRIX *M, MATRIX *C, double *s2_fit);
-double solve_normal_form_opt(MATRIX *F, MATRIX *sF, MATRIX *P, MATRIX *M, MATRIX *C, double dev_limit,
-    long *n_used, double *s2_fit);
 double propagate_errors_for_emittance(double **Sigma, double **Covar);
 void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, long nConfigs, long equal_weights);
 double estimate_uncertainty(double *uncert, MATRIX *S, MATRIX *sS, MATRIX *R, MATRIX *s2, MATRIX *K, 
@@ -782,86 +780,6 @@ void solveForSigmaMatrix(int i, int j,
   return;
 }
 
-double solve_normal_form_opt(
-                             MATRIX *F,       /* Mx1 matrix of Fit coefficients (returned) */
-                             MATRIX *sF,      /* MxM matrix of errors in Fit coefficients (returned) */
-                             MATRIX *P,       /* NxM matrix of Parameters of fit (provided) */
-                             MATRIX *M,       /* Nx1 column matrix of Measured quantities (provided) */
-                             /* M = P.F is the equation being solved */
-                             MATRIX *K,      /* NxN inverse covariance matrix for Measured quantities.
-                                                K[i][j] = delta(i,j)/uncert[i]^2 */
-                             double dev_limit,/* limit on deviation for any point used in final fit */
-                             long *n_used,    /* number of points used in final fit (returned) */
-                             double *s2_fit  /* sigma^2 from fit (returned) */
-                             )
-{
-  long i, j, i_good;
-  double rms_error, error;
-  double *s2_fit2;
-  long *index, n_good, *good;
-  MATRIX *Pc, *Mc, *Kc;
-
-  rms_error = solve_normal_form(F, sF, P, M, K, s2_fit);
-
-  if (dev_limit==0) {
-    *n_used = M->n;
-    return(rms_error);
-  }
-
-  good = tmalloc(sizeof(*good)*M->n);
-  if (dev_limit<0)
-    dev_limit = -dev_limit*rms_error;
-  for (i=n_good=0; i<M->n; i++) {
-    error = fabs(sqrt(s2_fit[i]) - sqrt(M->a[i][0]));
-    if (dev_limit>error) {
-      n_good++;
-      good[i] = 1;
-    }
-    else {
-      s2_fit[i] = -1;  /* used to mark excluded points for caller */
-      good[i] = 0;
-    }
-  }
-  if (n_good==0) {
-    *n_used = 0;
-    free(good);
-    return(0.0);
-  }
-
-  m_alloc(&Pc, n_good, P->m);
-  m_alloc(&Mc, n_good, 1);
-  m_alloc(&Kc, n_good, n_good);
-  m_zero(Kc);
-  index = tmalloc(sizeof(int)*n_good);
-  s2_fit2 = tmalloc(sizeof(*s2_fit2)*n_good);
-
-  for (i=i_good=0; i<M->n; i++) {
-    if (good[i]) {
-      index[i_good] = i;
-      for (j=0; j<P->m; j++)
-        Pc->a[i_good][j] = P->a[i][j];
-      for (j=0; j<Mc->m; j++)
-        Mc->a[i_good][j] = M->a[i][j];
-      Kc->a[i_good][i_good] = K->a[i][i];
-      i_good++;
-    }
-  }            
-
-  *n_used = n_good;
-  rms_error = solve_normal_form(F, sF, Pc, Mc, Kc, s2_fit2);
-  for (i=0; i<n_good; i++)
-    s2_fit[index[i]] = s2_fit2[i];
-
-  free(good);
-  free(s2_fit2);
-  free(index);
-  m_free(&Pc);
-  m_free(&Mc);
-  m_free(&Kc);
-
-  return(rms_error);
-}
-
 double solve_normal_form(
                          MATRIX *F,       /* Mx1 matrix of Fit coefficients (returned) */
                          MATRIX *sF,      /* MxM covariance matrix for Fit coefficients (returned) */
@@ -974,45 +892,6 @@ void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, long nCo
     else
       K->a[i_config][i_config] = 1./sqr(2*sigma[i_config]*uncert[i_config]);
   }
-}
-
-double estimate_uncertainty(double *uncert, MATRIX *S, MATRIX *sS, MATRIX *R, MATRIX *s2, 
-                            MATRIX *K, double dev_limit, long nConfigs, double uncert_min, double *fit_sig2_return)
-{
-  double md, *fit_sig2;
-  long n_used, i_config;
-
-  if (fit_sig2_return)
-    fit_sig2 = fit_sig2_return;
-  else
-    fit_sig2 = tmalloc(sizeof(*fit_sig2)*nConfigs);
-
-  /* find initial fit with supplied covariance matrix */
-  md = solve_normal_form_opt(S, sS, R, s2, K, 0.0, &n_used, fit_sig2);
-  if (!md || !n_used)
-    bomb("unable to find initial fit (1)", NULL);
-
-  /* calculate new covariance matrix */
-  for (i_config=0; i_config<nConfigs; i_config++)
-    K->a[i_config][i_config] = 1./sqr(2*md)/s2->a[i_config][0];
-
-  /* do second fit, excluding points that lie to far out */
-  md = solve_normal_form_opt(S, sS, R, s2, K, dev_limit, &n_used, fit_sig2);
-  if (!md || !n_used)
-    bomb("unable to find initial fit (2)", NULL);
-
-  /* calculate new covariance matrix */
-  if (uncert_min && md<uncert_min)
-    md = uncert_min;
-  for (i_config=0; i_config<nConfigs; i_config++) {
-    K->a[i_config][i_config] = 1./sqr(2*md)/s2->a[i_config][0];
-    uncert[i_config] = md;
-  }
-
-  if (!fit_sig2_return)
-    free(fit_sig2);
-
-  return(md);
 }
 
 long SetSigmaData(SDDS_DATASET *SDDSout, char *dataName, MATRIX *s2, 
