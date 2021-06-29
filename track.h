@@ -3940,8 +3940,8 @@ long binParticleCoordinate_s(double **hist, long *maxBins,
 
 /* prototypes for matrix_output.c: */
 void simplify_units(char *buffer, char **numer, long n_numer, char **denom, long n_denom);
-void run_matrix_output(RUN *run, LINE_LIST *beamline);
-void setup_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+void run_matrix_output(RUN *run, VARY *control, LINE_LIST *beamline);
+void setup_matrix_output(NAMELIST_TEXT *nltext, RUN *run, VARY *control, LINE_LIST *beamline);
 
 /* prototypes for twiss.c: */
 VMATRIX *compute_periodic_twiss(double *betax, double *alphax, double *etax, double *etaxp,

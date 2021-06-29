@@ -61,12 +61,13 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 } ;
 
 
-void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, VMATRIX *M1, long order,
+void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, VMATRIX *M1, long order, long step,
 		       ELEMENT_LIST *elem, long i_element, long n_elements);
 
 void setup_matrix_output(
 			 NAMELIST_TEXT *nltext,
 			 RUN *run, 
+                         VARY *control,
 			 LINE_LIST *beamline
 			 )
 {
@@ -267,7 +268,7 @@ void setup_matrix_output(
     /* user wants output now */
     output_now = n_outputs;
     n_outputs++;
-    run_matrix_output(run, beamline);
+    run_matrix_output(run, control, beamline);
     n_outputs--;
     if (SDDS_matrix_initialized[n_outputs]) {
       if (!SDDS_Terminate(SDDS_matrix+n_outputs)) {
@@ -294,6 +295,7 @@ void setup_matrix_output(
 
 void run_matrix_output(
 		       RUN *run, 
+                       VARY *control,
 		       LINE_LIST *beamline
 		       )
 {
@@ -374,13 +376,14 @@ void run_matrix_output(
     }
     if (fp_printout[i_output] && printElementData[i_output])
       print_line(fp_printout[i_output], beamline);
-    if (SDDS_matrix_initialized[i_output]) {
+    if (SDDS_matrix_initialized[i_output] && !print_full_only[i_output]) {
       ELEMENT_LIST start_elem;
       start_elem.end_pos = 0;
       start_elem.name = "_BEG_";
       start_elem.type = T_MARK;
       start_elem.occurence = 1;
-      SDDS_set_matrices(SDDS_matrix+i_output, M1, NULL, SDDS_order[i_output], &start_elem, 0, n_SDDS_output);
+      SDDS_set_matrices(SDDS_matrix+i_output, M1, NULL, SDDS_order[i_output], 
+                        control?control->i_step:-1, &start_elem, 0, n_SDDS_output);
     }
     i_SDDS_output = 1;
     member = first_member;
@@ -434,16 +437,23 @@ void run_matrix_output(
       }
       if (SDDS_matrix_initialized[i_output] && 
 	  (!SDDS_match[i_output] || wild_match(member->name, SDDS_match[i_output]))) {
-        if (individualMatrices[i_output]) {
-          /* output change in C, rather than C itself */
-          copy_doubles(Ccopy, M1->C, 6);
-          for (i=0; i<6; i++)
-            M1->C[i] -= M2->C[i];
+        if (!print_full_only[i_output]) {
+          if (individualMatrices[i_output]) {
+            /* output change in C, rather than C itself */
+            copy_doubles(Ccopy, M1->C, 6);
+            for (i=0; i<6; i++)
+              M1->C[i] -= M2->C[i];
+          }
+          SDDS_set_matrices(SDDS_matrix+i_output, M1, member->matrix, SDDS_order[i_output], 
+                            control?control->i_step:-1, member,
+                            i_SDDS_output++, n_SDDS_output);
+          if (individualMatrices[i_output])
+            copy_doubles(M1->C, Ccopy, 6);
+        } else if (member->succ==NULL) {
+          SDDS_set_matrices(SDDS_matrix+i_output, M1, member->matrix, SDDS_order[i_output], 
+                            control?control->i_step:-1, member,
+                            0, n_SDDS_output);
         }
-	SDDS_set_matrices(SDDS_matrix+i_output, M1, member->matrix, SDDS_order[i_output], member,
-			  i_SDDS_output++, n_SDDS_output);
-        if (individualMatrices[i_output])
-          copy_doubles(M1->C, Ccopy, 6);
       }
       member = member->succ;
     }
@@ -653,7 +663,7 @@ void finish_matrix_output()
   n_outputs = 0;
 }
 
-void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, VMATRIX *M0, long order,
+void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, VMATRIX *M0, long order, long step, 
 		       ELEMENT_LIST *elem, long i_element, long n_elements
 		       )
 {
@@ -668,6 +678,8 @@ void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, VMATRIX *M0, long ord
     if (!SDDS_StartTable(SDDS_table, n_elements)) {
       SDDS_SetError("Problem starting SDDS table for matrix output (SDDS_set_matrices)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Step", step, NULL)) {
     }
   }
             

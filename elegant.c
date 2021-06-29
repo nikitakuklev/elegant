@@ -1246,7 +1246,7 @@ char **argv;
           center_beam_on_coords(beam.particle, beam.n_to_track, starting_coord, center_momentum_also);
 	else if (offset_by_orbit)
           offset_beam_by_coords(beam.particle, beam.n_to_track, starting_coord, offset_momentum_also);
-        run_matrix_output(&run_conditions, beamline);
+        run_matrix_output(&run_conditions, &run_control, beamline);
         if (firstPass) {
           /* prevent fiducialization of RF etc. by correction etc. */
           delete_phase_references();
@@ -1333,7 +1333,7 @@ char **argv;
       if (!run_setuped)
         bombElegant("run_setup must precede matrix_output namelist", NULL);
       beamline->flags |= BEAMLINE_MATRICES_NEEDED;
-      setup_matrix_output(&namelist_text, &run_conditions, beamline);
+      setup_matrix_output(&namelist_text, &run_conditions, run_controled?&run_control:NULL, beamline);
       do_matrix_output = 1;
       break;
     case TWISS_OUTPUT:
@@ -1657,7 +1657,7 @@ char **argv;
 	  } else
 	    bombElegant("Coupled twiss parameters calculation failed", NULL);
         }
-        run_matrix_output(&run_conditions, beamline);
+        run_matrix_output(&run_conditions, &run_control, beamline);
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
         if (do_rf_setup)
