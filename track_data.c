@@ -80,6 +80,7 @@ char *entity_name[N_TYPES] = {
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
     "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY", "BOFFAXE",
     "APCONTOUR", "TAPERAPC", "TAPERAPE", "TAPERAPR", "SHRFDF", "GKICKMAP",
+    "BEAMBEAM",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -217,6 +218,7 @@ char *entity_text[N_TYPES] = {
     "A tapered rectangular aperture.",
     "Simulation through space harmonics of zero length deflecting cavity.",
     "An ordinary kick map (use UKICKMAP for undualtors).",
+    "An element to provide kicks from another beam",
     } ;
 
 QUAD quad_example;
@@ -3631,6 +3633,23 @@ PARAMETER shrfdf_param[N_SHRFDF_PARAMS] = {
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&shrfdf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     } ;
 
+
+BEAMBEAM beambeam_example;
+
+/* beam-beam physical parameters */
+PARAMETER beambeam_param[N_BEAMBEAM_PARAMS] = {
+  {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&beambeam_example.charge), NULL, 0.0, 0, "charge of opposing beam"},
+  {"XCENTER", "M", IS_DOUBLE, 0, (long)((char *)&beambeam_example.centroid[0]), NULL, 0.0, 0, "horizontal center position of opposing beam"},
+  {"YCENTER", "M", IS_DOUBLE, 0, (long)((char *)&beambeam_example.centroid[1]), NULL, 0.0, 0, "vertical center position of opposing beam"},
+  {"XSIZE", "M", IS_DOUBLE, 0, (long)((char *)&beambeam_example.size[0]), NULL, 0.0, 0, "horizontal size of opposing beam"},
+  {"YSIZE", "M", IS_DOUBLE, 0, (long)((char *)&beambeam_example.size[1]), NULL, 0.0, 0, "vertical size of opposing beam"},
+  {"DISTRIBUTION", NULL, IS_STRING, 0, (long)((char *)&beambeam_example.distribution), "gaussian", 0.0, 0, "distribution type of opposing beam"},
+    };
+
+char *beamBeamDistributionOption[N_BEAM_BEAM_DISTRIBUTIONS] = {
+  "gaussian", "uniform", "parabolic",
+};
+
 /* END OF ELEMENT DICTIONARY ARRAYS */
 
 /* array of parameter structures */
@@ -3785,6 +3804,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TAPERAPR_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPR), taperapr_param},
     { N_SHRFDF_PARAMS,  MPALGORITHM,   sizeof(SHRFDF),    shrfdf_param     },
     { N_KICKMAP_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MPALGORITHM|BACKTRACK, sizeof(UKICKMAP),    kickmap_param    },
+    { N_BEAMBEAM_PARAMS, 0, sizeof(BEAMBEAM),    beambeam_param    },
 } ;
 
 void compute_offsets()

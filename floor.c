@@ -974,7 +974,7 @@ void convertLocalCoordinatesToGlobal
 )
 {
   double theta1;
-  double dZ, dX, Z1, X1,  thetaX1, length;
+  double dZ, dX, Z1, X1,  length;
   /* convert (s, x, y, z) coordinates to (Z, X, Y) */
   /* For now, we assume that the beamline is flat ! */
 

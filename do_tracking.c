@@ -95,6 +95,8 @@ void checkBeamStructure(BEAM *beam);
 int comp_IDs(const void *coord1, const void *coord2);
 #endif
 
+void applyBeamBeamKicks(double **part, long np, BEAMBEAM *bb, double P0);
+
 double beta_from_delta(double p, double delta)
 {
   p *= 1+delta;
@@ -2124,6 +2126,9 @@ long do_tracking(
               trackWithIonEffects(coord, nToTrack, (IONEFFECTS*)eptr->p_elem, *P_central, i_pass, n_passes, charge);
               nLeft = nToTrack;
               break;
+            case T_BEAMBEAM:
+              applyBeamBeamKicks(coord, nToTrack, (BEAMBEAM*)eptr->p_elem, *P_central);
+              break;
 	    case T_CORGPIPE:
               nLeft = elimit_amplitudes(coord, ((CORGPIPE*)eptr->p_elem)->radius, ((CORGPIPE*)eptr->p_elem)->radius, 
                                         nToTrack, accepted, z-((CORGPIPE*)eptr->p_elem)->length, *P_central, 0, 0, 2, 2);
@@ -3889,17 +3894,20 @@ void createBPMReadingMemories(ELEMENT_LIST *eptr, double **coord, long np, doubl
 
 void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po)
 {
-  long npTotal;
   BEAM_SUMS *sums;
   char s[1000];
   double x, y;
   MONI *moni;
   HMON *hmon;
   VMON *vmon;
+  /*
+  long npTotal;
+  */
 
   sums = allocateBeamSums(0, 1);
   zero_beam_sums(sums, 1);
   accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
+  /*
 #if USE_MPI
   if (parallelStatus==trueParallel && partOnMaster && notSinglePart)
     MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
@@ -3908,7 +3916,8 @@ void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po)
 #else
   npTotal = np;
 #endif
-  
+  */
+
   x = sums->centroid[0];
   y = sums->centroid[2];
   freeBeamSums(sums, 1);
@@ -5773,3 +5782,38 @@ void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd)
   }
   tfbd->outputIndex = 0;
 }
+
+void applyBeamBeamKicks(double **part, long np, BEAMBEAM *bb, double P0)
+{
+  long ip;
+  short code;
+  double kick[2], qx, qy, qz, delta, denom;
+  if (bb->size[0]<=0 || bb->size[1]<=0)
+    bombElegant("XSIZE and YSIZE must be positive for BEAMBEAM element", NULL);
+  code = match_string(bb->distribution, beamBeamDistributionOption, N_BEAM_BEAM_DISTRIBUTIONS, 0);
+  if (code==GAUSSIAN_BEAM_BEAM) {
+    for (ip=0; ip<np; ip++) {
+      denom = sqrt(1 + sqr(part[ip][1]) + sqr(part[ip][3]));
+      delta = part[ip][5];
+      qx = part[ip][1]*(1+delta)/denom;
+      qy = part[ip][3]*(1+delta)/denom;
+      qz = sqrt(sqr(1+delta) - sqr(qx) - sqr(qy));
+      /* compute velocity changes in m/s */
+      gaussianBeamKick(part[ip], bb->centroid, bb->size, 0, kick, bb->charge, particleMass, particleCharge*particleRelSign/e_mks);
+      qx += kick[0]/(P0*c_mks);
+      qy += kick[1]/(P0*c_mks);
+      delta = 1 - sqrt(qx*qx + qy*qy + qz*qz);
+      part[ip][1] = qx/qz;
+      part[ip][3] = qy/qz;
+      part[ip][5] = delta;
+    }
+  } else if (code==UNIFORM_ELLIPSOIDAL_BEAM_BEAM) {
+    for (ip=0; ip<np; ip++)
+      ellipsoidalBeamKick(part[ip], P0, particleMass, -particleRelSign*particleCharge, bb->centroid, bb->size, bb->charge, 0);
+  } else if (code==PARABOLIC_ELLIPSOIDAL_BEAM_BEAM) {
+    for (ip=0; ip<np; ip++)
+      ellipsoidalBeamKick(part[ip], P0, particleMass, -particleRelSign*particleCharge, bb->centroid, bb->size, bb->charge, 1);
+  } else
+    bombElegantVA("BEAMBEAM distribution type %s not recognized", bb->distribution);
+}
+

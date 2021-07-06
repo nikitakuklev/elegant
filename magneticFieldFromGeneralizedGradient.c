@@ -203,11 +203,9 @@ long addBGGExpData(char *filename, char *nameFragment, short skew)
 
 long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted, double *sigmaDelta2)
 {
-  long ip, ig, im, iz, irow, m, igLimit[2], ns, nz;
-  /* long izLast; */
+  long ip, iz, irow, igLimit[2], nz;
   STORED_BGGEXP_DATA *bggData[2];
   double ds, dz, x, y, xp, yp, delta, s, phi, denom;
-  /* double gamma; */
   double step,  length;
   TRACKING_CONTEXT tcontext;
   double radCoef=0, isrCoef=0;
@@ -392,7 +390,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     long iImpLoop;
     double xMid, yMid,xNext, yNext, xLoop, yLoop, delta_s;
     double px, py, pxNext, pyNext, pxLoop, pyLoop, ux=0, uy=0;
-    double delta, r, phi, denom, scaleA, sin_phi, cos_phi;
+    double delta, phi, denom, scaleA, sin_phi, cos_phi;
     double Ax, dAx_dx, dAx_dy, Ay, dAy_dx, dAy_dy, dAz_dx, dAz_dy;
     double epsImplConverge = 1.e-14*1.0e-3;
     double Bx, By, Bz;
@@ -494,7 +492,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
 #endif
-        r = sqrt(sqr(x)+sqr(y));
+        /* r = sqrt(sqr(x)+sqr(y)); */
         phi = atan2(y, x);
         cos_phi = cos(phi);
         sin_phi = sin(phi);
@@ -521,7 +519,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           pyLoop = pyNext;
           xMid = 0.5*(x + xLoop);
           yMid = 0.5*(y + yLoop);
-          r = sqrt(sqr(xMid)+sqr(yMid));
+          /* r = sqrt(sqr(xMid)+sqr(yMid)); */
           phi = atan2(yMid, xMid);
 	  cos_phi = cos(phi);
  	  sin_phi = sin(phi);

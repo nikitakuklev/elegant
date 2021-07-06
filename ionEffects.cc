@@ -86,9 +86,6 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, 
 
 void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double x, double y);
 
-void gaussianBeamKick(double *coord, double *center, double *sigma, long fromBeam, double kick[2], double charge, 
-		      double ionMass, double ionCharge);
-
 void roundGaussianBeamKick(double *coord, double *center, double *sigma, long fromBeam, double kick[2], double charge, 
 		      double ionMass, double ionCharge);
 
@@ -1212,14 +1209,14 @@ void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double 
 
 void gaussianBeamKick
 (
- double *coord, 
- double *center, 
- double *sigma, 
- long fromBeam, // If nonzero, center and sigma arrays have (x, x', y, y') data. Otherwise, just (x, y)
- double kick[2], 
- double charge, 
- double ionMass, 
- double ionCharge
+ double *coord,   /* x, xp, y, yp, s, delta of kicked particle */
+ double *center,  /* center of kicking gaussian */
+ double *sigma,   /* sigma of kicking gaussian */
+ long fromBeam,   // If nonzero, center and sigma arrays have (x, x', y, y') data. Otherwise, just (x, y)
+ double kick[2],  /* for return of velocity change (m/s) */
+ double charge,   /* total charge of kicking distribution in Coulomb */
+ double ionMass,  /* mass of kicked particle in kg */
+ double ionCharge /* charge of kicked particle in units of electron charge */
  ) 
 {
   // calculate beam kick on ion, assuming Gaussian beam
@@ -1253,7 +1250,6 @@ void gaussianBeamKick
     erf2 = complexErf(w2, &flag2);
 
     Fc = C1 * C2 * (erf1 - C3*erf2);
-
     Fx = Fc.imag();
     if (y > 0) Fy = Fc.real();
     else Fy = -Fc.real();
@@ -3204,3 +3200,93 @@ void flushIonEffectsSummaryOutput(IONEFFECTS *ionEffects)
 #endif
 }
 
+/* This is for performing beam-beam kicks and really doesn't belong here, but it is a convenient place. */
+/* Based on M. Furman, LBL-34682 */
+void ellipsoidalBeamKick
+(
+ double *coord,          /* particle coordinates */
+ double P0,              /* reference beta*gamma */
+ double pMass,           /* mass of particle (kg) */
+ double pCharge,         /* charge of particle (C) */
+ double centroid[2],     /* centroid of opposing beam */
+ double size[2],         /* semi-axes of opposing beam */
+ double charge,          /* charge of opposing beam (C) */
+ short parabolic         /* if non-zero, density is a parabolic function of x/a and y/b */
+ )
+{
+  double x, y, a, b, ELx, ELy;
+  double xsign=1, ysign=1;
+
+  x = coord[0]-centroid[0];
+  y = coord[2]-centroid[1];
+  a = size[0];
+  b = size[1];
+
+  if ((sqr(x/a) + sqr(y/b))>1) {
+    /* Electric field times length, outside the ellipsoid */
+    if (!parabolic) {
+      std::complex <double> EL, zbar;
+      if (x<0)
+        x *= (xsign = -1);
+      if (y<0)
+        y *= (ysign = -1);
+      zbar = std::complex <double> (x, -y);
+      EL = 4*charge/(zbar + sqrt(zbar*zbar-a*a+b*b))/(4*PI*epsilon_o);
+      ELx = xsign*EL.real();
+      ELy = ysign*EL.imag();
+    } else {
+      std::complex <double> EL, zbar, c1, c2;
+      if (x<0)
+        x *= (xsign = -1);
+      if (y<0)
+        y *= (ysign = -1);
+      zbar = std::complex <double> (x, -y);
+      c1 = sqrt(zbar*zbar-a*a+b*b);
+      c2 = zbar + c1;
+      EL = (8*charge/3)*(zbar + 2.0*c1)/(c2*c2)/(4*PI*epsilon_o);
+      ELx = xsign*EL.real();
+      ELy = ysign*EL.imag();
+    }
+  } else {
+    /* Electric field times length, inside the ellipsoid */
+    if (!parabolic) {
+      ELx = 4*charge/(a+b)*(x/a)/(4*PI*epsilon_o);
+      ELy = 4*charge/(a+b)*(y/b)/(4*PI*epsilon_o);
+    } else {
+      std::complex <double> EL, xi, wbar, zbar, c1, c2;
+      if (x<0)
+        x *= (xsign = -1);
+      if (y<0)
+        y *= (ysign = -1);
+      zbar = std::complex <double> (x, -y);
+      wbar = std::complex <double> (b*x/a, -a*y/b);
+      xi = std::complex <double> (x/a, y/b);
+      EL = 8*charge*xi/(a+b)*(1.0 - ((2.0*zbar + wbar)*xi)/(3.0*(a+b)))/(4*PI*epsilon_o);
+      ELx = xsign*EL.real();
+      ELy = ysign*EL.imag();
+    }
+  }
+
+  double qx, qy, qz, delta, denom, p, beta, betaz, dpx, dpy;
+  delta = coord[5];
+  p = P0*(1+delta);
+  beta = p/sqrt(p*p+1);
+  betaz = beta/sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
+
+  dpx = ELx*pCharge/(betaz*c_mks);
+  dpy = ELy*pCharge/(betaz*c_mks);
+
+  denom = sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
+  delta = coord[5];
+  qx = coord[1]*(1+delta)/denom;
+  qy = coord[3]*(1+delta)/denom;
+  qz = sqrt(sqr(1+delta) - sqr(qx) - sqr(qy));
+
+  qx += dpx/(pMass*c_mks*P0);
+  qy += dpy/(pMass*c_mks*P0);
+  
+  delta = 1 - sqrt(qx*qx + qy*qy + qz*qz);
+  coord[1] = qx/qz;
+  coord[3] = qy/qz;
+  coord[5] = delta;
+}

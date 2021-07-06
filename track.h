@@ -1001,7 +1001,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_TAPERAPR 127
 #define T_SHRFDF  128
 #define T_KICKMAP 129
-#define N_TYPES  130
+#define T_BEAMBEAM 130
+#define N_TYPES  131
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1124,7 +1125,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHVCOR_PARAMS 17
 #define N_BMAPXYZ_PARAMS 22
 #define N_BRAT_PARAMS 28
-#define N_BGGEXP_PARAMS 34
+#define N_BGGEXP_PARAMS 35
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 14
@@ -1138,6 +1139,7 @@ extern char *entity_text[N_TYPES];
 #define N_TAPERAPR_PARAMS 9
 #define N_SHRFDF_PARAMS 25
 #define N_KICKMAP_PARAMS 13
+#define N_BEAMBEAM_PARAMS 6
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3387,6 +3389,21 @@ typedef struct {
   double ymin, ymax, dyg;
 } KICKMAP;  
 
+/* names and storage structure for beam-beam element */
+typedef struct {
+  double charge;
+  double centroid[2];
+  double size[2];
+  char *distribution;
+  /* for internal use */
+#define GAUSSIAN_BEAM_BEAM 0
+#define UNIFORM_ELLIPSOIDAL_BEAM_BEAM 1
+#define PARABOLIC_ELLIPSOIDAL_BEAM_BEAM 2
+#define N_BEAM_BEAM_DISTRIBUTIONS 3
+  short distributionCode;
+} BEAMBEAM;
+extern char *beamBeamDistributionOption[N_BEAM_BEAM_DISTRIBUTIONS];
+
 /* names and storage structure for field table parameters */
 extern PARAMETER ftable_param[N_FTABLE_PARAMS];
 
@@ -4823,10 +4840,14 @@ long applyElementRamps(RAMP_DATA *rampData, LINE_LIST *beamline, double pCentral
 void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his);
 #endif
 
-void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run);
-void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline);
-void trackWithIonEffects(double **part0, long np0, IONEFFECTS *ionEffects, double Po, long iPass, long nPasses, CHARGE *charge);
-void evaluateVoltageFromLorentzian(double *Eperp, double a, double b, double x, double y);
+extern void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run);
+extern void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline);
+extern void trackWithIonEffects(double **part0, long np0, IONEFFECTS *ionEffects, double Po, long iPass, long nPasses, CHARGE *charge);
+extern void evaluateVoltageFromLorentzian(double *Eperp, double a, double b, double x, double y);
+extern void gaussianBeamKick(double *coord, double *center, double *sigma, long fromBeam, double kick[2], double charge, 
+		      double ionMass, double ionCharge);
+extern void ellipsoidalBeamKick(double *coord, double P0, double pMass, double pCharge, double centroid[2],
+                                double size[2], double charge, short parabolic);
 
 extern VMATRIX *computeMatricesFromTracking(FILE *fpo_ma, double **initial, double **final, double **error, 
 				 double *step_size, double *maximum_value, int n_points1, int n_points_total,

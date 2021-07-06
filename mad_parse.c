@@ -428,7 +428,6 @@ long expand_phys(
 {
   long ie, il, i, j, comparison, div;
   char trunc_char, *editCmd;
-  ELEMENT_LIST *elem0;
   double length;
 
   log_entry("expand_phys");
@@ -440,7 +439,6 @@ long expand_phys(
     trunc_char = entity[max_name_length];
     entity[max_name_length] = 0;
   }
-  elem0 = elem_list;
   div = 1;
   for (ie=0; ie<ne; ie++) {
     if ((comparison=strcmp(entity, elem_list->name))==0) {
@@ -511,11 +509,6 @@ long expand_phys(
   
   printf("no expansion for entity %s\n", entity);
   fflush(stdout);
-  /*
-  printf("known elements are:\n");
-  fflush(stdout);
-  print_elem_names(stdout, elem0, 100);
-  */
 #if USE_MPI
   MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
 #endif
