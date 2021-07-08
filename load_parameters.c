@@ -339,11 +339,6 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           case IS_SHORT:
             *((short*)(load_request[i].reset_address[j])) = nearestInteger(load_request[i].starting_value[j]);
             break;
-          default:
-            printf("internal error: invalid value type for load request value restoration\n");
-            fflush(stdout);
-            exitElegant(1);
-            break;
           }
         }
       }
