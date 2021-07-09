@@ -46,7 +46,7 @@ __device__ __constant__ double d_coef[expansionOrderMax * expansionOrderMax];
 
 // Defined below
 __device__ int
-    gpu_integrate_kick_multipole_ordn(gpuParticleAccessor &coord, long *order, double *KnL, short *skew, long n_kicks,
+gpu_integrate_kick_multipole_ordn(gpuParticleAccessor &coord, long *order, double *KnL, short *skew, long n_parts, long i_part, long iSlice,
                                       double drift, long integration_order, double *dzLoss, double *sigmaDelta2, int radial, double refTilt,
                                       double srGaussianLimit, short expandHamiltonian);
 __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
@@ -69,7 +69,7 @@ class gpu_multipole_tracking2_kernel
   double drift, z_start;
   long order0, order1, order2;
   short skew0, skew1, skew2;
-  int n_parts, integ_order;
+  int n_parts, i_part, integ_order;
   short expandHamiltonian;
   // Associated MULTIPOLE_DATA is also in constant memory
   // From MULTIPOLE_DATA (*multData)
@@ -89,13 +89,13 @@ class gpu_multipole_tracking2_kernel
                                 double xkick, double ykick, double Po, double rad_coef, double isr_coef,
                                 double KnL0, double KnL1, double KnL2, double drift, double z_start, 
                                 long order0, long order1, long order2, short skew0, short skew1, short skew2,
-                                int n_parts, int integ_order, int multDataOrders, int edgeMultDataOrders,
+                                int n_parts, int i_part, int integ_order, int multDataOrders, int edgeMultDataOrders,
                                 int steeringMultDataOrders, int present, double xMax, double xCen,
                                 double yMax, double yCen, int radial, double refTilt, double srGaussianLimit, short expandHamiltonian) : d_sortIndex(d_sortIndex), d_sigmaDelta2(d_sigmaDelta2),
     state(state), dx(dx), dy(dy), xkick(xkick), ykick(ykick), Po(Po),
     rad_coef(rad_coef), isr_coef(isr_coef), KnL0(KnL0), KnL1(KnL1), KnL2(KnL2), drift(drift),
     z_start(z_start), order0(order0), order1(order1), order2(order2), 
-    skew0(skew0), skew1(skew1), skew2(skew2), n_parts(n_parts),
+    skew0(skew0), skew1(skew1), skew2(skew2), n_parts(n_parts), i_part(i_part),
     integ_order(integ_order), multDataOrders(multDataOrders),
     edgeMultDataOrders(edgeMultDataOrders),
     steeringMultDataOrders(steeringMultDataOrders), present(present),
@@ -124,7 +124,7 @@ class gpu_multipole_tracking2_kernel
     if (d_sigmaDelta2)
       tSigmaDelta2 = &d_sigmaDelta2[tid];
 
-    particle_lost = !gpu_integrate_kick_multipole_ordn(coord, order, KnL, skew, n_parts,
+    particle_lost = !gpu_integrate_kick_multipole_ordn(coord, order, KnL, skew, n_parts, i_part,
                                                        drift, integ_order, &dzLoss, tSigmaDelta2, radial, refTilt, srGaussianLimit, expandHamiltonian);
     if (particle_lost)
       {
@@ -148,7 +148,7 @@ class gpu_multipole_tracking2_kernel
 #define BETA 1.25992104989487316477
 
   __device__ int
-    gpu_integrate_kick_multipole_ordn(gpuParticleAccessor &coord, long *order, double *KnL, short *skew, long n_kicks,
+    gpu_integrate_kick_multipole_ordn(gpuParticleAccessor &coord, long *order, double *KnL, short *skew, long n_parts, long i_part,
                                       double drift, long integration_order, double *dzLoss, double *sigmaDelta2, int radial, double refTilt,
                                       double srGaussianLimit, short expandHamiltonian)
   {
@@ -235,6 +235,7 @@ class gpu_multipole_tracking2_kernel
     /* calculate initial canonical momenta */
     gpu_convertSlopesToMomenta(&qx, &qy, xp, yp, dp, expandHamiltonian);
 
+    if (i_part<=0) {
     if (edgeMultDataOrders >= 0)
       {
         for (imult = 0; imult < edgeMultDataOrders; imult++)
@@ -249,6 +250,7 @@ class gpu_multipole_tracking2_kernel
                                                   edgeMultDataJnL[imult], 1);
           }
       }
+    }
     /* We must do this in case steering or edge multipoles were run. We do it even if not in order
      * to avoid numerical precision issues that may subtly change the results
      */
@@ -267,7 +269,7 @@ class gpu_multipole_tracking2_kernel
         /* obstructions are not implemented in GPU code
         if (insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex], 
 			                            globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
-			                            refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_kicks))
+			                            refTilt,  GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts))
          {
             return 0;
           }
@@ -376,6 +378,8 @@ class gpu_multipole_tracking2_kernel
                   return 0;
               }
           }
+        if (i_part>=0)
+          break;
       }
     if (present &&
         ((xMax && fabs(x + dx - xCen) > xMax) ||
@@ -391,6 +395,7 @@ class gpu_multipole_tracking2_kernel
         return 0;
       }
     */
+  if (i_part<0 || i_part==(n_parts-1)) {
     if (edgeMultDataOrders >= 0)
       {
         for (imult = 0; imult < edgeMultDataOrders; imult++)
@@ -405,7 +410,7 @@ class gpu_multipole_tracking2_kernel
                                                   edgeMultDataJnL[imult], 1);
           }
       }
-
+  }
     if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
       return 0;
 
@@ -453,7 +458,7 @@ extern "C"
   long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
                                double p_error, double Po, double **accepted, double z_start,
                                MAXAMP *maxamp, APCONTOUR *apcontour, APERTURE_DATA *apFileData,
-                               double *sigmaDelta2)
+                               double *sigmaDelta2, long iSlice)
   {
     double *KnL;  /* integrated strength = L/(B.rho)*(Dx^n(By))_o for central momentum */
     long *order;  /* order (n) */
@@ -803,6 +808,7 @@ extern "C"
     unsigned int particlePitch = gpuBase->gpu_array_pitch;
     unsigned int *d_sortIndex = gpuBase->d_tempu_alpha;
 
+    if (iSlice<=0) {
     if (malignMethod!=0) {
       if (dx || dy || dz || tilt || pitch || yaw) {
         bombTracking("gpu_multipole_tracking2: Non zero MALIGN_METHOD not supported in the GPU version.");
@@ -842,6 +848,7 @@ extern "C"
       default:
         break;
       }
+    }
 
     // Copy multData and steeringMultData to device
     if (multData)
@@ -932,7 +939,7 @@ extern "C"
                            gpu_multipole_tracking2_kernel(d_sortIndex, d_sigmaDelta2, state,
                                                           dx, dy, xkick, ykick, Po, rad_coef, isr_coef, KnL[0], KnL[1], KnL[2], drift, z_start, 
                                                           order[0], order[1], order[2], skew[0], skew[1], skew[2],
-                                                          nSlices, integ_order, multData ? multData->orders : -1,
+                                                          nSlices, iSlice, integ_order, multData ? multData->orders : -1,
                                                           edgeMultData ? edgeMultData->orders : -1,
                                                           steeringMultData ? steeringMultData->orders : -1, apertureData.present,
                                                           apertureData.xMax, apertureData.xCen, apertureData.yMax,
@@ -945,6 +952,7 @@ extern "C"
         *sigmaDelta2 /= n_part;
       }
 
+  if (iSlice<0 || iSlice==(nSlices-1)) {
     /* Fringe treatment, if any */
     switch (elem->type)
       {
@@ -982,6 +990,7 @@ extern "C"
       if (dx || dy || dz)
         gpu_offsetBeamCoordinatesForMisalignment(n_part, -dx, -dy, -dz);
     }
+  }
 
     if (freeMultData && !multData->copy)
       {

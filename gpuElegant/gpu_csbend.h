@@ -10,7 +10,7 @@ extern "C" {
 long gpu_track_through_csbend(long n_part, CSBEND *csbend,
                               double p_error, double Po, double **accepted, double z_start,
                               double *sigmaDelta2, char *rootname, MAXAMP *maxamp, 
-                              APCONTOUR *apContour, APERTURE_DATA *apFileData);
+                              APCONTOUR *apContour, APERTURE_DATA *apFileData, long iSlice);
 
 long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
        double p_error, double Po, double **accepted, double z_start,

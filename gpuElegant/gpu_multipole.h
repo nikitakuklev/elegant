@@ -11,7 +11,7 @@ extern "C" {
 long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
                              double p_error, double Po, double **accepted, double z_start,
                              MAXAMP *maxamp, APCONTOUR *apcontour, APERTURE_DATA *apFileData,
-                             double *sigmaDelta2);
+                             double *sigmaDelta2, long iSlice);
 
 #ifdef __cplusplus
 }
