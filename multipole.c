@@ -793,10 +793,10 @@ long multipole_tracking2(
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
-    i_part = gpu_multipole_tracking2(n_part, elem, p_error, Po, accepted, z_start, maxamp, apcontour, apFileData, sigmaDelta2);
+    i_part = gpu_multipole_tracking2(n_part, elem, p_error, Po, accepted, z_start, maxamp, apcontour, apFileData, sigmaDelta2, iSlice);
 #ifdef GPU_VERIFY     
     startCpuTimer();
-    multipole_tracking2(particle, n_part, elem, p_error, Po, accepted, z_start, maxamp, apcontour, apFileData, sigmaDelta2);
+    multipole_tracking2(particle, n_part, elem, p_error, Po, accepted, z_start, maxamp, apcontour, apFileData, sigmaDelta2, iSlice);
     compareGpuCpu(n_part, "multipole_tracking2");
 #endif /* GPU_VERIFY */
     return i_part;
