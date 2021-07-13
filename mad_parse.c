@@ -148,7 +148,10 @@ extern ELEMENT_LIST *expand_line(
         ptr--;
       if (*ptr==')')
         *ptr = 0;
-      delete_bounding(ptr1, "\"");
+      if (*ptr1=='-')
+        delete_bounding(ptr1+1, "\"");
+      else
+        delete_bounding(ptr1, "\"");
 #ifdef DEBUG 
       printf("ptr1 = %s\n", ptr1);
       fflush(stdout);
