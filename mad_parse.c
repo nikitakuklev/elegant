@@ -153,7 +153,7 @@ extern ELEMENT_LIST *expand_line(
       else
         delete_bounding(ptr1, "\"");
 #ifdef DEBUG 
-      printf("ptr1 = %s\n", ptr1);
+      printf("ptr1 = %s (1)\n", ptr1);
       fflush(stdout);
 #endif
       reverse = 0;
@@ -181,7 +181,7 @@ extern ELEMENT_LIST *expand_line(
 #ifdef DEBUG
       printf("reverse = %ld, multiplier = %ld\n", reverse, multiplier);
       fflush(stdout);
-      printf("ptr1 = %s\n",ptr1);
+      printf("ptr1 = %s (2)\n",ptr1);
       fflush(stdout);
 #endif
       
