@@ -271,10 +271,14 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             }
             eptr->ignore = 0;
 	    if (ignoreElement(eptr->name, eptr->type, 0)) {
-	      printf("Ignoring %s in multi-particle tracking\n", eptr->name);
+              /*
+	      printf("Ignoring %s in multi-particle tracking\n", eptr->name); 
+              */
 	      eptr->ignore = 1;
 	    } else if (ignoreElement(eptr->name, eptr->type, 1)) {
+              /*
 	      printf("Ignoring %s completely\n", eptr->name);
+              */
 	      eptr->ignore = 2;
 	    }
             if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
