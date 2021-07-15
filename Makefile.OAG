@@ -92,7 +92,7 @@ endif
 
 ifneq ($(MPI),1)
 ifneq ($(NOMPI),1)
-PRODOAG = elegantto sddssasefel ibsEmittance abrat trimda
+PRODOAG = elegantto sddssasefel ibsEmittance abrat trimda iirFilterTest
 endif
 endif
 
@@ -635,6 +635,8 @@ sddssasefel_SRCS = sddssasefel.c sasefelmx.c bombElegant.c
 
 abrat_SRCS = abrat.c track_data.c warnings.c context.c  bombElegant.c
 
+iirFilterTest_SRCS = iirFilterTest.c iirFilter.c bombElegant.c sdds_support_common.c track_data.c
+
 trimda_SRCS = trimda.c trimApertureSearchResult.c
 
 ibsEmittance_SRCS = ibsEmittance.c zibs.c bombElegant.c
@@ -729,6 +731,8 @@ endif
 
 abrat_LIBS += $(GSLLIB)
 abrat_SYS_LIBS += $(SYS_GSLLIB)
+iirFilterTest_LIBS += $(GSLLIB)
+iirFilterTest_SYS_LIBS += $(SYS_GSLLIB)
 trimda_LIBS += $(GSLLIB)
 trimda_SYS_LIBS += $(SYS_GSLLIB)
 elegantto_LIBS += $(GSLLIB)
