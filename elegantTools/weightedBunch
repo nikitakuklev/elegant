@@ -7,7 +7,7 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage "usage: weightedBunch -twiss <filename> \[-location <elementName>\] -output <filename> -particles <number> \[-pages <num>(1)\] -ex <meters> -ey <meters> -Sdelta <fraction> -St <seconds> -nx <num-sigmas> -ny <num-sigmas> -nz <num-sigmas> \[-scale 1\] \[-particleID 0\]\nCreates an input file for tracking in elegant with uniformly distributed particles assigned gaussian weights."
+set usage "usage: weightedBunch -twiss <filename> \[-location <elementName>\] -output <filename> -particles <number> \[-pages <num>(1)\] -ex <meters> -ey <meters> -Sdelta <fraction> -St <seconds> -nx <num-sigmas> -ny <num-sigmas> -nz <num-sigmas> \[-seed <integer>\] \[-scale 1\] \[-particleID 0\]\nCreates an input file for tracking in elegant with uniformly distributed particles assigned gaussian weights."
 set twiss ""
 set location ""
 set output ""
@@ -22,8 +22,9 @@ set ny 0
 set nz 0
 set scale 0
 set particleID 1
+set seed -1
 set args $argv
-if {[APSStrictParseArguments {particleID twiss scale location particles pages output ex ey Sdelta St nx ny nz}] || ![string length $twiss] || ![string length $output]} {
+if {[APSStrictParseArguments {particleID twiss scale location particles pages output ex ey Sdelta St nx ny nz seed}] || ![string length $twiss] || ![string length $output]} {
     puts stderr "$usage"
     exit 1
 }
@@ -61,7 +62,7 @@ if $particleID {
     set weightColumn Weight
 }
 
-if [catch {exec sddssampledist $tmpRoot.2 -pipe=out -samples=[expr $pages*$particles] -optimalHalton \
+if [catch {exec sddssampledist $tmpRoot.2 -pipe=out -samples=[expr $pages*$particles] -optimalHalton -seed=$seed \
 	       -column=output=a,factor=$nx,independentVariable=z,df=P \
 	       -column=output=ap,factor=$nx,independentVariable=z,df=P \
 	       -column=output=b,factor=$ny,independentVariable=z,df=P \
