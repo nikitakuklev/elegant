@@ -9,9 +9,37 @@ differs by $-90$ degrees from the \verb|PHASE_SETPOINT|  parameter.
 The feedback implementation uses either amplitude and phase feedback or else in-phase and quadrature feedback.
 Figure \ref{fig:rfFeedbackModel} shows the model used for the feedback system.
 More information is available in \cite{Berenc-IPAC15-MOPMA006}.
-Feedback is active when a non-zero value is given for \verb|DRIVE_FREQUENCY| and when either
+
+Rf feedback is active when a non-zero value is given for \verb|DRIVE_FREQUENCY| and when either
 \verb|AMPLITUDE_FILTER| and \verb|PHASE_FILTER| or else
 \verb|IN_PHASE_FILTER| and \verb|QUADRATURE_FILTER| are given.
+These parameters name SDDS files that define filters in the $z$ domain 
+\begin{equation}
+H(z) = \frac{\sum\limits_{i=0}^m b_i z^{-i}}{\sum\limits_{i=0}^r a_i z^{-i}}
+\end{equation}
+which translates into the discrete time domain as
+\begin{equation}
+y[n ] = -\frac{1}{a_0}\sum\limits_{i=1}^r a_i y_{r-i} + \frac{1}{a_0}\sum\limits_{i=0}^m b_i x_{n-i},
+\end{equation}
+where $y[n]$ is the filter output (e.g., additional generator current) and $x[n]$ is the filter input (e.g., 
+the voltage error signal). 
+The filter files must each contain two columns:
+\begin{itemize}
+\item \verb|denominator| --- The $a_i$ filter coefficients. These should generally sum to zero or nearly zero.
+\item \verb|numerator| --- The $b_i$ filter coefficients. These are generally very small.
+\end{itemize}
+Each file can consist of up to four pages, with each page representing one filter in a parallel filter bank 
+formed from all pages. The output of the four stages is added to obtain the control signal.
+The number of rows in the page is given by the larger of r or m; in the case of multiple pages,
+the number of rows in each page is given by the largest r or m from the highest order filter amongst the pages, by
+simply stuffing the rows of the other pages with zeros, i.e., rows representing orders of $z$ down to $z^{-l}$ where $l$ is
+the largest $r$ or $m$ of the filter pages.
+
+For example, a digital low-pass filter with DC gain of $k$ can be specified as
+\begin{equation}
+y[1] = e^{-pT} y[0] + k (1 - e^{-pT}) x[0],
+\end{equation}
+where $p$ is the frequency of the pole and $T$ is the sample interval.
 
 The feedback loop reads the cavity state and acts on the generator at a fixed interval (in buckets) of
 \verb|UPDATE_INTERVAL|. 
@@ -41,7 +69,7 @@ may be unstable.
 \begin{figure}[htb]
 \center
 \includegraphics{rfFeedbackModel}
-\caption{Rf feedback model used by the {\tt RFMODE} element.}
+\caption{Rf feedback model used by the {\tt RFMODE} element. Courtesy T. Berenc, Argonne National Laboratory.}
 \label{fig:rfFeedbackModel}
 \end{figure}
 
