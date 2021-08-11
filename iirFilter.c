@@ -14,8 +14,9 @@
 int readIIRFilter(IIRFILTER *filterBank, long maxFilters, char *inputFile)
 {
   SDDS_DATASET SDDSin;
-  int i, code;
-  
+  int i, j, code;
+  double a0;
+
   if (!inputFile)
     return 0;
   if (maxFilters<=0 || filterBank==NULL)
@@ -50,7 +51,13 @@ int readIIRFilter(IIRFILTER *filterBank, long maxFilters, char *inputFile)
     if (!(filterBank[i].xn=calloc(filterBank[i].nTerms, sizeof(*(filterBank[i].xn)))) ||
         !(filterBank[i].yn=calloc(filterBank[i].nTerms, sizeof(*(filterBank[i].yn)))))
       bombElegantVA("Error: Memory allocation problem for IIR filter file %s, page %ld, %ld terms\n", inputFile, code, filterBank[i].nTerms);
-    
+   
+    if ((a0=filterBank[i].an[0])==0)
+      bombElegantVA("Error: first denominator filter coefficient is zero in IIR filter file %s, page %ld\n", inputFile, code);
+    for (j=0; j<filterBank[i].nTerms; j++) {
+      filterBank[i].an[j] /= a0;
+      filterBank[i].bn[j] /= a0;
+    }
     i++;
   }
   if (code==0)
