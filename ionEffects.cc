@@ -1256,6 +1256,7 @@ void gaussianBeamKick
 
 
   } else {
+    /*** The code here should exactly mirror the other branch, but doesn't ***/
     sd = sqrt(2.0*(sqr(sy)-sqr(sx)));
     w1 = std::complex <double> (y/sd, abs(x)/sd);
     w2 = std::complex <double> (y/sd*sx/sy, abs(x)/sd*sy/sx);
@@ -1269,6 +1270,7 @@ void gaussianBeamKick
 
     Fc = -Fc0 * (erf1 - C3*erf2);
 
+    /*** Shouldn't this be Fx = +/- Fc.real() and Fy = Fc.imag(), to swap x and y consistently? ***/
     if (x > 0) Fx = -Fc.imag();
     else Fx = Fc.imag();
     
