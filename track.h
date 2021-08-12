@@ -3554,17 +3554,12 @@ typedef struct {
   double dx, dy;
   short bunchedBeamMode;
    
-  
   /* internal parameters */
-  short initialized, iPlane;
-  long filterLength, pass0;
+  short initialized;
+  long pass0;
   double *filterOutput;
   double *long_coords, *horz_coords, *vert_coords;
-
-  double tReference;
-  long nBunches, tReferenceSet;
-  /* circular buffer for storing past readings */
-  double **data;
+  long nBunches;
 } CPICKUP;
 
 

@@ -96,15 +96,10 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
     if (cpickup->nBunches!=nBuckets) {
       printf("Number of bunches has changed, re-initializing cooler pickup\n");
       fflush(stdout);
-      for (i=0; i<cpickup->nBunches; i++)
-        free(cpickup->data[i]);
     }
     cpickup->nBunches = nBuckets;
-    cpickup->data = (double**)SDDS_Realloc(cpickup->data, sizeof(*cpickup->data)*nBuckets);
     cpickup->filterOutput = (double*)SDDS_Realloc(cpickup->filterOutput, sizeof(*cpickup->filterOutput)*nBuckets);
     for (i=0; i<nBuckets; i++) {
-      if (!(cpickup->data[i] = (double*)calloc(TFB_FILTER_LENGTH, sizeof(**cpickup->data))))
-        bombElegant("Memory allocation problem for TFBPICKUP", NULL);
       cpickup->filterOutput[i] = 0;
     }
     cpickup->pass0 = pass;
@@ -156,12 +151,6 @@ void initializeCoolerPickup(CPICKUP *cpickup)
   if (cpickup->ID==NULL || !strlen(cpickup->ID))
     bombElegant("you must give an ID string for TFBPICKUP", NULL);
 
-  if (cpickup->data && cpickup->nBunches) {
-    for (i=0; i<cpickup->nBunches; i++)
-      if (cpickup->data)
-        free(cpickup->data);
-    cpickup->data = NULL;
-  }
   cpickup->nBunches = 0;
 
   if (cpickup->updateInterval<1)
