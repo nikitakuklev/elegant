@@ -1143,7 +1143,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKMAP_PARAMS 13
 #define N_BEAMBEAM_PARAMS 6
 #define N_CPICKUP_PARAMS 7
-#define N_CKICKER_PARAMS 16
+#define N_CKICKER_PARAMS 14
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
