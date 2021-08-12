@@ -27,6 +27,10 @@
 #define cms c_mks
 #define twopi PIx2
 
+// Turn of MPI implementation for this element because the incoherent effects required *all* particle coordinates
+// on one processor. For that reason, CPICKUP and CKICKER are set to UNIPROCESSOR mode, so that all the work
+// is done by the master processor.
+
 #undef USE_MPI
 
 void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double Po, long idSlotsPerBunch)
@@ -52,11 +56,8 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
   long npTotal;
   double sumTotal;
   MPI_Status mpiStatus;
-#endif
-
 
   // this element does nothing in single particle mode (e.g., trajectory, orbit, ..) 
-#if USE_MPI
   if (notSinglePart==0)
     return;
 #endif
@@ -220,9 +221,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   MPI_Status mpiStatus;
   double sumTotal;
   long npTotal;
-#endif
 
-#if USE_MPI
   if (notSinglePart==0)
     /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
     return;
@@ -370,11 +369,6 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
     free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 
 }
-
-
-
-
-
 
 // Kicker initialization function
 
