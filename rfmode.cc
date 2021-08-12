@@ -1000,14 +1000,6 @@ void track_through_rfmode(
             n_occupied = receiveBuffer[12];
             n_summed = receiveBuffer[13];
             Vg_sum = receiveBuffer[14];
-	    if (adjusting) {
-	      /* adjust the voltage setpoint to get the voltage we really want */
-	      double VcEffective;
-	      VcEffective = n_summed?Vc_sum/n_summed:0.0;
-	      rfmode->setpointAdjustment += (rfmode->voltageSetpoint - VcEffective)*rfmode->adjustmentFraction;
-	      printf("Voltage setpoint adjustment changed to %le V on pass %ld\n\n", rfmode->setpointAdjustment, pass);
-	      fflush(stdout);
-	    }
 	  }
 	  if (myid==0) {
 #endif
@@ -1051,6 +1043,14 @@ void track_through_rfmode(
 #if USE_MPI
           }
 #endif
+          if (adjusting) {
+            /* adjust the voltage setpoint to get the voltage we really want */
+            double VcEffective;
+            VcEffective = n_summed?Vc_sum/n_summed:0.0;
+            rfmode->setpointAdjustment += (rfmode->voltageSetpoint - VcEffective)*rfmode->adjustmentFraction;
+            printf("Voltage setpoint adjustment changed to %le V on pass %ld\n", rfmode->setpointAdjustment, pass);
+            fflush(stdout);
+          }
       }
 
 #if USE_MPI
