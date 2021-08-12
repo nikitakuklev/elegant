@@ -24,8 +24,8 @@
 #include <gsl/gsl_integration.h>
 //#include <algorithm>
 
-#define cms 299792458.0
-#define twopi 6.28318530718
+#define cms c_mks
+#define twopi PIx2
 
 #undef USE_MPI
 
@@ -146,10 +146,8 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
 // Pickup initialization function{
 void initializeCoolerPickup(CPICKUP *cpickup)
 {
-  long i;
-
   if (cpickup->ID==NULL || !strlen(cpickup->ID))
-    bombElegant("you must give an ID string for TFBPICKUP", NULL);
+    bombElegant("you must give an ID string for CPICKUP", NULL);
 
   cpickup->nBunches = 0;
 
@@ -158,7 +156,6 @@ void initializeCoolerPickup(CPICKUP *cpickup)
 
   cpickup->initialized = 1;
 }
-
 
 
 struct E_params {double x; double y; double gamma; double lambda;};
@@ -185,7 +182,7 @@ double Ex (double theta, void * params){
 
 struct indexed_coord {int id; double t; double x; double y;};
 
-int compare(const void *arg1, const void *arg2){
+int compare_indexed_coord(const void *arg1, const void *arg2){
   indexed_coord const *lhs = static_cast<indexed_coord const*>(arg1);
   indexed_coord const *rhs = static_cast<indexed_coord const*>(arg2);
   return (lhs->t < rhs->t) ? -1 :  ((rhs->t < lhs->t) ? 1 : 0);
@@ -214,7 +211,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
     F.function = &Ex;
     F.params = &params;
 
-    // (gsl_funtion F, a, b, epsabs, epsrel, result, error, neval)
+    // (gsl_function F, a, b, epsabs, epsrel, result, error, neval)
     gsl_integration_qng(&F, 0, ckicker->angle_rad, 0, 1e-7, &Ex0, &error, &neval);
   }
 
@@ -253,14 +250,14 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
 
 
   if (ckicker->startPass>0 && ckicker->startPass!=ckicker->pickup->startPass)
-    bombElegantVA((char*)"TFBKICKER linked to TFBPICKUP with different START_PASS value (%ld vs %ld).", 
+    bombElegantVA((char*)"CKICKER linked to CPICKUP with different START_PASS value (%ld vs %ld).", 
                   ckicker->startPass, ckicker->pickup->startPass);
   if (ckicker->endPass>0 && ckicker->endPass!=ckicker->pickup->endPass)
-    bombElegantVA((char*)"TFBKICKER linked to TFBPICKUP with different END_PASS value (%ld vs %ld).", 
+    bombElegantVA((char*)"CKICKER linked to CPICKUP with different END_PASS value (%ld vs %ld).", 
                   ckicker->endPass, ckicker->pickup->endPass);
 
   if ((updateInterval =  ckicker->pickup->updateInterval*ckicker->updateInterval)<=0) 
-    bombElegantVA((char*)"TFBKICKER and TFBPICKUP with ID=%s have UPDATE_INTERVAL product of %d", ckicker->ID, updateInterval);
+    bombElegantVA((char*)"CKICKER and CPICKUP with ID=%s have UPDATE_INTERVAL product of %d", ckicker->ID, updateInterval);
   if (pass%updateInterval!=0) {
     if (isSlave || !notSinglePart) 
       free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
@@ -272,23 +269,13 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
     if (ckicker->nBunches!=nBuckets) {
       printf("Number of bunches has changed, re-initializing cooler driver.\n");
       fflush(stdout);
-      for (i=0; i<ckicker->nBunches; i++) {
-        free(ckicker->driverSignal[i]);
-        ckicker->driverSignal[i] = NULL;
-      }
-      free(ckicker->driverSignal);
     }
     ckicker->nBunches = nBuckets;
-    if (!(ckicker->driverSignal = (double**)tmalloc(sizeof(*ckicker->driverSignal)*nBuckets)))
-      bombElegant("memory allocation failure (coolerKicker)", NULL);
-    for (iBucket=0; iBucket<nBuckets; iBucket++) {
-      ckicker->driverSignal[iBucket] = (double*)calloc((1+TFB_FILTER_LENGTH), sizeof(**ckicker->driverSignal));
-    }
     ckicker->pass0 = pass;
   } 
 
   if (ckicker->nBunches!=ckicker->pickup->nBunches)
-    bombElegant("mismatch in number of buckets between TFBKICKER and TFBPICKUP", NULL);
+    bombElegant("mismatch in number of buckets between CKICKER and CPICKUP", NULL);
 
   
   
@@ -314,7 +301,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   }
   
   if(ckicker->incoherentMode!=0){
-    qsort(incoherent_ar, np0, sizeof(indexed_coord),compare ); 
+    qsort(incoherent_ar, np0, sizeof(indexed_coord),compare_indexed_coord ); 
   }
 
 
@@ -397,7 +384,7 @@ void initializeCoolerKicker(CKICKER *ckicker, LINE_LIST *beamline, long nPasses,
   long pickupFound = 0;
 
   if (ckicker->ID==NULL || !strlen(ckicker->ID))
-    bombElegant("you must give an ID string for TFBKICKER", NULL);
+    bombElegant("you must give an ID string for CKICKER", NULL);
 
   eptr = beamline->elem;
   while (eptr) {
@@ -409,10 +396,10 @@ void initializeCoolerKicker(CKICKER *ckicker, LINE_LIST *beamline, long nPasses,
     eptr = eptr->succ;
   }
   if (!pickupFound) 
-    bombElegant("pickup not found for TFBKICKER", NULL);
+    bombElegant("pickup not found for CKICKER", NULL);
 
   //if (ckicker->outputInterval<1)
-  //  bombElegant("TFBKICKER output interval is less than 1", NULL);
+  //  bombElegant("CKICKER output interval is less than 1", NULL);
 
   ckicker->nBunches = 0;
 
