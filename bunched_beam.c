@@ -682,7 +682,7 @@ long new_bunched_beam(
         beam->particle[i_particle][5] = (p-p_central)/p_central;
         beam->particle[i_particle][4] += s_offset;
         beam->particle[i_particle][lossPassIndex] = -1;
-        beam->particle[i_particle][bunchIndex] = -1;
+        beam->particle[i_particle][bunchIndex] = 0;
         beam->particle[i_particle][weightIndex] = 1;
         }
 
