@@ -43,22 +43,28 @@ Here is a summary of what's changed since release 2021.2.  Historical change log
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
+\item The voltage setpoint adjustment feature of \verb|RFMODE| will now work in the serial version.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item The lattice parser would crash when a single reflected element appeared with a quoted  name.
+  This was fixed.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None.
+\item Thanks to A. J. Dick and P. Piot (NIU), two new elements were added that allow simulation
+  of Optical Stochastic Cooling. The \verb|CPICKUP| element is used to record information from
+  the pickup undulator, while the \verb|CKICKER| element is used to impart corresponding
+  kicks to the beam. See the manual pages for more detail.
+\item The \verb|RFMODE| element now checks that the \verb|A0| coefficient is nonzero and normalizes
+  other coefficients to it, as implied by the manual.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item The \verb|ignore_elements| command no longer results in a printout of all the ignored elements.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}

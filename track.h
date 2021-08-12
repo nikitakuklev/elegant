@@ -1142,7 +1142,7 @@ extern char *entity_text[N_TYPES];
 #define N_SHRFDF_PARAMS 25
 #define N_KICKMAP_PARAMS 13
 #define N_BEAMBEAM_PARAMS 6
-#define N_CPICKUP_PARAMS 8 
+#define N_CPICKUP_PARAMS 7
 #define N_CKICKER_PARAMS 16
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
@@ -3549,7 +3549,6 @@ typedef struct {
 extern PARAMETER cpickup_param[N_CPICKUP_PARAMS];
 typedef struct {
   char *ID; 
-  double rmsNoise;
   long updateInterval, startPass, endPass;
   double dx, dy;
   short bunchedBeamMode;
@@ -3569,8 +3568,7 @@ typedef struct {
   char *ID; 
   double strength, kickLimit;
   double phase;
-  char *outputFile;
-  long updateInterval, outputInterval;
+  long updateInterval;
   long startPass, endPass;
   short bunchedBeamMode; 
   double lambda_rad;

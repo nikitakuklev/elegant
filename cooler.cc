@@ -242,8 +242,6 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
 #endif
 
   if (ckicker->initialized==0) {
-    if (nPasses<ckicker->outputInterval)
-      ckicker->outputInterval = nPasses;
     initializeCoolerKicker(ckicker, beamline, nPasses*nBuckets, rootname);
   }
 
@@ -391,9 +389,6 @@ void initializeCoolerKicker(CKICKER *ckicker, LINE_LIST *beamline, long nPasses,
   }
   if (!pickupFound) 
     bombElegant("pickup not found for CKICKER", NULL);
-
-  //if (ckicker->outputInterval<1)
-  //  bombElegant("CKICKER output interval is less than 1", NULL);
 
   ckicker->nBunches = 0;
 

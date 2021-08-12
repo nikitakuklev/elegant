@@ -3652,7 +3652,6 @@ CPICKUP cPickup_example;
 
 PARAMETER cpickup_param[N_CPICKUP_PARAMS] = {
    {"ID", "", IS_STRING, 0, (long)((char*)&cPickup_example.ID), NULL, 0.0, 0, "System identifier"},
-   {"RMS_NOISE", "M", IS_DOUBLE, 0, (long)((char*)&cPickup_example.rmsNoise), NULL, 0.0, 0, "RMS noise to add to position readings."},
    {"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char*)&cPickup_example.updateInterval), NULL, 0.0, 0, "Interval in turns for sampling data and updating filter output."},
    {"START_PASS", "", IS_LONG, 0, (long)((char*)&cPickup_example.startPass), NULL, 0.0, -1, "If positive, first pass on which to perform computations."},
    {"END_PASS", "", IS_LONG, 0, (long)((char*)&cPickup_example.endPass), NULL, 0.0, -1, "If positive, last pass on which to perform computations."},
@@ -3665,22 +3664,20 @@ CKICKER cKicker_example;
 
 
 PARAMETER ckicker_param[N_CKICKER_PARAMS] = {
-{"ID", "", IS_STRING, 0, (long)((char*)&cKicker_example.ID), NULL, 0.0, 0, "System identifier"},
-{"STRENGTH", "", IS_DOUBLE, 0, (long)((char*)&cKicker_example.strength), NULL, 0.0, 0, "Strength factor"},
-{"KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char*)&cKicker_example.kickLimit), NULL, 0.0, 0, "Limit on applied kick, nominally in radians."},
-{"PHASE", "Deg", IS_DOUBLE, 0, (long)((char*)&cKicker_example.phase), NULL, 0.0, 0, "Phase of the applied voltage relative to the bunch center, with 0 being on-crest.x2"},
-{"OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&cKicker_example.outputFile), NULL, 0.0, 0, "File for logging filter output and driver output"},
-{"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char*)&cKicker_example.updateInterval), NULL, 0.0, 0, "Interval in units of pickup update interval for sampling pickup data and upda"},
-{"OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char*)&cKicker_example.outputInterval), NULL, 0.0, 1024, "Number of samples to buffer between writing output file updates."},
-{"START_PASS", "", IS_LONG, 0, (long)((char*)&cKicker_example.startPass), NULL, 0.0, -1, "If positive, first pass on which to drive beam."},
-{"END_PASS", "", IS_LONG, 0, (long)((char*)&cKicker_example.endPass), NULL, 0.0, -1, "If positive, last pass on which to drive beam."},
-{"BUNCHED_BEAM_MODE", "", IS_SHORT, 0, (long)((char*)&cKicker_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, run in bunched beam mode."},
-{"LAMBDA_RAD", "M", IS_DOUBLE, 0, (long)((char*)&cKicker_example.lambda_rad), NULL, 0.0, 0, "Wavelength of radiation in meters"},
-{"TRANSVERSE_MODE", "", IS_SHORT, 0, (long)((char*)&cKicker_example.transverseMode), NULL, 0.0, 1, "If non-zero, use transverse effects."},
-{"INCOHERENT_MODE", "", IS_SHORT, 0, (long)((char*)&cKicker_example.incoherentMode), NULL, 0.0, 1, "If non-zero, use transverse effects."},
-{"ANGLE_RAD", "MRAD", IS_DOUBLE, 0, (long)((char*)&cKicker_example.angle_rad), NULL, 0.0, 0, "Angle, in mrad, of pickup radiation"},
-{"MAGNIFICATION", "", IS_DOUBLE, 0, (long)((char*)&cKicker_example.magnification), NULL, 0.0, 0, "Magnification of pickup radiation in the kicker"},
-{"NU", "", IS_LONG, 0, (long)((char*)&cKicker_example.Nu), NULL, 0.0, 0, "Number of undulator periods"},
+  {"ID", "", IS_STRING, 0, (long)((char*)&cKicker_example.ID), NULL, 0.0, 0, "System identifier"},
+  {"STRENGTH", "", IS_DOUBLE, 0, (long)((char*)&cKicker_example.strength), NULL, 0.0, 0, "Strength factor"},
+  {"KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char*)&cKicker_example.kickLimit), NULL, 0.0, 0, "Limit on applied kick, nominally in radians."},
+  {"PHASE", "Deg", IS_DOUBLE, 0, (long)((char*)&cKicker_example.phase), NULL, 0.0, 0, "Phase of the applied voltage relative to the bunch center, with 0 being on-crest.x2"},
+  {"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char*)&cKicker_example.updateInterval), NULL, 0.0, 0, "Interval in units of pickup update interval for sampling pickup data and upda"},
+  {"START_PASS", "", IS_LONG, 0, (long)((char*)&cKicker_example.startPass), NULL, 0.0, -1, "If positive, first pass on which to drive beam."},
+  {"END_PASS", "", IS_LONG, 0, (long)((char*)&cKicker_example.endPass), NULL, 0.0, -1, "If positive, last pass on which to drive beam."},
+  {"BUNCHED_BEAM_MODE", "", IS_SHORT, 0, (long)((char*)&cKicker_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, run in bunched beam mode."},
+  {"LAMBDA_RAD", "M", IS_DOUBLE, 0, (long)((char*)&cKicker_example.lambda_rad), NULL, 0.0, 0, "Wavelength of radiation in meters"},
+  {"TRANSVERSE_MODE", "", IS_SHORT, 0, (long)((char*)&cKicker_example.transverseMode), NULL, 0.0, 1, "If non-zero, use transverse effects."},
+  {"INCOHERENT_MODE", "", IS_SHORT, 0, (long)((char*)&cKicker_example.incoherentMode), NULL, 0.0, 1, "If non-zero, use transverse effects."},
+  {"ANGLE_RAD", "MRAD", IS_DOUBLE, 0, (long)((char*)&cKicker_example.angle_rad), NULL, 0.0, 0, "Angle, in mrad, of pickup radiation"},
+  {"MAGNIFICATION", "", IS_DOUBLE, 0, (long)((char*)&cKicker_example.magnification), NULL, 0.0, 0, "Magnification of pickup radiation in the kicker"},
+  {"NU", "", IS_LONG, 0, (long)((char*)&cKicker_example.Nu), NULL, 0.0, 0, "Number of undulator periods"},
 } ;
 
 char *beamBeamDistributionOption[N_BEAM_BEAM_DISTRIBUTIONS] = {
