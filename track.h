@@ -1002,7 +1002,9 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_SHRFDF  128
 #define T_KICKMAP 129
 #define T_BEAMBEAM 130
-#define N_TYPES  131
+#define T_CPICKUP 131
+#define T_CKICKER 132
+#define N_TYPES  133
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1140,6 +1142,8 @@ extern char *entity_text[N_TYPES];
 #define N_SHRFDF_PARAMS 25
 #define N_KICKMAP_PARAMS 13
 #define N_BEAMBEAM_PARAMS 6
+#define N_CPICKUP_PARAMS 8 
+#define N_CKICKER_PARAMS 16
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3541,6 +3545,57 @@ typedef struct {
   long initialized, fiducial_seen;
 } SHRFDF;
 
+/* Transverse Feedback Pickup element */
+extern PARAMETER cpickup_param[N_CPICKUP_PARAMS];
+typedef struct {
+  char *ID; 
+  double rmsNoise;
+  long updateInterval, startPass, endPass;
+  double dx, dy;
+  short bunchedBeamMode;
+   
+  
+  /* internal parameters */
+  short initialized, iPlane;
+  long filterLength, pass0;
+  double *filterOutput;
+  double *long_coords, *horz_coords, *vert_coords;
+
+  double tReference;
+  long nBunches, tReferenceSet;
+  /* circular buffer for storing past readings */
+  double **data;
+} CPICKUP;
+
+
+/* Transverse Feedback Driver element */
+extern PARAMETER ckicker_param[N_CKICKER_PARAMS];
+typedef struct {
+  char *ID; 
+  double strength, kickLimit;
+  double phase;
+  char *outputFile;
+  long updateInterval, outputInterval;
+  long startPass, endPass;
+  short bunchedBeamMode; 
+  double lambda_rad;
+  short transverseMode, incoherentMode; 
+  double angle_rad; 
+  double magnification;
+  long Nu; 
+
+  /* internal parameters */
+  unsigned short initialized;
+#define CKICKER_MAIN_INIT ((unsigned short)0x01)
+#define CKICKER_CLOCK_INIT ((unsigned short)0x02)
+  long pass0;
+  CPICKUP *pickup;
+  long nBunches;
+  /* circular buffer for storing output signal */
+  //long maxDelay;
+  double **driverSignal;
+} CKICKER;
+
   /* END OF ELEMENT STRUCTURE DEFINITIONS */
 
 /* macros for bending magnets */ 
@@ -4745,6 +4800,11 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass
 void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp);
 void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST *beamline, long pass, long n_passes, char *rootname, double Po, long idSlotsPerBunch);
 void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, long n_passes, char *rootname);
+
+void coolerPickup(CPICKUP *tfbp, double **part, long np, long pass, double Po, long idSlotsPerBunch);
+void initializeCoolerPickup(CPICKUP *tfbp);
+void coolerKicker(CKICKER *tfbd, double **part, long np, LINE_LIST *beamline, long pass, long n_passes, char *rootname, double Po, long idSlotsPerBunch);
+void initializeCoolerKicker(CKICKER *tfbd, LINE_LIST *beamline, long n_passes, char *rootname);
 
 long computeEngeCoefficients(double *engeCoef, double rho, double length, double gap, double fint);
 

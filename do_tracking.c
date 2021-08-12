@@ -970,9 +970,11 @@ long do_tracking(
 	  if (parallelStatus==trueParallel) {
 	    if (!partOnMaster) {
               if(usefulOperation(eptr, flags, i_pass)) {
+                /*
                 char buffer[16384];
                 snprintf(buffer, 16384, "%s (%s) is a serial element. It is not recommended for simulations with a large number of particles because of possible memory issues.", eptr->name, entity_name[eptr->type]);
                 printWarning(buffer, NULL);
+                */
 		gatherParticles(&coord, &nToTrack, &nLost, &accepted, 
 				n_processors, myid, &round);
 		if (isMaster)
@@ -2195,6 +2197,10 @@ long do_tracking(
 	      if (!(flags&TEST_PARTICLES))
 		transverseFeedbackPickup((TFBPICKUP*)eptr->p_elem, coord, nToTrack, i_pass, *P_central, beam?beam->id_slots_per_bunch:0);
 	      break;
+	    case T_CPICKUP:
+	      if (!(flags&TEST_PARTICLES))
+		coolerPickup((CPICKUP*)eptr->p_elem, coord, nToTrack, i_pass, *P_central, beam?beam->id_slots_per_bunch:0);
+	      break;
 	    case T_STRAY:
 	      if (eptr->matrix) {
 		free_matrices(eptr->matrix);
@@ -2217,6 +2223,11 @@ long do_tracking(
               fflush(stdout);
 #endif
 	      break;
+	    case T_CKICKER:
+	      if (!(flags&TEST_PARTICLES))
+		coolerKicker((CKICKER*)eptr->p_elem, coord, nToTrack, beamline, i_pass, n_passes, 
+                             run->rootname, *P_central, beam?beam->id_slots_per_bunch:0);	      
+              break;
 	    case T_LSRMDLTR:
 	      nLeft = motion(coord, nToTrack, eptr->p_elem, eptr->type, P_central, 
 			     &dgamma, dP, accepted, last_z);
@@ -4908,9 +4919,10 @@ void gatherParticles(double ***coord, long *nToTrack, long *nLost, double ***acc
 #endif
 
   MPI_Status status;
-
+  /*
   printf("Gathering particles to master from %ld processors\n", work_processors);
   fflush(stdout);
+  */
 
   nToTrackCounts = malloc(sizeof(int) * n_processors);
   nLostCounts = malloc(sizeof(int) * n_processors);
@@ -4996,8 +5008,9 @@ void gatherParticles(double ***coord, long *nToTrack, long *nLost, double ***acc
     }
     MPI_Bcast (round, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
+    /*
   report_stats(stdout, "Finished gathering particles to master:");
-  
+    */
   free(nToTrackCounts);
   free(nLostCounts);
 }
