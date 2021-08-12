@@ -3839,7 +3839,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_SHRFDF_PARAMS,  MPALGORITHM,   sizeof(SHRFDF),    shrfdf_param     },
     { N_KICKMAP_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MPALGORITHM|BACKTRACK, sizeof(UKICKMAP),    kickmap_param    },
     { N_BEAMBEAM_PARAMS, 0, sizeof(BEAMBEAM),    beambeam_param    },
-    { N_CPICKUP_PARAMS,         UNIPROCESSOR|NO_APERTURE,      sizeof(CPICKUP),  cpickup_param    },
+    { N_CPICKUP_PARAMS, UNIPROCESSOR|NO_APERTURE,      sizeof(CPICKUP),  cpickup_param    },
     { N_CKICKER_PARAMS, UNIPROCESSOR|RUN_ZERO_PARTICLES,     sizeof(CKICKER),  ckicker_param    },
 } ;
 
