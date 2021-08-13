@@ -3556,9 +3556,11 @@ typedef struct {
   /* internal parameters */
   short initialized;
   long pass0;
-  double *filterOutput;
-  double *long_coords, *horz_coords, *vert_coords;
   long nBunches;
+  double *filterOutput;
+  double **long_coords, **horz_coords, **vert_coords;
+  long **pid;
+  long *npBunch;
 } CPICKUP;
 
 
