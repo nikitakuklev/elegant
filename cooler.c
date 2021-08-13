@@ -16,7 +16,6 @@
 #include <sunmath.h>
 #endif
 
-#include <complex>
 #include "mdb.h"
 #include "track.h"
 #include <gsl/gsl_sf_bessel.h>
@@ -37,12 +36,7 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
   long **ipBucket = NULL;         /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;          /* array to record how many particles are in each bucket */
   long nBuckets=0;
-
-
-#ifdef DEBUG
-  printf("Running cooler pickup with %ld particles\n", np0);
-  fflush(stdout);
-#endif
+  long ib;
 
   // MPI Required vars 
 #if USE_MPI
@@ -66,22 +60,27 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
   if (cpickup->initialized==0)
     initializeCoolerPickup(cpickup); 
   else {
-    long ib;
     for (ib=0; ib<cpickup->nBunches; ib++) {
       free(cpickup->long_coords[ib]);
       free(cpickup->horz_coords[ib]);
       free(cpickup->vert_coords[ib]);
       free(cpickup->pid[ib]);
+      hdestroy(cpickup->pidHashTable[ib]);
+      free(cpickup->index[ib]);
     }
     free(cpickup->long_coords);
     free(cpickup->horz_coords);
     free(cpickup->vert_coords);
     free(cpickup->pid);
     free(cpickup->npBunch);
-    
+    free(cpickup->pidHashTable);
+    free(cpickup->index);
+
     cpickup->long_coords = cpickup->horz_coords = cpickup->vert_coords = NULL;
     cpickup->pid = NULL;
     cpickup->npBunch = NULL;
+    cpickup->pidHashTable = NULL;
+    cpickup->index = NULL;
   }
 
   // runs only between user specified passes
@@ -124,9 +123,9 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
       fflush(stdout);
     }
     cpickup->nBunches = nBuckets;
-    cpickup->filterOutput = (double*)SDDS_Realloc(cpickup->filterOutput, sizeof(*cpickup->filterOutput)*nBuckets);
+    cpickup->tAverage = (double*)SDDS_Realloc(cpickup->tAverage, sizeof(*cpickup->tAverage)*nBuckets);
     for (i=0; i<nBuckets; i++) {
-      cpickup->filterOutput[i] = 0;
+      cpickup->tAverage[i] = 0;
     }
   }
 
@@ -136,20 +135,25 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
   cpickup->vert_coords = (double **)malloc(sizeof(double*)*nBuckets);
   cpickup->pid = (long **)malloc(sizeof(long*)*nBuckets);
   cpickup->npBunch = (long *)malloc(sizeof(long)*nBuckets);
+  cpickup->pidHashTable = (htab **)malloc(sizeof(htab*)*nBuckets);
+  cpickup->index = (long **)malloc(sizeof(long*)*nBuckets);
 
   // Important stuff happens here
-  //    filterOutput takes average time of arrival
+  //    tAverage takes average time of arrival
   //    part_coords takes each particles individual time of arival
 
-  long ib;
   for (ib=0; ib<nBuckets; ib++) {
     cpickup->long_coords[ib] = (double *)malloc(sizeof(double)*npBucket[ib]);
     cpickup->horz_coords[ib] = (double *)malloc(sizeof(double)*npBucket[ib]);
     cpickup->vert_coords[ib] = (double *)malloc(sizeof(double)*npBucket[ib]);
     cpickup->pid[ib] = (long *)malloc(sizeof(long)*npBucket[ib]);
     cpickup->npBunch[ib] = npBucket[ib];
+    cpickup->pidHashTable[ib] = hcreate(12);
+    cpickup->index[ib] = (long *)malloc(sizeof(long)*npBucket[ib]);
+
     sum = 0; // Used to average all particle arival times in the pickup
     for (i=0; i<npBucket[ib]; i++) {
+      char pidString[32];
       sum += part0[ipBucket[ib][i]][4];
       // store the particle time in the coord array to be used in kicker 
       cpickup->long_coords[ib][i] = part0[ipBucket[ib][i]][4]; 
@@ -158,6 +162,11 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
       cpickup->vert_coords[ib][i] = part0[ipBucket[ib][i]][2] + cpickup->dy; 
       // will use this to double-check ordering of particles between pickup and kicker
       cpickup->pid[ib][i] = part0[ipBucket[ib][i]][particleIDIndex]; 
+      snprintf(pidString, 32, "%ld", cpickup->pid[ib][i]);
+      cpickup->index[ib][i] = i;
+      if (!hadd(cpickup->pidHashTable[ib], pidString, strlen(pidString), &(cpickup->index[ib][i]))) {
+        bombElegantVA("Problem creating PID hash table: duplicate PID %ld\n", cpickup->pid[ib][i]);
+      }
     }
 
 #ifdef DEBUG
@@ -181,11 +190,11 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
       printf("sumTotal = %le\n", sumTotal);
       fflush(stdout);
 #endif
-      cpickup->filterOutput[ib] = sumTotal/npTotal;
+      cpickup->tAverage[ib] = sumTotal/npTotal;
     } else
-      cpickup->filterOutput[ib] = sum/npBucket[ib];
+      cpickup->tAverage[ib] = sum/npBucket[ib];
 #else
-    cpickup->filterOutput[ib] = sum/npBucket[ib];
+    cpickup->tAverage[ib] = sum/npBucket[ib];
 #endif
   }
 
@@ -259,11 +268,11 @@ double Ex (double theta, void * params){
   return (J0_term + J2_term) * I0_term;
 }
 
-struct indexed_coord {int index; double t; double x; double y;};
+typedef struct {int index; double t; double x; double y;} indexed_coord ;
 
 int compare_indexed_coord(const void *arg1, const void *arg2){
-  indexed_coord const *lhs = static_cast<indexed_coord const*>(arg1);
-  indexed_coord const *rhs = static_cast<indexed_coord const*>(arg2);
+  indexed_coord const *lhs = (indexed_coord const*)(arg1);
+  indexed_coord const *rhs = (indexed_coord const*)(arg2);
   return (lhs->t < rhs->t) ? -1 :  ((rhs->t < lhs->t) ? 1 : 0);
 }
 
@@ -276,11 +285,8 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   long *npBucket = NULL;    /* array to record how many particles are in each bucket */
   long iBucket, nBuckets=0;
   long updateInterval;
-
-#ifdef DEBUG
-  printf("Running cooler kicker with %ld particles\n", np0);
-  fflush(stdout);
-#endif
+  double Ex0;
+  long ib;
 
 #if USE_MPI
   MPI_Status mpiStatus;
@@ -302,15 +308,14 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
     fflush(stdout);
 #endif
 
-  double Ex0;
   if (ckicker->transverseMode!=0) {
     // integration variables	
     double error;
     size_t neval;
+    gsl_function F;
 
     struct E_params params = {0, 0, Po, ckicker->lambda_rad}; // {x, y, gamma, lambda}
 
-    gsl_function F;
     F.function = &Ex;
     F.params = &params;
 
@@ -368,37 +373,31 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   } 
 
   if (ckicker->nBunches!=ckicker->pickup->nBunches)
-    bombElegant("mismatch in number of buckets between CKICKER and CPICKUP", NULL);
-
-  long ib;
+    bombElegantVA("mismatch in number of buckets between CKICKER (%ld) and CPICKUP (%ld)", 
+                  ckicker->nBunches, ckicker->pickup->nBunches);
+ 
   
-  for (ib=0; ib<nBuckets; ib++) {
-    if (npBucket[ib]!=ckicker->pickup->npBunch[ib]) 
-      bombElegantVA("Mismatch (%ld vs %ld) in number of particles in bucket %ld for CPICKUP/CKICKER %s\n",
-                    npBucket[ib], ckicker->pickup->npBunch[ib], ib, ckicker->ID);
-    for (i=0; i<npBucket[ib]; i++) {
-      if (((long)part0[ipBucket[ib][i]][particleIDIndex]) != ckicker->pickup->pid[ib][i]) {
-        for (j=0; j<npBucket[ib]; j++) {
-          printf("%ld %ld %ld %ld\n", j, ipBucket[ib][j],
-                 ((long)part0[ipBucket[ib][j]][particleIDIndex]),
-                 ckicker->pickup->pid[ib][j]);
-        }
-        fflush(stdout);
-        bombElegantVA("Mismatched particle IDs (%ld vs %ld) in bucket %ld for CPICKUP/CKICKER %s, original index %ld\n",
-                      ckicker->pickup->pid[ib][i], (long)part0[ipBucket[ib][i]][particleIDIndex],
-                      ib, ckicker->ID, ipBucket[ib][i]);
-      }
-    }
-  }
-
   for (ib=0; ib<nBuckets; ib++) {
     // ================================= //
     // This is where the kick is applied //
     // ================================= //
     double sum, nom_kick;
     double s_avg, s_i, x_i, y_i;
-    
+    char pidString[32];
+    long *sitmp, *sourceIndex = NULL;
     indexed_coord *incoherent_ar;
+    
+    sourceIndex = (long*) malloc(sizeof(long)*npBucket[ib]);
+    for (i=0; i<npBucket[ib]; i++) {
+      snprintf(pidString, 32, "%ld", (long)part0[ipBucket[ib][i]][particleIDIndex]);
+      if (!hfind(ckicker->pickup->pidHashTable[ib], pidString, strlen(pidString)))
+        bombElegantVA("PID of particle in CKICKER not present at CPICKUP! Cooling ID=%s\n",  ckicker->ID); 
+      if (!(sitmp = (long*)hstuff(ckicker->pickup->pidHashTable[ib]))) 
+        bombElegantVA("Problem retrieving index of PID %ld. Cooling ID=%s\n", (long)part0[ipBucket[ib][i]][particleIDIndex],
+                      ckicker->ID); 
+      sourceIndex[i] = *sitmp;
+    }
+
     if (ckicker->incoherentMode!=0)
       incoherent_ar = (indexed_coord *)malloc(sizeof(indexed_coord)*npBucket[ib]);
     sum = 0;
@@ -406,9 +405,9 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
       sum += part0[ipBucket[ib][i]][4];
       if (ckicker->incoherentMode!=0) {
         incoherent_ar[i].index = i;
-        incoherent_ar[i].x = ckicker->pickup->horz_coords[ib][i];
-        incoherent_ar[i].y = ckicker->pickup->vert_coords[ib][i];
-        incoherent_ar[i].t = ckicker->pickup->long_coords[ib][i];
+        incoherent_ar[i].x = ckicker->pickup->horz_coords[ib][sourceIndex[i]];
+        incoherent_ar[i].y = ckicker->pickup->vert_coords[ib][sourceIndex[i]];
+        incoherent_ar[i].t = ckicker->pickup->long_coords[ib][sourceIndex[i]];
       }  
     }
     
@@ -422,11 +421,11 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
     if (!partOnMaster) {
       MPI_Allreduce(&sum, &sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
       MPI_Allreduce(&npBucket[ib],  &npTotal, 1, MPI_LONG, MPI_SUM, workers);
-      s_avg = sumTotal/npTotal - ckicker->pickup->filterOutput[ib];
+      s_avg = sumTotal/npTotal - ckicker->pickup->tAverage[ib];
     } else
-      s_avg = sum/npBucket[ib] - ckicker->pickup->filterOutput[ib];
+      s_avg = sum/npBucket[ib] - ckicker->pickup->tAverage[ib];
 #else
-    s_avg = sum/npBucket[ib] - ckicker->pickup->filterOutput[ib];
+    s_avg = sum/npBucket[ib] - ckicker->pickup->tAverage[ib];
 #endif
 #ifdef DEBUG
     printf("bunch %ld has %ld particles, s_avg = %le\n", ib, npBucket[ib], s_avg);
@@ -435,13 +434,15 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
 
     if (ckicker->incoherentMode!=0){
       for (i=0; i<npBucket[ib]; i++){
-        long index = incoherent_ar[i].index; /* index of target particle in the unsorted arrays */
+        long index;
+        index = incoherent_ar[i].index; /* index of target particle in the unsorted arrays */
         for (j=i+1; j<npBucket[ib]; j++) {   
-          //if(abs(incoherent_ar[j].t-incoherent_ar[i].t) < ckicker->Nu*ckicker->lambda_rad){  
-          if (abs(incoherent_ar[j].t-incoherent_ar[i].t) < 11*ckicker->lambda_rad) { 
-            double incoherent_phase = abs(incoherent_ar[j].t-incoherent_ar[i].t)*twopi/ckicker->lambda_rad;
-            double incoherent_strength = 1 - abs(incoherent_phase / (twopi*11));
-            double kick = -(ckicker->strength * incoherent_strength) * sin(incoherent_phase + ckicker->phase*twopi); 
+          //if(fabs(incoherent_ar[j].t-incoherent_ar[i].t) < ckicker->Nu*ckicker->lambda_rad){  
+          if (fabs(incoherent_ar[j].t-incoherent_ar[i].t) < 11*ckicker->lambda_rad) { 
+            double incoherent_phase, incoherent_strength, kick;
+            incoherent_phase = fabs(incoherent_ar[j].t-incoherent_ar[i].t)*twopi/ckicker->lambda_rad;
+            incoherent_strength = 1 - fabs(incoherent_phase / (twopi*11));
+            kick = -(ckicker->strength * incoherent_strength) * sin(incoherent_phase + ckicker->phase*twopi); 
             
             part0[ipBucket[ib][index]][5] += kick;
           }   
@@ -452,9 +453,9 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
 
     for (i=0; i<npBucket[ib]; i++){
       // particle coords
-      s_i = part0[ipBucket[ib][i]][4] - ckicker->pickup->long_coords[ib][i];
-      x_i = part0[ipBucket[ib][i]][0] - ckicker->magnification * ckicker->pickup->horz_coords[ib][i];
-      y_i = part0[ipBucket[ib][i]][2] - ckicker->magnification * ckicker->pickup->vert_coords[ib][i];
+      s_i = part0[ipBucket[ib][i]][4] - ckicker->pickup->long_coords[ib][sourceIndex[i]];
+      x_i = part0[ipBucket[ib][i]][0] - ckicker->magnification * ckicker->pickup->horz_coords[ib][sourceIndex[i]];
+      y_i = part0[ipBucket[ib][i]][2] - ckicker->magnification * ckicker->pickup->vert_coords[ib][sourceIndex[i]];
 
       // on-axis kick = sin(difference in path length from avg + phase)
       nom_kick = -(ckicker->strength) * sin((s_avg - s_i) * (twopi/(ckicker->lambda_rad)) + ckicker->phase*twopi);     
@@ -462,9 +463,9 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
       if (ckicker->transverseMode!=0) {
         double Exi, error;
         size_t neval;
+        gsl_function F;
         struct E_params params = {x_i, y_i, Po, ckicker->lambda_rad}; // {x, y, gamma, lambda}
         
-        gsl_function F;
         F.function = &Ex;
         F.params = &params;
         
@@ -474,6 +475,8 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
         part0[ipBucket[ib][i]][5] += nom_kick;
       }   
     }
+    free(sourceIndex);
+    sourceIndex = NULL;
   }
 
   if (isSlave || !notSinglePart) 
@@ -513,7 +516,7 @@ void initializeCoolerKicker(CKICKER *ckicker, LINE_LIST *beamline, long nPasses,
 
   if (ckicker->updateInterval<1)
     ckicker->updateInterval = 1;
-  ckicker->initialized = CKICKER_MAIN_INIT;
+  ckicker->initialized = 1;
 }
 
 

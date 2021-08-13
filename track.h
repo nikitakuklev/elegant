@@ -3556,10 +3556,12 @@ typedef struct {
   /* internal parameters */
   short initialized;
   long nBunches, lastPass;
-  double *filterOutput;
-  double **long_coords, **horz_coords, **vert_coords;
-  long **pid;
-  long *npBunch;
+  double *tAverage;  /* Stores the average arrival time of each bunch */
+  long *npBunch; /* number of particles in each bunch */
+  double **long_coords, **horz_coords, **vert_coords; /* t, x, y coordinates of each particle in each bunch */
+  long **pid; /* particle ID for each particle in each bunch */
+  htab **pidHashTable; /* allows kicker code to quickly find particle index by particle ID */
+  long **index;  /* for storing indices for the hash table */
 } CPICKUP;
 
 
@@ -3579,14 +3581,9 @@ typedef struct {
   long Nu; 
 
   /* internal parameters */
-  unsigned short initialized;
-#define CKICKER_MAIN_INIT ((unsigned short)0x01)
-#define CKICKER_CLOCK_INIT ((unsigned short)0x02)
+  short initialized;
   CPICKUP *pickup;
   long nBunches;
-  /* circular buffer for storing output signal */
-  //long maxDelay;
-  double **driverSignal;
 } CKICKER;
 
   /* END OF ELEMENT STRUCTURE DEFINITIONS */
