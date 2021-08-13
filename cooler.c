@@ -42,7 +42,6 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
 #if USE_MPI
   long npTotal;
   double sumTotal;
-  MPI_Status mpiStatus;
 
   if (!partOnMaster) {
     // this element does nothing in single particle mode (e.g., trajectory, orbit, ..) 
@@ -154,9 +153,9 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
     sum = 0; // Used to average all particle arival times in the pickup
     for (i=0; i<npBucket[ib]; i++) {
       char pidString[32];
-      sum += part0[ipBucket[ib][i]][4];
+      sum += time0[ipBucket[ib][i]];
       // store the particle time in the coord array to be used in kicker 
-      cpickup->long_coords[ib][i] = part0[ipBucket[ib][i]][4]; 
+      cpickup->long_coords[ib][i] = time0[ipBucket[ib][i]];
       // store x and y for use in computing transverse effects
       cpickup->horz_coords[ib][i] = part0[ipBucket[ib][i]][0] + cpickup->dx;   
       cpickup->vert_coords[ib][i] = part0[ipBucket[ib][i]][2] + cpickup->dy; 
@@ -283,13 +282,12 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   long *ibParticle = NULL;  /* array to record which bucket each particle is in */
   long **ipBucket = NULL;		/* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;    /* array to record how many particles are in each bucket */
-  long iBucket, nBuckets=0;
+  long nBuckets=0;
   long updateInterval;
   double Ex0;
   long ib;
 
 #if USE_MPI
-  MPI_Status mpiStatus;
   double sumTotal;
   long npTotal;
 
@@ -382,10 +380,10 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
     // This is where the kick is applied //
     // ================================= //
     double sum, nom_kick;
-    double s_avg, s_i, x_i, y_i;
+    double t_avg, t_i, x_i, y_i;
     char pidString[32];
     long *sitmp, *sourceIndex = NULL;
-    indexed_coord *incoherent_ar;
+    indexed_coord *incoherent_ar = NULL;
     
     sourceIndex = (long*) malloc(sizeof(long)*npBucket[ib]);
     for (i=0; i<npBucket[ib]; i++) {
@@ -402,7 +400,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
       incoherent_ar = (indexed_coord *)malloc(sizeof(indexed_coord)*npBucket[ib]);
     sum = 0;
     for (i=0; i<npBucket[ib]; i++) {
-      sum += part0[ipBucket[ib][i]][4];
+      sum += time0[ipBucket[ib][i]];
       if (ckicker->incoherentMode!=0) {
         incoherent_ar[i].index = i;
         incoherent_ar[i].x = ckicker->pickup->horz_coords[ib][sourceIndex[i]];
@@ -416,19 +414,19 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
       qsort(incoherent_ar, npBucket[ib], sizeof(indexed_coord),compare_indexed_coord ); 
     }
 
-    // s_avg equals average arrival time at kicker - average time at pickup
+    // t_avg equals average arrival time at kicker - average time at pickup
 #if USE_MPI
     if (!partOnMaster) {
       MPI_Allreduce(&sum, &sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
       MPI_Allreduce(&npBucket[ib],  &npTotal, 1, MPI_LONG, MPI_SUM, workers);
-      s_avg = sumTotal/npTotal - ckicker->pickup->tAverage[ib];
+      t_avg = sumTotal/npTotal - ckicker->pickup->tAverage[ib];
     } else
-      s_avg = sum/npBucket[ib] - ckicker->pickup->tAverage[ib];
+      t_avg = sum/npBucket[ib] - ckicker->pickup->tAverage[ib];
 #else
-    s_avg = sum/npBucket[ib] - ckicker->pickup->tAverage[ib];
+    t_avg = sum/npBucket[ib] - ckicker->pickup->tAverage[ib];
 #endif
 #ifdef DEBUG
-    printf("bunch %ld has %ld particles, s_avg = %le\n", ib, npBucket[ib], s_avg);
+    printf("bunch %ld has %ld particles, t_avg = %le\n", ib, npBucket[ib], t_avg);
     fflush(stdout);
 #endif
 
@@ -453,12 +451,12 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
 
     for (i=0; i<npBucket[ib]; i++){
       // particle coords
-      s_i = part0[ipBucket[ib][i]][4] - ckicker->pickup->long_coords[ib][sourceIndex[i]];
+      t_i = time0[ipBucket[ib][i]]    - ckicker->pickup->long_coords[ib][sourceIndex[i]];
       x_i = part0[ipBucket[ib][i]][0] - ckicker->magnification * ckicker->pickup->horz_coords[ib][sourceIndex[i]];
       y_i = part0[ipBucket[ib][i]][2] - ckicker->magnification * ckicker->pickup->vert_coords[ib][sourceIndex[i]];
 
-      // on-axis kick = sin(difference in path length from avg + phase)
-      nom_kick = -(ckicker->strength) * sin((s_avg - s_i) * (twopi/(ckicker->lambda_rad)) + ckicker->phase*twopi);     
+      // on-axis kick = sin(c*(difference in arrival time)*2*Pi/lambda + phase)
+      nom_kick = -(ckicker->strength) * sin((t_avg - t_i)*c_mks * (twopi/(ckicker->lambda_rad)) + ckicker->phase*twopi);     
     
       if (ckicker->transverseMode!=0) {
         double Exi, error;
