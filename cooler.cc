@@ -6,7 +6,6 @@
  * This file is distributed subject to a Software License Agreement found
  * in the file LICENSE that is included with this distribution. 
  \*************************************************************************/
-#define DEBUG
 
 /*  file: cooler.cc 
  *  based on: tfeedback.c
@@ -27,17 +26,6 @@
 #define cms c_mks
 #define twopi PIx2
 
-// Turn off MPI implementation for this element because the incoherent effects required *all* particle coordinates
-// on one processor. For that reason, CPICKUP and CKICKER are set to UNIPROCESSOR mode, so that all the work
-// is done by the master processor.
-
-#if USE_MPI
-#define WAS_USE_MPI 1
-#else
-#define WAS_USE_MPI 0
-#endif
-#define USE_MPI 0
-
 void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double Po, long idSlotsPerBunch)
 {
 
@@ -50,20 +38,29 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
   long *npBucket = NULL;          /* array to record how many particles are in each bucket */
   long nBuckets=0;
 
+
+#ifdef DEBUG
+  printf("Running cooler pickup with %ld particles\n", np0);
+  fflush(stdout);
+#endif
+
   // MPI Required vars 
 #if USE_MPI
   long npTotal;
   double sumTotal;
   MPI_Status mpiStatus;
 
-  // this element does nothing in single particle mode (e.g., trajectory, orbit, ..) 
-  if (notSinglePart==0)
-    return;
+  if (!partOnMaster) {
+    // this element does nothing in single particle mode (e.g., trajectory, orbit, ..) 
+    if (notSinglePart==0)
+      return;
+  }
 #endif
 
-  // runs only between user specified passes
-  if ((cpickup->startPass>0 && pass<cpickup->startPass) || (cpickup->endPass>0 && pass>cpickup->endPass))
-    return;
+#ifdef DEBUG
+    printf("Continuing cooler pickup\n");
+    fflush(stdout);
+#endif
 
   // makes sure element is initialized 
   if (cpickup->initialized==0)
@@ -87,33 +84,40 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
     cpickup->npBunch = NULL;
   }
 
+  // runs only between user specified passes
+  if ((cpickup->startPass>0 && pass<cpickup->startPass) || (cpickup->endPass>0 && pass>cpickup->endPass))
+    return;
+  if (cpickup->updateInterval>1 && pass%cpickup->updateInterval!=0)
+    return;
+  cpickup->lastPass = pass;
+
+#ifdef DEBUG
+    printf("Initialized cooler pickup\n");
+    fflush(stdout);
+#endif
+
   // assign buckets normal
   if (isSlave || !notSinglePart 
-#if WAS_USE_MPI==1
+#if USE_MPI
       || (partOnMaster && myid==0)
 #endif
-      ) {
+      )
     index_bunch_assignments(part0, np0, cpickup->bunchedBeamMode?idSlotsPerBunch:0, Po, 
                             &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
-    
 
-  // assign buckets mpi
+#ifdef DEBUG
+    printf("indexed bunch assignments\n");
+    fflush(stdout);
+#endif    
+
 #if USE_MPI
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (myid==0)
-    MPI_Recv(&nBuckets, 1, MPI_LONG, 1, 1, MPI_COMM_WORLD, &mpiStatus);
-  else if (myid==1)
-    MPI_Send(&nBuckets, 1, MPI_LONG, 0, 1, MPI_COMM_WORLD);
+    if (partOnMaster || myid!=0) {
 #endif
-
-
-  if (cpickup->updateInterval>1 && pass%cpickup->updateInterval!=0) {
-    if (isSlave || !notSinglePart) 
-      // memory management for bucket assignments
-      free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
-    return;
-  }
-
+#ifdef DEBUG
+    printf("%ld buckets found\n", nBuckets);
+    fflush(stdout);
+#endif
+    
   if (cpickup->nBunches==0 || cpickup->nBunches!=nBuckets) {
     if (cpickup->nBunches!=nBuckets) {
       printf("Number of bunches has changed, re-initializing cooler pickup\n");
@@ -124,7 +128,6 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
     for (i=0; i<nBuckets; i++) {
       cpickup->filterOutput[i] = 0;
     }
-    cpickup->pass0 = pass;
   }
 
   // Allocate space for particle coordinates, which may be needed by the CKICKER 
@@ -146,7 +149,7 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
     cpickup->pid[ib] = (long *)malloc(sizeof(long)*npBucket[ib]);
     cpickup->npBunch[ib] = npBucket[ib];
     sum = 0; // Used to average all particle arival times in the pickup
-    for(i=0; i<npBucket[ib]; i++){
+    for (i=0; i<npBucket[ib]; i++) {
       sum += part0[ipBucket[ib][i]][4];
       // store the particle time in the coord array to be used in kicker 
       cpickup->long_coords[ib][i] = part0[ipBucket[ib][i]][4]; 
@@ -157,19 +160,61 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
       cpickup->pid[ib][i] = part0[ipBucket[ib][i]][particleIDIndex]; 
     }
 
+#ifdef DEBUG
+    printf("Finished looping over %ld particles, sum = %le\n", npBucket[ib], sum);
+    fflush(stdout);
+#endif
+
 #if USE_MPI
-    MPI_Allreduce(&sum, &sumTotal, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&npBucket[ib],  &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-    cpickup->filterOutput[ib] = sumTotal/npTotal;
+    if (!partOnMaster) {
+#ifdef DEBUG
+      printf("Reducing sum data\n");
+      fflush(stdout);
+#endif
+      MPI_Allreduce(&npBucket[ib],  &npTotal, 1, MPI_LONG, MPI_SUM, workers);
+#ifdef DEBUG
+      printf("npTotal = %ld\n", npTotal);
+      fflush(stdout);
+#endif
+      MPI_Allreduce(&sum, &sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
+#ifdef DEBUG
+      printf("sumTotal = %le\n", sumTotal);
+      fflush(stdout);
+#endif
+      cpickup->filterOutput[ib] = sumTotal/npTotal;
+    } else
+      cpickup->filterOutput[ib] = sum/npBucket[ib];
 #else
     cpickup->filterOutput[ib] = sum/npBucket[ib];
 #endif
   }
 
+#if USE_MPI
+    } /* if (!partOnMaster || myid==0) */
+#endif
+
   //memory managment
-  if (isSlave || !notSinglePart) 
+  if (isSlave || !notSinglePart
+#if USE_MPI
+        || (partOnMaster && myid==0)
+#endif
+        ) 
     free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
-  }
+
+
+#if USE_MPI
+#ifdef DEBUG
+  printf("Waiting on barrier before returning from coolerPickup\n");
+  fflush(stdout);
+#endif
+  if (!partOnMaster)
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+#ifdef DEBUG
+  printf("Returning from coolerPickup\n");
+  fflush(stdout);
+#endif
 
 }
 
@@ -185,7 +230,7 @@ void initializeCoolerPickup(CPICKUP *cpickup)
     cpickup->updateInterval = 1;
 
   cpickup->initialized = 1;
-
+  cpickup->lastPass = -1;
   cpickup->long_coords = cpickup->horz_coords = cpickup->vert_coords = NULL;
   cpickup->pid = NULL;
   cpickup->npBunch = NULL;
@@ -231,21 +276,30 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   long *npBucket = NULL;    /* array to record how many particles are in each bucket */
   long iBucket, nBuckets=0;
   long updateInterval;
+
 #ifdef DEBUG
-  static FILE *fpdeb = NULL;
-#if WAS_USE_MPI
-  if (myid==0)
+  printf("Running cooler kicker with %ld particles\n", np0);
+  fflush(stdout);
 #endif
-  if (!fpdeb) {
-    fpdeb = fopen("ckicker.sdds", "w");
-    fprintf(fpdeb, "SDDS1\n");
-    fprintf(fpdeb, "&parameter name=ID, type=string &end\n");
-    fprintf(fpdeb, "&parameter name=Pass, type=long &end\n");
-    fprintf(fpdeb, "&parameter name=Bunch, type=long &end\n");
-    fprintf(fpdeb, "&column name=particleID type=long &end\n");
-    fprintf(fpdeb, "&column name=Kick type=double &end\n");
-    fprintf(fpdeb, "&data mode=ascii &end\n");
+
+#if USE_MPI
+  MPI_Status mpiStatus;
+  double sumTotal;
+  long npTotal;
+
+  if (!partOnMaster) {
+    if (notSinglePart==0)
+      /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+      return;
   }
+#endif
+
+  if ((ckicker->startPass>0 && pass<ckicker->startPass) || (ckicker->endPass>0 && pass>ckicker->endPass))
+    return;
+
+#ifdef DEBUG
+    printf("Continuing cooler kicker\n");
+    fflush(stdout);
 #endif
 
   double Ex0;
@@ -264,39 +318,13 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
     gsl_integration_qng(&F, 0, ckicker->angle_rad, 0, 1e-7, &Ex0, &error, &neval);
   }
 
-
-#if USE_MPI
-  MPI_Status mpiStatus;
-  double sumTotal;
-  long npTotal;
-
-  if (notSinglePart==0)
-    /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
-    return;
-#endif
-
-  if ((ckicker->startPass>0 && pass<ckicker->startPass) || (ckicker->endPass>0 && pass>ckicker->endPass))
-    return;
-
-  if (isSlave || !notSinglePart 
-#if WAS_USE_MPI
-      || (partOnMaster && myid==0)
-#endif
-      )
-    index_bunch_assignments(part0, np0, ckicker->bunchedBeamMode?idSlotsPerBunch:0, Po, 
-                            &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
-
-#if USE_MPI
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (myid==0)
-    MPI_Recv(&nBuckets, 1, MPI_LONG, 1, 1, MPI_COMM_WORLD, &mpiStatus);
-  else if (myid==1)
-    MPI_Send(&nBuckets, 1, MPI_LONG, 0, 1, MPI_COMM_WORLD);
-#endif
-
-  if (ckicker->initialized==0) {
+  if (ckicker->initialized==0)
     initializeCoolerKicker(ckicker, beamline, nPasses*nBuckets, rootname);
-  }
+
+#ifdef DEBUG
+    printf("Initialized cooler kicker\n");
+    fflush(stdout);
+#endif
 
   if (ckicker->startPass>0 && ckicker->startPass!=ckicker->pickup->startPass)
     bombElegantVA((char*)"CKICKER linked to CPICKUP with different START_PASS value (%ld vs %ld).", 
@@ -307,12 +335,29 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
 
   if ((updateInterval =  ckicker->pickup->updateInterval*ckicker->updateInterval)<=0) 
     bombElegantVA((char*)"CKICKER and CPICKUP with ID=%s have UPDATE_INTERVAL product of %d", ckicker->ID, updateInterval);
-  if (pass%updateInterval!=0) {
-    if (isSlave || !notSinglePart) 
-      free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+  if (pass%updateInterval!=0)
     return;
-  }
 
+  if (ckicker->pickup->lastPass!=pass)
+    bombElegantVA("CKICKER and CPICKUP with ID=%s are not synchronized to the same pass (%ld vs %ld)\n",
+                  pass, ckicker->pickup->lastPass);
+
+  if (isSlave || !notSinglePart 
+#if USE_MPI
+      || (partOnMaster && myid==0)
+#endif
+      )
+    index_bunch_assignments(part0, np0, ckicker->bunchedBeamMode?idSlotsPerBunch:0, Po, 
+                            &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+
+#ifdef DEBUG
+    printf("indexed bunch assignments\n");
+    fflush(stdout);
+#endif    
+
+#if USE_MPI
+    if (partOnMaster || myid!=0) {
+#endif
 
   if (ckicker->nBunches==0 || ckicker->nBunches!=nBuckets) {
     if (ckicker->nBunches!=nBuckets) {
@@ -320,7 +365,6 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
       fflush(stdout);
     }
     ckicker->nBunches = nBuckets;
-    ckicker->pass0 = pass;
   } 
 
   if (ckicker->nBunches!=ckicker->pickup->nBunches)
@@ -348,12 +392,6 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   }
 
   for (ib=0; ib<nBuckets; ib++) {
-#ifdef DEBUG
-#if WAS_USE_MPI
-  if (myid==0)
-#endif
-    fprintf(fpdeb, "%s\n%ld\n%ld\n%ld\n", ckicker->ID, pass, ib, npBucket[ib]);
-#endif
     // ================================= //
     // This is where the kick is applied //
     // ================================= //
@@ -381,14 +419,18 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
 
     // s_avg equals average arrival time at kicker - average time at pickup
 #if USE_MPI
-    long npshare = npBucket[ib];
-    if (myid==0)
-      npshare = 0;
-    MPI_Allreduce(&sum, &sumTotal, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&npshare,  &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-    s_avg = sumTotal/npTotal - ckicker->pickup->filterOutput[ib];
+    if (!partOnMaster) {
+      MPI_Allreduce(&sum, &sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
+      MPI_Allreduce(&npBucket[ib],  &npTotal, 1, MPI_LONG, MPI_SUM, workers);
+      s_avg = sumTotal/npTotal - ckicker->pickup->filterOutput[ib];
+    } else
+      s_avg = sum/npBucket[ib] - ckicker->pickup->filterOutput[ib];
 #else
     s_avg = sum/npBucket[ib] - ckicker->pickup->filterOutput[ib];
+#endif
+#ifdef DEBUG
+    printf("bunch %ld has %ld particles, s_avg = %le\n", ib, npBucket[ib], s_avg);
+    fflush(stdout);
 #endif
 
     if (ckicker->incoherentMode!=0){
@@ -430,25 +472,20 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
         part0[ipBucket[ib][i]][5] += nom_kick * Exi/Ex0;
       } else {
         part0[ipBucket[ib][i]][5] += nom_kick;
-#ifdef DEBUG
-#if WAS_USE_MPI
-  if (myid==0)
-#endif
-      fprintf(fpdeb, "%ld %le\n", (long)part0[ipBucket[ib][i]][particleIDIndex], nom_kick);
-#endif
       }   
     }
-
   }
-
-#if USE_MPI
-  MPI_Barrier(MPI_COMM_WORLD);
-#endif
 
   if (isSlave || !notSinglePart) 
     free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 
+#if USE_MPI
+    } /* if (partOnMaster || myid!=0) */
+  if (!partOnMaster)
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
 }
+
 
 // Kicker initialization function
 
@@ -480,4 +517,23 @@ void initializeCoolerKicker(CKICKER *ckicker, LINE_LIST *beamline, long nPasses,
 }
 
 
-
+void setCoolingTrackingMode(ELEMENT_LIST *eptr)
+{
+  short incoherentCooling = 0;
+  if ((entity_description[T_CKICKER].flags&UNIPROCESSOR) &&
+      (entity_description[T_CPICKUP].flags&UNIPROCESSOR))
+    return;
+  while (eptr && !incoherentCooling) {
+    if (eptr->type==T_CKICKER)
+      incoherentCooling = ((CKICKER*)(eptr->p_elem))->incoherentMode;
+    eptr = eptr->succ;
+  }
+  if (incoherentCooling) {
+    /* Force cooling into serial model */
+    printWarning("CPICKUP and CKICKER elements running in serial mode", "Parallel cooling incompatible with inclusion of incoherent effects.");
+    entity_description[T_CKICKER].flags &= ~MPALGORITHM;
+    entity_description[T_CKICKER].flags |= UNIPROCESSOR;
+    entity_description[T_CPICKUP].flags &= ~MPALGORITHM;
+    entity_description[T_CPICKUP].flags |= UNIPROCESSOR;
+  }
+}

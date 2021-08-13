@@ -381,6 +381,7 @@ long do_tracking(
   nToTrack = nLeft = nMaximum = nOriginal;
 
 #if USE_MPI
+  setCoolingTrackingMode(eptr);
   if (!partOnMaster && notSinglePart) {
     if (isMaster) nToTrack = 0; 
     if (beam)

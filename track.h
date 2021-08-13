@@ -3555,8 +3555,7 @@ typedef struct {
    
   /* internal parameters */
   short initialized;
-  long pass0;
-  long nBunches;
+  long nBunches, lastPass;
   double *filterOutput;
   double **long_coords, **horz_coords, **vert_coords;
   long **pid;
@@ -3583,7 +3582,6 @@ typedef struct {
   unsigned short initialized;
 #define CKICKER_MAIN_INIT ((unsigned short)0x01)
 #define CKICKER_CLOCK_INIT ((unsigned short)0x02)
-  long pass0;
   CPICKUP *pickup;
   long nBunches;
   /* circular buffer for storing output signal */
@@ -4800,6 +4798,7 @@ void coolerPickup(CPICKUP *tfbp, double **part, long np, long pass, double Po, l
 void initializeCoolerPickup(CPICKUP *tfbp);
 void coolerKicker(CKICKER *tfbd, double **part, long np, LINE_LIST *beamline, long pass, long n_passes, char *rootname, double Po, long idSlotsPerBunch);
 void initializeCoolerKicker(CKICKER *tfbd, LINE_LIST *beamline, long n_passes, char *rootname);
+void setCoolingTrackingMode(ELEMENT_LIST *eptr);
 
 long computeEngeCoefficients(double *engeCoef, double rho, double length, double gap, double fint);
 
