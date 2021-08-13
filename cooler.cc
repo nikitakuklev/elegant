@@ -374,7 +374,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   
   for (ib=0; ib<nBuckets; ib++) {
     if (npBucket[ib]!=ckicker->pickup->npBunch[ib]) 
-      bombElegantVA("Mismatch (%ld vs %ld) in number of bunches in bucket %ld for CPICKUP/CKICKER %s\n",
+      bombElegantVA("Mismatch (%ld vs %ld) in number of particles in bucket %ld for CPICKUP/CKICKER %s\n",
                     npBucket[ib], ckicker->pickup->npBunch[ib], ib, ckicker->ID);
     for (i=0; i<npBucket[ib]; i++) {
       if (((long)part0[ipBucket[ib][i]][particleIDIndex]) != ckicker->pickup->pid[ib][i]) {
