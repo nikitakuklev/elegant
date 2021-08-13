@@ -2397,7 +2397,7 @@ long do_tracking(
 #ifdef USE_MPE
 	      MPE_Log_event( event2b, 0, bytebuf );
 #endif
-	}
+          }
           
 #if USE_MPI
 	if ((myid==0) && notSinglePart && (!usefulOperation(eptr, flags, i_pass)))
@@ -2549,8 +2549,20 @@ long do_tracking(
 	  /* a non-diagnostic uniprocessor element */
 	  if ((myid == 0) && (nMaximum!=(nLeft+nLost)))         
 	    /* there are additional losses occurred */
-	    lostSinceSeqMode = needSort= 1;
+	    lostSinceSeqMode = needSort = 1;
+#ifdef DEBUG_CRASH 
+          printMessageAndTime(stdout, "do_tracking checkpoint 14.1: ");
+          printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+          printf("nMaximum = %ld nLeft = %ld nLost = %ld\n", 
+                 nMaximum, nLeft, nLost);
+          fflush(stdout);
+#endif
 	  MPI_Bcast (&lostSinceSeqMode, 1, MPI_INT, 0, MPI_COMM_WORLD);
+#ifdef DEBUG_CRASH 
+          printMessageAndTime(stdout, "do_tracking checkpoint 14.2: ");
+          printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
+          fflush(stdout);
+#endif
 	}
 	if (classFlags&MPALGORITHM && isMaster) {
 	  /* Master does not need to do limit_amplitudes for MPALGORITHM elements */
@@ -4910,8 +4922,9 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
 void gatherParticles(double ***coord, long *nToTrack, long *nLost, double ***accepted, long n_processors, int myid, double *round)
 {
   long work_processors = n_processors-1;
-  int root = 0, i, nItems, displs ;
-  int my_nToTrack, my_nLost, *nToTrackCounts, 
+  int root = 0, nItems, displs ;
+  long i;
+  long my_nToTrack, my_nLost, *nToTrackCounts, 
     *nLostCounts, current_nLost=0, nToTrack_total, nLost_total; 
  
 #ifdef HAVE_GPU
@@ -4924,8 +4937,8 @@ void gatherParticles(double ***coord, long *nToTrack, long *nLost, double ***acc
   fflush(stdout);
   */
 
-  nToTrackCounts = malloc(sizeof(int) * n_processors);
-  nLostCounts = malloc(sizeof(int) * n_processors);
+  nToTrackCounts = malloc(sizeof(long) * n_processors);
+  nLostCounts = malloc(sizeof(long) * n_processors);
 
   if (myid==0) {
     my_nToTrack = 0;  
@@ -4937,14 +4950,21 @@ void gatherParticles(double ***coord, long *nToTrack, long *nLost, double ***acc
   }
 
   /* gather nToTrack and nLost from all of the slave processors to the master processors */ 
-  MPI_Gather(&my_nToTrack, 1, MPI_INT, nToTrackCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Gather(&my_nLost, 1, MPI_INT, nLostCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
-  MPI_Reduce (&my_nToTrack, &nToTrack_total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Reduce (&my_nLost, &nLost_total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Gather(&my_nToTrack, 1, MPI_LONG, nToTrackCounts, 1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Gather(&my_nLost, 1, MPI_LONG, nLostCounts, 1, MPI_LONG, root, MPI_COMM_WORLD);
+  MPI_Allreduce(&my_nToTrack, &nToTrack_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&my_nLost, &nLost_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 
 #if MPI_DEBUG
-  printf("gatherPaticles: nToTrack_total = %d, nLost_total = %d\n",
-         nToTrack_total, nLost_total);
+  printf("gatherPaticles: nToTrack = %ld, nToTrack_total = %ld, nLost = %ld, nLost_total = %ld\n",
+         *nToTrack, nToTrack_total, *nLost, nLost_total);
+  if (myid==0) {
+    for (i=0; i<n_processors; i++) {
+      printf("nToTrackCounts[%ld] = %ld, nLostCounts[%ld] = %ld\n",
+             i, nToTrackCounts[i], i, nLostCounts[i]);
+      fflush(stdout);
+    }
+  }
 #endif
 
   if (isMaster) {
@@ -4976,7 +4996,7 @@ void gatherParticles(double ***coord, long *nToTrack, long *nLost, double ***acc
   /* collect information for the lost particles and gather the accepted array */
   
   MPI_Bcast(&current_nLost, 1, MPI_INT, root, MPI_COMM_WORLD);
-
+  
     if (myid==0) {
       /* set up the displacement array and the number of elements that are received from each processor */ 
       nLostCounts[0] = 0;
