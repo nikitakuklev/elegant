@@ -2732,12 +2732,12 @@ void checkTarget(double myResult, long invalid) {
   MPI_Status status;
   static int *targetBuffer = NULL;
   int targetTag = 1;
+  if (hybrid_simplex_comparison_interval<=0)
+    return;
 #if MPI_DEBUG
   printf("checkTarget(%le, %ld) called\n", myResult, invalid);
   fflush(stdout);
 #endif
-  if (hybrid_simplex_comparison_interval<=0)
-    return;
   if (!targetBuffer)
     targetBuffer = tmalloc(sizeof(*targetBuffer)*n_processors);
   if (targetReached) {
