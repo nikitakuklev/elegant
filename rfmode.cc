@@ -486,8 +486,8 @@ void track_through_rfmode(
                * the nominal beam phase)
                */
               phaseg = PI/180*rfmode->phaseSetpoint - 3*PI/2;
-              VISetpoint = (rfmode->voltageSetpoint+rfmode->setpointAdjustment)*cos(phaseg) + rfmode->V0*cos(rfmode->last_phase0);
-              VQSetpoint = (rfmode->voltageSetpoint+rfmode->setpointAdjustment)*sin(phaseg) + rfmode->V0*sin(rfmode->last_phase0);
+              VISetpoint = (rfmode->voltageSetpoint+rfmode->setpointAdjustment)*cos(phaseg);
+              VQSetpoint = (rfmode->voltageSetpoint+rfmode->setpointAdjustment)*sin(phaseg);
               
               rfmode->Iiq->a[0][0] = rfmode->Ig0->a[0][0] + (dII=applyIIRFilter(rfmode->IFilter, rfmode->nIFilters, rfmode->lambdaA*(VISetpoint-VI)));
               rfmode->Iiq->a[1][0] = rfmode->Ig0->a[1][0] + (dIQ=applyIIRFilter(rfmode->QFilter, rfmode->nQFilters, rfmode->lambdaA*(VQSetpoint-VQ)));
