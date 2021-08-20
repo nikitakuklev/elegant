@@ -2317,8 +2317,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
        * to make sure there are subsequent monitors */
       moni = corr->succ;
       while (moni) {
-        if (findLongInArray(moni->type, moni_type, 2)!=-1 &&
-            ((MONI*)moni->p_elem)->weight>0)
+        if (findLongInArray(moni->type, moni_type, 2)!=-1 && getMonitorWeight(moni)>0)
           break;
         moni = moni->succ;
       }
@@ -2393,7 +2392,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
     i_elem = 0;
     while (moni) {
       if (moni->end_pos>=(*ucorr)[0]->end_pos && 
-          findLongInArray(moni->type, moni_type, 2)!=-1 && ((MONI*)moni->p_elem)->weight>0) {
+          findLongInArray(moni->type, moni_type, 2)!=-1 && getMonitorWeight(moni)>0) {
         printf("Found monitor %s#%ld (type %s) at s=%e\n",
                moni->name, moni->occurence, entity_name[moni->type], moni->end_pos);
         *nmon += 1;
@@ -2411,7 +2410,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
     moni = start;
     i_elem = 0;
     while (moni) {
-      if (findLongInArray(moni->type, moni_type, 2)!=-1 && ((MONI*)moni->p_elem)->weight>0) {
+      if (findLongInArray(moni->type, moni_type, 2)!=-1 && getMonitorWeight(moni)>0) {
         *nmon += 1;
         *umoni = trealloc(*umoni, *nmon*sizeof(**umoni));
         (*umoni)[*nmon-1] = moni;
