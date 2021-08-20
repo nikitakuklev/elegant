@@ -44,6 +44,9 @@ Here is a summary of what's changed since release 2021.2.  Historical change log
 
 \begin{itemize}
 \item The voltage setpoint adjustment feature of \verb|RFMODE| will now work in the serial version.
+\item There was a bug in the I/Q feedback for \verb|RFMODE| that essentially added the beamloading
+  voltage to the setpoint. This was pointed out by Z. Duan (IHEP), who also provided a correction
+  to the code.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -91,6 +94,7 @@ are listed in Section \ref{sect:tools}.
 Changes to these tools in this release include
 \begin{itemize}
 \item The \verb|weightedBunch| script now allows users to control the random number seed.
+\item The \verb|computeRBGGE| and \verb|computeCBGGE| programs now provide units for the generalized gradients.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
