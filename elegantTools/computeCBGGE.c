@@ -1237,7 +1237,7 @@ int SetUpOutputFile(SDDS_DATASET *SDDSout, char *filename, long skew, long deriv
 {
   long n;
   char tag[2] = "SC";
-  char name[1024];
+  char name[1024], units[1024];
 
   if (skew)
     skew = 1;
@@ -1256,14 +1256,26 @@ int SetUpOutputFile(SDDS_DATASET *SDDSout, char *filename, long skew, long deriv
   
   for (n = 0; n < 2*derivatives; n+=2)  {
     sprintf(name, "Cnm%c%ld", tag[skew], n);
-    if (SDDS_DefineSimpleColumn(SDDSout, name, NULL, SDDS_DOUBLE) != 1) {
+    if ((2*n-1)<0)
+      sprintf(units, "T/m$a(m-%ld)$n", -(2*n-1));
+    else if ((2*n-1)==0)
+      sprintf(units, "T/m$am$n");
+    else
+      sprintf(units, "T/m$a(m+%ld)$n", (2*n-1));
+    if (SDDS_DefineSimpleColumn(SDDSout, name, units, SDDS_DOUBLE) != 1) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }
   }
   for (n = 0; n < 2*derivatives; n+=2)  {
     sprintf(name, "dCnm%c%ld/dz", tag[skew], n);
-    if (SDDS_DefineSimpleColumn(SDDSout, name, NULL, SDDS_DOUBLE) != 1) {
+    if ((2*n-2)<0)
+      sprintf(units, "T/m$a(m-%ld)$n", -(2*n-2));
+    else if ((2*n-2)==0)
+      sprintf(units, "T/m$am$n");
+    else
+      sprintf(units, "T/m$a(m+%ld)$n", (2*n-2));
+    if (SDDS_DefineSimpleColumn(SDDSout, name, units, SDDS_DOUBLE) != 1) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return (1);
     }

@@ -1107,7 +1107,7 @@ int ReadInputFiles
   int32_t Ncoeff = 40;
 
   SDDS_DATASET SDDSOutput;
-  char name[1024];
+  char name[1024], units[1024];
 
   Ngrad = multipoles;
   Nderiv = 2 * derivatives - 1;
@@ -1289,7 +1289,13 @@ int ReadInputFiles
   for (n = 0; n < Nderiv; n+=2)
     {
       sprintf(name, "CnmS%" PRId32, n);
-      if (SDDS_DefineSimpleColumn(&SDDSOutput, name, NULL, SDDS_DOUBLE) != 1)
+      if ((2*n-1)<0)
+        sprintf(units, "T/m$a(m-%d)$n", -(2*n-1));
+      else if ((2*n-1)==0)
+        sprintf(units, "T/m$am$n");
+      else
+        sprintf(units, "T/m$a(m+%d)$n", (2*n-1));
+      if (SDDS_DefineSimpleColumn(&SDDSOutput, name, units, SDDS_DOUBLE) != 1)
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
@@ -1298,7 +1304,13 @@ int ReadInputFiles
   for (n = 0; n < Nderiv; n+=2)
     {
       sprintf(name, "dCnmS%" PRId32 "/dz", n);
-      if (SDDS_DefineSimpleColumn(&SDDSOutput, name, NULL, SDDS_DOUBLE) != 1)
+      if ((2*n-2)<0)
+        sprintf(units, "T/m$a(m-%d)$n", -(2*n-2));
+      else if ((2*n-2)==0)
+        sprintf(units, "T/m$am$n");
+      else
+        sprintf(units, "T/m$a(m+%d)$n", (2*n-2));
+      if (SDDS_DefineSimpleColumn(&SDDSOutput, name, units, SDDS_DOUBLE) != 1)
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
@@ -1421,7 +1433,7 @@ int computeGGcos
 
   SDDS_DATASET SDDSOutput;
 
-  char name[20];
+  char name[1024], units[1024];
 
   Ngrad = multipoles;
   Nderiv = 2 * derivatives - 1;
@@ -1681,7 +1693,13 @@ int computeGGcos
   for (n = 0; n < Nderiv; n+=2)
     {
       sprintf(name, "CnmC%" PRId32, n);
-      if (SDDS_DefineSimpleColumn(&SDDSOutput, name, NULL, SDDS_DOUBLE) != 1)
+      if ((2*n-1)<0)
+        sprintf(units, "T/m$a(m-%d)$n", -(2*n-1));
+      else if ((2*n-1)==0)
+        sprintf(units, "T/m$am$n");
+      else
+        sprintf(units, "T/m$a(m+%d)$n", (2*n-1));
+      if (SDDS_DefineSimpleColumn(&SDDSOutput, name, units, SDDS_DOUBLE) != 1)
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
@@ -1690,7 +1708,13 @@ int computeGGcos
   for (n = 0; n < Nderiv; n+=2)
     {
       sprintf(name, "dCnmC%" PRId32 "/dz", n);
-      if (SDDS_DefineSimpleColumn(&SDDSOutput, name, NULL, SDDS_DOUBLE) != 1)
+      if ((2*n-2)<0)
+        sprintf(units, "T/m$a(m-%d)$n", -(2*n-2));
+      else if ((2*n-2)==0)
+        sprintf(units, "T/m$am$n");
+      else
+        sprintf(units, "T/m$a(m+%d)$n", (2*n-2));
+      if (SDDS_DefineSimpleColumn(&SDDSOutput, name, units, SDDS_DOUBLE) != 1)
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           return (1);
