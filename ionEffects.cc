@@ -1222,8 +1222,7 @@ void gaussianBeamKick
   // calculate beam kick on ion, assuming Gaussian beam
   double sx, sy, x, y, sd, Fx, Fy, C1, C2, C3, ay;
   std::complex <double> Fc, w1, w2, Fc0, erf1, erf2;
-  long flag, flag2;
-
+  long flag, flag2, swapXY;
 
   kick[0] = 0;
   kick[1] = 0;
@@ -1237,45 +1236,37 @@ void gaussianBeamKick
 
   C1 = c_mks * charge * re_mks * me_mks * ionCharge / e_mks;
 
-  if (sx > sy) {
-    ay = abs(y);
-    sd = sqrt(2.0*(sqr(sx)-sqr(sy)));
-    w1 = std::complex <double> (x/sd, ay/sd);
-    w2 = std::complex <double> (x/sd*sy/sx, ay/sd*sx/sy);
+  swapXY = 0;
+  if (sx<sy) {
+    double tmp;
+    swapXY = 1;
+    SWAP_DOUBLE(sx, sy);
+    tmp = x;
+    x = y;
+    y = -tmp;
+  }
 
-    C2 = sqrt(2*PI / (sqr(sx)-sqr(sy)));
-    C3 = exp(-sqr(x)/(2*sqr(sx))-sqr(y)/(2*sqr(sy)));
-
-    erf1 = complexErf(w1, &flag);
-    erf2 = complexErf(w2, &flag2);
-
-    Fc = C1 * C2 * (erf1 - C3*erf2);
-    Fx = Fc.imag();
-    if (y > 0) Fy = Fc.real();
-    else Fy = -Fc.real();
-
-
-  } else {
-    /*** The code here should exactly mirror the other branch, but doesn't ***/
-    sd = sqrt(2.0*(sqr(sy)-sqr(sx)));
-    w1 = std::complex <double> (y/sd, abs(x)/sd);
-    w2 = std::complex <double> (y/sd*sx/sy, abs(x)/sd*sy/sx);
-
-    Fc0 = std::complex <double> (0, C1 * sqrt(2*PI / (sqr(sy)-sqr(sx))) );
-
-    erf1 = complexErf(w1, &flag);
-    erf2 = complexErf(w2, &flag2);
-
-    C3 = exp(-sqr(x)/(2*sqr(sx))-sqr(y)/(2*sqr(sy)));
-
-    Fc = -Fc0 * (erf1 - C3*erf2);
-
-    /*** Shouldn't this be Fx = +/- Fc.real() and Fy = Fc.imag(), to swap x and y consistently? ***/
-    if (x > 0) Fx = -Fc.imag();
-    else Fx = Fc.imag();
-    
-    Fy = Fc.real();
-
+  ay = abs(y);
+  sd = sqrt(2.0*(sqr(sx)-sqr(sy)));
+  w1 = std::complex <double> (x/sd, ay/sd);
+  w2 = std::complex <double> (x/sd*sy/sx, ay/sd*sx/sy);
+  
+  C2 = sqrt(2*PI / (sqr(sx)-sqr(sy)));
+  C3 = exp(-sqr(x)/(2*sqr(sx))-sqr(y)/(2*sqr(sy)));
+  
+  erf1 = complexErf(w1, &flag);
+  erf2 = complexErf(w2, &flag2);
+  
+  Fc = C1 * C2 * (erf1 - C3*erf2);
+  Fx = Fc.imag();
+  if (y > 0) Fy = Fc.real();
+  else Fy = -Fc.real();
+  
+  if (swapXY) {
+    double tmp;
+    tmp = Fx;
+    Fx = -Fy;
+    Fy = tmp;
   }
 
   kick[0] = -Fx / ionMass;
