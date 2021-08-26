@@ -257,11 +257,12 @@ long applyElementModulations(MODULATION_DATA *modData, LINE_LIST *beamline, doub
   matricesUpdated = 0;
 
 
-  for (iMod=0; iMod<modData->nItems; iMod++) {
+  if (firstPass) {
+    for (iMod=0; iMod<modData->nItems; iMod++) {
 #ifdef DEBUG
-    printf("applyElementModulations: iMod = %ld\n", iMod); fflush(stdout);
+      printf("applyElementModulations: iMod = %ld\n", iMod); fflush(stdout);
 #endif
-    if (firstPass) {
+
       modData->lastVerboseValue[iMod] = modData->unperturbedValue[iMod] 
 	= parameter_value(modData->element[iMod]->name,  modData->element[iMod]->type,
 			  modData->parameterNumber[iMod], beamline);
@@ -276,6 +277,9 @@ long applyElementModulations(MODULATION_DATA *modData, LINE_LIST *beamline, doub
 	fflush(stdout);
       }
     }
+  }
+
+  for (iMod=0; iMod<modData->nItems; iMod++) {
     if (iPass<modData->startPass[iMod] || iPass>modData->endPass[iMod])
       continue;
 #ifdef DEBUG

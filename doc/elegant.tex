@@ -53,6 +53,9 @@ Here is a summary of what's changed since release 2021.2.  Historical change log
 \begin{itemize}
 \item The lattice parser would crash when a single reflected element appeared with a quoted  name.
   This was fixed.
+\item A bug was fixed in the \verb|ramp_elements| and \verb|modulate_elements| commands that would cause
+  incorrect values to be asserted when multiple elements of the same name were targetted in the
+  default differential mode.
 \end{itemize}
 
 \subsection{New and Modified Elements}

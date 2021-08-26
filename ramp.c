@@ -160,12 +160,12 @@ long applyElementRamps(RAMP_DATA *rampData, LINE_LIST *beamline, double pCentral
   printf("applyElementRamps\n"); fflush(stdout);
 #endif
   
-  for (iMod=0; iMod<rampData->nItems; iMod++) {
+  if (firstPass) {
+    for (iMod=0; iMod<rampData->nItems; iMod++) {
 #ifdef DEBUG
-    printf("applyElementRamps: iMod = %ld\n", iMod); fflush(stdout);
+      printf("applyElementRamps: iMod = %ld\n", iMod); fflush(stdout);
 #endif
 
-    if (firstPass) {
       rampData->unperturbedValue[iMod] 
 	= parameter_value(rampData->element[iMod]->name, rampData->element[iMod]->type,
 			  rampData->parameterNumber[iMod], beamline);
@@ -181,7 +181,9 @@ long applyElementRamps(RAMP_DATA *rampData, LINE_LIST *beamline, double pCentral
 	fflush(stdout);
       }
     }
-
+  }
+  
+  for (iMod=0; iMod<rampData->nItems; iMod++) {
     type = rampData->element[iMod]->type;
     param = rampData->parameterNumber[iMod];
     p_elem = (char*)(rampData->element[iMod]->p_elem);
