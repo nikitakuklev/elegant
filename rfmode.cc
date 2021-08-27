@@ -725,7 +725,7 @@ void track_through_rfmode(
 	if (!rfmode->allowUnbinnedParticles) {
 	  bombElegantVA((char*)"%ld of %ld particles  outside of binning region in RFMODE %s #%ld. Consider increasing number of bins. Also, particleID assignments should be checked.", np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
 	} else {
-	  printf("%ld of %ld particles  outside of binning region in RFMODE %s #%ld. Consider increasing number of bins. Also, particleID assignments should be checked.", np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
+	  printf("%ld of %ld particles  outside of binning region in RFMODE %s #%ld. Consider increasing number of bins. Also, particleID assignments should be checked.\n", np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
 	  fflush(stdout);
 	}
       }
