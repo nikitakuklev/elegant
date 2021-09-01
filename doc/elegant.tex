@@ -51,11 +51,14 @@ Here is a summary of what's changed since release 2021.2.  Historical change log
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The lattice parser would crash when a single reflected element appeared with a quoted  name.
-  This was fixed.
+\item Fixed a lattice lattice parser bug that would cause a crash when a single reflected element appeared with a quoted  name.
 \item A bug was fixed in the \verb|ramp_elements| and \verb|modulate_elements| commands that would cause
   incorrect values to be asserted when multiple elements of the same name were targetted in the
   default differential mode.
+\item The \verb|chromaticity| command was ignoring the \verb|update_orbit| parameter and not fully updating the
+  twiss parameters as the correction was performed. In cases with large orbits and strong sextupoles, this would
+  cause a discrepancy between the claimed corrected chromaticity and the actual chromaticity (as reported by the
+  \verb|twiss_output| command). This was reported by V. Sajaev (ANL).
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -1612,7 +1615,10 @@ to obtain correction.  In general, it is not necessary and only slows the simula
 \item \verb|exit_on_failure| --- If nonzero, then failure to reach the desired chromaticities within the
   tolerance results in the program exiting.
 \item \verb|update_orbit| --- If non-zero, the orbit calculation is updated after each $n^{th}$ adjustment of the
-  sextupoles.
+  sextupoles. If this is needed, it may also help to use reduce the \verb|n_iterations| parameter and 
+  set the \verb|correction_iterations| parameter of \verb|run_setup| to a larger value; this will cause
+  \verb|elegant| to cycle through orbit, tune, and chromaticity correction multiple times, which will
+  help converge to a fully-corrected result.
 \item \verb|verbosity| --- Increasing positive values result in increasing amounts of information printed during
   execution.
 \end{itemize}
@@ -4976,7 +4982,9 @@ If equal to $n$ with $n<0$, information is printed only after pass $\left|n\righ
 \item \verb|show_element_timing| --- A flag indicating whether to collect and report execution time statistics binned by element type.
 \item \verb|monitor_memory_usage| --- A flag indicating whether to monitor memory usage during tracking to detect memory leaks.
 \item \verb|random_number_seed| --- A seed for the random number generators.  If zero, a seed will be generated from the system clock.
-\item \verb|correction_iterations| --- Number of iterations of tune and chromaticity correction.
+\item \verb|correction_iterations| --- Number of iterations of orbit, tune, and chromaticity correction.
+  Setting this to a value larger than 1 will cause orbit, tune, and chromaticity correction to be repeated, which improves
+  overall convergence.
 \item \verb|p_central| --- Central momentum of the beamline, about which expansions are done.
         This is $\beta\gamma$.
 \item \verb|p_central_mev| --- Central momentum of the beamline in
