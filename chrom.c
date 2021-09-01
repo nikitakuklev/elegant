@@ -374,6 +374,10 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
 
     log_entry("do_chromaticity_correction");
 
+#ifdef DEBUG  
+    dumpLatticeParameters("do_chromaticity_correction_start.sdds", run, beamline, 1);
+    finishLatticeParametersFile();
+#endif
     if (!beamline->matrix || !beamline->twiss0) {
         if (!beamline->twiss0)
             beamline->twiss0 = tmalloc(sizeof(*beamline->twiss0));
@@ -638,6 +642,10 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
       exitElegant(1);
     }
 
+#ifdef DEBUG  
+    dumpLatticeParameters("do_chromaticity_correction_end.sdds", run, beamline, 1);
+    finishLatticeParametersFile();
+#endif
     return 1;
   }
 
