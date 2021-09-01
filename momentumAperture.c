@@ -778,10 +778,31 @@ long doMomentumApertureSearch(
 static double deltaStep;
 static long nDelta;
 
+#ifdef DEBUG
+FILE *fpoffset = NULL;
+#endif
+
 static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral)
 {
   long id, ie, ip, particleID;
   MALIGN mal;
+#ifdef DEBUG
+  if (fpoffset==NULL) {
+    char s[1024];
+    snprintf(s, 1024, "offset%04d.sdds", myid);
+    fpoffset = fopen(s, "w");
+    fprintf(fpoffset, "SDDS1\n");
+    fprintf(fpoffset, "&column name=particleID type=long &end\n");
+    fprintf(fpoffset, "&column name=ElementName type=string &end\n");
+    fprintf(fpoffset, "&column name=ElementOccurence type=long &end\n");
+    fprintf(fpoffset, "&column name=s type=double units=m &end\n");
+    fprintf(fpoffset, "&column name=iElement type=long &end\n");
+    fprintf(fpoffset, "&column name=iDelta type=long &end\n");
+    fprintf(fpoffset, "&column name=deltaChange type=double &end\n");
+    fprintf(fpoffset, "&data mode=ascii no_row_counts=1 &end\n");
+    fflush(fpoffset);
+  }
+#endif
   if (pass==fireOnPass) {
     for (ie=0; ie<nElements; ie++) {
       if (eptr==elementArray[ie])
@@ -808,6 +829,12 @@ static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long 
       } else {
         mal.dp = delta_positive_start + (id-ideltaCutover)*deltaStep;
       }
+#ifdef DEBUG
+      fprintf(fpoffset, "%ld %s %ld %le %ld %ld %le\n", 
+	      particleID, eptr->name?eptr->name:"?", 
+	      eptr->occurence, eptr->end_pos, ie, id, mal.dp);
+      fflush(fpoffset);
+#endif
       offset_beam(coord+ip, 1, &mal, *pCentral);
     }
   }
@@ -936,11 +963,69 @@ long multiparticleLocalMomentumAcceptance(
   printf("Waiting for tracking to complete\n");
   fflush(stdout);
 
+#ifdef DEBUG
+  if (myid!=0) {
+    FILE *fpdeb;
+    long ip;
+    char s[1024];
+    snprintf(s, 1024, "mmapDebug%04d.sdds", myid);
+    fpdeb = fopen(s, "w");
+    fprintf(fpdeb, "SDDS1\n");
+    fprintf(fpdeb, "&column name=x type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=xp type=double &end\n");
+    fprintf(fpdeb, "&column name=y type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=yp type=double &end\n");
+    fprintf(fpdeb, "&column name=s type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=delta type=double &end\n");
+    fprintf(fpdeb, "&column name=particleID type=long &end\n");
+    fprintf(fpdeb, "&column name=isLost type=short &end\n");
+    fprintf(fpdeb, "&data mode=ascii &end\n");
+    fprintf(fpdeb, "%ld\n", nEachProcessor);
+    for (ip=0; ip<nEachProcessor; ip++) {
+      fprintf(fpdeb, "%e %e %e %e %e %e %ld %d\n",
+	      coord[ip][0], coord[ip][1], coord[ip][2], coord[ip][3],
+	      coord[ip][4], coord[ip][5], (long)coord[ip][6],
+	      ip>=nLeft?1:0);
+    }
+    fclose(fpdeb);
+    fpdeb = NULL;
+    fclose(fpoffset);
+    fpoffset = NULL;
+  }
+#endif
+
   MPI_Barrier(MPI_COMM_WORLD);
 
   /* gather lost particle data to master */
   gatherLostParticles(&lostParticles, &nLost, coord, nLeft, n_processors, myid);
   printf("Lost-particle gather done\n"); fflush(stdout);
+
+#ifdef DEBUG
+  if (myid==0) {
+    FILE *fpdeb;
+    long ip;
+    char s[1024];
+    snprintf(s, 1024, "mmapDebug%04d.sdds", myid);
+    fpdeb = fopen(s, "w");
+    fprintf(fpdeb, "SDDS1\n");
+    fprintf(fpdeb, "&column name=x type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=xp type=double &end\n");
+    fprintf(fpdeb, "&column name=y type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=yp type=double &end\n");
+    fprintf(fpdeb, "&column name=s type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=p type=double &end\n");
+    fprintf(fpdeb, "&column name=particleID type=long &end\n");
+    fprintf(fpdeb, "&data mode=ascii &end\n");
+    fprintf(fpdeb, "%ld\n", nLost);
+    for (ip=0; ip<nLost; ip++) {
+      fprintf(fpdeb, "%e %e %e %e %e %e %ld\n",
+	      lostParticles[ip][0], lostParticles[ip][1], lostParticles[ip][2], lostParticles[ip][3],
+	      lostParticles[ip][4], lostParticles[ip][5], (long)lostParticles[ip][6]);
+    }
+    fclose(fpdeb);
+    fpdeb = NULL;
+  }
+#endif
 
   if (myid==0) {
     long slot;
@@ -975,6 +1060,9 @@ long multiparticleLocalMomentumAcceptance(
       }
       idelta = ((long)lostParticles[ip][6])%nDelta;
       ie = (lostParticles[ip][6]-idelta)/nDelta;
+      if (ie<0 || ie>=nElem) 
+	bombElegantVA("Lost-particle accounting error: element index is %ld, out of range [%ld, %ld]\n",
+		      ie, 0, nElem-1);
       if (idelta<ideltaCutover) {
         delta = delta_negative_limit + idelta*deltaStep;
       } else {
