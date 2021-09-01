@@ -66,6 +66,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     if ((--chrom->n_families)<2)
         bombElegant("too few sextupoles given for chromaticity correction", NULL);
 
+    chrom->update_orbit = update_orbit;
+
     chrom->lowerLimit  = chrom->upperLimit = NULL;
     if (lower_limits) {
       long nll = 0;
@@ -411,7 +413,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         beamline->twiss0->etapy  = etap_y;
         
         propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
-                                   NULL, beamline->elem_twiss, run, clorb, 
+                                   NULL, beamline->elem_twiss, run, do_closed_orbit?clorb:NULL,
 				   beamline->couplingFactor);
         }
     else if (beamline->matrix->order<2) {
@@ -451,9 +453,9 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         lastError = presentError;
         presentError = sqr(dchromx)+sqr(dchromy);
         if (iter && presentError>lastError) {
-          printf("Error increasing---reducing gain\n");
+          chrom->correction_fraction /= 2;
+          printf("Error increasing---reducing correction fraction to %le\n", chrom->correction_fraction);
           fflush(stdout);
-          chrom->correction_fraction /= 10;
         }
 
         if (chrom->use_perturbed_matrix)
@@ -567,6 +569,11 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             fflush(stdout);
           }
           run_closed_orbit(run, beamline, clorb, NULL, 0);
+          if (verbosityLevel>5) {
+            printf("Closed orbit: %le %le %le %le %le %le\n",
+                   clorb[0], clorb[1], clorb[2], clorb[3], clorb[4], clorb[5]);
+            fflush(stdout);
+          }
         }
 
         M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
@@ -583,6 +590,10 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         beamline->twiss0->etay   = eta_y;
         beamline->twiss0->etapy  = etap_y;
         
+        propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
+                                   NULL, beamline->elem_twiss, run, do_closed_orbit?clorb:NULL,
+				   beamline->couplingFactor);
+
         if (!M || !M->C || !M->R || !M->T)
             bombElegant("something wrong with transfer map for beamline (do_chromaticity_correction.2)", NULL);
         computeChromaticities(&chromx0, &chromy0, 
@@ -593,6 +604,17 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         if (verbosityLevel>1) {
           printf("resulting chromaticities:  %e  %e\n", chromx0, chromy0);
           printf("min, max sextupole strength:  %e  %e  1/m^2\n", K2_min, K2_max);
+          if (verbosityLevel>4) {
+            printf("Twiss parameters, start: betax=%le, betay=%le, alphax=%le, alphay=%le, etax=%le, etaxp=%le\n",
+                   beta_x, beta_y, alpha_x, alpha_y,  eta_x, etap_x);
+            printf("Twiss parameters, end  : betax=%le, betay=%le, alphax=%le, alphay=%le, etax=%le, etaxp=%le\n",
+                   beamline->elast->twiss->betax, 
+                   beamline->elast->twiss->betay, 
+                   beamline->elast->twiss->alphax, 
+                   beamline->elast->twiss->alphay, 
+                   beamline->elast->twiss->etax, 
+                   beamline->elast->twiss->etapx);
+          }
           fflush(stdout);
         }
         if (nLimit == nTotal || nChanged==0)
@@ -631,7 +653,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     
 
     propagate_twiss_parameters(beamline->twiss0, beamline->tune, 
-                               beamline->waists, NULL, beamline->elem_twiss, run, clorb,
+                               beamline->waists, NULL, beamline->elem_twiss, run, do_closed_orbit?clorb:NULL,
 			       beamline->couplingFactor);
     log_exit("do_chromaticity_correction");
 
