@@ -49,8 +49,9 @@ exec sddssort $input -pipe=out -column=$zColumn,incr -unique \
   -process=$gradientColumn,ave,%sAve,functionof=zOffsetNorm,lower=-2.5,upper=2.5 \
   "-redefine=column,GNorm,$gradientColumn ${gradientColumn}Ave /" \
   -filter=column,zOffsetNorm,-0.5,1e300 \
-  -process=GNorm,gminteg,GNormInteg,functionOf=$zColumn \
-  "-redefine=parameter,LEFFECTIVE,GNormInteg 2 *,units=m" \
+  -process=$gradientColumn,gminteg,GHalfInteg,functionOf=$zColumn \
+  -process=GNorm,gminteg,GHalfNormInteg,functionOf=$zColumn \
+  "-redefine=parameter,LEFFECTIVE,GHalfNormInteg 2 *,units=m" \
   "-redefine=column,GradientHE,$zColumn abs LEFFECTIVE  2 / > ? 0 : 1 $ " \
   "-redefine=column,g0,GNorm GradientHE -" \
   "-redefine=parameter,s1,0.0,units=m" \
