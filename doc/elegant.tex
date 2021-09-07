@@ -69,6 +69,8 @@ Here is a summary of what's changed since release 2021.2.  Historical change log
   kicks to the beam. See the manual pages for more detail.
 \item The \verb|RFMODE| element now checks that the \verb|A0| coefficient is nonzero and normalizes
   other coefficients to it, as implied by the manual.
+\item The \verb|REFERENCE_CORRECTION| feature of \verb|CSBEND| was not handling non-zero \verb|EPITCH| or
+  \vert|EYAW| values, as reported by  G. Penn (LBNL).
 \end{itemize}
 
 \subsection{New and Modified Commands}
