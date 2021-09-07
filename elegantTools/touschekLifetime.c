@@ -534,7 +534,11 @@ int main( int argc, char **argv)
     fprintf( stdout, "Reading aperture file...");
     fflush(stdout);
   }
-  eName2 = SDDS_GetColumn(&aperPage, "ElementName");
+  if (!(eName2 = SDDS_GetColumn(&aperPage, "ElementName"))) {
+    fprintf(stderr, "Error reading ElementName from aperture file\n");
+    exit(1);
+  }
+
   for (i=0; i<elem2; i++)
     trim_spaces(eName2[i]);
   
