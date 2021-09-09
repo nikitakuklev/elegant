@@ -379,7 +379,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
     // ================================= //
     // This is where the kick is applied //
     // ================================= //
-    double sum, nom_kick;
+    double sum, nom_kick, env_term;
     double t_avg, t_i, x_i, y_i;
     char pidString[32];
     long *sitmp, *sourceIndex = NULL;
@@ -435,11 +435,10 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
         long index;
         index = incoherent_ar[i].index; /* index of target particle in the unsorted arrays */
         for (j=i+1; j<npBucket[ib]; j++) {   
-          //if(fabs(incoherent_ar[j].t-incoherent_ar[i].t) < ckicker->Nu*ckicker->lambda_rad){  
-          if (fabs(incoherent_ar[j].t-incoherent_ar[i].t) < 11*ckicker->lambda_rad) { 
+          if (fabs(incoherent_ar[j].t-incoherent_ar[i].t) < ckicker->Nu*ckicker->lambda_rad) { 
             double incoherent_phase, incoherent_strength, kick;
             incoherent_phase = fabs(incoherent_ar[j].t-incoherent_ar[i].t)*twopi/ckicker->lambda_rad;
-            incoherent_strength = 1 - fabs(incoherent_phase / (twopi*11));
+            incoherent_strength = 1 - fabs(incoherent_phase / (twopi*ckicker->Nu));
             kick = -(ckicker->strength * incoherent_strength) * sin(incoherent_phase + ckicker->phase*twopi); 
             
             part0[ipBucket[ib][index]][5] += kick;
@@ -456,8 +455,13 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
       y_i = part0[ipBucket[ib][i]][2] - ckicker->magnification * ckicker->pickup->vert_coords[ib][sourceIndex[i]];
 
       // on-axis kick = sin(c*(difference in arrival time)*2*Pi/lambda + phase)
-      nom_kick = -(ckicker->strength) * sin((t_avg - t_i)*c_mks * (twopi/(ckicker->lambda_rad)) + ckicker->phase*twopi);     
-    
+      double sigma = 0.01;
+      double w = ckicker->Nu/2;
+      double x = ckicker->phase;
+      env_term = (1.0/PI)*(atan((x+w)/sigma) + atan(-(x-w)/sigma)) * (1 - abs(x)/w);   
+      nom_kick = -(ckicker->strength) * env_term * sin((t_avg - t_i)*c_mks * (twopi/(ckicker->lambda_rad)) + ckicker->phase*twopi);     
+      
+
       if (ckicker->transverseMode!=0) {
         double Exi, error;
         size_t neval;
