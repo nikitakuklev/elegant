@@ -76,6 +76,9 @@ Here is a summary of what's changed since release 2021.2.  Historical change log
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item The \verb|ignore_elements| command no longer results in a printout of all the ignored elements.
+\item Several improvements were made to the \verb|ion_effects| command: (a) Changed binning for multi-function fits, so
+  that only ions that are in range in both planes are counted. (b) Normalize kicks by the charge in the fit region,
+  rather than the total charge. (c) Fixed some bugs with single Gaussian fit method. These changes were made by J. Calvery (APS).
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
