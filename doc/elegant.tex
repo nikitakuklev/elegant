@@ -70,7 +70,7 @@ Here is a summary of what's changed since release 2021.2.  Historical change log
 \item The \verb|RFMODE| element now checks that the \verb|A0| coefficient is nonzero and normalizes
   other coefficients to it, as implied by the manual.
 \item The \verb|REFERENCE_CORRECTION| feature of \verb|CSBEND| was not handling non-zero \verb|EPITCH| or
-  \vert|EYAW| values, as reported by  G. Penn (LBNL).
+  \verb|EYAW| values, as reported by  G. Penn (LBNL).
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -4957,8 +4957,12 @@ which parameters of accelerator elements are written.
 \item \verb|suppress_parameter_defaults| --- If non-zero, then the \verb|parameters| output file
   will not contain rows for parameters whose values are identical to the then-current default values.
   This can result in significantly smaller parameter files and faster loading.
-  The downside is that future changes to defaults would possible result in difficulty reproducing a
+  One downside is that future changes to defaults would possible result in difficulty reproducing a
   result from a saved parameter file.
+  Another, more serious, risk is that the parameter file may not reflect changes made via, e.g.,
+  \verb|alter_elements| or \verb|load_parameters| if those changes {\em restore} default 
+  values for quantities that have non-default values in the lattice file.
+  Users are warned to use this feature with caution.
 \item \verb|rfc_reference_output| --- The (incomplete) name of an SDDS file into
 which the internally-determined reference times for \verb|RFCA| and \verb|RFCW| 
 elements are written. This file can be loaded with \verb|load_parameters| to
