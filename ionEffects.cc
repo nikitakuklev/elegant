@@ -880,10 +880,11 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd,
 
 void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma, double *ionSigma)
 {
-  long iSpecies, iBin, iPlane;
+  long iSpecies, iBin[2], iPlane;
   long iIon;
   double qTotal = 0;
   long nIons = 0;
+  double delta[2], bStart[2];
 
   for (iSpecies=qTotal=0; iSpecies<nSpecies; iSpecies++)
     nIons += ionEffects->nIons[iSpecies]; 
@@ -950,18 +951,22 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma
 
     ionEffects->ionHistogramMissed[iPlane] = 0;
 
-    double delta, xyStart;
-    delta = ionEffects->ionDelta[iPlane];
-    xyStart = -ionEffects->ionRange[iPlane]/2;
+    //double delta, xyStart;
+    delta[iPlane] = ionEffects->ionDelta[iPlane];
+    bStart[iPlane] = -ionEffects->ionRange[iPlane]/2;
+  }
 
-    /* histogram ion charge */
-    for (iSpecies=qTotal=0; iSpecies<nSpecies; iSpecies++) {
-      for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
-	iBin = floor((ionEffects->coordinate[iSpecies][iIon][2*iPlane] - xyStart)/delta);
-	if (iBin<0 || iBin>(ionEffects->ionBins[iPlane]-1))
-	  ionEffects->ionHistogramMissed[iPlane] += ionEffects->coordinate[iSpecies][iIon][4];
-	else
-	  ionEffects->ionHistogram[iPlane][iBin] += ionEffects->coordinate[iSpecies][iIon][4];
+    /* histogram ion charge, if it's in range in both planes */
+  for (iSpecies=qTotal=0; iSpecies<nSpecies; iSpecies++) {
+    for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
+      for (iPlane=0; iPlane<2; iPlane++)
+	iBin[iPlane] = floor((ionEffects->coordinate[iSpecies][iIon][2*iPlane] - bStart[iPlane])/delta[iPlane]);
+      if (iBin[0]<0 || iBin[0]>(ionEffects->ionBins[0]-1) || iBin[1]<0 || iBin[1]>(ionEffects->ionBins[1]-1)) {
+	  ionEffects->ionHistogramMissed[0] += ionEffects->coordinate[iSpecies][iIon][4];
+	  ionEffects->ionHistogramMissed[1] += ionEffects->coordinate[iSpecies][iIon][4];
+      } else {
+	for (iPlane=0; iPlane<2; iPlane++)
+	  ionEffects->ionHistogram[iPlane][iBin[iPlane]] += ionEffects->coordinate[iSpecies][iIon][4];
 	qTotal += ionEffects->coordinate[iSpecies][iIon][4];
       }
     }
@@ -1392,16 +1397,16 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	if (myid%2==0 && ionEffects->xyFitSet[plane]&0x01) {
 	  memcpy(paramValue, ionEffects->xyFitParameter2[plane], 6*sizeof(double));
 	} else {
-	  paramValue[0] = ionSigma[2*plane];
-	  paramValue[1] = ionCentroid[2*plane];
+	  paramValue[0] = ionSigma[plane];
+	  paramValue[1] = ionCentroid[plane];
 	  paramValue[2] = peakVal;
 	}
 #else
 	if (ionEffects->xyFitSet[plane]&0x01) {
 	  memcpy(paramValue, ionEffects->xyFitParameter2[plane], 6*sizeof(double));
 	} else {
-	  paramValue[0] = ionSigma[2*plane];
-	  paramValue[1] = ionCentroid[2*plane];
+	  paramValue[0] = ionSigma[plane];
+	  paramValue[1] = ionCentroid[plane];
 	  paramValue[2] = peakVal;
 	}
 #endif
@@ -2894,16 +2899,28 @@ void applyIonKicksToElectronBunch
 	   * Dividing by qIon is needed because we are making a product of two functions, rho(x) and rho(y),
 	   * each of which will integrate to qIon.
 	   */
+
 	  tempQ[ix+iy*nFunctions] = 
-	    paramValueX[2+ix*3] / normX * paramValueY[2+iy*3] / normY * 
-	    2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] / qIon;
-	  if (tempQ[ix+iy*nFunctions]<1e-6*qIon)
+	     paramValueX[2+ix*3] / normX * paramValueY[2+iy*3] / normY * 
+	     2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] / ionEffects->qTotal;
+
+	  // tempQ[ix+iy*nFunctions] = 
+	  //  paramValueX[2+ix*3] / normX * paramValueY[2+iy*3] / normY * 
+	  //  2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] / qIon;
+
+	  //tempQ[ix+iy*nFunctions] = 
+	  //  paramValueX[2+ix*3] / normX / ionEffects->ionChargeFromFit[0] * 
+	  //  paramValueY[2+iy*3] / normY /  ionEffects->ionChargeFromFit[1] * 
+	  //  2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] * ionEffects->qTotal;
+
+
+	  if (tempQ[ix+iy*nFunctions]<1e-6*ionEffects->qTotal)
 	    // Ignore these contributions, as they are likely to have wild values for centroid and size that
 	    // can lead to numerical problems
 	    tempQ[ix+iy*nFunctions] = 0;
 	}
       }
-    } else if (ionEffects->ionFieldMethod==ION_FIELD_BILORENTZIAN || ionEffects->ionFieldMethod==ION_FIELD_TRILORENTZIAN || ionEffects->ionFieldMethod==ION_FIELD_GAUSSIANFIT) {
+    } else if (ionEffects->ionFieldMethod==ION_FIELD_BILORENTZIAN || ionEffects->ionFieldMethod==ION_FIELD_TRILORENTZIAN) {
       /* paramValueX[0..8] = ax1, centroidx1, heightx1, ax2, centroidx2, heightx2, [ax3, centroidx3, heightx3] */
       /* paramValueY[0..8] = ay1, centroidy1, heighty1, ay2, centroidy2, heighty2, [ay3, centroidy3, heighty3] */
       for (int ix=0; ix<nFunctions; ix++) {
@@ -2919,8 +2936,8 @@ void applyIonKicksToElectronBunch
 	   */
 	  tempQ[ix+iy*nFunctions] = 
 	    paramValueX[2+ix*3]*PI*paramValueX[0+ix*3]/normX *
-	    paramValueY[2+iy*3]*PI*paramValueY[0+iy*3]/normY / qIon;
-	  if (tempQ[ix+iy*nFunctions]<1e-6*qIon)
+	    paramValueY[2+iy*3]*PI*paramValueY[0+iy*3]/normY / ionEffects->qTotal;
+	  if (tempQ[ix+iy*nFunctions]<1e-6*ionEffects->qTotal)
 	    // Ignore these contributions, as they are likely to have wild values for centroid and size that
 	    // can lead to numerical problems
 	    tempQ[ix+iy*nFunctions] = 0;
@@ -3114,11 +3131,11 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 				"Plane", iPlane==0?"x":"y", 
 				"fitResidual", ionEffects->xyFitResidual[iPlane],
 				isLorentzian?"a1":"sigma1", 
-				nFunctions==2?ionEffects->xyFitParameter2[iPlane][0]:ionEffects->xyFitParameter3[iPlane][0],
+				nFunctions<3?ionEffects->xyFitParameter2[iPlane][0]:ionEffects->xyFitParameter3[iPlane][0],
 				"centroid1", 
-				nFunctions==2?ionEffects->xyFitParameter2[iPlane][1]:ionEffects->xyFitParameter3[iPlane][1],
+				nFunctions<3?ionEffects->xyFitParameter2[iPlane][1]:ionEffects->xyFitParameter3[iPlane][1],
 				"q1", 
-				nFunctions==2?ionEffects->xyFitParameter2[iPlane][2]:ionEffects->xyFitParameter3[iPlane][2],
+				nFunctions<3?ionEffects->xyFitParameter2[iPlane][2]:ionEffects->xyFitParameter3[iPlane][2],
 				NULL) ||
 	    !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
 			    ionEffects->xyIonHistogram[iPlane]+binOffset, activeBins, "Position") ||
