@@ -893,7 +893,12 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline, long s
   double value=0.0;
   char *string_value = NULL;
   static long iElementName, iElementParameter, iParameterValue, iElementType, iOccurence, iElementGroup, iParameterValueString;
-  
+
+  if (suppressDefaults) {
+    printWarning("use of suppress_parameter_defaults (run_setup) can lead to unexpected results",
+                 "problems may particularly appear in conjunction with alter_elements or load_parameters");
+  }
+
   SDDSout = &SDDS_dumpLattice;
   if (!dumpingLatticeParameters) {
     if (!SDDS_InitializeOutputElegant(SDDSout, SDDS_BINARY, 0, NULL, NULL, filename) ||
@@ -950,16 +955,39 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline, long s
           value *= -1; /* don't want to save internal negative length values */
         if (suppressDefaults && value==parameter[iParam].number)
           doSave = 0;
+        if (!doSave) {
+          double refValue;
+          refValue = *(double*)(eptr->p_elem0+parameter[iParam].offset);
+          if (parameter[iParam].flags&PARAM_DIVISION_RELATED &&
+              eptr->divisions>1)
+            refValue *= eptr->divisions;
+          if (parameter[iParam].flags&HAS_LENGTH && run->backtrack && iParam==0)
+            refValue *= -1; /* don't want to save internal negative length values */
+          if (value!=refValue)
+            doSave = 1;
+        }
         break;
       case IS_LONG:
         value = *(long*)(eptr->p_elem+parameter[iParam].offset);
         if (suppressDefaults && value==parameter[iParam].integer)
           doSave = 0;
+        if (!doSave) {
+          double refValue;
+          refValue = *(long*)(eptr->p_elem0+parameter[iParam].offset);
+          if (value!=refValue)
+            doSave = 1;
+        }
         break;
       case IS_SHORT:
         value = *(short*)(eptr->p_elem+parameter[iParam].offset);
         if (suppressDefaults && value==parameter[iParam].integer)
           doSave = 0;
+        if (!doSave) {
+          double refValue;
+          refValue = *(short*)(eptr->p_elem0+parameter[iParam].offset);
+          if (value!=refValue)
+            doSave = 0;
+        }
         break;
       case IS_STRING:
         string_value = *(char**)(eptr->p_elem+parameter[iParam].offset);
@@ -971,6 +999,13 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline, long s
             if (parameter[iParam].string && strcmp(string_value, parameter[iParam].string)==0)
               doSave = 0;
           }
+        }
+        if (!doSave) {
+          char *ref_value;
+          ref_value = *(char**)(eptr->p_elem0+parameter[iParam].offset);
+          if ((!string_value && ref_value) || (string_value && !ref_value)
+              || (ref_value && string_value && strcmp(string_value, ref_value)!=0))
+            doSave = 1;
         }
         break;
       default:
