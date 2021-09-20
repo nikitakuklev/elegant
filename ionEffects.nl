@@ -45,7 +45,7 @@
    long freeze_ions_until_pass = 0;
    long freeze_electrons_until_pass = 0;
    long ion_fit_subtract_baseline = 1;
-   double gaussian_ion_range = 3;
+   double gaussian_ion_range = 5;
    long verbosity = 0; 
 #end
 
