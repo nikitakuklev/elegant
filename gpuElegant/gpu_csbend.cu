@@ -633,8 +633,8 @@ extern "C"
             part0 = (double **)czarray_2d(sizeof(double), 1, totalPropertiesPerParticle);
             memset(part0[0], 0, sizeof(**part0) * totalPropertiesPerParticle);
             memcpy(&csbend0, csbend, sizeof(*csbend));
-            csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 0;
-            csbend0.fseDipole = csbend0.fseQuadrupole = csbend0.xKick = csbend0.yKick = 0;
+            csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.epitch = csbend0.eyaw = 0;
+            csbend0.isr = csbend0.synch_rad = csbend0.fseDipole = csbend0.fseQuadrupole = csbend0.xKick = csbend0.yKick = 0;
 
             csbend0.refTrajectoryChange = csbend->refTrajectoryChange = (double **)czarray_2d(sizeof(double), csbend->nSlices, 5);
             refTrajectoryPoints = csbend->nSlices;

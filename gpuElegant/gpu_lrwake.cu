@@ -100,10 +100,12 @@ void gpu_index_bunch_assignments(long np, long idSlotsPerBunch,
       printf("Sharing bunch min/max data: %ld, %ld\n", ibMin, ibMax);
       fflush(stdout);
 #  endif
-      MPI_Allreduce(&ibMin, &ibMinGlobal, 1, MPI_LONG, MPI_MIN, workers);
-      MPI_Allreduce(&ibMax, &ibMaxGlobal, 1, MPI_LONG, MPI_MAX, workers);
-      ibMin = ibMinGlobal;
-      ibMax = ibMaxGlobal;
+      if (!partOnMaster) {
+        MPI_Allreduce(&ibMin, &ibMinGlobal, 1, MPI_LONG, MPI_MIN, workers);
+        MPI_Allreduce(&ibMax, &ibMaxGlobal, 1, MPI_LONG, MPI_MAX, workers);
+        ibMin = ibMinGlobal;
+        ibMax = ibMaxGlobal;
+      }
 #endif
       if (ibMin == LONG_MAX || ibMax == LONG_MIN)
         *nBunches = 0;
@@ -140,7 +142,7 @@ void gpu_index_bunch_assignments(long np, long idSlotsPerBunch,
       fflush(stdout);
 #endif
 #if USE_MPI
-      if (isSlave || !notSinglePart)
+      if (isSlave || !notSinglePart || partOnMaster)
         {
 #  ifdef DEBUG
           printf("...performing bunch assignment\n");
@@ -192,20 +194,30 @@ void gpu_index_bunch_assignments(long np, long idSlotsPerBunch,
     }
 
 #ifdef DEBUG
-  printf("%ld bunches found\n", *nBunches);
-  for (ib = 0; ib < *nBunches; ib++)
-    printf("npBunch[%ld] = %ld\n", ib, (*npBunch)[ib]);
+  printf("%ld bunches found (1)\n", *nBunches);
+  printf("npBunch = %x\n", npBunch);
+  printf("*npBunch = %x\n", *npBunch);
+  fflush(stdout);
+  if (!partOnMaster || myid==0) {
+    for (ib=0; ib<*nBunches; ib++) 
+      printf("npBunch[%ld] = %ld\n", ib, (*npBunch)[ib]);
+    fflush(stdout);
+  }
+  printf("%ld bunches found (2)\n", *nBunches);
+  fflush(stdout);
 #endif
 
 #if USE_MPI
+  if (!partOnMaster) {
 #  ifdef DEBUG
-  printf("Waiting on barrier at end of index_bunch_assignment\n");
-  fflush(stdout);
+    printf("Waiting on barrier at end of index_bunch_assignment\n");
+    fflush(stdout);
 #  endif
-  if (notSinglePart)
-    MPI_Barrier(workers);
-  else
-    MPI_Barrier(MPI_COMM_WORLD);
+    if (notSinglePart)
+      MPI_Barrier(workers);
+    else
+      MPI_Barrier(MPI_COMM_WORLD);
+  }
 #endif
 
 #ifdef DEBUG
