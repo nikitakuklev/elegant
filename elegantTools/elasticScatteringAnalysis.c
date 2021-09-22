@@ -149,8 +149,10 @@ int main(int argc, char **argv)
     SDDS_Bomb("output rootname");
 
   /* Read data from twiss file */
-  if (!SDDS_InitializeInput(&SDDSin, twissFile))
+  if (!SDDS_InitializeInput(&SDDSin, twissFile)) {
+    SDDS_SetError("Problem initializing input from twiss file.");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
   if (SDDS_CheckColumn(&SDDSin, "s", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY ||
       SDDS_CheckColumn(&SDDSin, "betax", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY || 
       SDDS_CheckColumn(&SDDSin, "betay", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY) {
@@ -187,8 +189,10 @@ int main(int argc, char **argv)
 
   readGasPressureData(pressureFile, &pressureData);
   
-  if (!SDDS_InitializeInput(&SDDSin, inputFile))
+  if (!SDDS_InitializeInput(&SDDSin, inputFile)) {
+    SDDS_SetError("Problem initializing input from scattering file.");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
 
   /* check the input file for valid data */
   if (SDDS_CheckColumn(&SDDSin, "s", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY ||
