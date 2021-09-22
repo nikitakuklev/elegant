@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2021.3\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 2021.4\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,50 +35,30 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2021.3}
+\section{Highlights of What's New in Version 2021.4}
 
-Here is a summary of what's changed since release 2021.2.  Historical change logs are collected in Section
+Here is a summary of what's changed since release 2021.3.  Historical change logs are collected in Section
 \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The voltage setpoint adjustment feature of \verb|RFMODE| will now work in the serial version.
-\item There was a bug in the I/Q feedback for \verb|RFMODE| that essentially added the beamloading
-  voltage to the setpoint. This was pointed out by Z. Duan (IHEP), who also provided a correction
-  to the code.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Fixed a lattice lattice parser bug that would cause a crash when a single reflected element appeared with a quoted  name.
-\item A bug was fixed in the \verb|ramp_elements| and \verb|modulate_elements| commands that would cause
-  incorrect values to be asserted when multiple elements of the same name were targetted in the
-  default differential mode.
-\item The \verb|chromaticity| command was ignoring the \verb|update_orbit| parameter and not fully updating the
-  twiss parameters as the correction was performed. In cases with large orbits and strong sextupoles, this would
-  cause a discrepancy between the claimed corrected chromaticity and the actual chromaticity (as reported by the
-  \verb|twiss_output| command). This was reported by V. Sajaev (ANL).
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Thanks to A. J. Dick and P. Piot (NIU), two new elements were added that allow simulation
-  of Optical Stochastic Cooling. The \verb|CPICKUP| element is used to record information from
-  the pickup undulator, while the \verb|CKICKER| element is used to impart corresponding
-  kicks to the beam. See the manual pages for more detail.
-\item The \verb|RFMODE| element now checks that the \verb|A0| coefficient is nonzero and normalizes
-  other coefficients to it, as implied by the manual.
-\item The \verb|REFERENCE_CORRECTION| feature of \verb|CSBEND| was not handling non-zero \verb|EPITCH| or
-  \verb|EYAW| values, as reported by  G. Penn (LBNL).
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|ignore_elements| command no longer results in a printout of all the ignored elements.
-\item Several improvements were made to the \verb|ion_effects| command: (a) Changed binning for multi-function fits, so
-  that only ions that are in range in both planes are counted. (b) Normalize kicks by the charge in the fit region,
-  rather than the total charge. (c) Fixed some bugs with single Gaussian fit method. These changes were made by J. Calvery (APS).
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -104,8 +84,7 @@ are listed in Section \ref{sect:tools}.
 
 Changes to these tools in this release include
 \begin{itemize}
-\item The \verb|weightedBunch| script now allows users to control the random number seed.
-\item The \verb|computeRBGGE| and \verb|computeCBGGE| programs now provide units for the generalized gradients.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -8254,6 +8233,78 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 2021.3}
+
+Here is a summary of what's changed since release 2021.2. 
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The voltage setpoint adjustment feature of \verb|RFMODE| will now work in the serial version.
+\item There was a bug in the I/Q feedback for \verb|RFMODE| that essentially added the beamloading
+  voltage to the setpoint. This was pointed out by Z. Duan (IHEP), who also provided a correction
+  to the code.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item Fixed a lattice lattice parser bug that would cause a crash when a single reflected element appeared with a quoted  name.
+\item A bug was fixed in the \verb|ramp_elements| and \verb|modulate_elements| commands that would cause
+  incorrect values to be asserted when multiple elements of the same name were targetted in the
+  default differential mode.
+\item The \verb|chromaticity| command was ignoring the \verb|update_orbit| parameter and not fully updating the
+  twiss parameters as the correction was performed. In cases with large orbits and strong sextupoles, this would
+  cause a discrepancy between the claimed corrected chromaticity and the actual chromaticity (as reported by the
+  \verb|twiss_output| command). This was reported by V. Sajaev (ANL).
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item Thanks to A. J. Dick and P. Piot (NIU), two new elements were added that allow simulation
+  of Optical Stochastic Cooling. The \verb|CPICKUP| element is used to record information from
+  the pickup undulator, while the \verb|CKICKER| element is used to impart corresponding
+  kicks to the beam. See the manual pages for more detail.
+\item The \verb|RFMODE| element now checks that the \verb|A0| coefficient is nonzero and normalizes
+  other coefficients to it, as implied by the manual.
+\item The \verb|REFERENCE_CORRECTION| feature of \verb|CSBEND| was not handling non-zero \verb|EPITCH| or
+  \verb|EYAW| values, as reported by  G. Penn (LBNL).
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|ignore_elements| command no longer results in a printout of all the ignored elements.
+\item Several improvements were made to the \verb|ion_effects| command: (a) Changed binning for multi-function fits, so
+  that only ions that are in range in both planes are counted. (b) Normalize kicks by the charge in the fit region,
+  rather than the total charge. (c) Fixed some bugs with single Gaussian fit method. These changes were made by J. Calvery (APS).
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}  Users are encouraged to check results against
+the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+The {\tt elegant} distribution includes many programs and scripts that perform computations with {\tt elegant}
+output data, provide interfaces with other programs, or prepare data for use with {\tt elegant}. These
+are listed in Section \ref{sect:tools}. 
+
+Changes to these tools in this release include
+\begin{itemize}
+\item The \verb|weightedBunch| script now allows users to control the random number seed.
+\item The \verb|computeRBGGE| and \verb|computeCBGGE| programs now provide units for the generalized gradients.
+\end{itemize}
 
 \subsection{Highlights of What's New in Version 2021.2}
 
