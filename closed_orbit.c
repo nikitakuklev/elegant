@@ -317,8 +317,8 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, double clorb_acc_req
 
   if (fixed_length)
     return findFixedLengthClosedOrbit(clorb, clorb_acc, clorb_acc_requirement, clorb_iter, beamline, M, run, dp,
-                                      start_from_recirc, starting_point, change_fraction, fraction_multiplier, multiplier_interval, deviation,
-                                      n_turns);
+                                      start_from_recirc, starting_point, change_fraction, fraction_multiplier, 
+                                      multiplier_interval, deviation, n_turns);
 
 #ifdef DEBUG
   printf("running find_closed_orbit: clorb_acc=%le, clorb_iter=%ld, dp=%le, start_from_recirc=%ld, fixed_length=%ld, change_fraction=%le, n_turns = %ld\n",
@@ -395,7 +395,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, double clorb_acc_req
 
   p = run->p_central;
   if (deviation)
-    deviation[4] = deviation[5] = 0;
+     deviation[4] = deviation[5] = 0;
   /* method=0: iterate using the R matrix; only invoked if n_turns>=0
    * method=1: track a specified number of turns, given by |n_turns|; only invoked if |n_turns|>0
    * method=2: iterate using the R matrix again, starting from tracking result (n_turns>0); or, fill trajectory buffer (n_turns<0)
@@ -443,6 +443,8 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, double clorb_acc_req
           if (deviation)
             deviation[i] = diff->a[i][0];
         }
+        if (deviation)
+          deviation[4] = one_part[0][4] - beamline->revolution_length;
         last_error = error;
         if ((error = sqrt(sqr(diff->a[0][0]) + sqr(diff->a[1][0]) + sqr(diff->a[2][0]) + sqr(diff->a[3][0])))<clorb_acc)
           break;
