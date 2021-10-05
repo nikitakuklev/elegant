@@ -425,7 +425,8 @@ int main(int argc, char **argv)
             }
           } else {
             if (autoTuneFlags&AUTOTUNE_VERBOSE) {
-              printf("Goodness of fit (%le) for m=%ld, d=%ld is not better\n", residual, multipoles, derivatives);
+              printf("Goodness of fit (%le) for m=%ld, d=%ld is not better than %le obtained for m=%ld, d=%ld\n", 
+                     residual, multipoles, derivatives, bestResidual, bestMultipoles, bestDerivatives);
               fflush(stdout);
             }
           }
