@@ -633,8 +633,8 @@ int ReadInputFiles
       return (1);
     }
   if ((zvalues[0] != zvalues[1]) || (xvalues[0] == xvalues[1])) {
-      fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
-      return (1);
+    fprintf(stderr, "Error: Sort the input file %s with sddssort -col=z -col=y -col=x\n", topFile);
+    return (1);
   }
   xmintop = xvalues[0];
   xmaxtop = xvalues[rows-1];
@@ -741,7 +741,7 @@ int ReadInputFiles
       return (1);
     }
   if ((zvalues[0] != zvalues[1]) || (xvalues[0] == xvalues[1])) {
-      fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
+      fprintf(stderr, "Error: Sort the input %s with sddssort -col=z -col=y -col=x\n", bottomFile);
       return (1);
   }
   xminbottom = xvalues[0];
@@ -862,7 +862,7 @@ int ReadInputFiles
       return (1);
     }
   if ((zvalues[0] != zvalues[1]) || (yvalues[0] == yvalues[1])) {
-      fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
+      fprintf(stderr, "Error: Sort the input file %s with sddssort -col=z -col=y -col=x\n", leftFile);
       return (1);
   }
   yminleft = yvalues[0];
@@ -978,7 +978,7 @@ int ReadInputFiles
       return (1);
     }
   if ((zvalues[0] != zvalues[1]) || (yvalues[0] == yvalues[1])) {
-      fprintf(stderr, "Error: Sort the input files with sddssort -col=z -col=y -col=x\n");
+      fprintf(stderr, "Error: Sort the input file %s with sddssort -col=z -col=y -col=x\n", rightFile);
       return (1);
   }
   yminright = yvalues[0];
