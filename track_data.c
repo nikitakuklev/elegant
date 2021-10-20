@@ -390,6 +390,7 @@ PARAMETER fmult_param[N_FMULT_PARAMS] = {
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.factor), NULL, 1.0, 0, "factor by which to multiply multipole strengths"},
     {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX|PARAM_IS_DEPRECATED, (long)((char *)&fmult_example.n_kicks), NULL, 0.0, 0, "Deprecated. Use N_SLICES."},
     {"N_SLICES", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.nSlices), NULL, 0.0, 1, "Number of slices (full integrator steps)."},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&fmult_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},

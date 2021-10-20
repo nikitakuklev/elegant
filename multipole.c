@@ -425,10 +425,10 @@ long fmultipole_tracking(
     JnLSave = NULL;
   for (i_order=0; i_order<multData.orders; i_order++) {
     KnLSave[i_order] = multData.KnL[i_order];
-    multData.KnL[i_order] *= (1+multipole->fse);
+    multData.KnL[i_order] *= (1+multipole->fse)*multipole->factor;
     if (multData.JnL) {
       JnLSave[i_order] = multData.JnL[i_order];
-      multData.JnL[i_order] *= (1+multipole->fse);
+      multData.JnL[i_order] *= (1+multipole->fse)*multipole->factor;
     }
   }
   

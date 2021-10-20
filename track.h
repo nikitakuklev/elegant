@@ -1074,7 +1074,7 @@ extern char *entity_text[N_TYPES];
 #define N_SREFFECTS_PARAMS 15
 #define N_ZTRANSVERSE_PARAMS 37
 #define N_IBSCATTER_PARAMS 12
-#define N_FMULT_PARAMS 11
+#define N_FMULT_PARAMS 12
 #define N_BMAPXY_PARAMS 7
 #define N_WAKE_PARAMS 15
 #define N_TRWAKE_PARAMS 23
@@ -1333,7 +1333,7 @@ typedef struct {
 extern PARAMETER fmult_param[N_FMULT_PARAMS];
 
 typedef struct {
-  double length, tilt, dx, dy, dz, fse;
+  double length, tilt, dx, dy, dz, fse, factor;
   long n_kicks, nSlices;
   short synch_rad;
   char *filename;
