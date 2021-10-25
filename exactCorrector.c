@@ -41,8 +41,8 @@ int applySteeringMultipoleKicks(
   qy = (1+delta)*coord[3]/denom;
 
   maxOrder = findMaximumOrder(-1, -1, multData, NULL, NULL);
-  xpow = tmalloc(sizeof(*xpow)*maxOrder);
-  ypow = tmalloc(sizeof(*ypow)*maxOrder);
+  xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
+  ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
   fillPowerArray(coord[0], xpow, maxOrder);
   fillPowerArray(coord[2], ypow, maxOrder);
 
