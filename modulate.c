@@ -266,7 +266,7 @@ long applyElementModulations(MODULATION_DATA *modData, LINE_LIST *beamline, doub
       modData->lastVerboseValue[iMod] = modData->unperturbedValue[iMod] 
 	= parameter_value(modData->element[iMod]->name,  modData->element[iMod]->type,
 			  modData->parameterNumber[iMod], beamline);
-      printf("Unperturbed value of modulated quantity %s.%s is %le\n",
+      printf("Unperturbed value of modulated quantity %s.%s is %21.15le\n",
 	     modData->element[iMod]->name, 
 	     entity_description[modData->element[iMod]->type].parameter[modData->parameterNumber[iMod]].name,
 	     modData->unperturbedValue[iMod]);
