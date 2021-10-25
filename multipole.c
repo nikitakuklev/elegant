@@ -488,6 +488,9 @@ long fmultipole_tracking(
     if (multData.JnL)
       multData.JnL[i_order] = JnLSave[i_order];
   }
+  free(KnLSave);
+  if (JnLSave)
+    free(JnLSave);
 
   log_exit("fmultipole_tracking");
   return(i_top+1);
