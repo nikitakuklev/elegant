@@ -5187,7 +5187,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   double St0, Sz0, nus, rfAcceptance = -1;
   double wrf, w0, Vdot, E;
   long h;
-  double eta, gamma;
+  double eta, gamma, dPOverP, pCentral;
 
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT) || !(beamline->flags&BEAMLINE_RADINT_CURRENT)) {
     if (output_before_tune_correction)
@@ -5197,9 +5197,23 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   
   if (beamline->revolution_length<=0)
     bombElegant("Beamline length is undefined (do_rf_setup)", NULL);
-  
-  beta = run->p_central/(gamma=sqrt(sqr(run->p_central)+1));
-  T0 = beamline->revolution_length/(beta*c_mks);
+
+  pCentral = run->p_central;
+  dPOverP = 0;
+  if (beamline->closed_orbit) {
+    /*
+    printf("Using closed orbit to compute orbit length: centroid[4] = %21.15e, centroid[5] = %21.15e\n",
+           beamline->closed_orbit[beamline->n_elems-1].centroid[4],
+           beamline->closed_orbit[beamline->n_elems-1].centroid[5]);
+    */
+    dPOverP = beamline->closed_orbit[beamline->n_elems-1].centroid[5];
+    pCentral = run->p_central*(1+dPOverP);
+    beta = pCentral/(gamma=sqrt(sqr(pCentral)+1));
+    T0 = beamline->closed_orbit[beamline->n_elems-1].centroid[4]/(beta*c_mks);
+  } else {
+    beta = run->p_central/(gamma=sqrt(sqr(run->p_central)+1));
+    T0 = beamline->revolution_length/(beta*c_mks);
+  }
   if (rf_setup_struct.harmonic>0)
     harmonic = rf_setup_struct.harmonic;
   else
@@ -5213,7 +5227,8 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   for (i=0; i<nRfca; i++) {
     rfca = (RFCA*)(rfcaElem[i]->p_elem);
     rfca->freq = frf;
-    change_defined_parameter(rfcaElem[i]->name, iFreq, T_RFCA, frf, NULL, LOAD_FLAG_ABSOLUTE);
+    change_defined_parameter(rfcaElem[i]->name, iFreq, T_RFCA, frf, NULL, LOAD_FLAG_ABSOLUTE|LOAD_FLAG_VERBOSE);
+    change_used_parameter(beamline, rfcaElem[i]->name, iFreq, T_RFCA, frf, NULL, LOAD_FLAG_ABSOLUTE|LOAD_FLAG_VERBOSE);
     if (rfcaElem[i]->matrix) {
       free_matrices(rfcaElem[i]->matrix);
       free(rfcaElem[i]->matrix);
@@ -5229,7 +5244,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   if (rf_setup_struct.bucket_half_height>0) {
     double F, E;
     
-    E = sqrt(sqr(run->p_central)+1)*particleMassMV;
+    E = sqrt(sqr(pCentral)+1)*particleMassMV;
     F = sqr(rf_setup_struct.bucket_half_height)/(beamline->radIntegrals.Uo/(PI*fabs(eta)*harmonic*E));
     q = (F+2)/2;
     voltage = (q=solveForOverVoltage(F,q))*beamline->radIntegrals.Uo*1e6/nRfca;
@@ -5246,23 +5261,28 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
       phase = 180-asin(1/q)*180/PI;
     else
       phase = asin(1/q)*180/PI;
-    printf("Voltage per cavity is %21.15e V, phase is %21.15e deg\n\n", voltage, phase);
+    printf("Voltage per cavity is %21.15e V, overvoltage is %21.15e, phase is %21.15e deg\n\n", voltage, q, phase);
     fflush(stdout);
     for (i=0; i<nRfca; i++) {
       rfca = (RFCA*)(rfcaElem[i]->p_elem);
       rfca->volt = voltage;
       rfca->phase = phase;
+      rfca->fiducial_seen =0;
       change_defined_parameter(rfcaElem[i]->name, iVolt, T_RFCA, voltage, NULL, LOAD_FLAG_ABSOLUTE);
-      change_defined_parameter(rfcaElem[i]->name, iPhase, T_RFCA, phase, NULL, LOAD_FLAG_ABSOLUTE);
+      change_used_parameter(beamline, rfcaElem[i]->name, iVolt, T_RFCA, voltage, NULL, LOAD_FLAG_ABSOLUTE|LOAD_FLAG_VERBOSE);
+      change_defined_parameter(rfcaElem[i]->name, iPhase, T_RFCA, phase+rf_setup_struct.phase_offset, NULL, LOAD_FLAG_ABSOLUTE);
+      change_used_parameter(beamline, rfcaElem[i]->name, iPhase, T_RFCA, phase+rf_setup_struct.phase_offset, NULL, LOAD_FLAG_ABSOLUTE|LOAD_FLAG_VERBOSE);
+      printf("Set phase of %s to %21.15e deg\n",
+             rfcaElem[i]->name, phase+rf_setup_struct.phase_offset);
     }
   }
 
   rfAcceptance = -1;
   wrf = frf*PIx2;
-  w0 = PIx2*c_mks/beamline->revolution_length;
+  w0 = PIx2/T0;
   h = wrf/w0+0.5;
   Vdot = nRfca*h*w0*voltage*cos(phase*PI/180);
-  E = sqrt(sqr(run->p_central)+1)*particleMassMV*1e6;
+  E = sqrt(sqr(pCentral)+1)*particleMassMV*1e6;
   
   if ((eta*Vdot)<0) {
     nus = sqrt(eta/PIx2*(-Vdot/w0)/E);
@@ -5276,10 +5296,11 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
 
   rpn_store(Sz0, NULL, rpn_create_mem((char*)"Sz0", 0));
   rpn_store(St0, NULL, rpn_create_mem((char*)"St0", 0));
+  rpn_store(frf, NULL, rpn_create_mem((char*)"RfFrequency", 0));
   rpn_store(beamline->radIntegrals.sigmadelta, NULL, rpn_create_mem((char*)"Sdelta0", 0));
-  
+
   if (writeToFile && fpRf) {
-    fprintf(fpRf, "%le\n%le\n%le\n%le\n%le\n%le\n%le\n%ld\n",
+    fprintf(fpRf, "%21.15le\n%21.15le\n%21.15le\n%21.15le\n%21.15le\n%21.15le\n%21.15le\n%ld\n",
             phase, voltage*nRfca, rfAcceptance, nus, Sz0, St0, frf, h);
   }
 }

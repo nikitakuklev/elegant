@@ -107,4 +107,5 @@
 	long disable = 0;
         long output_only = 0;
         long track_for_frequency = 0;
+        double phase_offset = 0;
 #end

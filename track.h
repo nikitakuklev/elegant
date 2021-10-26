@@ -4127,17 +4127,23 @@ extern void extend_elem_list(ELEMENT_LIST **eptr);
 extern void show_elem(ELEMENT_LIST *eptr, long type);
 extern LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long backtrack,
                                  CHANGE_START_SPEC *css);
-double compute_end_positions(LINE_LIST *lptr) ;
+extern double compute_end_positions(LINE_LIST *lptr) ;
 extern void show_elem(ELEMENT_LIST *eptr, long type);
 extern void free_elements(ELEMENT_LIST *elemlist);
 extern void free_beamlines(LINE_LIST *beamline);
 extern void do_save_lattice(NAMELIST_TEXT *nl, RUN *run, LINE_LIST *beamline);
-void print_with_continuation(FILE *fp, char *s, long endcol);
-void change_defined_parameter_values(char **elem_name, long *param_number, long *type, double *value, long n_elems);
-void change_defined_parameter_divopt(char *elem_name, long param, long elem_type, 
+extern void print_with_continuation(FILE *fp, char *s, long endcol);
+extern void change_defined_parameter_values(char **elem_name, long *param_number, long *type, double *value, long n_elems);
+extern void change_defined_parameter_divopt(char *elem_name, long param, long elem_type, 
                                      double value, char *valueString, unsigned long mode, 
                                      long checkDiv);
-void change_defined_parameter(char *elem_name, long param_number, long type, double value, char *valueString, unsigned long mode);
+extern void change_defined_parameter(char *elem_name, long param_number, long type, double value, char *valueString, unsigned long mode);
+extern void change_used_parameter_divopt(LINE_LIST *beamline, char *elem_name, long param, long elem_type, 
+                                  double value, char *valueString, unsigned long mode, 
+                                  long checkDiv);
+extern void change_used_parameter(LINE_LIST *beamline, char *elem_name, long param, long elem_type, 
+                           double value, char *valueString, unsigned long mode);
+
 extern void delete_matrix_data(LINE_LIST *beamline);
 extern void create_load_hash(ELEMENT_LIST *elem);
 
