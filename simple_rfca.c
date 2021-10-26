@@ -333,6 +333,12 @@ long trackRfCavityWithWakes
     double error_sum=0.0, *sumArray, *errorArray;
 #endif
 
+#ifdef DEBUG
+    printf("Tracking through rf cavity with V=%le, Phase=%le\n",
+           rfca->volt, rfca->phase);
+    fflush(stdout);
+#endif
+
     matrixMethod = 0;
     if (rfca->bodyFocusModel) {
       char *modelName[2] = { "none", "srs" };
