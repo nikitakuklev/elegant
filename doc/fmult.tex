@@ -19,5 +19,6 @@ The {\tt MULT} element is also available, which allows the same functionality wi
 for a single component.
 
 The transport matrix for {\tt FMULT} elements is determined by tracking and will affect the
-tunes, chromaticities, etc.
-
+tunes, chromaticities, etc. However, in some cases if \verb|TILT| is nonzero, it may happen that
+the phase advance jumps by nearly $2\pi$; this anomaly can be suppressed by setting \verb|UNTILTED_MATRIX| to
+a nonzero value.

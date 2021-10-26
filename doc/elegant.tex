@@ -43,7 +43,7 @@ Here is a summary of what's changed since release 2021.3.  Historical change log
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
+\item A memory leak was fixed in the \verb|FMULT| element.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -54,12 +54,18 @@ Here is a summary of what's changed since release 2021.3.  Historical change log
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None.
+\item Added the \verb|FACTOR| parameter for the \verb|FMULT| element, allowing all multipole components to
+  be scaled by a common factor. Also added the \verb|UNTILTED_MATRIX| parameter, which can be used to force
+  \verb|elegant| to numerically compute the matrix for the untilted element; see the manual page for
+  discussion.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item The \verb|rf_setup| command now does a better job of setting the rf frequency in the presence of a closed
+  orbit, which may have a different length than the nominal orbit. It also includes the ability to offset the
+  rf phase, which allows the user to compensate for small differences between the calculation of the energy loss per
+  turn from radiation integrals and tracking.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -4604,6 +4610,41 @@ energy spread in \verb|Sdelta0|, where they can be used in rpn expressions in su
  sigma_s = "(Sz0)",
  ...
 &end
+\end{verbatim}
+
+If performing rf setup in the presence of a non-zero orbit, the best procedure is to run \verb|rf_setup| twice,
+in a sequence like the following
+\begin{verbatim}
+...
+! Compute nominal radiation integrals
+&twiss_output
+        radiation_integrals = 1
+&end
+! Perform nominal rf cavity setup
+&rf_setup
+        name = *,
+        harmonic = 1296
+        total_voltage = 9e6
+&end
+! Set up to compute the closed orbit, which may depened on radiation losses and rf cavity location
+&closed_orbit
+        output = %s.clo       
+&end
+! Set up to compute twiss parameters and radiation integrals
+&twiss_output
+        filename = %s.twi
+        radiation_integrals = 1
+        output_at_each_step = 1
+&end
+! Set up to perform rf cavity setup
+&rf_setup
+        filename = %s.rf
+        name = *,
+        harmonic = 1296
+        total_voltage = 9e6
+        set_for_each_step = 1
+&end
+...
 \end{verbatim}
 
 \begin{itemize}
