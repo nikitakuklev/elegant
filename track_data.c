@@ -395,7 +395,8 @@ PARAMETER fmult_param[N_FMULT_PARAMS] = {
     {"N_SLICES", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.nSlices), NULL, 0.0, 1, "Number of slices (full integrator steps)."},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&fmult_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&fmult_example.filename), NULL, 0.0, 0, "name of file containing multipole data"},
-    {"SQRT_ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
+    {"SQRT_ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX|PARAM_IS_DEPRECATED, (long)((char *)&fmult_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
+    {"UNTILTED_MATRIX", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&fmult_example.untiltedMatrix), NULL, 0.0, 0, "If nonzero, TILT is ignored for purposes of matrix computation."},
     };
 
 POLYNOMIALSERIES polynomialSeries_example;

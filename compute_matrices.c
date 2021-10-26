@@ -1009,7 +1009,7 @@ VMATRIX *compute_matrix(
     SOLE *sole; ROTATE *rot; QFRING *qfring;
     MONI *moni; HMON *hmon; VMON *vmon; 
     KSEXT *ksext; KOCT *koct; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept; KQUSE *kquse;
-    MULT *mult; 
+    MULT *mult;  FMULT *fmult;
     SAMPLE *sample; STRAY *stray; CSBEND *csbend; CCBEND *ccbend; RFCA *rfca; ENERGY *energy;
     RFCW *rfcw; 
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
@@ -1714,7 +1714,15 @@ VMATRIX *compute_matrix(
                           misalignmentMethod, misalignmentMethod==1?0:1);
         break;
       case T_FMULT:
-        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, 3);
+	fmult = (FMULT*)elem->p_elem;
+	if (fmult->untiltedMatrix) {
+	  double saveTilt;
+	  saveTilt = fmult->tilt;
+	  fmult->tilt = 0;
+	  elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, 3);
+	  fmult->tilt = saveTilt;
+	} else
+	  elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, 3);
         break;
       case T_EHCOR:
         ehcor = (EHCOR*) elem->p_elem;
