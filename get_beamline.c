@@ -1417,7 +1417,7 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
           dValue *= eptr->divisions;
         *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = dValue;
 #if DEBUG
-        printf("   changing parameter %s of %s #%ld to %e\n",
+        printf("   changing parameter %s of %s #%ld to %21.15e\n",
                 entity_description[elem_type].parameter[param].name,
                 eptr->name, eptr->occurence,
                 *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
@@ -1489,7 +1489,7 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
           (entity_description[elem_type].parameter[param].flags&PARAM_DIVISION_RELATED))
         value /= eptr->divisions;
       if (mode&LOAD_FLAG_VERBOSE)
-        printf("Changing definition (mode %s) %s.%s from %e to ", 
+        printf("Changing definition (mode %s) %s.%s from %21.15e to ", 
                 (mode&LOAD_FLAG_ABSOLUTE)?"absolute":
                 ((mode&LOAD_FLAG_DIFFERENTIAL)?"differential":
                  (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
@@ -1506,7 +1506,7 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
         *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
       }
       if (mode&LOAD_FLAG_VERBOSE)
-        printf("%e\n", 
+        printf("%21.15e\n", 
                 *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
       fflush(stdout);
       break;
@@ -1593,6 +1593,145 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
                               double value, char *valueString, unsigned long mode)
 {
   change_defined_parameter_divopt(elem_name, param, elem_type, value, valueString, mode, 0);
+}
+
+
+/* Change used parameter values in the reference list elem.
+ * This routine allows changing a single parameter for a single element name.
+ */
+void change_used_parameter_divopt(LINE_LIST *beamline, char *elem_name, long param, long elem_type, 
+                                      double value, char *valueString, unsigned long mode, 
+                                      long checkDiv)
+{
+  ELEMENT_LIST *eptr;
+  char *p_elem;
+  long data_type;
+
+  log_entry("change_used_parameter_divopt");
+
+  eptr = NULL;
+  data_type = entity_description[elem_type].parameter[param].type;
+  if (mode&LOAD_FLAG_IGNORE)
+    return;
+  while (find_element(elem_name, &eptr, beamline->elem)) {
+    p_elem = eptr->p_elem;
+    switch (data_type) {
+    case IS_DOUBLE:
+      if (valueString) {
+        if (!sscanf(valueString, "%lf", &value)) {
+          printf("Error (change_used_parameter): unable to scan double from \"%s\"\n", valueString);
+          fflush(stdout);
+          exitElegant(1);
+        }
+      }
+      if (checkDiv && eptr->divisions>1 &&
+          (entity_description[elem_type].parameter[param].flags&PARAM_DIVISION_RELATED))
+        value /= eptr->divisions;
+      if (mode&LOAD_FLAG_VERBOSE)
+        printf("Changing value (mode %s) %s.%s from %21.15e to ", 
+                (mode&LOAD_FLAG_ABSOLUTE)?"absolute":
+                ((mode&LOAD_FLAG_DIFFERENTIAL)?"differential":
+                 (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
+                elem_name, entity_description[elem_type].parameter[param].name,
+                *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+      fflush(stdout);
+      if (mode&LOAD_FLAG_ABSOLUTE) {
+        *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) =  value;
+      }
+      else if (mode&LOAD_FLAG_DIFFERENTIAL) {
+        *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) += value;
+      }
+      else if (mode&LOAD_FLAG_FRACTIONAL) {
+        *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
+      }
+      if (mode&LOAD_FLAG_VERBOSE)
+        printf("%21.15e\n", 
+                *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+      fflush(stdout);
+      break;
+    case IS_LONG:
+    case IS_SHORT:
+      if (valueString) {
+        if (!sscanf(valueString, "%lf", &value)) {
+          printf("Error (change_used_parameter): unable to scan double from \"%s\"\n", valueString);
+          fflush(stdout);
+          exitElegant(1);
+        }
+      }
+      if (mode&LOAD_FLAG_VERBOSE) {
+        printf("Changing value (mode %s) %s.%s ",
+               (mode&LOAD_FLAG_ABSOLUTE)?"absolute":
+               ((mode&LOAD_FLAG_DIFFERENTIAL)?"differential":
+                (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
+               elem_name, entity_description[elem_type].parameter[param].name);
+        if (data_type==IS_LONG)
+          printf("from %ld to ",
+                 *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        else
+          printf("from %hd to ",
+                 *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fflush(stdout);
+      }
+      if (data_type==IS_LONG) {
+        if (mode&LOAD_FLAG_ABSOLUTE) 
+          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+            nearestInteger(value);
+        else if (mode&LOAD_FLAG_DIFFERENTIAL)
+          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += 
+            nearestInteger(value);
+        else if (mode&LOAD_FLAG_FRACTIONAL)
+          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
+      } else {
+        if (mode&LOAD_FLAG_ABSOLUTE)
+          *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+            nearestInteger(value);
+        else if (mode&LOAD_FLAG_DIFFERENTIAL)
+          *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) += 
+            nearestInteger(value);
+        else if (mode&LOAD_FLAG_FRACTIONAL) 
+          *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
+      }
+      if (mode&LOAD_FLAG_VERBOSE) {
+        if (data_type==IS_LONG)
+          printf("%ld\n",
+                 *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        else 
+          printf("%hd\n",
+                 *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fflush(stdout);
+      }
+      break;
+    case IS_STRING:
+      if (!valueString)
+        return;
+      if (mode&LOAD_FLAG_VERBOSE)
+        printf("Changing value %s.%s from %s to %s\n",
+                elem_name, entity_description[elem_type].parameter[param].name,
+                *((char**)(p_elem+entity_description[elem_type].parameter[param].offset)),
+                valueString);
+      fflush(stdout);
+      if (strlen(valueString)) {
+        if (!SDDS_CopyString(((char**)(p_elem+entity_description[elem_type].parameter[param].offset)), 
+                             valueString)) {
+          printf("Error (change_used_parameter): unable to copy string parameter value\n");
+          fflush(stdout);
+          exitElegant(1);
+        }
+      } else 
+        *((char**)(p_elem+entity_description[elem_type].parameter[param].offset)) = NULL;
+      break;
+    default:
+      bombElegant("unknown/invalid variable quantity", NULL);
+      exitElegant(1);
+    }
+  }
+  log_exit("change_used_parameter_divopt");
+}
+
+void change_used_parameter(LINE_LIST *beamline, char *elem_name, long param, long elem_type, 
+                              double value, char *valueString, unsigned long mode)
+{
+  change_used_parameter_divopt(beamline, elem_name, param, elem_type, value, valueString, mode, 0);
 }
 
 
