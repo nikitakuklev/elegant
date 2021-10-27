@@ -1777,7 +1777,7 @@ long nearestInteger(double value)
 void add_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1) 
 {
   ELEMENT_LIST *eptr;
-  printf("Adding %s after %s\n", elem1->name, elem0->name);
+  /* printf("Adding %s after %s\n", elem1->name, elem0->name); */
   eptr = tmalloc(sizeof(*eptr));
   copy_element(eptr, elem1, 0, 0, 0, NULL);
 
