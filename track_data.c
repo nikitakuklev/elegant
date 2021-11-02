@@ -2260,17 +2260,18 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
 IBSCATTER ibs_example;
 PARAMETER ibscatter_param[N_IBSCATTER_PARAMS] = {
   {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&ibs_example.factor), NULL, 1.0, 0, "factor by which to multiply growth rates before using"},
-  {"DO_X", "", IS_LONG, 0, (long)((char *)&ibs_example.do_x), NULL, 0.0, 1, "do x-plane scattering?"},
-  {"DO_Y", "", IS_LONG, 0, (long)((char *)&ibs_example.do_y), NULL, 0.0, 1, "do y-plane scattering?"},
-  {"DO_Z", "", IS_LONG, 0, (long)((char *)&ibs_example.do_z), NULL, 0.0, 1, "do z-plane scattering?"},
+  {"DO_X", "", IS_SHORT, 0, (long)((char *)&ibs_example.do_x), NULL, 0.0, 1, "do x-plane scattering?"},
+  {"DO_Y", "", IS_SHORT, 0, (long)((char *)&ibs_example.do_y), NULL, 0.0, 1, "do y-plane scattering?"},
+  {"DO_Z", "", IS_SHORT, 0, (long)((char *)&ibs_example.do_z), NULL, 0.0, 1, "do z-plane scattering?"},
+  {"SMOOTH", "", IS_SHORT, 0, (long)((char *)&ibs_example.smooth), NULL, 0.0, 1, "Use smooth method instead of random numbers?"},
+  {"FORCE_MATCHED_TWISS", "", IS_SHORT, 0, (long)((char *)&ibs_example.forceMatchedTwiss), NULL, 0.0, 0, "Force computations to be done with twiss parameters of the beamline, not the beam."},
+  {"ISRING", "", IS_SHORT, 0, (long)((char *)&ibs_example.isRing), NULL, 0.0, 1, "Is it storage ring?"},
   {"NSLICE", "", IS_LONG, 0, (long)((char *)&ibs_example.nslice), NULL, 0.0, 1, "The number of slices per bunch"},
-  {"SMOOTH", "", IS_LONG, 0, (long)((char *)&ibs_example.smooth), NULL, 0.0, 1, "Use smooth method instead of random numbers?"},
-  {"FORCE_MATCHED_TWISS", "", IS_LONG, 0, (long)((char *)&ibs_example.forceMatchedTwiss), NULL, 0.0, 0, "Force computations to be done with twiss parameters of the beamline, not the beam."},
-  {"ISRING", "", IS_LONG, 0, (long)((char *)&ibs_example.isRing), NULL, 0.0, 1, "Is it storage ring?"},
   {"INTERVAL", "", IS_LONG, 0, (long)((char *)&ibs_example.interval), NULL, 0.0, 1, "Interval in passes at which to update output file."},
   {"FILENAME", "", IS_STRING, 0, (long)((char *)&ibs_example.filename), NULL, 0.0, 0, "Output filename."},
-  {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&ibs_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
-  {"VERBOSE", "", IS_LONG, 0, (long)((char *)&ibs_example.verbose), NULL, 0.0, 0, "If non-zero, then print updates during calculations."},
+  {"BUNCHED_BEAM_MODE", "", IS_SHORT, 0, (long)((char *)&ibs_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
+  {"PARALLEL_INTEGRATION", "", IS_SHORT, 0, (long)((char *)&ibs_example.parallelIntegration), NULL, 0.0, 1, "If non-zero, then uses parallel method for integration in Pelegant."},
+  {"VERBOSE", "", IS_SHORT, 0, (long)((char *)&ibs_example.verbose), NULL, 0.0, 0, "If non-zero, then print updates during calculations."},
 };
 
 WAKE wake_example;
@@ -3731,7 +3732,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {  N_PEPPOT_PARAMS,  MAT_LEN_NCAT,     sizeof(PEPPOT),    peppot_param   },
     {  N_ENERGY_PARAMS,          MPALGORITHM|GPU_SUPPORT|BACKTRACK,     sizeof(ENERGY),    energy_param   },
     {  N_MAXAMP_PARAMS,           GPU_SUPPORT|BACKTRACK,     sizeof(MAXAMP),    maxamp_param   },
-    {  N_ROTATE_PARAMS,  HAS_MATRIX|BACKTRACK|MATRIX_TRACKING|GPU_SUPPORT,     sizeof(ROTATE),    rotate_param   },
+    {  N_ROTATE_PARAMS,  HAS_MATRIX|BACKTRACK|GPU_SUPPORT,     sizeof(ROTATE),    rotate_param   },
     { N_TRCOUNT_PARAMS,           UNIDIAGNOSTIC|NO_APERTURE,    sizeof(TRCOUNT),    trcount_param  },
     {  N_RECIRC_PARAMS,           0|NO_APERTURE,     sizeof(RECIRC),    recirc_param   },
     {  N_QFRING_PARAMS,     MAT_LEN|MATRIX_TRACKING,     sizeof(QFRING),    qfring_param   },

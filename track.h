@@ -1073,7 +1073,7 @@ extern char *entity_text[N_TYPES];
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 15
 #define N_ZTRANSVERSE_PARAMS 37
-#define N_IBSCATTER_PARAMS 12
+#define N_IBSCATTER_PARAMS 13
 #define N_FMULT_PARAMS 13
 #define N_BMAPXY_PARAMS 7
 #define N_WAKE_PARAMS 15
@@ -2980,10 +2980,11 @@ extern PARAMETER IBSCATTER_param[N_IBSCATTER_PARAMS];
 
 typedef struct {
   double factor;
-  long do_x, do_y, do_z, nslice;
-  long smooth, forceMatchedTwiss, isRing, interval;
+  short do_x, do_y, do_z;
+  short smooth, forceMatchedTwiss, isRing;
+  long nslice, interval;
   char *filename; 
-  long bunchedBeamMode, verbose;
+  short bunchedBeamMode, parallelIntegration, verbose;
   /* internal use only */
   double charge;
   char **name;
@@ -2997,6 +2998,8 @@ typedef struct {
   long elements, offset, output;
   double revolutionLength, dT;
   ELEMENT_LIST *elem;
+  SDDS_DATASET outPage;
+  long isInit, doOut;
 } IBSCATTER;
 
 /* space charge multipole element */
@@ -4577,7 +4580,7 @@ void track_SReffects(double **coord, long n, SREFFECTS *SReffects, double Po,
                      long lossesOnly);
 VMATRIX *srEffectsMatrix(SREFFECTS *SReffects);
 
-void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po, 
+void track_IBS(double **coord, long np, ELEMENT_LIST *eptr, double Po, 
                ELEMENT_LIST *element, CHARGE *charge, long i_pass, long n_passes, RUN *run);
 
 void addCorrectorRadiationKick(double **coord, long np, ELEMENT_LIST *elem, long type, double Po, double *sigmaDelta2, 

@@ -78,7 +78,7 @@ void IBSRate (double particles,
   sigmaz = sigmaz0;
 
   if (sTotal<=0)
-    sTotal = s[elements-1];
+    sTotal = s[elements-1] - s[0];
 
   for( i=0; i<elements; i++) {
     if (i==0) {

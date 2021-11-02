@@ -23,7 +23,7 @@ void inflateEmittance(double **coord, double Po, double eta[4],
 void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
 		       long istart, long iend, long *index, double zRate[3], double Duration);
 void SDDS_IBScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
-                         char *command_file, char *lattice_file, char *caller, long isRing);
+                         RUN *run, ELEMENT_LIST *elem, char *caller, long isRing);
 void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass);
 void reset_IBS_output(ELEMENT_LIST *element);
 
@@ -34,7 +34,7 @@ void forth_propagate_twiss(IBSCATTER *IBS, long islice, double betax0, double al
                            double betay0, double alphay0, RUN *run);
 void copy_twiss(TWISS *tp0, TWISS *tp1);
 
-void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po, 
+void track_IBS(double **part0, long np0, ELEMENT_LIST *eptr, double Po, 
                ELEMENT_LIST *element, CHARGE *charge, long i_pass, long n_passes, RUN *run)
 {
   double *time0 = NULL;           /* array to record arrival time of each particle */
@@ -53,9 +53,8 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   double randomNumber;
   double RNSigma[3], RNSigmaCheck[3]={0,0,0};
   double bLength=0, tLength, zRate[3];
-  static SDDS_TABLE outPage;
-  static long isInit=0, doOut=0;
   double eta[4];
+  IBSCATTER *IBS;
 #if USE_MPI
   long npTotal, countTotal;
   MPI_Status mpiStatus;
@@ -63,6 +62,8 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   double mpiTemp;
   /* printf("myid=%d, np=%ld, npTotal=%ld\n", myid, np, npTotal);  */
 #endif
+
+  IBS = (IBSCATTER*)eptr->p_elem;
 
   if (IBS->verbose) {
 #if USE_MPI
@@ -85,6 +86,8 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   if (!IBS->s)
     init_IBS(element);
   if (IBS->dT == 0) return;
+  if (IBS->dT<0)
+    bombElegant("IBSCATTER failed because interval dT was negative. This shouldn't happen.", NULL);
 
   if (IBS->verbose) {
 #if USE_MPI
@@ -224,11 +227,14 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
       index = (long*)malloc(sizeof(long)*np);
       count = (long*)malloc(sizeof(long)*IBS->nslice);
       slicebeam(part, np, time, Po, IBS->nslice, index, count, &tLength);
-      bLength = IBS->revolutionLength/IBS->dT*tLength;
-      if ((IBS->nslice == 1) && (!IBS->isRing))
-        bLength /= sqrt(2*PI);
-      if ((IBS->nslice > 1) && (IBS->isRing))
-        bLength /= sqrt(4*PI);
+      bLength = 0; 
+      if (IBS->nslice>1) {
+        bLength = c_mks*tLength/sqrt(4*PI);
+        /*
+        if (IBS->isRing)
+          bLength *= 2;
+        */
+      }
     }
     
     iend = 0;
@@ -308,7 +314,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
         IBS->emity0[islice] = correctedEmittance(S, eta, 2, 3, &betay0, &alphay0);
         IBS->emitl0[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
         IBS->sigmaDelta0[islice] = sqrt(S[5][5]);
-        if (IBS->isRing && IBS->nslice == 1)
+        if (IBS->nslice == 1)
 	  bLength = sqrt(S[4][4])*c_mks;
         IBS->sigmaz0[islice] = bLength;
 #ifdef DEBUG
@@ -327,17 +333,19 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 	elemCount = 0;
 	if (n_processors>2)
 	  elemCount = IBS->elements/(n_processors-1);
-	if (elemCount>5) {
+	if (elemCount>5 && IBS->parallelIntegration) {
 	  elemOffset = (myid-1)*elemCount;
 	  if (myid==(n_processors-1))
 	    elemCount = IBS->elements - (n_processors-2)*elemCount;
 	  IBSRate (fabs(IBS->icharge[islice]/particleCharge), 
 		   elemCount, 1, 0, IBS->isRing,
 		   IBS->emitx0[islice], IBS->emity0[islice], IBS->sigmaDelta0[islice], bLength,
-		   IBS->s+elemOffset, IBS->pCentral, IBS->betax[islice]+elemOffset, IBS->alphax[islice]+elemOffset, IBS->betay[islice]+elemOffset, IBS->alphay[islice]+elemOffset,
+		   IBS->s+elemOffset, IBS->pCentral, IBS->betax[islice]+elemOffset, IBS->alphax[islice]+elemOffset, 
+                   IBS->betay[islice]+elemOffset, IBS->alphay[islice]+elemOffset,
 		   IBS->etax+elemOffset, IBS->etaxp+elemOffset, IBS->etay+elemOffset, IBS->etayp+elemOffset, 
 		   IBS->xRateVsS[islice]+elemOffset, IBS->yRateVsS[islice]+elemOffset, IBS->zRateVsS[islice]+elemOffset,
-		   &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1, IBS->s[IBS->elements-1]);    
+		   &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1,
+                   IBS->s[IBS->elements-1]-IBS->s[0]);
 	  MPI_Allreduce(&IBS->xGrowthRate[islice], &mpiTemp, 1, MPI_DOUBLE, MPI_SUM, workers);
 	  IBS->xGrowthRate[islice] = mpiTemp;
 	  MPI_Allreduce(&IBS->yGrowthRate[islice], &mpiTemp, 1, MPI_DOUBLE, MPI_SUM, workers);
@@ -351,7 +359,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 		   IBS->s, IBS->pCentral, IBS->betax[islice], IBS->alphax[islice], IBS->betay[islice], IBS->alphay[islice],
 		   IBS->etax, IBS->etaxp, IBS->etay, IBS->etayp, 
 		   IBS->xRateVsS[islice], IBS->yRateVsS[islice], IBS->zRateVsS[islice],
-		   &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1, -1);    
+		   &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1, -1);
 	}
 #else
         IBSRate (fabs(IBS->icharge[islice]/particleCharge), 
@@ -372,7 +380,6 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
     for (islice=0; islice<IBS->nslice; islice++) {
       if (IBS->verbose>1) {
 #if USE_MPI
-	MPI_Barrier(MPI_COMM_WORLD);
 	if (myid==0) {
 #endif
 	  printf("Starting application of IBS effect for slice %ld for bunch %ld\n", islice, iBucket);
@@ -380,6 +387,33 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 #if USE_MPI
 	}
 #endif
+      }
+#if USE_MPI
+      MPI_Barrier(MPI_COMM_WORLD);
+#endif
+      if (!IBS->smooth) {
+#if USE_MPI
+	if (myid==0) {
+	  double buffer[3];
+	  MPI_Status status;
+	  MPI_Recv(&buffer[0], 3, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &status);
+	  IBS->xGrowthRate[islice] = buffer[0];
+	  IBS->yGrowthRate[islice] = buffer[1];
+	  IBS->zGrowthRate[islice] = buffer[2];
+	} else if (myid==1) {
+	  double buffer[3];
+	  buffer[0] = IBS->xGrowthRate[islice];
+	  buffer[1] = IBS->yGrowthRate[islice];
+	  buffer[2] = IBS->zGrowthRate[islice];
+	  MPI_Send(&buffer[0], 3, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+	}
+#endif
+	if (IBS->xGrowthRate[islice]<0)
+	  bombElegant("IBSCATTER with SMOOTH=0 failed because horizontal growth rate is negative", NULL);
+	if (IBS->yGrowthRate[islice]<0)
+	  bombElegant("IBSCATTER with SMOOTH=0 failed because vertical growth rate is negative", NULL);
+	if (IBS->zGrowthRate[islice]<0)
+	  bombElegant("IBSCATTER with SMOOTH=0 failed because longitudinal growth rate is negative", NULL);
       }
       if (isSlave || !notSinglePart) {
         istart = iend;
@@ -397,13 +431,19 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
         
         RNSigma[0] = RNSigma[1] = RNSigma[2] = 0;
         if (!IBS->smooth) {
+	  double G;
           computeSliceParameters(aveCoord, S, part, index, istart, iend, Po);
-          if (IBS->do_x)
-            RNSigma[0] = sqrt(fabs(sqr(1 + IBS->dT * IBS->xGrowthRate[islice])-1))*sqrt(S[1][1]);
-          if (IBS->do_y)
-            RNSigma[1] = sqrt(fabs(sqr(1 + IBS->dT * IBS->yGrowthRate[islice])-1))*sqrt(S[3][3]);
-          if (IBS->do_z) {
-            RNSigma[2] = sqrt(fabs(sqr(1 + IBS->dT * IBS->zGrowthRate[islice])-1))*sqrt(S[5][5]);
+          if (IBS->do_x) {
+	    G = IBS->dT * IBS->xGrowthRate[islice];
+            RNSigma[0] = sqrt((2*G+G*G)*S[1][1]);
+	  }
+          if (IBS->do_y) {
+	    G = IBS->dT * IBS->yGrowthRate[islice];
+	    RNSigma[1] = sqrt((2*G+G*G)*S[3][3]);
+	  }
+	  if (IBS->do_z) {
+	    G = IBS->dT * IBS->zGrowthRate[islice];
+            RNSigma[2] = sqrt((2*G+G*G)*S[5][5]);
           }
           if (index==NULL)
             bombElegant("index array is NULL in track_IBS. Seek professional help!", NULL);
@@ -413,9 +453,13 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
               for (ipart=istart; ipart<iend; ipart++) {
                 randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
                 part[index[ipart]][icoord] += randomNumber;
+		/*
                 RNSigmaCheck[ihcoord] += sqr(randomNumber);
+		*/
               }
+	      /*
               RNSigmaCheck[ihcoord] = sqrt(RNSigmaCheck[ihcoord]/(double)(iend-istart)/S[icoord][icoord]+1.);
+	      */
             }
           }
           /*
@@ -524,18 +568,18 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 #endif
 
   if (IBS->filename && isMaster) {
-    if (!isInit) {
-      SDDS_IBScatterSetup(&outPage, IBS->filename, SDDS_BINARY, 1, "IBS scatter growth rate output", 
-                          run->runfile, run->lattice, "ibs_tracking", IBS->isRing);
-      isInit = 1;
+    if (!(IBS->isInit)) {
+      SDDS_IBScatterSetup(&(IBS->outPage), IBS->filename, SDDS_BINARY, 1, "IBS scatter growth rate output", 
+                          run, eptr, "ibs_tracking", IBS->isRing);
+      IBS->isInit = 1;
     }
 
-    if ((int)i_pass/IBS->interval > doOut) {
-      doOut++;
+    if ((int)i_pass/IBS->interval > (IBS->doOut)) {
+      (IBS->doOut)++;
       reset_IBS_output(element);
     }
     if (IBS->output) {
-      dump_IBScatter(&outPage, IBS, i_pass);
+      dump_IBScatter(&(IBS->outPage), IBS, i_pass);
       IBS->output = 0;
     }
   }
@@ -1073,7 +1117,7 @@ static SDDS_DEFINITION ibscatter_print_parameter[IBSCATTER_LINAC_PARAMETERS] = {
   {"sigmaDelta", "&parameter name=sigmaDelta, symbol=\"$gs$r$bd$n\", type=double, description=\"Momentum spread with IBS\" &end"},
   {"sigmaz", "&parameter name=sigmaz, symbol=\"$gs$r$bz$n\", units=m, type=double, description=\"Bunch length with IBS\" &end"},
 };
-/*
+
 #define IBSCATTER_COLUMNS 13
 static SDDS_DEFINITION ibscatter_print_column[IBSCATTER_COLUMNS] = {
     {"ElementName", "&column name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
@@ -1090,10 +1134,10 @@ static SDDS_DEFINITION ibscatter_print_column[IBSCATTER_COLUMNS] = {
     {"etay", "&column name=etay, type=double, units=m, symbol=\"$gc$r$by$n\", description=\"Vertical dispersion\" &end"},
     {"etayp", "&column name=etayp, type=double, symbol=\"$gc$r$by$n$a'$n\", description=\"Slope of vertical dispersion\" &end"},
 };
-*/
+
 
 void SDDS_IBScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
-                         char *command_file, char *lattice_file, char *caller, long isRing)
+                         RUN *run, ELEMENT_LIST *element, char *caller, long isRing)
 {
     log_entry("SDDS_IBScatterSetup");
 
@@ -1107,20 +1151,24 @@ void SDDS_IBScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long
                             ibscatter_print_parameter, IBSCATTER_LINAC_PARAMETERS, ibscatter_print_column, IBSCATTER_COLUMNS,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
 */
+    fflush(stdout);
+    filename = compose_filename_occurence(filename, run->rootname, element->occurence);
+    printf("Setting up IBS file %s for rootname %s and occurence %ld\n",
+           filename, run->rootname, element->occurence);
     if (isRing)
-      SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
-                            ibscatter_print_parameter, IBSCATTER_RING_PARAMETERS, NULL, 0,
-                            caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+      SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, run->runfile, run->lattice,
+                              ibscatter_print_parameter, IBSCATTER_RING_PARAMETERS, ibscatter_print_column, IBSCATTER_COLUMNS,
+                              caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     else
-      SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
-                            ibscatter_print_parameter, IBSCATTER_LINAC_PARAMETERS, NULL, 0,
-                            caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+      SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, run->runfile, run->lattice,
+                              ibscatter_print_parameter, IBSCATTER_LINAC_PARAMETERS, ibscatter_print_column, IBSCATTER_COLUMNS,
+                              caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     log_exit("SDDS_IBScatterSetup");
 }
 
 void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass)
 {
-  long islice;
+  long islice, i;
   double gamma;
 
   log_entry("dump_IBScatter");
@@ -1135,7 +1183,7 @@ void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
 
-/*    for (i=0; i<IBS->elements; i++) {
+    for (i=0; i<IBS->elements; i++) {
       if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                              0, IBS->name[i], 1, IBS->s[i], 
                              2, IBS->xRateVsS[islice][i], 3, IBS->yRateVsS[islice][i], 4, IBS->zRateVsS[islice][i], 
@@ -1144,7 +1192,8 @@ void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass)
         SDDS_SetError("Problem setting SDDS row values (dump_IBScatter)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
-    } */
+    }
+
     if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", fabs(IBS->icharge[islice]/particleCharge), NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Charge", IBS->icharge[islice]*1e9, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "TotalSlice", IBS->nslice, NULL))||
@@ -1176,7 +1225,7 @@ void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass)
           (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "enx", IBS->emitx[islice]*gamma, NULL))||
           (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "eny", IBS->emity[islice]*gamma, NULL))||
           (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "sigmaDelta", IBS->sigmaDelta[islice], NULL))||
-          (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "sigmaz", IBS->sigmaz[islice], NULL))){
+          (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "sigmaz", IBS->sigmaz[islice]*c_mks, NULL))){
         SDDS_SetError("Problem setting SDDS parameters (dump_IBScatter)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }

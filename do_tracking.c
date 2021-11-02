@@ -1776,6 +1776,13 @@ long do_tracking(
             case T_BOFFAXE:
               trackMagneticFieldOffAxisExpansion(coord, nToTrack, (BOFFAXE*)eptr->p_elem, *P_central, accepted, NULL);
               break;
+	    case T_ROTATE:
+	      if (((ROTATE*)eptr->p_elem)->excludeOptics)
+		/* matrix doesn't include rotation */
+		rotateBeamCoordinatesForMisalignment(coord, nToTrack, -((ROTATE*)eptr->p_elem)->tilt);
+	      else
+		track_particles(coord, eptr->matrix, coord, nToTrack);
+	      break;
 	    case T_MALIGN:
 	      malign = (MALIGN*)eptr->p_elem;
 	      if (malign->on_pass==-1 || malign->on_pass==i_pass)
@@ -2158,7 +2165,7 @@ long do_tracking(
               printf("Running IBSSCATTER\n");
 #endif
 	      if (!(flags&TEST_PARTICLES))
-		track_IBS(coord, nToTrack, (IBSCATTER*)eptr->p_elem,
+		track_IBS(coord, nToTrack, eptr, 
 			  *P_central, beamline->elem, charge, i_pass, n_passes, run);
 	      break;
 	    case T_SCRIPT:
