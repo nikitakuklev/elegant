@@ -10,6 +10,7 @@
 #namelist bunched_beam_moments static,struct
     STRING bunch = NULL;
     long n_particles_per_bunch = 1;
+    long multiply_np_by_cores = 0;
     long use_moments_output_values = 0;
 
     double S1_beta = 0;

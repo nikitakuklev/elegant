@@ -89,6 +89,10 @@ void setup_bunched_beam(
     bombElegant("&correct settings are incompatible with using results of moments_output for generating the beam. Set start_from_centroid and track_before_and_after to 0.", NULL);
 
   if (echoNamelists) print_namelist(stdout, &bunched_beam);
+#if USE_MPI
+  if (multiply_np_by_cores && n_processors>1)
+    n_particles_per_bunch *= (n_processors-1);
+#endif
 
   finish_bunched_beam_setup(beam, run, control, errcon, optim, output, beamline, n_elements, save_original);
 }
@@ -350,6 +354,10 @@ void setup_bunched_beam_moments(
     bombElegant("&correct settings are incompatible with using results of moments_output for generating the beam. Set start_from_centroid and track_before_and_after to 0.", NULL);
 
   if (echoNamelists) print_namelist(stdout, &bunched_beam_moments);
+#if USE_MPI
+  if (multiply_np_by_cores && n_processors>1)
+    n_particles_per_bunch *= (n_processors-1);
+#endif
 
   /* We'll be copying values to the variables for &bunched_beam, so we do a reset first */
   reset_namelist_values(&bunched_beam);

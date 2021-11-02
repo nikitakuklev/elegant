@@ -9,6 +9,7 @@
 #namelist bunched_beam static
     STRING bunch = NULL;
     long n_particles_per_bunch = 1;
+    long multiply_np_by_cores = 0;
     double time_start = 0;
     STRING matched_to_cell = NULL;
     double emit_x  = 0;

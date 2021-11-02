@@ -44,6 +44,10 @@ Here is a summary of what's changed since release 2021.3.  Historical change log
 
 \begin{itemize}
 \item A memory leak was fixed in the \verb|FMULT| element.
+\item As pointed out by P. Anisimov, there were problems with the \verb|IBSCATTER| element when more than one
+  was inserted in the beamline. This was fixed. In addition, the code now detects negative growth rates (typically
+  in the transverse planes) and correctly refuses to operate in ``random'' mode, since that mode is only able
+  to increase the emittances.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -58,6 +62,8 @@ Here is a summary of what's changed since release 2021.3.  Historical change log
   be scaled by a common factor. Also added the \verb|UNTILTED_MATRIX| parameter, which can be used to force
   \verb|elegant| to numerically compute the matrix for the untilted element; see the manual page for
   discussion.
+\item Added the \verb|PARALLEL_INTEGRATION| parameter to \verb|IBSCATTER|, which permits disabling the default
+  parallelization of $s$-dependent integrals for intrabeam scattering.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -71,7 +77,9 @@ Here is a summary of what's changed since release 2021.3.  Historical change log
 \subsection{Changes Specific to the MPI Parallel Version}
 
 \begin{itemize}
-\item None.
+\item Added the \verb|multiply_np_by_cores| parameter to \verb|bunched_beam|  and \verb|bunched_beam_moments|.
+  If non-zero, then the number of particles generated is \verb|n_particles_per_bunch| times the number of
+  working cores.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
