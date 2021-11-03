@@ -30,13 +30,6 @@ static FILE *fpHam = NULL;
 
 void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
 void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, double gK, long order);
-int integrate_kick_K012(double *coord, double dx, double dy, 
-                        double Po, double rad_coef, double isr_coef,
-                        double K0L, double K1L, double K2L,
-                        long integration_order, long n_parts, long iPart, long iFinalSlice,
-                        double drift,
-                        MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, 
-                        MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
 int integrate_kick_KnL(double *coord, double dx, double dy, 
                       double Po, double rad_coef, double isr_coef,
                       double *KnL, long nTerms,
@@ -502,277 +495,6 @@ long track_through_ccbend(
 /* beta is 2^(1/3) */
 #define BETA 1.25992104989487316477
 
-int integrate_kick_K012(double *coord, /* coordinates of the particle */
-                        double dx, double dy,  /* misalignments, needed for aperture checks */
-                        double Po, double rad_coef, double isr_coef, /* radiation effects */
-                        double K0L, double K1L, double K2L, /* strength parameters for full magnet */
-                        long integration_order, /* 2 or 4 */
-                        long n_parts, /* NSLICES */
-                        long iPart,   /* If <0, integrate the full magnet. If >=0, integrate just a single part and return.
-                                       * This is needed to allow propagation of the radiation matrix. */
-                        long iFinalSlice, /* If >0, integrate to the indicated slice. Needed to allow extracting the
-                                           * interior matrix from tracking data. */
-                        double drift, /* length of the full element */
-                        MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, /* error multipoles */
-                        MULT_APERTURE_DATA *apData,  /* aperture */
-                        double *dzLoss,      /* if particle is loss, offset from start of element where this occurs */
-                        double *sigmaDelta2  /* accumulate the energy spread increase for propagation of radiation matrix */
-                        )
-{
-  double p, qx, qy, denom, beta0, beta1, dp, s;
-  double x, y, xp, yp, sum_Fx, sum_Fy;
-  double xSum;
-  long i_kick, step, steps, iMult, nSum;
-  double dsh;
-  long maxOrder;
-  double *xpow, *ypow;
-  static double driftFrac[4] = {
-    0.5/(2-BETA),  (1-BETA)/(2-BETA)/2,  (1-BETA)/(2-BETA)/2,  0.5/(2-BETA)
-    } ;
-  static double kickFrac[4] = {
-    1./(2-BETA),  -BETA/(2-BETA),  1/(2-BETA),  0
-    } ;
-  if (integration_order==2) {
-    driftFrac[0] = driftFrac[1] = 0.5;
-    kickFrac[0] = 1;
-    kickFrac[1] = 0;
-    steps = 2;
-  } else
-    steps = 4;
-
-  drift = drift/n_parts;
-  K0L /= n_parts;
-  K1L /= n_parts;
-  K2L /= n_parts;
-
-  x = coord[0];
-  xp = coord[1];
-  y = coord[2];
-  yp = coord[3];
-  s  = 0;
-  dp = coord[5];
-  p = Po*(1+dp);
-  beta0 = p/sqrt(sqr(p)+1);
-
-#if defined(ieee_math)
-  if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
-    return 0;
-  }
-#endif
-  if (fabs(x)>COORD_LIMIT || fabs(y)>COORD_LIMIT ||
-      fabs(xp)>SLOPE_LIMIT || fabs(yp)>SLOPE_LIMIT) {
-    return 0;
-  }
-
-  /* calculate initial canonical momenta */
-  qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
-  qy = (1+dp)*yp/denom;
-
-  maxOrder = findMaximumOrder(1, 2, edgeMultData, multData, NULL);
-  xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
-  ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
-
-  if (iPart<=0 && edgeMultData && edgeMultData->orders) {
-    fillPowerArray(x, xpow, maxOrder);
-    fillPowerArray(y, ypow, maxOrder);
-    for (iMult=0; iMult<edgeMultData->orders; iMult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[iMult], 
-                                      edgeMultData->KnL[iMult], 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[iMult], 
-                                      edgeMultData->JnL[iMult], 1);
-    }
-  }
-  /* we must do this to avoid numerical precision issues that may subtly change the results
-   * when edge multipoles are enabled to disabled
-   */
-  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-    coord[0] = x;
-    coord[2] = y;
-    free(xpow); free(ypow);
-    return 0;
-  }
-  denom = sqrt(denom);
-  xp = qx/denom;
-  yp = qy/denom;
-
-  *dzLoss = 0;
-  if (iFinalSlice<=0)
-    iFinalSlice = n_parts;
-  xMin = DBL_MAX;
-  xMax = -DBL_MAX;
-  xSum = x;
-  nSum = 1;
-  for (i_kick=0; i_kick<iFinalSlice; i_kick++) {
-#ifdef DEBUG
-    double H0;
-    if (logHamiltonian && fpHam) {
-      double H;
-      H = -sqrt(ipow(1+dp, 2)-qx*qx-qy*qy) +
-        K0L/drift*x +
-        K1L/(2*drift)*(x*x - y*y) +
-        K2L/(6*drift)*(ipow(x, 3) - 3*x*y*y);
-      if (i_kick==0) 
-        H0 = H;
-      fprintf(fpHam, "%e %e %e %e %le %le\n", i_kick*drift, x, y, qx, qy, H-H0);
-      if (i_kick==n_parts)
-        fputs("\n", fpHam);
-    }
-#endif
-    if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
-      coord[0] = x;
-      coord[2] = y;
-      free(xpow); free(ypow);
-      return 0;
-    }
-    for (step=0; step<steps; step++) {
-      if (drift) {
-        dsh = drift*driftFrac[step];
-        x += xp*dsh;
-        y += yp*dsh;
-        s += dsh*sqrt(1 + sqr(xp) + sqr(yp));
-        *dzLoss += dsh;
-      }
-
-      if (!kickFrac[step])
-        break;
-
-      fillPowerArray(x, xpow, maxOrder);
-      fillPowerArray(y, ypow, maxOrder);
-
-      sum_Fx = sum_Fy = 0;
-
-      if (K0L)
-        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
-                                        0, K0L*kickFrac[step], 0);
-      if (K1L)
-        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
-                                        1, K1L*kickFrac[step], 0);
-      if (K2L)
-        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
-                                        2, K2L*kickFrac[step], 0);
-
-      if (multData) {
-        /* do kicks for spurious multipoles */
-        for (iMult=0; iMult<multData->orders; iMult++) {
-          if (multData->KnL && multData->KnL[iMult]) {
-            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                            multData->order[iMult], 
-                                            multData->KnL[iMult]*kickFrac[step]/n_parts,
-                                            0);
-          }
-          if (multData->JnL && multData->JnL[iMult]) {
-            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                            multData->order[iMult], 
-                                            multData->JnL[iMult]*kickFrac[step]/n_parts,
-                                            1);
-          }
-        }
-      }
-      if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-        coord[0] = x;
-        coord[2] = y;
-        free(xpow); free(ypow);
-        return 0;
-      }
-      xp = qx/(denom=sqrt(denom));
-      yp = qy/denom;
-      /* these three quantities are needed for radiation integrals */
-      lastRho = 1/(K0L/drift + x*(K1L/drift) + x*x*(K2L/drift)/2);
-      lastX = x;
-      lastXp = xp;
-      if ((rad_coef || isr_coef) && drift) {
-	double deltaFactor, F2, dsFactor, dsIsrFactor;
-        qx /= (1+dp);
-        qy /= (1+dp);
-	deltaFactor = sqr(1+dp);
-	F2 = (sqr(sum_Fy)+sqr(sum_Fx))/sqr(lastRho);
-	dsFactor = sqrt(1+sqr(xp)+sqr(yp));
-	dsIsrFactor = dsFactor*drift/3;   /* recall that kickFrac may be negative */
-	dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
-	if (rad_coef)
-	  dp -= rad_coef*deltaFactor*F2*dsFactor;
-	if (isr_coef>0)
-	  dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsIsrFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
-        if (sigmaDelta2)
-          *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
-        qx *= (1+dp);
-        qy *= (1+dp);
-      }
-    }
-    xSum += x;
-    nSum ++;
-    if (x>xMax) xMax = x;
-    if (x<xMin) xMin = x;
-    if (iPart>=0)
-      break;
-  }
-  xFinal = x;
-  xAve = xSum/nSum;
-  xError = xMax + xMin;
-  /*
-  printf("x init, min, max, fin = %le, %le, %le, %le\n", x0, xMin, xMax, x);
-  printf("xp init, fin = %le, %le\n", xp0, xp);
-  */
-
-  if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
-    coord[0] = x;
-    coord[2] = y;
-    free(xpow); free(ypow);
-    return 0;
-  }
-  
-  if ((iPart<0 || iPart==n_parts) && (iFinalSlice==n_parts-1) && edgeMultData && edgeMultData->orders) {
-    fillPowerArray(x, xpow, maxOrder);
-    fillPowerArray(y, ypow, maxOrder);
-    for (iMult=0; iMult<edgeMultData->orders; iMult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[iMult], 
-                                      edgeMultData->KnL[iMult], 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[iMult], 
-                                      edgeMultData->JnL[iMult], 1);
-    }
-  }
-  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-    coord[0] = x;
-    coord[2] = y;
-    free(xpow); free(ypow);
-    return 0;
-  }
-  denom = sqrt(denom);
-  xp = qx/denom;
-  yp = qy/denom;
-
-  free(xpow);
-  free(ypow);
-
-  coord[0] = x;
-  coord[1] = xp;
-  coord[2] = y;
-  coord[3] = yp;
-  if (rad_coef) {
-    p = Po*(1+dp);
-    beta1 = p/sqrt(sqr(p)+1);
-    coord[4] = beta1*(coord[4]/beta0 + 2*s/(beta0+beta1));
-  }
-  else 
-    coord[4] += s;
-  coord[5] = dp;
-
-#if defined(ieee_math)
-  if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
-    return 0;
-  }
-#endif
-  if (fabs(x)>COORD_LIMIT || fabs(y)>COORD_LIMIT ||
-      fabs(xp)>SLOPE_LIMIT || fabs(yp)>SLOPE_LIMIT) {
-    return 0;
-  }
-  return 1;
-}
-
 int integrate_kick_KnL(double *coord, /* coordinates of the particle */
                        double dx, double dy,  /* misalignments, needed for aperture checks */
                        double Po, double rad_coef, double isr_coef, /* radiation effects */
@@ -795,7 +517,7 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
                        )
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
-  double x, y, xp, yp, sum_Fx, sum_Fy;
+  double x, y, xp, yp, delta_qx, delta_qy;
   double xSum;
   long i_kick, step, iMult, nSum;
   double dsh;
@@ -938,6 +660,7 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
       free(KnL);
       return 0;
     }
+    delta_qx = delta_qy = 0;
     for (step=0; step<nSubsteps; step++) {
       if (drift) {
         dsh = drift*driftFrac[step];
@@ -953,11 +676,11 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
       fillPowerArray(x, xpow, maxOrder);
       fillPowerArray(y, ypow, maxOrder);
 
-      sum_Fx = sum_Fy = 0;
+      delta_qx = delta_qy = 0;
 
       for (iTerm=0; iTerm<nTerms; iTerm++)
         if (KnL[iTerm])
-          apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
+          apply_canonical_multipole_kicks(&qx, &qy, &delta_qx, &delta_qy, xpow, ypow, 
                                           iTerm, KnL[iTerm]*kickFrac[step], 0);
 
       if (multData) {
@@ -997,24 +720,25 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
         bombElegant("nTerms apparently less than zero in CCBEND", NULL);
       lastX = x;
       lastXp = xp;
-      if ((rad_coef || isr_coef) && drift) {
-	double deltaFactor, F2, dsFactor, dsIsrFactor;
-        qx /= (1+dp);
-        qy /= (1+dp);
-	deltaFactor = sqr(1+dp);
-	F2 = (sqr(sum_Fy)+sqr(sum_Fx))/sqr(lastRho);
-	dsFactor = sqrt(1+sqr(xp)+sqr(yp));
-	dsIsrFactor = dsFactor*drift/3;   /* recall that kickFrac may be negative */
-	dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
-	if (rad_coef)
-	  dp -= rad_coef*deltaFactor*F2*dsFactor;
-	if (isr_coef>0)
-	  dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsIsrFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
-        if (sigmaDelta2)
-          *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
-        qx *= (1+dp);
-        qy *= (1+dp);
-      }
+    }
+    if ((rad_coef || isr_coef) && drift) {
+      double deltaFactor, F2, dsFactor;
+      qx /= (1+dp);
+      qy /= (1+dp);
+      deltaFactor = sqr(1+dp);
+      /* delta_qx and delta_qy are for the last step and have kickFrac[step-1] included, so remove it */
+      delta_qx /= kickFrac[step-1];
+      delta_qy /= kickFrac[step-1];
+      F2 = sqr(delta_qx/drift)+sqr(delta_qy/drift);
+      dsFactor = sqrt(1+sqr(xp)+sqr(yp))*drift;
+      if (rad_coef)
+        dp -= rad_coef*deltaFactor*F2*dsFactor;
+      if (isr_coef>0)
+        dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+      if (sigmaDelta2)
+        *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
+      qx *= (1+dp);
+      qy *= (1+dp);
     }
     xSum += x;
     nSum ++;

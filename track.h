@@ -4306,7 +4306,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
 				  long radial, 
                                   double refTilt /* used for obstruction evaluation only */);
 void apply_canonical_multipole_kicks(double *qx, double *qy, 
-                                     double *sum_Fx_return, double *sum_Fy_return,
+                                     double *delta_qx_return, double *delta_qy_return,
                                      double *xpow, double *ypow,
                                      long order, double KnL, long skew);
 void fillPowerArray(double x, double *xpow, long order);

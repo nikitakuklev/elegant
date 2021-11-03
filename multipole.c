@@ -1232,7 +1232,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
                                   )
 {
   double p, qx, qy, beta0, beta1, dp, s;
-  double x, y, xp, yp, sum_Fx, sum_Fy;
+  double x, y, xp, yp, delta_qx, delta_qy;
   long i_kick, step, imult, iOrder;
   double dsh;
   long maxOrder;
@@ -1346,6 +1346,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
       coord[2] = y;
       return 0;
     }
+    delta_qx = delta_qy = 0;
     for (step=0; step<nSubsteps; step++) {
       if (drift) {
         dsh = drift*driftFrac[step];
@@ -1365,15 +1366,15 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
       fillPowerArray(x, xpow, maxOrder);
       fillPowerArray(y, ypow, maxOrder);
 
-      sum_Fx = sum_Fy = 0;
+      delta_qx = delta_qy = 0;
 
       if (!radial) {
 	for (iOrder=0; iOrder<3; iOrder++)
           if (KnL[iOrder])
-            apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
+            apply_canonical_multipole_kicks(&qx, &qy, &delta_qx, &delta_qy, xpow, ypow, 
                                             order[iOrder], KnL[iOrder]/n_parts*kickFrac[step], skew[iOrder]);
       } else 
-	applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
+	applyRadialCanonicalMultipoleKicks(&qx, &qy, &delta_qx, &delta_qy, xpow, ypow, 
 					   order[0], KnL[0]/n_parts*kickFrac[step], 0);
 
       if (xkick)
@@ -1415,28 +1416,30 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
 
       if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
         return 0;
-
-      if ((rad_coef || isr_coef) && drift) {
-	double deltaFactor, F2, dsFactor, dsISRFactor;
-        qx /= (1+dp);
-        qy /= (1+dp);
-	deltaFactor = sqr(1+dp);
-	F2 = (sqr(sum_Fy*KnL[0]/n_parts-xkick)+sqr(sum_Fx*KnL[0]/n_parts+ykick))/sqr(drift);
-	dsFactor = sqrt(1+sqr(xp)+sqr(yp));
-	dsISRFactor = dsFactor*drift/(nSubsteps-1);   /* recall that kickFrac may be negative */
-	dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
-	if (rad_coef)
-	  dp -= rad_coef*deltaFactor*F2*dsFactor;
-	if (isr_coef>0)
-	  dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsISRFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
-        if (sigmaDelta2)
-          *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
-        qx *= (1+dp);
-        qy *= (1+dp);
-        if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
-          return 0;
-      }
     }
+
+    if ((rad_coef || isr_coef) && drift) {
+      double deltaFactor, F2, dsFactor;
+      qx /= (1+dp);
+      qy /= (1+dp);
+      deltaFactor = sqr(1+dp);
+      /* delta_qx and delta_qy are for the last step and have kickFrac[step-1] included, so remove it */
+      delta_qx /= kickFrac[step-1];
+      delta_qy /= kickFrac[step-1];
+      F2 = sqr(delta_qx/drift-xkick/drift)+sqr(delta_qy/drift+ykick/drift);
+      dsFactor = sqrt(1+sqr(xp)+sqr(yp))*drift;
+      if (rad_coef)
+        dp -= rad_coef*deltaFactor*F2*dsFactor;
+      if (isr_coef>0)
+        dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+      if (sigmaDelta2)
+        *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
+      qx *= (1+dp);
+      qy *= (1+dp);
+      if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
+        return 0;
+    }
+
     if (i_part>=0)
       break;
   }
@@ -1498,7 +1501,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
 
 
 void apply_canonical_multipole_kicks(double *qx, double *qy, 
-                                     double *sum_Fx_return, double *sum_Fy_return,
+                                     double *delta_qx_return, double *delta_qy_return,
                                      double *xpow, double *ypow,
                                      long order, double KnL, long skew)
 {
@@ -1528,10 +1531,10 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
   /* add the kicks */
   *qx -= KnL*sum_Fy;
   *qy += KnL*sum_Fx;
-  if (sum_Fx_return)
-    *sum_Fx_return += sum_Fx;
-  if (sum_Fy_return)
-    *sum_Fy_return += sum_Fy;
+  if (delta_qx_return)
+    *delta_qx_return -= KnL*sum_Fy;
+  if (delta_qy_return)
+    *delta_qy_return += KnL*sum_Fx;
 }
 
 void applyRadialCanonicalMultipoleKicks(double *qx, double *qy, 

@@ -48,6 +48,10 @@ Here is a summary of what's changed since release 2021.3.  Historical change log
   was inserted in the beamline. This was fixed. In addition, the code now detects negative growth rates (typically
   in the transverse planes) and correctly refuses to operate in ``random'' mode, since that mode is only able
   to increase the emittances.
+\item As pointed out by G. Penn (LBNL), the \verb|KSEXT| element gave incorrect results for synchrotron radiation
+  if \verb|K1| or \verb|J1| was significant. This was fixed. This change resulted in some reorganization of common
+  routines used by \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, and \verb|CCBEND|, so small differences in results
+  may be seen.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -71,7 +75,7 @@ Here is a summary of what's changed since release 2021.3.  Historical change log
 \item The \verb|rf_setup| command now does a better job of setting the rf frequency in the presence of a closed
   orbit, which may have a different length than the nominal orbit. It also includes the ability to offset the
   rf phase, which allows the user to compensate for small differences between the calculation of the energy loss per
-  turn from radiation integrals and tracking.
+  turn from radiation integrals and tracking. These improvements were inspired by questions from G. Penn (LBNL).
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}

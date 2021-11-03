@@ -235,8 +235,12 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
     
     log_entry("track_particles");
     
-    if (!M)
-        bombElegant("NULL VMATRIX pointer in track_particles", NULL);
+    if (!M) {
+      TRACKING_CONTEXT tc;
+      getTrackingContext(&tc);
+      bombElegantVA("NULL VMATRIX pointer in track_particles (%s #%ld)", 
+                    tc.elementName, tc.elementOccurrence);
+    }
 #if !SDDS_MPI_IO
     if (!final)
         bombElegant("NULL final coordinates pointer in track_particles", NULL);

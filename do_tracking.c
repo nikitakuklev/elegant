@@ -1777,11 +1777,17 @@ long do_tracking(
               trackMagneticFieldOffAxisExpansion(coord, nToTrack, (BOFFAXE*)eptr->p_elem, *P_central, accepted, NULL);
               break;
 	    case T_ROTATE:
-	      if (((ROTATE*)eptr->p_elem)->excludeOptics)
-		/* matrix doesn't include rotation */
-		rotateBeamCoordinatesForMisalignment(coord, nToTrack, -((ROTATE*)eptr->p_elem)->tilt);
-	      else
+	      if (((ROTATE*)eptr->p_elem)->excludeOptics) {
+                VMATRIX *M;
+                M = rotation_matrix(((ROTATE*)eptr->p_elem)->tilt);
+		track_particles(coord, M, coord, nToTrack);
+                free_matrices(M);
+                free(M);
+              } else {
+                if (!(eptr->matrix))
+                  eptr->matrix = rotation_matrix(((ROTATE*)eptr->p_elem)->tilt);
 		track_particles(coord, eptr->matrix, coord, nToTrack);
+              }
 	      break;
 	    case T_MALIGN:
 	      malign = (MALIGN*)eptr->p_elem;
