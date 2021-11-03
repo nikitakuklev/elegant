@@ -1788,7 +1788,7 @@ char *fft_window_name[N_FFT_WINDOWS] = {
     "hanning", "parzen", "welch", "uniform",
     } ;
 
-void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName, long i_pass)
+void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName, long i_pass, ELEMENT_LIST *eptr)
 {
     char *mode, *qualifier;
 
@@ -1819,6 +1819,23 @@ void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousEl
     watch->initialized = 1;
     watch->count = 0;
     watch->flushSample = -1;
+    if (watch->autoReference && eptr) {
+      double fmax = -DBL_MAX, f;
+      while (eptr) {
+        f = -1;
+        if (eptr->type==T_RFCA) {
+          f = ((RFCA*)eptr->p_elem)->freq;
+        } else if (eptr->type==T_RFCW) {
+          f = ((RFCW*)eptr->p_elem)->freq;
+        }
+        if (f>fmax)
+          fmax = f;
+        eptr = eptr->succ;
+      }
+      printf("Using frequency %21.15e Hz for rf reference for WATCH file %s\n",
+             fmax, watch->filename);
+      watch->referenceFrequency = fmax;
+    }
     if (watch->start_pass<i_pass)
       /* Need this for WATCH points on branches that don't get executed on pass 0 */
       watch->start_pass = i_pass;

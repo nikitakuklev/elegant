@@ -1038,7 +1038,7 @@ extern char *entity_text[N_TYPES];
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
 #define N_TWPL_PARAMS 16
-#define N_WATCH_PARAMS 19
+#define N_WATCH_PARAMS 20
 #define N_MALIGN_PARAMS 13
 #define N_TWLA_PARAMS 20
 #define N_PEPPOT_PARAMS 6
@@ -1776,6 +1776,7 @@ typedef struct {
     short disable, useDisconnect;
     long indexOffset;
     double referenceFrequency;
+    short autoReference; 
     /* internal variables for SDDS output */
     short initialized;
     long count, mode_code, window_code;
@@ -3828,7 +3829,8 @@ extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCo
 VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize, long order);
 extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long slices, long sliceEtilted, long order);
 extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long ignoreRadiation, double *z, long iSlice);
-extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName, long i_pass);
+extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName, long i_pass,
+                                 ELEMENT_LIST *eptr);
 extern void set_up_slice_point(SLICE_POINT *slice, RUN *run, long occurence, char *previousElementName);
 void SDDS_SlicePointSetup(SLICE_POINT *slicePoint, char *command_file, char *lattice_file, char *caller, 
                           char *previousElementName);
