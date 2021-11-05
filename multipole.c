@@ -1416,28 +1416,33 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
 
       if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
         return 0;
-    }
 
-    if ((rad_coef || isr_coef) && drift) {
-      double deltaFactor, F2, dsFactor;
-      qx /= (1+dp);
-      qy /= (1+dp);
-      deltaFactor = sqr(1+dp);
-      /* delta_qx and delta_qy are for the last step and have kickFrac[step-1] included, so remove it */
-      delta_qx /= kickFrac[step-1];
-      delta_qy /= kickFrac[step-1];
-      F2 = sqr(delta_qx/drift-xkick/drift)+sqr(delta_qy/drift+ykick/drift);
-      dsFactor = sqrt(1+sqr(xp)+sqr(yp))*drift;
-      if (rad_coef)
-        dp -= rad_coef*deltaFactor*F2*dsFactor;
-      if (isr_coef>0)
-        dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
-      if (sigmaDelta2)
-        *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
-      qx *= (1+dp);
-      qy *= (1+dp);
-      if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
-        return 0;
+      if ((rad_coef || isr_coef) && drift) {
+        double deltaFactor, F2, dsFactor, dsISRFactor;
+        qx /= (1+dp);
+        qy /= (1+dp);
+        deltaFactor = sqr(1+dp);
+        /* delta_qx and delta_qy are for the last step and have kickFrac[step-1] included, so remove it */
+        delta_qx /= kickFrac[step];
+        delta_qy /= kickFrac[step];
+        F2 = sqr(delta_qx/drift-xkick/drift)+sqr(delta_qy/drift+ykick/drift);
+        delta_qx = 0;
+        delta_qy = 0;
+        dsFactor = sqrt(1+sqr(xp)+sqr(yp));
+        dsISRFactor = dsFactor*drift/(nSubsteps-1);   /* recall that kickFrac may be negative */
+        dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
+        if (rad_coef)
+          dp -= rad_coef*deltaFactor*F2*dsFactor;
+        if (isr_coef>0)
+          dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsISRFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+        if (sigmaDelta2)
+          *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsISRFactor;
+        qx *= (1+dp);
+        qy *= (1+dp);
+        if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
+          return 0;
+      }
+      
     }
 
     if (i_part>=0)
