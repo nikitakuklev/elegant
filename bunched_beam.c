@@ -812,6 +812,7 @@ long track_beam(
   beam->p0 = p_central;
   beam->n_accepted = n_left;
 
+  /*
   if (!(flags&SILENT_RUNNING)) {
     extern unsigned long multipoleKicksDone;
 #if SDDS_MPI_IO
@@ -842,6 +843,7 @@ long track_beam(
     fflush(stdout);
 #endif
   }
+  */
 
 #if USE_MPI
   /*  if (!runInSinglePartMode) */
