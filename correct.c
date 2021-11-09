@@ -1527,9 +1527,9 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
       bombElegant("tracking failed for test particle (compute_trajcor_matrices())", NULL);
 
     /* compute coefficients of array C that are driven by this corrector */
-    corrCalibration = getCorrectorCalibration(CM->ucorr[i_corr], coord)/(2*corr_tweek);
+    corrCalibration = 1/(2*corr_tweek);
 #else
-    corrCalibration = getCorrectorCalibration(CM->ucorr[i_corr], coord)/corr_tweek;
+    corrCalibration = 1/corr_tweek;
 #endif
 
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
