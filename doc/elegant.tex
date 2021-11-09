@@ -52,6 +52,10 @@ Here is a summary of what's changed since release 2021.3.  Historical change log
   if \verb|K1| or \verb|J1| was significant. This was fixed. This change resulted in some reorganization of common
   routines used by \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, and \verb|CCBEND|, so small differences in results
   may be seen.
+\item The \verb|CALIBRATION| factor on \verb|HKICK|, \verb|VKICK|, \verb|EHKICK|, and \verb|EVKICK| and the
+  \verb|HCALIBRATION| and \verb|VCALIBRATION| factors on \verb|HVKICK| and \verb|EHVKICK| was applied twice
+  in the computation of the response matrices for trajectories. That is, the actual calibration factor would
+  be the square of the given factor.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
