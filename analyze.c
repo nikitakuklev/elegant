@@ -1644,7 +1644,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         ccbend.nSlices = nSlices;
         elem.type = T_CCBEND;
         elem.p_elem = (void*)&ccbend;
-        csbend.integration_order = 6;
+        ccbend.integration_order = 6;
       }
       break;
     case T_SBEN:
