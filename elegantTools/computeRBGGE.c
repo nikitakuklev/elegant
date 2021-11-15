@@ -108,7 +108,8 @@ char *option[N_OPTIONS] = {
 -xminus      (x, y, z, Bx, By, Bz) map for negative-x plane.\n\
 -xplus       (x, y, z, Bx, By, Bz) map for positive-x plane.\n\
 -normal      Output file for normal-component generalized gradients.\n\
--skew        Output file for skew-component generalized gradients.\n\
+-skew        Output file for skew-component generalized gradients. If the input data\n\
+             has non-zero Bz on axis, this option is essential.\n\
 -derivatives Number of derivatives vs z desired in output. Default: 7\n\
 -multipoles  Number of multipoles desired in output. Default: 8\n\
 -fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\

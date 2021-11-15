@@ -85,7 +85,8 @@ char *option[N_OPTIONS] = {
 -input       Single-page file giving (z, phi, Brho) on circular cylinder of radius rho.\n\
              If solenoidal fields are desired, file can also include Bz, but column must be named with Bz qualifier.\n\
 -normal      Output file for normal-component generalized gradients.\n\
--skew        Output file for skew-component generalized gradients.\n\
+-skew        Output file for skew-component generalized gradients. If the input data\n\
+             has non-zero Bz on axis, this option is essential.\n\
 -derivatives Number of derivatives vs z desired in output. Default: 7\n\
 -multipoles  Number of multipoles desired in output. Default: 8\n\
 -fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\
