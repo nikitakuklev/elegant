@@ -153,7 +153,7 @@ class gpu_multipole_tracking2_kernel
                                       double srGaussianLimit, short expandHamiltonian)
   {
     double p, qx, qy, beta0, beta1, s;
-    double sum_Fx, sum_Fy;
+    double delta_qx, delta_qy;
     int i_kick, step, imult;
     double dsh;
     
@@ -274,6 +274,7 @@ class gpu_multipole_tracking2_kernel
             return 0;
           }
         */
+        delta_qx = delta_qy = 0;
         for (step = 0; step < nSubsteps; step++)
           {
             if (drift)
@@ -295,17 +296,17 @@ class gpu_multipole_tracking2_kernel
             if (!kickFrac[step])
               break;
 
-            sum_Fx = sum_Fy = 0;
+            delta_qx = delta_qy = 0;
 
             if (!radial) {
               for (int iOrder=0; iOrder<3; iOrder++) {
                 if (KnL[iOrder]) {
-                  gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
+                  gpu_apply_canonical_multipole_kicks(&qx, &qy, &delta_qx, &delta_qy, x, y, 
                                                       order[iOrder], KnL[iOrder]/n_parts*kickFrac[step], skew[iOrder]);
                 }
               }
             } else 
-              gpu_applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
+              gpu_applyRadialCanonicalMultipoleKicks(&qx, &qy, &delta_qx, &delta_qy, x, y, 
                                                      order[0], KnL[0]/n_parts*kickFrac[step], 0);
 
             if (xkick)
@@ -355,7 +356,12 @@ class gpu_multipole_tracking2_kernel
                 qx /= (1 + dp);
                 qy /= (1 + dp);
                 deltaFactor = sqr(1 + dp);
-                F2 = (sqr(sum_Fy * KnL[0] / n_parts - xkick) + sqr(sum_Fx * KnL[0] / n_parts + ykick)) / sqr(drift);
+                /* delta_qx and delta_qy are for the last step and have kickFrac[step-1] included, so remove it */
+                delta_qx /= kickFrac[step];
+                delta_qy /= kickFrac[step];
+                F2 = sqr(delta_qx/drift-xkick/drift)+sqr(delta_qy/drift+ykick/drift);
+                delta_qx = 0;
+                delta_qy = 0;
                 dsFactor = xp * xp + yp * yp;
                 dsFactor = sqrt(1 + dsFactor);
                 dsISRFactor = dsFactor * drift / (nSubsteps - 1); /* recall that kickFrac may be negative */
@@ -371,7 +377,7 @@ class gpu_multipole_tracking2_kernel
                     dp -= isr_coef * deltaFactor * pow(F2, 0.75) * sqrt(dsISRFactor) * rand;
                   }
                 if (sigmaDelta2)
-                  *sigmaDelta2 += sqr(isr_coef * deltaFactor) * pow(F2, 1.5) * dsFactor;
+                  *sigmaDelta2 += sqr(isr_coef * deltaFactor) * pow(F2, 1.5) * dsISRFactor;
                 qx *= (1 + dp);
                 qy *= (1 + dp);
                 if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
@@ -1012,7 +1018,7 @@ extern "C"
 } // extern "C"
 
 __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
-                                                    double *sum_Fx_return, double *sum_Fy_return, double x, double y,
+                                                    double *delta_qx_return, double *delta_qy_return, double x, double y,
                                                     int order, double KnL, int skew)
 {
   int i;
@@ -1034,10 +1040,10 @@ __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
   /* add the kicks */
   *qx -= KnL * sum_Fy;
   *qy += KnL * sum_Fx;
-  if (sum_Fx_return)
-    *sum_Fx_return += sum_Fx;
-  if (sum_Fy_return)
-    *sum_Fy_return += sum_Fy;
+  if (delta_qx_return)
+    *delta_qx_return -= KnL*sum_Fy;
+  if (delta_qy_return)
+    *delta_qy_return += KnL*sum_Fx;
 }
 
 __device__ void gpu_applyRadialCanonicalMultipoleKicks(double *qx, double *qy,

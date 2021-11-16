@@ -637,10 +637,10 @@ extern "C"
             csbend0.isr = csbend0.synch_rad = csbend0.fseDipole = csbend0.fseQuadrupole = csbend0.xKick = csbend0.yKick = 0;
 
             csbend0.refTrajectoryChange = csbend->refTrajectoryChange = (double **)czarray_2d(sizeof(double), csbend->nSlices, 5);
+            csbend->refSlices = csbend0.refSlices = csbend0.nSlices;
             refTrajectoryPoints = csbend->nSlices;
             csbend0.refLength = csbend0.length;
             csbend0.refAngle = csbend0.angle;
-            csbend0.refSlices = csbend0.nSlices;
             /* This forces us into the next branch on the next call to this routine */
             csbend0.refTrajectoryChangeSet = 1;
             setTrackingContext((char *)"csbend0", 0, T_CSBEND, (char *)"none", NULL);
@@ -665,7 +665,7 @@ extern "C"
             /* indicates reference trajectory is about to be determined */
             printf("GPU DEBUG2\n");
             refTrajectoryData = csbend->refTrajectoryChange;
-            refTrajectoryPoints = csbend->nSlices;
+            refTrajectoryPoints = csbend->refSlices;
             refTrajectoryMode = RECORD_TRAJECTORY;
             csbend->refTrajectoryChangeSet = 2;
           }
@@ -1271,6 +1271,14 @@ gpu_integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2,
 
       if (d_refTrajectoryMode == RECORD_TRAJECTORY)
         {
+/*
+          if (i>=refTrajectoryPoints) {
+            TRACKING_CONTEXT context;
+            getTrackingContext(&context);
+            bombElegantVA("Problem with reference trajectory for %s#%ld: i=%ld, refTrajectoryPoints=%ld\n",
+                          context.elementName, context.elementOccurrence, i, refTrajectoryPoints);
+          }
+*/
           d_refTrajectoryData[i * 5 + 0] = X;
           d_refTrajectoryData[i * 5 + 1] = QX;
           d_refTrajectoryData[i * 5 + 2] = Y;
@@ -1280,6 +1288,14 @@ gpu_integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2,
         }
       if (d_refTrajectoryMode == SUBTRACT_TRAJECTORY)
         {
+/*
+          if (i>=refTrajectoryPoints) {
+            TRACKING_CONTEXT context;
+            getTrackingContext(&context);
+            bombElegantVA("Problem with reference trajectory for %s#%ld: i=%ld, refTrajectoryPoints=%ld\n",
+                          context.elementName, context.elementOccurrence, i, refTrajectoryPoints);
+          }
+*/
           X -= d_refTrajectoryData[i * 5 + 0];
           QX -= d_refTrajectoryData[i * 5 + 1];
           Y -= d_refTrajectoryData[i * 5 + 2];
