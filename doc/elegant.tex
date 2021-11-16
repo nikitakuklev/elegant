@@ -56,6 +56,8 @@ Here is a summary of what's changed since release 2021.3.  Historical change log
   \verb|HCALIBRATION| and \verb|VCALIBRATION| factors on \verb|HVKICK| and \verb|EHVKICK| was applied twice
   in the computation of the response matrices for trajectories. That is, the actual calibration factor would
   be the square of the given factor.
+\item A memory bug was found in \verb|CSBEND| that would sometimes cause a crash when \verb|REFERENCE_CORRECTION=1|
+  if the \verb|moments_output| command was given. This was reported by G. Penn (LBNL).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -82,6 +84,8 @@ Here is a summary of what's changed since release 2021.3.  Historical change log
   orbit, which may have a different length than the nominal orbit. It also includes the ability to offset the
   rf phase, which allows the user to compensate for small differences between the calculation of the energy loss per
   turn from radiation integrals and tracking. These improvements were inspired by questions from G. Penn (LBNL).
+\item The \verb|save_lattice| command can now write the entire lattice as a single beamline, if \verb|output_seq=2|.
+  This was requested by forum user \verb|blanco-garcia|.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -5130,7 +5134,9 @@ supported; the ``Ming-Xie'' model is based on the simple parametrization M. Xie\
 \begin{itemize}
 \item \verb|filename| --- The (incomplete) name of a file to which the element and beamline definitions
 will be written.  Recommended value: ``\%s.new''.
-\item \verb|output_seq| --- If non-zero, the lattice will be saved as a single beamline sequence.
+\item \verb|output_seq| --- If non-zero, the lattice will be saved as a single beamline sequence, in one of
+  two ways: For \verb|output_seq=1|, the sequence is contained in a series of 40-element sub-beamlines.
+  For \verb|output_seq=2|, the sequence is contained in a single long beamline definition.
 Elements used for the beamline are re-arranged according to their type. Note: 
 sub-beamline definitions in the original lattice file will be destroyed from the output file.
 This feature is intended to be used 
@@ -6598,6 +6604,7 @@ computeCBGGE -input=<filename>[,z=<colName>][,phi=<colName>][,Brho=<colName>][,B
   parameter of \verb|BGGEXP|.
 \item {\tt skew} ---  Output file for skew-component generalized gradients. Supply to \verb|SKEW_FILENAME|
   parameter of \verb|BGGEXP|.
+  NB: if $B_z$ is non-zero on axis, this option is essential in getting valid results.
 \item {\tt derivatives} --- Number of derivatives vs z desired in output. Default: 7
 \item {\tt multipoles} ---  Number of multipoles desired in output. Default: 8
 \item {\tt fundamental} --- Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.
@@ -6653,7 +6660,8 @@ computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<fil
 \item {\tt normal} ---  Output file for normal-component generalized gradients. Supply to \verb|NORMAL_FILENAME|
   parameter of \verb|BGGEXP|.
 \item {\tt skew} ---  Output file for skew-component generalized gradients. Supply to \verb|SKEW_FILENAME|
-  parameter of \verb|BGGEXP|.
+  parameter of \verb|BGGEXP|. NB: if $B_z$ is non-zero on axis, this option is essential in getting
+  valid results.
 \item {\tt derivatives} --- Number of derivatives vs z desired in output. Default: 7
 \item {\tt multipoles} ---  Number of multipoles desired in output. Default: 8
 \item {\tt fundamental} --- Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.

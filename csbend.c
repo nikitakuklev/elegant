@@ -671,6 +671,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       }
       
       if (csbend->refTrajectoryChange && csbend->refSlices) {
+        /*
+        printf("Freeing refTrajectoryChange=%p for CSBEND (%ld slices)\n", (void*)csbend->refTrajectoryChange,
+               csbend->refSlices);
+        fflush(stdout);
+        */
         free_czarray_2d((void**)csbend->refTrajectoryChange, csbend->refSlices, 5);
         csbend->refTrajectoryChange = NULL;
         csbend->refSlices = 0;
@@ -683,17 +688,20 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         csbend0.isr = csbend0.synch_rad = csbend0.fseDipole = csbend0.fseQuadrupole = csbend0.xKick = csbend0.yKick = 0;
       
       csbend0.refTrajectoryChange = csbend->refTrajectoryChange = (double**)czarray_2d(sizeof(double), csbend->nSlices, 5);
+      /*
+      printf("Allocated refTrajectoryChange=%p for CSBEND\n", (void*)csbend->refTrajectoryChange);
+      fflush(stdout);
+      */
+      csbend->refSlices = csbend0.refSlices = csbend0.nSlices;
       refTrajectoryPoints = csbend->nSlices;
       csbend0.refLength = csbend0.length;
       csbend0.refAngle = csbend0.angle;
-      csbend0.refSlices = csbend0.nSlices;
       /* This forces us into the next branch on the next call to this routine */
       csbend0.refTrajectoryChangeSet = 1;
       setTrackingContext("csbend0", 0, T_CSBEND, "none", NULL);
       track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apContour, apFileData, -1);
       csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
 
-      csbend->refSlices = csbend->nSlices;
       csbend->refLength = csbend->length;
       csbend->refAngle = csbend->angle;
       free_czarray_2d((void**)part0, 1, totalPropertiesPerParticle);
@@ -704,7 +712,12 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     } else if (csbend->refTrajectoryChangeSet==1) {
       /* indicates reference trajectory is about to be determined */
       refTrajectoryData = csbend->refTrajectoryChange;
-      refTrajectoryPoints = csbend->nSlices;
+      refTrajectoryPoints = csbend->refSlices;
+      /*
+      printf("refTrajectoryData = %p, refTrajectoryPoints = %ld with csbend->refTrajectoryChangeSet==1\n", 
+             refTrajectoryData, refTrajectoryPoints);
+      fflush(stdout);
+      */
       refTrajectoryMode = RECORD_TRAJECTORY;
       csbend->refTrajectoryChangeSet = 2;
     } else {
@@ -712,6 +725,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       refTrajectoryData = csbend->refTrajectoryChange;
       refTrajectoryPoints = csbend->refSlices;
       refTrajectoryMode = SUBTRACT_TRAJECTORY;
+      /*
+      printf("refTrajectoryData = %p, refTrajectoryPoints = %ld with csbend->refTrajectoryChangeSet==%ld\n", 
+             refTrajectoryData, refTrajectoryPoints, csbend->refTrajectoryChangeSet);
+      fflush(stdout);
+      */
     }
   } else
     refTrajectoryMode = 0;
@@ -1475,6 +1493,12 @@ long integrate_csbend_ordn
     }
 
     if (refTrajectoryMode==RECORD_TRAJECTORY) {
+      if (i>=refTrajectoryPoints) {
+        TRACKING_CONTEXT context;
+        getTrackingContext(&context);
+        bombElegantVA("Problem with reference trajectory for %s#%ld: i=%ld, refTrajectoryPoints=%ld\n",
+                      context.elementName, context.elementOccurrence, i, refTrajectoryPoints);
+      }
       refTrajectoryData[i][0] = X;
       refTrajectoryData[i][1] = QX;
       refTrajectoryData[i][2] = Y;
@@ -1483,6 +1507,12 @@ long integrate_csbend_ordn
       X = QX = Y = QY = dist = 0;
     }
     if (refTrajectoryMode==SUBTRACT_TRAJECTORY) {
+      if (i>=refTrajectoryPoints) {
+        TRACKING_CONTEXT context;
+        getTrackingContext(&context);
+        bombElegantVA("Problem with reference trajectory for %s#%ld: i=%ld, refTrajectoryPoints=%ld\n",
+                      context.elementName, context.elementOccurrence, i, refTrajectoryPoints);
+      }
       X -= refTrajectoryData[i][0];
       QX -= refTrajectoryData[i][1];
       Y -= refTrajectoryData[i][2];

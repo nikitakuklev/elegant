@@ -1632,9 +1632,18 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         memcpy(&csbend, (CSBEND*)eptr->p_elem, sizeof(CSBEND));
         csbend.isr = 0;
         csbend.nSlices = nSlices;
+        csbend.refTrajectoryChangeSet = 0;
+        csbend.refTrajectoryChange = NULL;
         elem.type = T_CSBEND;
         elem.p_elem = (void*)&csbend;
         csbend.integration_order = 6;
+        if (csbend.referenceCorrection) {
+          double **coord;
+          coord = (double**)czarray_2d(sizeof(**coord), 1, totalPropertiesPerParticle);
+          track_through_csbend(coord, 1, &csbend, 0, run->p_central, NULL, 0.0,
+                               NULL, run->rootname, NULL, NULL, NULL, -1);
+          free_czarray_2d((void**)coord, 1, totalPropertiesPerParticle);
+        }
       }
       break;
     case T_CCBEND:
@@ -2025,6 +2034,13 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     }
     fflush(stdout);
     */
+  }
+
+  if (eptr->type==T_CSBEND) {
+    if (csbend.referenceCorrection) {
+      free_czarray_2d((void**)csbend.refTrajectoryChange, csbend.refSlices, 5);
+      csbend.refTrajectoryChange = NULL;
+    }
   }
 
   free(accumD1);
