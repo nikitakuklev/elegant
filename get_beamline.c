@@ -1128,6 +1128,9 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   if (filename==NULL)
     bombElegant("no filename given to save lattice to", NULL);
 
+  if (output_seq<0 || output_seq>2) 
+    bombElegant("valid values of output_seq are 0, 1, and 2", NULL);
+
 #if USE_MPI
   if (myid==0) {
 #endif
@@ -1298,7 +1301,10 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         eptr = eptr->succ;
       }
     }
-    /* Write beamline sequence now, each line has 40 elements limitation */
+    /* Write beamline sequence now
+     * if output_seq=1, each line has 40 elements limitation 
+     * otherwise, a single beamline is created
+     */
     eptr = beamline->elem;
     sprintf(s, "L%04ld: LINE = (", nline);
     while (eptr) {
@@ -1311,7 +1317,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       strcat(s, ",");
 
       eptr = eptr->succ;
-      if (nelem == 40) {
+      if (output_seq==1 && nelem == 40) {
         nline++;
         nelem=0;
         if (s[j=strlen(s)-1]==',')
