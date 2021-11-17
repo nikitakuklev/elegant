@@ -4927,6 +4927,7 @@ in \verb|run_setup|.
     STRING rootname = NULL;
     STRING output = NULL;
     STRING centroid = NULL;
+    STRING bpm_centroid = NULL;
     STRING sigma = NULL;
     STRING final = NULL;
     STRING acceptance = NULL;
@@ -4973,6 +4974,8 @@ the filename minus extension of the input file is used.
 will be written.  Recommended value: ``\%s.out''.
 \item \verb|centroid| --- The (incomplete) name of an SDDS file into which beam centroids as a function
 of s will be written.   Recommended value: ``\%s.cen''.
+\item \verb|bpm_centroid| --- The (incomplete) name of an SDDS file into which beam centroids at beam position monitors
+only as a function of s will be written.   Recommended value: ``\%s.bpmcen''.
 \item \verb|sigma| --- The (incomplete) name of an SDDS file into
 which the beam sigma matrix as a function of z will be written.
 Recommended value: ``\%s.sig''.  N.B.: confusion sometimes occurs about some of the quantities related to
