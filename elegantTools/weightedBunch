@@ -57,7 +57,7 @@ exec sddssequence -pipe=out -define=z -sequence=begin=-1,end=1,n=1001 | sddsproc
 
 if $particleID {
     # Use particleID as the weight column
-    set weightColumn $particleID
+    set weightColumn particleID
 } else {
     set weightColumn Weight
 }
