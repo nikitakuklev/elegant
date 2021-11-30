@@ -58,8 +58,12 @@ exec sddssequence -pipe=out -define=z -sequence=begin=-1,end=1,n=1001 | sddsproc
 if $particleID {
     # Use particleID as the weight column
     set weightColumn particleID
+    set weightType long
+    set weightOffset 1
 } else {
     set weightColumn Weight
+    set weightType double
+    set weightOffset 0
 }
 
 if [catch {exec sddssampledist $tmpRoot.2 -pipe=out -samples=[expr $pages*$particles] -optimalHalton -seed=$seed \
@@ -72,7 +76,7 @@ if [catch {exec sddssampledist $tmpRoot.2 -pipe=out -samples=[expr $pages*$parti
 	       | sddsxref -pipe $tmpRoot.1 -leave=* -transfer=parameter,*0,pCentral \
 	       | sddsbreak -pipe -rowlimit=$particles \
 	       | sddsprocess -pipe \
-	       "-define=column,$weightColumn,a sqr ap sqr +  b sqr + bp sqr +  c sqr +  d sqr + -2 / exp 2 30 pow * 1 + ,type=long" \
+	       "-define=column,$weightColumn,a sqr ap sqr +  b sqr + bp sqr +  c sqr +  d sqr + -2 / exp 2 30 pow * $weightOffset + ,type=$weightType" \
 	       -process=\[abcd\]*,stand,%sStDev,weight=$weightColumn \
 	       "-redefine=col,%s,$scale 0 == ? 1 : 1 %sStDev / $ %s *,select=\[ab\]*" \
 	       "-redefine=col,%s,$scale 0 == ? 1 : 1 %sStDev / $ %s *,select=\[cd\]" \
