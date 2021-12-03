@@ -891,10 +891,17 @@ char **argv;
         magnets = semaphore_file = parameters = rfc_reference_output = NULL;
       }
 
+#if USE_MPI
+      if (myid==0)
+#endif
       manageSemaphoreFiles(semaphore_file, rootname, semaphoreFile);
      
       /* output the magnet layout */
-      if (magnets)
+      if (magnets
+#if USE_MPI
+	  && myid==0
+#endif
+	  )
         output_magnets(magnets, lattice, beamline);
 
       delete_phase_references();    /* necessary for multi-step runs */
