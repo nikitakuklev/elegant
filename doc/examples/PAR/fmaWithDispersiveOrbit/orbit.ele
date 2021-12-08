@@ -1,0 +1,21 @@
+&run_setup
+        lattice = parTrack.lte
+        p_central_mev = 450
+        final = %s.fin
+        use_beamline = RINGCO
+&end
+
+&run_control 
+             n_indices = 1
+&end
+
+!! Change the range here to cover your stable region
+&vary_element name=MALDP, item=DP, initial=-0.02, final=0.02, index_number=0, index_limit=21 &end
+
+&closed_orbit
+        output = %s.clo
+&end
+
+&bunched_beam &end
+
+&track &end

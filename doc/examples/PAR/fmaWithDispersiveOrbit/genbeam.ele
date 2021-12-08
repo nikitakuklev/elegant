@@ -1,0 +1,21 @@
+&run_setup
+        lattice = parTrack.lte
+        p_central_mev = 450
+        use_beamline = GB
+        output = %s.out
+&end
+
+&run_control 
+             n_indices = 2
+&end
+
+!! Change the ranges here to cover the region of interest
+&vary_element name=MALIN, item=DP, initial=-0.02, final=0.02, index_number=0, index_limit=61 &end
+&vary_element name=MALIN, item=DX, initial=-0.02, final=0.02, index_number=1, index_limit=61 &end
+
+&bunched_beam
+       centroid[2] = 1e-6
+&end
+
+&track &end
+

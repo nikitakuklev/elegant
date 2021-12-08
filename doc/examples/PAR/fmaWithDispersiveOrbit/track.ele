@@ -1,0 +1,15 @@
+&run_setup
+        lattice = parTrack.lte
+        p_central_mev = 450
+        use_beamline = RINGW1
+&end
+
+&run_control 
+             n_passes = 256
+&end
+
+&sdds_beam
+        input = genbeam.out1
+&end
+
+&track &end

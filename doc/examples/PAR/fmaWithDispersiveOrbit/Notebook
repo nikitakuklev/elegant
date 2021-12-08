@@ -1,0 +1,37 @@
+Example of performing FMA for (x, delta) where the initial x coordinates
+are offset by the closed orbit.
+
+M. Borland, 12/2021
+
+====
+
+parTrack.lte
+        Lattice file. 
+        The lattice needs three beamlines, as described at the end.
+
+orbit.ele
+        Computes the off-momentum closed orbits
+
+genbeam.ele
+        Generates a beam on a grid
+
+prepBeam
+        Runs orbit calculation and beam generation
+
+track.ele
+        Used to track the particles after beam is prepared.
+        mpiexec -np `nproc` Pelegant track.ele
+
+processTracking
+        Postprocesses tracking results to give FMA.
+
+cleanUp
+        Cleans up output files.
+
+====
+
+Sequence
+
+./prepBeam
+mpiexec -np `nproc` Pelegant track.ele
+./processTracking

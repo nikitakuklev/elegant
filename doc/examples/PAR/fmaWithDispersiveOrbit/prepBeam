@@ -1,0 +1,25 @@
+#!/bin/bash
+
+elegant orbit.ele > orbit.log
+sddscollapse orbit.fin orbit.finc
+sddsprocess orbit.clo -pipe=out \
+    -process=[xy]*,first,%sOrbit \
+    | sddscollapse -pipe \
+    | sddsxref -pipe=in orbit.finc orbit.cloc -take=*
+sddsplot -col=MALDP.DP,xOrbit orbit.cloc -graph=sym,fill,con,scale=2 &
+
+elegant genbeam.ele > genbeam.log
+sddscombine genbeam.out -pipe=out -merge  \
+    | sddsprocess -pipe=in genbeam.tmp1 \
+    "-define=col,delta,p pCentral / 1 -"
+
+sddsinterp orbit.cloc -pipe=out -fileValues=genbeam.tmp1,column=delta -column=MALDP.DP,xOrbit,xpOrbit,yOrbit,ypOrbit \
+    | sddsxref genbeam.tmp1 -take=* -pipe \
+    | sddsconvert -pipe -rename=col,x=x0,y=y0,xp=xp0,yp=yp0 \
+    | sddsprocess -pipe=in genbeam.out1 \
+    -define=col,x,"x0 xOrbit +",units=m \
+    -define=col,xp,"xp0 xpOrbit +" \
+    -define=col,y,"y0 yOrbit +",units=m \
+    -define=col,yp,"yp0 ypOrbit +"
+
+\rm genbeam.tmp1

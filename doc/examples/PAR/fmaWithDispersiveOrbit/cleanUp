@@ -1,0 +1,4 @@
+#!/bin/bash
+
+\rm *.fin* *.log *.out* orbit.clo* *.w1 *.fma
+

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+turns=256
+
+sddsprocess track.w1 -pipe=out -define=col,PassC,Pass,type=long \
+    | sddscombine -pipe -merge \
+    | sddssort -pipe -column=particleID -column=PassC \
+    | sddsbreak -pipe -change=particleID \
+    | sddsprocess -pipe "-test=parameter,n_rows $turns ==" \
+    -process=PassC,max,%sMax \
+    -process=particleID,first,%s \
+    "-define=col,part2,PassC $turns / 2 * int,type=short" \
+    | sddsbreak -pipe -change=part2 \
+    | sddsprocess -pipe=in track.tmp1 -process=part2,first,part2P
+
+sddsprocess track.tmp1 -pipe=out -filter=parameter,part2P,0,0 \
+    | sddsnaff -pipe -column=PassC -pair=x,xp -pair=y,yp -terminate=freq=1 -nowarning \
+    | sddsexpand -pipe \
+    | sddscollapse -pipe \
+    | sddsconvert -pipe=in track.tmp2 -rename=col,xFrequency=nux0,yFrequency=nuy0
+
+sddsprocess track.tmp1 -pipe=out -filter=parameter,part2P,1,1 \
+    | sddsnaff -pipe -column=PassC -pair=x,xp -pair=y,yp -terminate=freq=1 -nowarning \
+    | sddsexpand -pipe \
+    | sddscollapse -pipe \
+    | sddsconvert -pipe -rename=col,xFrequency=nux1,yFrequency=nuy1 -retain=col,*Frequency,particleID \
+    | sddsxref genbeam.out1 -pipe -reuse=row -equate=particleID -take=x0,xp0,y0,yp0,delta \
+    | sddsxref track.tmp2 -pipe -equate=particleID -take=nu?0 \
+    | sddsprocess -pipe=in track.fma \
+    "-define=col,deltaNux,nux1 nux0 -" \
+    "-define=col,deltaNuy,nuy1 nuy0 -" \
+    "-define=col,diffusionRate,deltaNux sqr deltaNuy sqr + sqrt $turns 2 / / log"
+
+\rm track.tmp?
+
+sddsplot -col=x0,delta track.fma -graph=sym,vary=sub,scale=2,fill,type=2 -order=spect -split=col=diffusionRate
+
