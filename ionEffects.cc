@@ -1236,7 +1236,7 @@ void gaussianBeamKick
   sx = sigma[0];
   sy = sigma[fromBeam?2:1];
 
-  if (sx==sy)
+  if (abs(sx - sy)/sx < 1e-9)
     return roundGaussianBeamKick(coord, center, sigma, fromBeam, kick, charge, ionMass, ionCharge);
 
   x = coord[0] - center[0];
