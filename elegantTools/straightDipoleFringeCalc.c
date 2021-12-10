@@ -27,7 +27,7 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
 void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS,
                       int Nz, double Bscaling, double zRef, double bendAngle, char *output);
 
-int refineNextMaximum(double *ggeD, int *zMaxInt, int edgeNum);
+//int refineNextMaximum(double *ggeD, int *zMaxInt, int edgeNum);
 
 double integrateTrap(double *integrand, int startPt, int endPt, double dz);
 
@@ -776,6 +776,7 @@ void readInTrajectoryInput(char *input, double **x, double **xp, double *pCentra
     }
 }
 
+/*
 int refineNextMaximum(double *ggeD, int *zMaxInt, int edgeNum)
 {
   double max;
@@ -793,13 +794,14 @@ int refineNextMaximum(double *ggeD, int *zMaxInt, int edgeNum)
           count = 0;
         }
       else
-        count++; /* prevent local mimima due to noise */
+        count++; // prevent local mimima due to noise 
       search++;
     }
   while (count < 10);
 
   return (searchRet);
 }
+*/
 
 /*** integrates integrand using the trapezoidal rule from startPt to endPt ***/
 double integrateTrap(double *integrand, int startPt, int endPt, double dz)
