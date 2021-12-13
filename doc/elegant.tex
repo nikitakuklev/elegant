@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2021.4\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 2021.5\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,65 +35,42 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2021.4}
+\section{Highlights of What's New in Version 2021.5}
 
-Here is a summary of what's changed since release 2021.3.  Historical change logs are collected in Section
+Here is a summary of what's changed since release 2021.4.  Historical change logs are collected in Section
 \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item A memory leak was fixed in the \verb|FMULT| element.
-\item As pointed out by P. Anisimov, there were problems with the \verb|IBSCATTER| element when more than one
-  was inserted in the beamline. This was fixed. In addition, the code now detects negative growth rates (typically
-  in the transverse planes) and correctly refuses to operate in ``random'' mode, since that mode is only able
-  to increase the emittances.
-\item As pointed out by G. Penn (LBNL), the \verb|KSEXT| element gave incorrect results for synchrotron radiation
-  if \verb|K1| or \verb|J1| was significant. This was fixed. This change resulted in some reorganization of common
-  routines used by \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, and \verb|CCBEND|, so small differences in results
-  may be seen.
-\item The \verb|CALIBRATION| factor on \verb|HKICK|, \verb|VKICK|, \verb|EHKICK|, and \verb|EVKICK| and the
-  \verb|HCALIBRATION| and \verb|VCALIBRATION| factors on \verb|HVKICK| and \verb|EHVKICK| was applied twice
-  in the computation of the response matrices for trajectories. That is, the actual calibration factor would
-  be the square of the given factor.
-\item A memory bug was found in \verb|CSBEND| that would sometimes cause a crash when \verb|REFERENCE_CORRECTION=1|
-  if the \verb|moments_output| command was given. This was reported by G. Penn (LBNL).
+\item There was a bug in \verb|BEAMBEAM| that resulted in flipping the sign of the momentum offset of each particle
+  on each pass. The propblem was reported by B. Podobedov (BNL).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item As pointed out by G. Penn (LBNL), the \verb|lengthError| parameter in the \verb|closed_orbit| output file
-  was always zero, even when \verb|fixed_length=0|. This was fixed.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added the \verb|FACTOR| parameter for the \verb|FMULT| element, allowing all multipole components to
-  be scaled by a common factor. Also added the \verb|UNTILTED_MATRIX| parameter, which can be used to force
-  \verb|elegant| to numerically compute the matrix for the untilted element; see the manual page for
-  discussion.
-\item Added the \verb|PARALLEL_INTEGRATION| parameter to \verb|IBSCATTER|, which permits disabling the default
-  parallelization of $s$-dependent integrals for intrabeam scattering.
-\item The \verb|WATCH| element has a new parameter \verb|AUTO_REFERENCE| that allows automatically determining
-  the reference frequency from the rf cavities.
+\item The unified warning system has now been (essentially) completed. All warnings from elements go through this
+  system and are collected in the summary at the end of the run.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|rf_setup| command now does a better job of setting the rf frequency in the presence of a closed
-  orbit, which may have a different length than the nominal orbit. It also includes the ability to offset the
-  rf phase, which allows the user to compensate for small differences between the calculation of the energy loss per
-  turn from radiation integrals and tracking. These improvements were inspired by questions from G. Penn (LBNL).
-\item The \verb|save_lattice| command can now write the entire lattice as a single beamline, if \verb|output_seq=2|.
-  This was requested by forum user \verb|blanco-garcia|.
+\item The unified warning system has now been (essentially) completed. All warnings from commands go through this
+  system and are collected in the summary at the end of the run.
+\item Added the \verb|element_occurence| parameter to the \verb|change_start| command, which allows
+  changing the starting location in a beamline.
+\item Added the \verb|change_end| command, which allows changing the end of the beamline.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
 
 \begin{itemize}
-\item Added the \verb|multiply_np_by_cores| parameter to \verb|bunched_beam|  and \verb|bunched_beam_moments|.
-  If non-zero, then the number of particles generated is \verb|n_particles_per_bunch| times the number of
-  working cores.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -1436,6 +1413,33 @@ particles.
 
 %\begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|change_end|}\end{center}
+%\end{latexonly}
+\subsection{change\_end\label{subsec:changeend}}
+
+\begin{itemize}
+\item type: action command.
+\item function: change the ending point in a lattice
+\item sequence: must precede \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
+\end{itemize}
+
+\begin{verbatim}
+&change_start
+          STRING element_name = NULL;
+          STRING element_occurence = -1;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|element_name| --- Name of the element where the lattice will start, which implies removing all 
+  elements upstream of the named element. If the element occurs more than once, the first instance is used.
+  The named element will be the first element in the lattice.
+\item \verb|element_occurence| --- Occurrence number of the element to use. By default, uses the last occurrence.
+\end{itemize}
+
+%\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|change_particle|}\end{center}
 %\end{latexonly}
 \subsection{change\_particle\label{subsec:changeparticle}}
@@ -1469,7 +1473,7 @@ particles.
 \newpage
 \begin{center}{\Large\verb|change_start|}\end{center}
 %\end{latexonly}
-\subsection{change\_particle\label{subsec:changestart}}
+\subsection{change\_start\label{subsec:changestart}}
 
 \begin{itemize}
 \item type: action command.
@@ -1481,6 +1485,7 @@ particles.
 \begin{verbatim}
 &change_start
           STRING element_name = NULL;
+          STRING element_occurence = 1;
           long ring_mode = 0;
 &end
 \end{verbatim}
@@ -1489,6 +1494,7 @@ particles.
 \item \verb|element_name| --- Name of the element where the lattice will start, which implies removing all 
   elements upstream of the named element. If the element occurs more than once, the first instance is used.
   The named element will be the first element in the lattice.
+\item \verb|element_occurence| --- Occurrence number of the element to use.
 \item \verb|ring_mode| --- If nonzero, the ring structure of the lattice is preserved by moving the elements 
   upstream of the named element to the end of the lattice.
 \end{itemize}
@@ -8304,6 +8310,87 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 2021.4}
+
+Here is a summary of what's changed since release 2021.3.  
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item A memory leak was fixed in the \verb|FMULT| element.
+\item As pointed out by P. Anisimov, there were problems with the \verb|IBSCATTER| element when more than one
+  was inserted in the beamline. This was fixed. In addition, the code now detects negative growth rates (typically
+  in the transverse planes) and correctly refuses to operate in ``random'' mode, since that mode is only able
+  to increase the emittances.
+\item As pointed out by G. Penn (LBNL), the \verb|KSEXT| element gave incorrect results for synchrotron radiation
+  if \verb|K1| or \verb|J1| was significant. This was fixed. This change resulted in some reorganization of common
+  routines used by \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, and \verb|CCBEND|, so small differences in results
+  may be seen.
+\item The \verb|CALIBRATION| factor on \verb|HKICK|, \verb|VKICK|, \verb|EHKICK|, and \verb|EVKICK| and the
+  \verb|HCALIBRATION| and \verb|VCALIBRATION| factors on \verb|HVKICK| and \verb|EHVKICK| was applied twice
+  in the computation of the response matrices for trajectories. That is, the actual calibration factor would
+  be the square of the given factor.
+\item A memory bug was found in \verb|CSBEND| that would sometimes cause a crash when \verb|REFERENCE_CORRECTION=1|
+  if the \verb|moments_output| command was given. This was reported by G. Penn (LBNL).
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item As pointed out by G. Penn (LBNL), the \verb|lengthError| parameter in the \verb|closed_orbit| output file
+  was always zero, even when \verb|fixed_length=0|. This was fixed.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item Added the \verb|FACTOR| parameter for the \verb|FMULT| element, allowing all multipole components to
+  be scaled by a common factor. Also added the \verb|UNTILTED_MATRIX| parameter, which can be used to force
+  \verb|elegant| to numerically compute the matrix for the untilted element; see the manual page for
+  discussion.
+\item Added the \verb|PARALLEL_INTEGRATION| parameter to \verb|IBSCATTER|, which permits disabling the default
+  parallelization of $s$-dependent integrals for intrabeam scattering.
+\item The \verb|WATCH| element has a new parameter \verb|AUTO_REFERENCE| that allows automatically determining
+  the reference frequency from the rf cavities.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|rf_setup| command now does a better job of setting the rf frequency in the presence of a closed
+  orbit, which may have a different length than the nominal orbit. It also includes the ability to offset the
+  rf phase, which allows the user to compensate for small differences between the calculation of the energy loss per
+  turn from radiation integrals and tracking. These improvements were inspired by questions from G. Penn (LBNL).
+\item The \verb|save_lattice| command can now write the entire lattice as a single beamline, if \verb|output_seq=2|.
+  This was requested by forum user \verb|blanco-garcia|.
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item Added the \verb|multiply_np_by_cores| parameter to \verb|bunched_beam|  and \verb|bunched_beam_moments|.
+  If non-zero, then the number of particles generated is \verb|n_particles_per_bunch| times the number of
+  working cores.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}  Users are encouraged to check results against
+the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+The {\tt elegant} distribution includes many programs and scripts that perform computations with {\tt elegant}
+output data, provide interfaces with other programs, or prepare data for use with {\tt elegant}. These
+are listed in Section \ref{sect:tools}. 
+
+Changes to these tools in this release include
+\begin{itemize}
+\item None.
+\end{itemize}
+
 
 \subsection{Highlights of What's New in Version 2021.3}
 
