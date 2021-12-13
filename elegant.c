@@ -56,6 +56,7 @@ void closeBeamlineOutputFiles(LINE_LIST *beamline);
 void setSigmaIndices();
 void process_particle_command(NAMELIST_TEXT *nltext);
 void process_change_start(NAMELIST_TEXT *nltext, CHANGE_START_SPEC *css);
+void process_change_end(NAMELIST_TEXT *nltext, CHANGE_END_SPEC *ces);
 void processGlobalSettings(NAMELIST_TEXT *nltext);
 void freeInputObjects();
 void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST *beamline, short final, short mustSurvive);
@@ -186,7 +187,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define OBSTRUCTION_DATA 70
 #define SET_BUNCHED_BEAM_MOMENTS 71
 #define CHANGE_START 72
-#define N_COMMANDS      73
+#define CHANGE_END 73
+#define N_COMMANDS      74
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -203,6 +205,7 @@ char *command[N_COMMANDS] = {
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
     "tune_footprint", "ion_effects", "elastic_scattering", "inelastic_scattering", "ignore_elements",
     "set_reference_particle_output", "obstruction_data", "bunched_beam_moments", "change_start",
+    "change_end",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -279,6 +282,7 @@ char *description[N_COMMANDS] = {
     "obstruction_data                 set (Z,X) contours of obstructions in the vertical midplane",
     "bunched_beam_moments             defines beam distribution using user-supplied beam moments",
     "change_start                     modify the beamline to start at a named location",
+    "change_end                       modify the beamline to end at a named location",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -385,7 +389,8 @@ char **argv;
   int namelen; 
 #endif 
 #endif
-  CHANGE_START_SPEC changeStart = {0, NULL, 0};
+  CHANGE_START_SPEC changeStart = {0, NULL, -1, 0};
+  CHANGE_END_SPEC changeEnd = {0, NULL, -1};
 
   semaphoreFile[0] = semaphoreFile[1] = semaphoreFile[2] = NULL;
 
@@ -660,7 +665,7 @@ char **argv;
                         &optimize, &chrom_corr_data, &tune_corr_data, &links);
   
   run_setuped = run_controled = error_controled = correction_setuped = ionEffectsSeen = 0;
-  changeStart.active = 0;
+  changeStart.active = changeEnd.active = 0;
 
   beam_type = -1;
   if (configurationFile) {
@@ -705,8 +710,13 @@ char **argv;
       break;
     case CHANGE_START:
       if (run_setuped)
-        bombElegant("change_start command should preceed run_setup", NULL);
+        bombElegant("change_start command must preceed run_setup", NULL);
       process_change_start(&namelist_text, &changeStart);
+      break;
+    case CHANGE_END:
+      if (run_setuped)
+        bombElegant("change_end command must preceed run_setup", NULL);
+      process_change_end(&namelist_text, &changeEnd);
       break;
     case RUN_SETUP:
       beam_type = -1;
@@ -855,7 +865,7 @@ char **argv;
 	  MPE_Describe_state(event1a, event1b, "get_beamline", "blue");
 	MPE_Log_event(event1a, 0, "start get_beamline"); /* record time spent on reading input */ 
 #endif
-        beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice, back_tracking, &changeStart);
+        beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice, back_tracking, &changeStart, &changeEnd);
         changeStart.active = 0;
 #ifdef  USE_MPE
 	      MPE_Log_event(event1b, 0, "end get_beamline");
@@ -3187,6 +3197,23 @@ void process_change_start(NAMELIST_TEXT *nltext, CHANGE_START_SPEC *css)
   css->active = 1;
   css->elementName = change_start_struct.element_name;
   css->ringMode = change_start_struct.ring_mode;
+  css->elementOccurence = change_start_struct.element_occurence;
+}
+
+void process_change_end(NAMELIST_TEXT *nltext, CHANGE_END_SPEC *ces)
+{
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  if (processNamelist(&change_end, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
+  if (echoNamelists) print_namelist(stdout, &change_end);
+
+  if (ces->elementName)
+    free(ces->elementName);
+
+  ces->active = 1;
+  ces->elementName = change_end_struct.element_name;
+  ces->elementOccurence = change_end_struct.element_occurence;
 }
 
 void manageSemaphoreFiles(char *semaphore_file, char *rootname, char *semaphoreFile[3])

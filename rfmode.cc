@@ -67,7 +67,6 @@ void track_through_rfmode(
     double V_sum, Vr_sum, Vi_sum, Vg_sum, Vgr_sum, Vgi_sum, Vci_sum, Vcr_sum, Vc_sum;
     double Q_sum, dgamma;
     long n_summed, max_hist, n_occupied;
-    static long been_warned = 0;
     double Qrp, VbImagFactor, Q=0;
     long deltaPass;
     long np_total;
@@ -1394,7 +1393,6 @@ void runBinlessRfMode(
   double V_sum, Vr_sum, phase_sum;
   double Vc, Vcr, Q_sum, dgamma, Vb_sum;
   long n_summed, max_hist, n_occupied;
-  static long been_warned = 0;
   double Qrp, VbImagFactor, Q;
   double tmean;
   long deltaPass;

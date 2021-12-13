@@ -868,7 +868,6 @@ long get_sdds_particles(double ***particle,
         }
         if (!check_sdds_column(&SDDS_input, "p", "m$be$nc")) {
           if (check_sdds_column(&SDDS_input, "p", NULL)) {
-            char warningText[2048];
             printWarning("Column p in file given to sdds_beam has no units.", inputFile[inputFileIndex]);
           } else
             bombElegantVA("Column p in file %s is missing or units are not recognized.",

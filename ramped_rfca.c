@@ -26,7 +26,6 @@ long ramped_rf_cavity(
     double P, gamma, beta, dgamma, phase, length, volt;
     double *coord, t, t0, omega, beta_i;
     long fixed_freq;
-    static long been_warned = 0;
     double dphase;
 #if DEBUG
     static SDDS_TABLE debugTable;

@@ -370,8 +370,15 @@ typedef struct {
 typedef struct {
   short active;
   char *elementName;
+  long elementOccurence;
   short ringMode;
 } CHANGE_START_SPEC;
+
+typedef struct {
+  short active;
+  char *elementName;
+  long elementOccurence;
+} CHANGE_END_SPEC;
 
 /* radiation integrals and related values.  See SLAC 1193. */
 typedef struct {
@@ -4132,7 +4139,7 @@ extern void extend_elem_list(ELEMENT_LIST **eptr);
 /* prototypes for get_beamline5.c: */
 extern void show_elem(ELEMENT_LIST *eptr, long type);
 extern LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long backtrack,
-                                 CHANGE_START_SPEC *css);
+                               CHANGE_START_SPEC *css, CHANGE_END_SPEC *ces);
 extern double compute_end_positions(LINE_LIST *lptr) ;
 extern void show_elem(ELEMENT_LIST *eptr, long type);
 extern void free_elements(ELEMENT_LIST *elemlist);

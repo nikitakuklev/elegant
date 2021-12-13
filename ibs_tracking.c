@@ -51,7 +51,7 @@ void track_IBS(double **part0, long np0, ELEMENT_LIST *eptr, double Po,
   double aveCoord[6], S[6][6];
   double betax0, alphax0, betay0, alphay0;
   double randomNumber;
-  double RNSigma[3], RNSigmaCheck[3]={0,0,0};
+  double RNSigma[3];
   double bLength=0, tLength, zRate[3];
   double eta[4];
   IBSCATTER *IBS;
@@ -451,7 +451,7 @@ void track_IBS(double **part0, long np0, ELEMENT_LIST *eptr, double Po,
             bombElegant("index array is NULL in track_IBS. Seek professional help!", NULL);
           for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
             if (RNSigma[ihcoord]) {
-              RNSigmaCheck[ihcoord] = 0;
+              /* RNSigmaCheck[ihcoord] = 0; */
               for (ipart=istart; ipart<iend; ipart++) {
                 randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
                 part[index[ipart]][icoord] += randomNumber;

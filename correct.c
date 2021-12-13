@@ -3948,7 +3948,7 @@ long global_coupled_trajcor
       fputc('\n', stdout);
     } else if (n_part==0) {
       /* This actually should never happen given the tracking flags */
-      printf("Beam lost before end of beamline during trajectory correction (flags=%x)\n", tracking_flags);
+      printf("Beam lost before end of beamline during trajectory correction (flags=%lx)\n", tracking_flags);
       for (i=0; i<beamline->n_elems+1; i++)
 	if (traj[i].n_part==0)
 	  break;

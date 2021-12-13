@@ -320,7 +320,6 @@ long trackRfCavityWithWakes
     double P, gamma, gamma1, dgamma=0.0, dgammaMax=0.0, phase, length, dtLight, volt, To;
     double *coord, t, t0, omega, beta_i, tau, dt, tAve=0, dgammaAve=0;
     long useSRSModel = 0;
-    static long been_warned = 0;
     double dgammaOverGammaAve = 0;
     long dgammaOverGammaNp = 0;
     long lockPhase = 0;
@@ -1054,7 +1053,6 @@ long track_through_rfcw
   }
 #endif /* HAVE_GPU */
 
-  static long warned = 0;
   if (rfcw->cellLength<=0) 
     bombElegant("invalid cell length for RFCW", NULL);
   if (rfcw->length==0)

@@ -32,6 +32,12 @@
 #namelist change_start static,struct
           STRING element_name = NULL;
           long ring_mode = 0;
+          long element_occurence = 1;
+#end
+
+#namelist change_end static,struct
+          STRING element_name = NULL;
+          long element_occurence = 1;
 #end
 
 #namelist run_setup static

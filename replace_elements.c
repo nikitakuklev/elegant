@@ -102,7 +102,7 @@ void do_replace_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     delElem.occur[i] =  occurrence[i];
   }
 
-  beamline = get_beamline(NULL, beamline->name, run->p_central, 0, 0, NULL);
+  beamline = get_beamline(NULL, beamline->name, run->p_central, 0, 0, NULL, NULL);
   delete_elem_flag = 0;
 
   return;

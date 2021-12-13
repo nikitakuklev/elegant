@@ -321,9 +321,9 @@ VMATRIX *compute_periodic_twiss(
   for (i=0; i<4; i+=2 ) {
     if (fabs(cos_phi = (R[i][i] + R[i+1][i+1])/2)>1) {
       if (i==0)
-        printWarning("Beamline unstable for x plane.", "Can't match beta functions.");
+        printWarning((char*)"Beamline unstable for x plane.", (char*)"Can't match beta functions.");
       else
-        printWarning("Beamline unstable for y plane.", "Can't match beta functions.");
+        printWarning((char*)"Beamline unstable for y plane.", (char*)"Can't match beta functions.");
       *unstable |= (i==0?1:2);
       sin_phi = 1e-6;
     }
@@ -671,7 +671,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
         if ((sin_dphi=S[plane]/sqrt(beta[plane]*func[0]))>1) {
           if (asinWarning>0) {
             asinWarning--;
-            printWarning("Argument of asin() is >1 when propagating twiss parameters", NULL);
+            printWarning((char*)"Argument of asin() is >1 when propagating twiss parameters", NULL);
             printf((char*)"Argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
             printf((char*)"element is %s at z=%em\n", elem->name, elem->end_pos);
             printf((char*)"%c-plane matrix:  C = %e,  S = %e,  ",
@@ -686,7 +686,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
         else if (sin_dphi<-1) {
           if (asinWarning>0) {
             asinWarning--;
-            printWarning("Argument of asin() is < -1 when propagating twiss parameters", NULL);
+            printWarning((char*)"Argument of asin() is < -1 when propagating twiss parameters", NULL);
             printf((char*)"Argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
             printf((char*)"element is %s at z=%em\n", elem->name, elem->end_pos);
             printf((char*)"%c-plane matrix:  C = %e,  S = %e,  ",
@@ -3499,7 +3499,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         snprintf(warningBuffer, 1024, 
                  "Reducing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le.",
 		tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
-        printWarning("The amplitude you specified for tune shift with amplitude is too large.", 
+        printWarning((char*)"The amplitude you specified for tune shift with amplitude is too large.", 
                      warningBuffer);
 	if (tries==0) 
 	  tries = 1;   /* ensures we don't exit on amplitude too large */
@@ -3888,7 +3888,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		       TEST_PARTICLES+(allowLosses?TEST_PARTICLE_LOSSES:0)+TIME_DEPENDENCE_OFF, 
                        nPeriods, i-1+turnOffset, NULL, NULL, NULL, NULL, NULL)) {
 	if (!allowLosses)
-          printWarning("Test particle lost when computing tunes from tracking", NULL);
+          printWarning((char*)"Test particle lost when computing tunes from tracking", NULL);
         return 0;
       }
     }
@@ -3896,7 +3896,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
         isnan(oneParticle[0][2]) || isnan(oneParticle[0][3]) ||
         isnan(oneParticle[0][4]) || isnan(oneParticle[0][5])) {
       if (!allowLosses)
-        printWarning("Test particle lost when computing tunes from tracking", NULL);
+        printWarning((char*)"Test particle lost when computing tunes from tracking", NULL);
       return 0;
     }
     x[i] = oneParticle[0][0];

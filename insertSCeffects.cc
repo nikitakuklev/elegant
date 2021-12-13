@@ -164,8 +164,8 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     sc->horizontal = horizontal;
 
   if (longitudinal) 
-    printWarning("The longitudinal space-charge effect is not implemented by SCMULT.", 
-                 "Consider using LSCDRIFT elements.");
+    printWarning((char*)"The longitudinal space-charge effect is not implemented by SCMULT.", 
+                 (char*)"Consider using LSCDRIFT elements.");
 
   if (uniform_distribution)
     sc->uniform = 1;

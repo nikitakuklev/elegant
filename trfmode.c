@@ -48,7 +48,6 @@ void track_through_trfmode(
   double Px, Py, Pz;
   double Q, Qrp;
   long n_binned, firstBin, lastBin;
-  static long been_warned = 0;
 #ifdef DEBUG
   static FILE *fpdeb = NULL;
   static long debugPass = 0;
@@ -627,7 +626,6 @@ void runBinlessTrfMode(
   double Q, Qrp;
   double x, y;
   double VxMax, VxRealMax, VyMax, VyRealMax;
-  static long been_warned = 0;
   /* static long called = 0; */
 #if DEBUG
   static FILE *fpdeb = NULL;

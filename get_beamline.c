@@ -90,7 +90,7 @@ void freeInputObjects()
 #define MAX_LINE_LENGTH 128*16384 
 #define MAX_FILE_NESTING 10
 LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long backtrack, 
-                        CHANGE_START_SPEC *changeStart)
+                        CHANGE_START_SPEC *changeStart, CHANGE_END_SPEC *changeEnd)
 {
   long type=0, i;
   long iMad;
@@ -550,15 +550,21 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 
   if (changeStart && changeStart->active) {
     /* change the starting element */
-    ELEMENT_LIST *eptrMiddle, *eptrEnd, *eptrBegin;
+    ELEMENT_LIST *eptrMiddle, *eptrEnd, *eptrBegin, *eptrLastMatch;
+    long countDown = changeStart->elementOccurence;
     eptrMiddle = eptrBegin = lptr->elem;
+    eptrLastMatch = NULL;
     while (eptrMiddle) {
-      if (strcmp(eptrMiddle->name, changeStart->elementName)==0) 
-        break;
+      if (strcmp(eptrMiddle->name, changeStart->elementName)==0)  {
+        eptrLastMatch = eptrMiddle;
+        if ((--countDown)==0)
+          break;
+      }
       eptrMiddle = eptrMiddle->succ;
     }
+    eptrMiddle = eptrLastMatch;
     if (!eptrMiddle)
-      bombElegantVA("Couldn't find element %s for &change_start\n", changeStart->elementName);
+      bombElegantVA("Couldn't find element %s#%ld for &change_start\n", changeStart->elementName, changeStart->elementOccurence);
     if (changeStart->ringMode) {
       /* If ring mode, put all elements before the new start onto the end of the beamline */
       /* find the last element */
@@ -581,6 +587,29 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     lptr->elem = eptrMiddle;
   }
 
+  if (changeEnd && changeEnd->active) {
+    /* change the final element */
+    ELEMENT_LIST *eptrEnd, *eptrLastMatch;
+    long countDown = changeEnd->elementOccurence;
+    eptrEnd = lptr->elem;
+    eptrLastMatch = NULL;
+    while (eptrEnd) {
+      if (strcmp(eptrEnd->name, changeEnd->elementName)==0)  {
+        eptrLastMatch = eptrEnd;
+        if ((--countDown)==0)
+          break;
+      }
+      eptrEnd = eptrEnd->succ;
+    }
+    eptrEnd = eptrLastMatch;
+    if (!eptrEnd)
+      bombElegantVA("Couldn't find element %s#%ld for &change_end\n", changeStart->elementName, changeEnd->elementOccurence);
+    if (eptrEnd->succ) {
+      free_elements(eptrEnd->succ);
+      eptrEnd->succ = NULL;
+    }
+  }
+  
   /* go through and do some basic initialization for each element */
   eptr = lptr->elem;
   totalElements = 0;
