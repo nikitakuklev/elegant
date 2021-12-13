@@ -565,6 +565,25 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     eptrMiddle = eptrLastMatch;
     if (!eptrMiddle)
       bombElegantVA("Couldn't find element %s#%ld for &change_start\n", changeStart->elementName, changeStart->elementOccurence);
+    if (changeStart->deltaPosition>0) {
+      long countDown = changeStart->deltaPosition;
+      while (countDown--) {
+        if (eptrMiddle->succ)
+          eptrMiddle = eptrMiddle->succ;
+        else
+          bombElegantVA("Couldn't offset start position as requested by %ld positions due to end of beamline", 
+                        changeStart->deltaPosition);
+      }
+    } else if (changeStart->deltaPosition<0) {
+      long countDown = -changeStart->deltaPosition;
+      while (countDown--) {
+        if (eptrMiddle->pred)
+          eptrMiddle = eptrMiddle->pred;
+        else
+          bombElegantVA("Couldn't offset start position as requested by %ld positions due to end of beamline", 
+                        changeStart->deltaPosition);
+      }
+    }
     if (changeStart->ringMode) {
       /* If ring mode, put all elements before the new start onto the end of the beamline */
       /* find the last element */
@@ -603,7 +622,26 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     }
     eptrEnd = eptrLastMatch;
     if (!eptrEnd)
-      bombElegantVA("Couldn't find element %s#%ld for &change_end\n", changeStart->elementName, changeEnd->elementOccurence);
+      bombElegantVA("Couldn't find element %s#%ld for &change_end\n", changeEnd->elementName, changeEnd->elementOccurence);
+    if (changeEnd->deltaPosition>0) {
+      long countDown = changeEnd->deltaPosition;
+      while (countDown--) {
+        if (eptrEnd->succ)
+          eptrEnd = eptrEnd->succ;
+        else
+          bombElegantVA("Couldn't offset end position as requested by %ld positions due to end of beamline", 
+                        changeEnd->deltaPosition);
+      }
+    } else if (changeEnd->deltaPosition<0) {
+      long countDown = -changeEnd->deltaPosition;
+      while (countDown--) {
+        if (eptrEnd->pred)
+          eptrEnd = eptrEnd->pred;
+        else
+          bombElegantVA("Couldn't offset end position as requested by %ld positions due to end of beamline", 
+                        changeEnd->deltaPosition);
+      }
+    }
     if (eptrEnd->succ) {
       free_elements(eptrEnd->succ);
       eptrEnd->succ = NULL;

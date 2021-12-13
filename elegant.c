@@ -3198,6 +3198,7 @@ void process_change_start(NAMELIST_TEXT *nltext, CHANGE_START_SPEC *css)
   css->elementName = change_start_struct.element_name;
   css->ringMode = change_start_struct.ring_mode;
   css->elementOccurence = change_start_struct.element_occurence;
+  css->deltaPosition = change_start_struct.delta_position;
 }
 
 void process_change_end(NAMELIST_TEXT *nltext, CHANGE_END_SPEC *ces)
@@ -3214,6 +3215,7 @@ void process_change_end(NAMELIST_TEXT *nltext, CHANGE_END_SPEC *ces)
   ces->active = 1;
   ces->elementName = change_end_struct.element_name;
   ces->elementOccurence = change_end_struct.element_occurence;
+  ces->deltaPosition = change_end_struct.delta_position;
 }
 
 void manageSemaphoreFiles(char *semaphore_file, char *rootname, char *semaphoreFile[3])

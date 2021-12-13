@@ -370,14 +370,14 @@ typedef struct {
 typedef struct {
   short active;
   char *elementName;
-  long elementOccurence;
+  long elementOccurence, deltaPosition;
   short ringMode;
 } CHANGE_START_SPEC;
 
 typedef struct {
   short active;
   char *elementName;
-  long elementOccurence;
+  long elementOccurence, deltaPosition;
 } CHANGE_END_SPEC;
 
 /* radiation integrals and related values.  See SLAC 1193. */

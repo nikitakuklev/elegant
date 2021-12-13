@@ -33,11 +33,13 @@
           STRING element_name = NULL;
           long ring_mode = 0;
           long element_occurence = 1;
+          long delta_position = 0;
 #end
 
 #namelist change_end static,struct
           STRING element_name = NULL;
           long element_occurence = 1;
+          long delta_position = 0;
 #end
 
 #namelist run_setup static
