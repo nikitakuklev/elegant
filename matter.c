@@ -342,7 +342,6 @@ double solveBremsstrahlungCDF(double F)
  */
 {
   static double dy, y0=BS_Y0;
-  static long beenWarned = 0;
   double y;
   long nf = 1000, i, code;
   
@@ -365,10 +364,7 @@ double solveBremsstrahlungCDF(double F)
   if (code==1) {
     y = y0*exp(y);
   } else {
-    if (!beenWarned)  {
-      beenWarned = 1; 
-      printf("*** Warning: interpolation problem for bremsstrahlung.\n");
-    }
+    printWarningForTracking("Interpolation problem for bremsstrahlung.", NULL);
     y = y0;
   }
   return y;

@@ -116,9 +116,8 @@ void setup_sdds_beam(
   if (prebunched!=-1) {
     track_pages_separately = prebunched;
     prebunched = -1;
-    printf("***\n");
-    printf("*** WARNING: the prebunched qualifier is deprecated and may be ignored in future versions. Use track_pages_separately instead.\n");
-    printf("***\n");
+    printWarning("The prebunched qualifier of sdds_beam is deprecated and may be ignored in future versions.",
+                 "Use track_pages_separately instead.");
   }
 
   /* check for validity of namelist inputs */
@@ -168,13 +167,6 @@ void setup_sdds_beam(
     bombElegant("either sample_fraction or sample_interval must be 1", NULL);
   if (save_initial_coordinates && !reuse_bunch)
     save_initial_coordinates = 0;
-/*
-  if (reuse_bunch && inputFiles!=1) {
-    printf("*** Warning: reuse_bunch=1 with several input files.  Only the first file will be used.\n");
-    while (inputFiles>1) 
-      free(inputFile[--inputFiles]);
-  }
-*/
   
   beam->original = beam->particle = beam->accepted = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
@@ -224,8 +216,8 @@ long new_sdds_beam(
     if (beam->original==NULL)
       bombElegant("can't retrack with previous bunch--there isn't one!", NULL);
     if (n_particles_per_ring!=1) {
-      fputs("Warning: can't do retracking with previous bunch when n_particles_per_ring!=1\n", stdout);
-      fputs("Will use a new bunch generated from previously read data.\n", stdout);
+      printWarning("Can't do retracking with previous bunch when n_particles_per_ring!=1.", 
+                   "Will use a new bunch generated from previously read data.");
       generate_new_bunch = 1;
     }
     else
@@ -836,10 +828,12 @@ long get_sdds_particles(double ***particle,
       input_initialized = 1;
 
       if (selection_parameter) {
-        if ((i=SDDS_GetParameterIndex(&SDDS_input, selection_parameter))<0)
-          printf("warning: SDDS beam file %s does not contain the selection parameter %s\n",
+        if ((i=SDDS_GetParameterIndex(&SDDS_input, selection_parameter))<0) {
+          sprintf(s, "SDDS beam file %s does not contain selection parameter %s", 
                   inputFile[inputFileIndex], selection_parameter);
-        fflush(stdout);
+          SDDS_SetError(s);
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
         if (SDDS_GetParameterType(&SDDS_input, i)!=SDDS_STRING) {
           sprintf(s, "SDDS beam file %s contains parameter %s, but parameter is not a string", 
                   inputFile[inputFileIndex], selection_parameter);
@@ -867,17 +861,19 @@ long get_sdds_particles(double ***particle,
             !check_sdds_column(&SDDS_input, "yp", NULL) ||
             !check_sdds_column(&SDDS_input, "t", "s")) {
           printf(
-                  "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in %s\n", 
+                  "necessary data quantities (x, x', y, y', t) have the wrong units or are not present in %s\n", 
                   inputFile[inputFileIndex]);
           fflush(stdout);
           exitElegant(1);
         }
         if (!check_sdds_column(&SDDS_input, "p", "m$be$nc")) {
           if (check_sdds_column(&SDDS_input, "p", NULL)) {
-            printf("Warning: p has no units.  Expected m$be$nc\n");
-            fflush(stdout);
-          }
-        }
+            char warningText[2048];
+            printWarning("Column p in file given to sdds_beam has no units.", inputFile[inputFileIndex]);
+          } else
+            bombElegantVA("Column p in file %s is missing or units are not recognized.",
+                          inputFile[inputFileIndex]);
+        } 
       }
       printf("File %s opened and checked.\n", inputFile[inputFileIndex]);
       fflush(stdout);

@@ -5,6 +5,7 @@ static long warnings = 0;
 static char **warningText = NULL;
 static long *warningCount = NULL;
 static FILE *fpWarn = NULL;
+static htab *hash_table = NULL;
 
 void setWarningFilePointer(FILE *fp)
 {
@@ -20,49 +21,65 @@ void printWarningForTracking(char *text, char *detail)
 /* extracts element info from tracking context */
 {
   TRACKING_CONTEXT trackingContext;
+  char warningBuffer[1024];
   getTrackingContext(&trackingContext);
-  if (!strlen(trackingContext.elementName) || trackingContext.elementOccurrence || !trackingContext.element)
+  if (!strlen(trackingContext.elementName) || !trackingContext.elementOccurrence || !trackingContext.element)
     printWarning(text, detail);
-  printWarningWithContext(entity_name[trackingContext.element->type], trackingContext.elementName,
-                          text, detail);
+  else {
+    snprintf(warningBuffer, 1024, "%s#%ld", trackingContext.elementName, trackingContext.elementOccurrence);
+    printWarningWithContext(entity_name[trackingContext.element->type], warningBuffer, 
+                            text, detail);
+  }
 }
 
 void printWarningWithContext(char *context1, char  *context2, char *text,  char *detail)
 {
-  long i;
-  char buffer[32768];
-  for (i=0; i<warnings; i++) 
-    if (strcmp(warningText[i], text)==0)
-      break;
-  if (i==warnings)  {
+  long *counterPtr;
+
+  if (!hash_table)
+    hash_table = hcreate(12);
+  if (hcount(hash_table)==0 ||
+      hfind(hash_table, text, strlen(text))==FALSE) {
     if (!(warningText = SDDS_Realloc(warningText, sizeof(*warningText)*(warnings+1))))
       bombElegant("Memory allocation error in printWarning\n", NULL);
     if (!(warningCount = SDDS_Realloc(warningCount, sizeof(*warningCount)*(warnings+1))))
       bombElegant("Memory allocation error in printWarning\n", NULL);
     cp_str(&warningText[warnings], text);
     warningCount[warnings] = 1;
+    counterPtr = &warningCount[warnings];
+    hadd(hash_table, warningText[warnings], strlen(warningText[warnings]), 
+         (void*)&warningCount[warnings]);
     warnings++;
-  } else 
-    warningCount[i] += 1;
+  } else {
+    counterPtr = hstuff(hash_table);
+    *counterPtr += 1;
+  }
 
   if (!fpWarn)
     fpWarn = stdout;
-  if (context1 && strlen(context1)) {
-    if (context2 && strlen(context2))
-      /* context1 is typically the element type name, context2 is typically the element name */
-      snprintf(buffer, 32768, "%s %s: %s", context1, context2, detail);
-    else
-      /* context1 is typically the command name or subroutine name */
-      snprintf(buffer, 32768, "%s: %s", context1, detail);
-  }
-  else
-    strncpy(buffer, text, 32768);
-  if (warningCount[i]<=warningCountLimit) {
-    if (detail && strlen(detail))
-      fprintf(fpWarn, "*** Warning: %s---%s\n", buffer, detail);
-    else
-      fprintf(fpWarn, "*** Warning: %s\n", buffer);
-    if (warningCount[i]==warningCountLimit)
+  if ((*counterPtr)<=warningCountLimit) {
+    fprintf(fpWarn, "*** Warning: %s", text);
+    if (context1 && strlen(context1)) {
+      if (context2 && strlen(context2)) {
+        /* context1 is typically the element type name, context2 is typically the element name */
+        if (detail && strlen(detail))
+          fprintf(fpWarn, " --- %s %s: %s\n", context1, context2, detail);
+        else 
+          fprintf(fpWarn, " --- %s %s\n", context1, context2);
+      } else {
+        /* context1 is typically the command name or subroutine name */
+        if (detail && strlen(detail))
+          fprintf(fpWarn, " --- %s: %s\n", context1, detail);
+        else
+          fprintf(fpWarn, " --- %s\n", context1);
+      }
+    } else {
+      if (detail && strlen(detail))
+        fprintf(fpWarn, " --- %s\n", detail);
+      else
+        fprintf(fpWarn, "\n");
+    }
+    if ((*counterPtr)==warningCountLimit)
       fprintf(fpWarn, "Further warnings of this type will be suppressed.\n");
     fflush(fpWarn);
   }
@@ -75,7 +92,6 @@ void summarizeWarnings()
     fpWarn = stdout;
   if (warnings) {
     fprintf(fpWarn, "\n************************** Summary of warnings ****************************\n");
-    fprintf(fpWarn, "*** NB: the warning summary is still in development and covers only some warnings.\n\n");
     fprintf(fpWarn, "%ld types of warnings were recorded:\n", warnings);
     for (i=0; i<warnings; i++) {
       fprintf(fpWarn, "%ld* %s\n",
@@ -84,9 +100,12 @@ void summarizeWarnings()
       warningCount[i] = 0;
       warningText[i] = NULL;
     }
-    fprintf(fpWarn, "\n*** NB: the warning summary is still in development and covers only some warnings.\n");
     fprintf(fpWarn, "*****************************************************************************\n\n");
 
     warnings = 0;
+    hdestroy(hash_table);
+    hash_table = NULL;
+    free(warningText);
+    free(warningCount);
   }
 }

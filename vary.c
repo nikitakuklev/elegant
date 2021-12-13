@@ -150,11 +150,12 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
                enumeration_file);
         fflush(stdout);
         if (_control->index_limit[index_number]) {
-            printf("Warning: the limit for index %ld is specified more than once.\nThe lowest-valued specification is used.\n", index_number);
-            fflush(stdout);
-            if (index_limit>_control->index_limit[index_number])
-                index_limit = _control->index_limit[index_number];
-            }
+          char warningBuffer[1024];
+          snprintf(warningBuffer, 1024, "The lowest-valued specification for index %ld will be used.", index_number);
+          printWarning("The limit for an index is specified more than once.", warningBuffer);
+          if (index_limit>_control->index_limit[index_number])
+            index_limit = _control->index_limit[index_number];
+        }
         initial = _control->enumerated_value[n_elements_to_vary][0];
         _control->index_limit[index_number] = index_limit;
         }
@@ -164,11 +165,12 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
                 _control->index_limit[index_number] = index_limit;
             }
         else if (index_limit>0) {
-            printf("Warning: the limit for index %ld is specified more than once.\nThe first specification is used.\n",
-                   index_number);
-            fflush(stdout);
-            }
+          char warningBuffer[1024];
+          snprintf(warningBuffer, 1024, "The first-given specification for index %ld will be used.", index_number);
+          printWarning("The limit for an index is specified more than once.", warningBuffer);
+          fflush(stdout);
         }
+    }
 
     if (name==NULL)
         bombElegant("element name missing in vary_element namelist", NULL);

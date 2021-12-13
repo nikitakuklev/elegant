@@ -53,19 +53,13 @@ int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double 
 
 int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta)
 {
-  static short warningCounter = 100;
   if (expandHamiltonian) {
     *xp = qx/(1+delta);
     *yp = qy/(1+delta);
   } else {
     double denom;
     if ((denom=sqr(1+delta)-sqr(qx)-sqr(qy))<=0) {
-      if (warningCounter) {
-        printf("Warning: particle acquired undefined slopes when integrating through kick multipole\n");
-        if (--warningCounter==0)
-          printf("         No further warnings of this type will be issued.\n");
-        fflush(stdout);
-      }
+      printWarningForTracking("Particle acquired undefined slopes when integrating through kick multipole.", NULL);
       return 0;
     }
     denom = sqrt(denom);
@@ -133,6 +127,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   char buffer[1024];
   short anCheck, bnCheck, normalCheck, skewCheck;
   long index;
+  char warningBuffer[1024];
 
   if (!multFile || !strlen(multFile)) {
     multData->orders = 0;
@@ -146,6 +141,8 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     return;
   }
   cp_str(&(multData->filename), multFile);
+  snprintf(warningBuffer, 1024, "File is %s", multFile);
+
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, multFile)) {
     printf("Problem opening file %s\n", multFile);
     fflush(stdout);
@@ -164,7 +161,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     exitElegant(1);
   }
   if (anCheck && normalCheck) {
-    printf("*** Warning: multipole file %s has both \"an\" and \"normal\" columns. \"normal\" used.\n", multFile);
+    printWarningForTracking("Multipole file has both \"an\" and \"normal\" columns. \"normal\" used.", warningBuffer);
     anCheck = 0;
   }
 
@@ -176,14 +173,13 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
       exitElegant(1);
     }
     if (bnCheck && skewCheck) {
-      printf("*** Warning: multipole file %s has both \"bn\" and \"skew\" columns. \"skew\" used.\n", multFile);
+      printWarningForTracking("Multipole file has both \"bn\" and \"skew\" columns. \"skew\" used.", warningBuffer);
       bnCheck = 0;
     }
   } else {
     if (bnCheck || skewCheck) {
-      printf("*** Warning: Steering multipole file %s has systematic bn or skew columns, which is ignored.\n",
-            multFile);
-      fflush(stdout);
+      printWarningForTracking("Steering multipole file%s has systematic bn or skew columns, which are ignored.",
+                              warningBuffer);
     }
   }
   
@@ -194,9 +190,9 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     exitElegant(1);
   }
   if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
-    printf("Warning: no data in multipole file %s\n", multFile);
-    fflush(stdout);
+    printWarningForTracking("No rows of data in multipole file.", warningBuffer);
     SDDS_Terminate(&SDDSin);
+    return;
   }
   if (!SDDS_GetParameterAsDouble(&SDDSin, "referenceRadius", &multData->referenceRadius) ||
       !(multData->order=SDDS_GetColumnInLong(&SDDSin, "order")) ||
@@ -235,9 +231,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     }
   }
   if (SDDS_ReadPage(&SDDSin)==2) {
-    printf("Warning: multipole file %s has multiple pages, which are ignored\n",
-            multFile);
-    fflush(stdout);
+    printWarningForTracking("Multipole file has multiple pages, which are ignored.", warningBuffer);
   }
   SDDS_Terminate(&SDDSin);
   if (steering==1) {
@@ -320,7 +314,7 @@ void fillPowerArray(double x, double *xpow, long order)
 void initialize_fmultipole(FMULT *multipole)
 {
   SDDS_DATASET SDDSin;
-  char buffer[1024];
+  char buffer[1024], warningBuffer[1024];
   MULTIPOLE_DATA *multData;
   
   multData = &(multipole->multData);
@@ -339,14 +333,14 @@ void initialize_fmultipole(FMULT *multipole)
       SDDS_CheckColumn(&SDDSin, "JnL", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK)
     bombTracking("problems with data in FMULT input file");
   if (SDDS_ReadPage(&SDDSin)!=1)  {
-    sprintf(buffer, "Problem reading FMULT file %s\n", multipole->filename);
+    snprintf(buffer, 1024, "Problem reading FMULT file %s\n", multipole->filename);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
   }
+  snprintf(warningBuffer, 1024, "File is %s.", multipole->filename);
   if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
-    printf("Warning: no data in FMULT file %s\n", multipole->filename);
-    fflush(stdout);
+    printWarningForTracking("No data in FMULT file.", warningBuffer);
     SDDS_Terminate(&SDDSin);
     return;
   }
@@ -354,16 +348,13 @@ void initialize_fmultipole(FMULT *multipole)
   if (!(multData->order=SDDS_GetColumnInLong(&SDDSin, "order")) ||
       !(multData->KnL=SDDS_GetColumnInDoubles(&SDDSin, "KnL")) ||
       !(multData->JnL=SDDS_GetColumnInDoubles(&SDDSin, "JnL"))) {
-    sprintf(buffer, "Unable to read data for FMULT file %s\n", multipole->filename);
+    snprintf(buffer, 1024, "Unable to read data for FMULT file %s\n", multipole->filename);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
   }    
-  if (SDDS_ReadPage(&SDDSin)==2) {
-    printf("Warning: FMULT file %s has multiple pages, which are ignored\n",
-            multipole->filename);
-    fflush(stdout);
-  }
+  if (SDDS_ReadPage(&SDDSin)==2)
+    printWarningForTracking("FMULT file has multiple pages, which are ignored.", warningBuffer);
   SDDS_Terminate(&SDDSin);
   multData->initialized = 1;
 }
@@ -785,7 +776,6 @@ long multipole_tracking2(
   KSEXT *ksext;
   KQUSE *kquse;
   KOCT *koct;
-  static long sextWarning = 0, quadWarning = 0, octWarning = 0, quseWarning = 0;
   double lEffective = -1, lEnd = 0;
   short doEndDrift = 0, malignMethod;
   
@@ -859,10 +849,8 @@ long multipole_tracking2(
       isr_coef *= -1;
     if (kquad->length<1e-6 && (kquad->isr || kquad->synch_rad)) {
       rad_coef = isr_coef = 0;  /* avoid unphysical results */
-      if (!quadWarning) {
-        printf("**** Warning: one or more quadrupoles with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
-	quadWarning = 1;
-      }
+      printWarningForTracking("Quadrupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.",
+                              NULL);
     }
     if (!kquad->multipolesInitialized) {
       /* read the data files for the error multipoles */
@@ -933,10 +921,8 @@ long multipole_tracking2(
       isr_coef *= -1;
     if (ksext->length<1e-6 && (ksext->isr || ksext->synch_rad)) {
       rad_coef = isr_coef = 0;  /* avoid unphysical results */
-      if (!sextWarning) {
-        printf("**** Warning: one or more sextupoles with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
-	sextWarning = 1;
-      }
+      printWarningForTracking("Sextupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.",
+                              NULL);
     }
     if (!ksext->multipolesInitialized) {
       /* read the data files for the error multipoles */
@@ -996,10 +982,8 @@ long multipole_tracking2(
       isr_coef *= -1;
     if (koct->length<1e-6 && (koct->isr || koct->synch_rad)) {
       rad_coef = isr_coef = 0;  /* avoid unphysical results */
-      if (!octWarning) {
-        printf("**** Warning: one or more octupoles with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
-	octWarning = 1;
-      }
+      printWarningForTracking("Octupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.", 
+                              NULL);
     }
     if (!koct->multipolesInitialized) {
       /* read the data files for the error multipoles */
@@ -1048,10 +1032,7 @@ long multipole_tracking2(
       isr_coef *= -1;
     if (kquse->length<1e-6 && (kquse->isr || kquse->synch_rad)) {
       rad_coef = isr_coef = 0;  /* avoid unphysical results */
-      if (!quseWarning) {
-        printf("**** Warning: one or more KQUSE's with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
-	quseWarning = 1;
-      }
+      printWarningForTracking("KQUSE with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.", NULL);
     }
     KnL[1] = kquse->k2*kquse->length*(1+kquse->fse2);
     order[1] = 2;

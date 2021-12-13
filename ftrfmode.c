@@ -249,7 +249,7 @@ void track_through_ftrfmode(
 #if USE_MPI
       if (myid==0)
 #endif
-        printf("Warning: time range overlap between buckets\n");
+        printWarning("Time range overlap between buckets for FTRFMODE", "Consider using fewer bins or smaller bins");
     }
     last_tmax = tmax;
 
@@ -381,8 +381,6 @@ void track_through_ftrfmode(
           t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
           if (t<trfmode->last_t) {
             trfmode->last_t = t;
-            /*  printf("*** Warning: reference time reset for FTRFMODE.  Should only happen once per step.\n");
-                fflush(stdout); */
           }            
           omega = trfmode->omega[imode];
           Q = trfmode->Q[imode]/(1+trfmode->beta[imode]);

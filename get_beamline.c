@@ -52,9 +52,12 @@ typedef struct input_object {
 static INPUT_OBJECT inputObject, *lastInputObject=NULL;
 
 /* All the quantities listed here must be double-precision values */
-#define N_TRANSMUTE_ITEMS 22
+#define N_TRANSMUTE_ITEMS 32
 static char *transmuteItems[N_TRANSMUTE_ITEMS] = {
-  "L", "K1", "K2", "K3", "ANGLE", "DX", "DY", "DZ", "TILT", "BORE", "E1", "E2", "H1", "H2", "FINT", "ETILT", "B1", "B2", "FSE", "HGAP", "X_MAX", "Y_MAX",
+  "L", "K1", "K2", "K3", "ANGLE", "DX", "DY", "DZ", "TILT", "BORE", 
+  "E1", "E2", "H1", "H2", "FINT", "ETILT", "B1", "B2", "FSE", "HGAP", "X_MAX", "Y_MAX", 
+  "I0P", "I1P", "I2P", "I3P", "LAMBDA2P", 
+  "I0M", "I1M", "I2M", "I3M", "LAMBDA2M", 
 };
 
 
@@ -158,7 +161,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             printf("reading file %s\n", ptr);
           }
           if (!(filename=findFileInSearchPath(ptr))) {
-            fprintf(stderr, "Unable to find file %s\n", ptr);
+            fprintf(stderr, "Error: unable to find file %s\n", ptr);
             exitElegant(1);
           }
           fp_mad[iMad] = fopen_e(filename, "r", 0);
@@ -168,8 +171,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
         strcpy_ss(t, s);
         if ((type = tell_type(s, elem))==T_NODEF) {
           if (!is_blank(s))
-            printf("warning: no recognized statement on line: %s\n", t);
-          fflush(stdout);
+            printWarning("no recognized statement on lattice file line", t);
           continue;
         }
 #ifdef DEBUG
@@ -195,11 +197,11 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
           fill_line(line, n_lines, elem, n_elems, s);
           addToInputObjectList((void*)lptr, 1);
           if (strchr(lptr->name, '#')) {
-            printf("The name %s is invalid for a beamline: # is a reserved character.\n", lptr->name);
+            printf("Error: the name %s is invalid for a beamline: # is a reserved character.\n", lptr->name);
             exitElegant(1);
           }
           if (check_duplic_elem(&elem, NULL, lptr->name, n_elems, NULL)) {
-            printf("line definition %s conflicts with element of same name\n", lptr->name);
+            printf("Error: line definition %s conflicts with element of same name\n", lptr->name);
             exitElegant(1);
           }
           check_duplic_line(line, lptr->name, n_lines+1, 0);
@@ -220,7 +222,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             strcpy_ss(s, t);
             copy_named_element(eptr, s, elem);
             if (strchr(eptr->name, '#')) {
-              printf("The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
+              printf("Error: the name %s is invalid for an element: # is a reserved character.\n", eptr->name);
               exitElegant(1);
             }
           }
@@ -234,7 +236,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             fill_elem(eptr, s, type, fp_mad[iMad]);
             addToInputObjectList((void*)eptr, 0);
             if (strchr(eptr->name, '#')) {
-              printf("The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
+              printf("Error: the name %s is invalid for an element: # is a reserved character.\n", eptr->name);
               exitElegant(1);
             }
             length = 0;
@@ -245,7 +247,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
               if (entity_description[eptr->type].flags&HAS_LENGTH) {
                 length = ((DRIFT*)eptr->p_elem)->length;
                 if (length && !(entity_description[newType].flags&HAS_LENGTH)) {
-                  fprintf(stderr, "error: can't transmute %s %s into %s---would change length of beamline\n",
+                  printf("Error: can't transmute %s %s into %s---would change length of beamline\n",
                           entity_name[eptr->type], eptr->name, 
                           entity_name[newType]);
                   exitElegant(1);
@@ -282,7 +284,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 	      eptr->ignore = 2;
 	    }
             if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
-              printf("element %s conflicts with line with same name\n", eptr->name);
+              printf("Error: element %s conflicts with line with same name\n", eptr->name);
               exitElegant(1);
             }
             check_duplic_elem(&elem, &eptr, NULL, n_elems, NULL);
@@ -298,7 +300,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       iMad--;
     }
     if (n_elems==0 || n_lines==0) {
-      printf("Insufficient (recognizable) data in file.\n");
+      printf("Error: insufficient (recognizable) data in file.\n");
       fflush(stdout);
       exitElegant(1);
     }
@@ -344,16 +346,15 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       s = getElemDefinition();
       if ((type = tell_type(s, elem))==T_NODEF) {
         if (!is_blank(s))
-          printf("warning: no recognized statement on line: %s\n", s);
-        fflush(stdout);
+          printWarning("no recognized statement on line", s);
       }
       fill_elem(eptr, s, type, NULL);
       if (strchr(eptr->name, '#')) {
-        printf("The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
+        printf("Error: the name %s is invalid for an element: # is a reserved character.\n", eptr->name);
         exitElegant(1);
       }
       if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
-        printf("element %s conflicts with line with same name\n", eptr->name);
+        printf("Error: element %s conflicts with line with same name\n", eptr->name);
         exitElegant(1);
       }
       if (check_duplic_elem(&elem, NULL, eptr->name, n_elems, &eptrExisting)) {
@@ -383,18 +384,17 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       s = getElemDefinition1();
       if ((type = tell_type(s, elem))==T_NODEF) {
         if (!is_blank(s))
-          printf("warning: no recognized statement on line: %s\n", s);
-        fflush(stdout);
+          printWarning("No recognized statement on line.", s);
       }
       fill_elem(eptr, s, type, NULL);
       if (strchr(eptr->name, '#')) {
-        printf("The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
+        printf("Error: the name %s is invalid for an element: # is a reserved character.\n", eptr->name);
         exitElegant(1);
       }
       /* This is mis spelled. Should be eptr_replace. */
       eptr_del = eptr;
       if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
-        printf("element %s conflicts with line with same name\n", eptr->name);
+        printf("Error: element %s conflicts with line with same name\n", eptr->name);
         exitElegant(1);
       }
       check_duplic_elem(&elem, &eptr, NULL, n_elems, NULL);
@@ -404,10 +404,11 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   
 
   if (type!=T_USE && use_beamline==NULL) {
+    char warningBuffer[1024];
     if (n_lines==0)
       bombElegant("no beam-line defined\n", NULL);
-    printf("no USE statement--will use line %s\n", lptr->name);
-    fflush(stdout);
+    snprintf(warningBuffer, 1024, "Will use line %s", lptr->name);
+    printWarning("No USE statement in lattice file", warningBuffer);
   }
   else {
     if (!use_beamline) {
@@ -423,8 +424,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       lptr = lptr->succ;
     }
     if (lptr==NULL) {
-      printf("no definition of beam-line %s\n", ptr);
-      fflush(stdout);
+      printf("Error: no definition of beam-line %s\n", ptr);
       exitElegant(1);
     }
     if (!use_beamline) {
@@ -529,7 +529,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   while (eptr) {
     if (eptr->ignore==2) {
       if (eptr->pred == NULL) {
-        printf("Warning: can't ignore the first element in the beamline (%s)\n", eptr->name);
+        printWarning("Can't ignore the first element in the beamline", eptr->name);
         eptr->ignore = 0;
         eptr = eptr->succ;
       } else {
@@ -597,7 +597,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     eptr = eptr->succ;
   }
 
-  /* Set up hash table to all computing occurrence numbers quickly */
+  /* Set up hash table to allow computing occurrence numbers quickly */
   occurence_htab = hcreate(12);
   occurenceCounter = tmalloc(sizeof(*occurenceCounter)*totalElements);
   uniqueElements = 0;
@@ -739,14 +739,11 @@ void create_load_hash(ELEMENT_LIST *elem)
   }
 }
 
-static long negativeLengthWarningsLeft = 100;
-
 double compute_end_positions(LINE_LIST *lptr) 
 {
     double z, l, theta, z_recirc;
     static ELEMENT_LIST *eptr;
     long i_elem, recircPresent;
-    static int edgeEffectsWarning = 0;
     CSBEND *csbend;
 
     /* use length data to establish z coordinates at end of each element */
@@ -772,12 +769,11 @@ double compute_end_positions(LINE_LIST *lptr)
             theta += ((NISEPT*)eptr->p_elem)->angle;
         else if (eptr->type==T_CSBEND) {
           csbend = (CSBEND*)eptr->p_elem;
-          if (!edgeEffectsWarning && 
-              csbend->edge_order>1 &&
+          if (csbend->edge_order>1 &&
               (csbend->edge_effects[0]==1 || csbend->edge_effects[1]==1 || 
                csbend->edge_effects[0]==2 || csbend->edge_effects[1]==2)) {
-            printWarning("Edge effects settings on CSBENDs may be non-optimal if symplecticity is important", "EDGE1_EFFECTS and EDGE2_EFFECTS should be 3 or 4 for symplectic tracking with nonlinear effects.");
-            edgeEffectsWarning = 1;
+            printWarning("CSBEND edge settings may be non-optimal if symplecticity is important", 
+                         "EDGE1_EFFECTS and EDGE2_EFFECTS should be 3 or 4 for symplectic tracking with nonlinear effects.");
           }
           theta += ((CSBEND*)eptr->p_elem)->angle;
         }
@@ -796,14 +792,12 @@ double compute_end_positions(LINE_LIST *lptr)
             z_recirc = z;
             recircPresent = 1;
             }
-        if ( ((!(lptr->flags&BEAMLINE_BACKTRACKING) && l<0) || (lptr->flags&BEAMLINE_BACKTRACKING && l>0)) &&
-	     negativeLengthWarningsLeft>0) {
-            printf("warning(1): element %s has negative length = %e\n", eptr->name,
-		   lptr->flags&BEAMLINE_BACKTRACKING?-l:l);
-            if (--negativeLengthWarningsLeft==0)
-              printf("Further negative length warnings will be suppressed.\n");
-            fflush(stdout);
-          }
+        if ( ((!(lptr->flags&BEAMLINE_BACKTRACKING) && l<0) || (lptr->flags&BEAMLINE_BACKTRACKING && l>0))) {
+          char warningText[1024];
+          snprintf(warningText, 1024, 
+                   "%s has length %le.", eptr->name, lptr->flags&BEAMLINE_BACKTRACKING?-l:l);
+          printWarning("Element has negative length.", warningText);
+        }
         eptr->end_pos = z + l;
         eptr->end_theta = theta ;
         z = eptr->end_pos;
@@ -1745,6 +1739,7 @@ void process_rename_request(char *s, char **name, long n_names)
 {
   long i;
   char *old, *new, *ptr;
+  char warningText[1024];
 
   log_entry("process_rename_request");
   if (!(ptr=strchr(s, '='))) 
@@ -1756,16 +1751,15 @@ void process_rename_request(char *s, char **name, long n_names)
     old++;
   str_toupper(trim_spaces(new = ptr));
   if (match_string(new, name, n_names, EXACT_MATCH)>=0) {
-    printf("error: can't rename to name %s--already exists\n", new);
-    fflush(stdout);
+    printf("Error: can't rename to name %s--already exists\n", new);
     exitElegant(1);
   }
   if ((i=match_string(old, name, n_names, EXACT_MATCH))<0) {
-    printf("error: can't rename %s to %s--%s not recognized\n", old, new, old);
-    fflush(stdout);
+    printf("Error: can't rename %s to %s--%s not recognized\n", old, new, old);
     exitElegant(1);
   }
-  printf("warning: element %s now known as %s\n", old, new);
+  snprintf(warningText, 1024, "%s is now known as %s", old, new);
+  printWarning("Element renaming can result in unexpected behavior.", warningText);
   fflush(stdout);
   cp_str(name+i, new);
   log_exit("process_rename_request");

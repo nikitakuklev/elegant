@@ -271,10 +271,11 @@ long applyElementModulations(MODULATION_DATA *modData, LINE_LIST *beamline, doub
 	     entity_description[modData->element[iMod]->type].parameter[modData->parameterNumber[iMod]].name,
 	     modData->unperturbedValue[iMod]);
       if (modData->unperturbedValue[iMod]==0 && modData->flags[iMod]&MULTIPLICATIVE_MOD) {
-	printf("***\7\7\7 warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
-	       modData->element[iMod]->name, 
-	       entity_description[modData->element[iMod]->type].parameter[modData->parameterNumber[iMod]].name);
-	fflush(stdout);
+        char buffer[1024];
+        snprintf(buffer, 1024, "Quantity is %s.%s. This may be an error.",
+                 modData->element[iMod]->name, 
+                 entity_description[modData->element[iMod]->type].parameter[modData->parameterNumber[iMod]].name);
+	printWarning("Multiplicative modulation specified but unperturbed value is zero.", buffer);
       }
     }
   }
@@ -323,15 +324,19 @@ long applyElementModulations(MODULATION_DATA *modData, LINE_LIST *beamline, doub
         jMod = modData->dataIndex[iMod];
       code = 1;
       if (t<=modData->timeData[jMod][0]) {
+        char buffer[16384];
         modulation = modData->modulationData[jMod][0];
-        fprintf(stderr, "Warning: interpolation at t=%21.15le below modulation table range [%21.15le, %21.15le] for element %s, parameter %s\n",
+        snprintf(buffer, 16384, "t=%21.15le is below modulation table range [%21.15le, %21.15le] for element %s, parameter %s\n",
                 t, modData->timeData[jMod][0], modData->timeData[jMod][modData->nData[jMod]-1], modData->element[jMod]->name,
                 entity_description[type].parameter[param].name);
+        printWarning("Interpolation below modulation table range.", buffer);
       } else if (t>=modData->timeData[jMod][modData->nData[jMod]-1]) {
+        char buffer[16384];
         modulation = modData->modulationData[jMod][modData->nData[jMod]-1];
-        fprintf(stderr, "Warning: interpolation at t=%21.15le above modulation table range [%21.15le, %21.15le] for element %s, parameter %s\n",
+        snprintf(buffer, 16384, "t=%21.15le is above modulation table range [%21.15le, %21.15le] for element %s, parameter %s\n",
                 t, modData->timeData[jMod][0], modData->timeData[jMod][modData->nData[jMod]-1], modData->element[jMod]->name,
                 entity_description[type].parameter[param].name);
+        printWarning("Interpolation above modulation table range.", buffer);
       } else
         modulation = interp(modData->modulationData[jMod], modData->timeData[jMod], modData->nData[jMod], t, 0, 1, &code);
       if (code==0) {

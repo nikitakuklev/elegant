@@ -767,11 +767,11 @@ long do_tracking(
 	    warnedAboutChargePosition = 1;
             if (eptr->pred && eptr->pred->name) {
               char buffer[16384];
-              snprintf(buffer, 16384, ". Preceeded by %s.", eptr->pred->name);
-              printWarning("CHARGE element is not at the start of the beamline", buffer);
+              snprintf(buffer, 16384, "Preceeded by %s.", eptr->pred->name);
+              printWarning("CHARGE element is not at the start of the beamline.", buffer);
             }
             else
-              printWarning("CHARGE element is not at the start of the beamline", ". Preceeded by ?.");
+              printWarning("CHARGE element is not at the start of the beamline.", "Preceeded by ?.");
 	  }
 	  if (charge!=NULL) {
 	    printf("Fatal error: multipole CHARGE elements in one beamline.\n");
@@ -907,7 +907,7 @@ long do_tracking(
       if (!USE_MPI || needSort)
 	if (nToTrackAtLastSort > nToTrack) {/* indicates more particles are lost, need sort */
           if (beam && beam->bunchFrequency!=0) 
-            printWarning("particle ID sort not being performed because bunch frequency is nonzero", NULL);
+            printWarning("particle ID sort not being performed because bunch frequency is nonzero.", NULL);
           else {
 #ifdef HAVE_GPU
             if (getElementOnGpu())
@@ -1306,10 +1306,10 @@ long do_tracking(
 		  warnedAboutChargePosition = 1;
                   if (eptr->pred && eptr->pred->name) {
                     char buffer[16384];
-                    snprintf(buffer, 16384, ". Preceeded by %s.", eptr->pred->name);
-                    printWarning("CHARGE element is not at the start of the beamline", buffer);
+                    snprintf(buffer, 16384, "Preceeded by %s.", eptr->pred->name);
+                    printWarning("CHARGE element is not at the start of the beamline.", buffer);
                   } else
-                    printWarning("CHARGE element is not at the start of the beamline", ". Preceeded by ?.");
+                    printWarning("CHARGE element is not at the start of the beamline.", "Preceeded by ?.");
 		}
 		if (charge!=NULL && !( ((CHARGE*)(eptr->p_elem))->allowChangeWhileRunning && charge==((CHARGE*)(eptr->p_elem)))) {
 		  printf("Fatal error: multiple CHARGE elements in one beamline.\n");
@@ -5849,7 +5849,7 @@ void applyBeamBeamKicks(double **part, long np, BEAMBEAM *bb, double P0)
       gaussianBeamKick(part[ip], bb->centroid, bb->size, 0, kick, bb->charge, particleMass, particleCharge*particleRelSign/e_mks);
       qx += kick[0]/(P0*c_mks);
       qy += kick[1]/(P0*c_mks);
-      delta = 1 - sqrt(qx*qx + qy*qy + qz*qz);
+      delta = sqrt(qx*qx + qy*qy + qz*qz) - 1;
       part[ip][1] = qx/qz;
       part[ip][3] = qy/qz;
       part[ip][5] = delta;

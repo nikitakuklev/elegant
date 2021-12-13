@@ -175,10 +175,11 @@ long applyElementRamps(RAMP_DATA *rampData, LINE_LIST *beamline, double pCentral
 	     rampData->unperturbedValue[iMod]);
       
       if (rampData->unperturbedValue[iMod]==0 && rampData->flags[iMod]&MULTIPLICATIVE_RAMP) {
-	printf("*** warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
-	       rampData->element[iMod]->name,
-	       entity_description[rampData->element[iMod]->type].parameter[rampData->parameterNumber[iMod]].name);
-	fflush(stdout);
+        char warningBuffer[1024];
+        snprintf(warningBuffer, 1024, "Element %s, parameter %s.", 
+                 rampData->element[iMod]->name,
+                 entity_description[rampData->element[iMod]->type].parameter[rampData->parameterNumber[iMod]].name);
+	printWarning("Multiplicative ramp specified, but the unperturbed value is zero.", warningBuffer);
       }
     }
   }

@@ -340,14 +340,17 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
                 = parameter_value(errcon->name[n_items], errcon->elem_type[n_items], errcon->param_number[n_items],
                             beamline);
             if (errcon->unperturbed_value[n_items]==0 && errcon->flags[n_items]&FRACTIONAL_ERRORS) {
-                printf("***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
-                    errcon->name[n_items], errcon->item[n_items]);
-                fflush(stdout);
+              char warningText[1024];
+              snprintf(warningText, 1024, "Element %s, item %s", 
+                       errcon->name[n_items], errcon->item[n_items]);
+              printWarning("Fractional error specified for unperturbed value of zero.", warningText);
 	    }
 	    if (duplicate_name(errcon->quan_name, n_items, errcon->quan_name[n_items])) {
-	      printf("***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
-                    errcon->name[n_items], errcon->item[n_items]);
-	      fflush(stdout);
+              char warningText[1024];
+              snprintf(warningText, 1024, "Element %s, item %s", 
+                       errcon->name[n_items], errcon->item[n_items]);
+              printWarning("Errors specified more than once for the same quantity.",
+                           warningText);
 	    }
             errcon->n_items = ++n_items;
             n_added++;
@@ -434,14 +437,17 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             = parameter_value(errcon->name[n_items], errcon->elem_type[n_items], errcon->param_number[n_items],
                         beamline);
         if (errcon->unperturbed_value[n_items]==0 && errcon->flags[n_items]&FRACTIONAL_ERRORS) {
-            printf("***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
-                errcon->name[n_items], errcon->item[n_items]);
-            fflush(stdout);
+          char warningText[1024];
+          snprintf(warningText, 1024, "Element %s, item %s", 
+                   errcon->name[n_items], errcon->item[n_items]);
+          printWarning("Fractional error specified for unperturbed value of zero.", warningText);
 	}
         if (duplicate_name(errcon->quan_name, n_items, errcon->quan_name[n_items])) {
-            printf("***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
-                errcon->name[n_items], errcon->item[n_items]);
-            fflush(stdout);
+          char warningText[1024];
+          snprintf(warningText, 1024, "Element %s, item %s", 
+                   errcon->name[n_items], errcon->item[n_items]);
+          printWarning("Errors specified more than once for the same quantity.",
+                       warningText);
 	}
         errcon->n_items = ++n_items;
         n_added++;

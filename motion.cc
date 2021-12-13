@@ -191,8 +191,6 @@ double HermitePolynomial(double x, long n);
 double HermitePolynomialDeriv(double x, long n);
 double HermitePolynomial2ndDeriv(double x, long n);
 
-static short twlaBeenWarned = 0;
-
 long motion(
     double **part,
     long n_part,
@@ -782,13 +780,8 @@ void (*set_up_derivatives(
     twla->EzS    = twla->Ez * Escale;
     twla->BsolS  = twla->B_solenoid * Bscale;
     twla->FrP = 4*sqr(particleCharge*twla->Ez/(omega*particleMass*c_mks))/gamma*twla->sum_bn2;
-    if (!twlaBeenWarned && twla->sum_bn2!=0 && fabs(particleCharge*twla->Ez*PI/(2*twla->kz*me_mks*sqr(c_mks))/P_central_inner_scope)>0.1) {
-      printf("****\n");
-      printf("Warning: TWLA does not satisfy requirements for validity of Hartman-Rosenzweig ponderomotive transverse focusing treatment.");
-      printf("         No further warnings of this type will be issued.\n");
-      printf("****\n");
-      twlaBeenWarned = 1;
-    }
+    if (twla->sum_bn2!=0 && fabs(particleCharge*twla->Ez*PI/(2*twla->kz*me_mks*sqr(c_mks))/P_central_inner_scope)>0.1)
+      printWarning("TWLA does not satisfy requirements for validity of Hartman-Rosenzweig ponderomotive transverse focusing treatment.", NULL);
     /* calculate initial tau value, less omega*t: 
      *    tau_start = omega*(t_offset-t_fid)+phase 
      *              = omega*t_offset + phase + phase0
@@ -1774,12 +1767,10 @@ void select_integrator(char *desired_method)
 #endif
     switch (integratorCode=match_string(desired_method, method, N_METHODS, 0)) {
       case RUNGE_KUTTA:
-        printf((char*)"Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
-        fflush(stdout);
+        printWarningForTracking("\"non-adaptive runge-kutta\" integrator is recommended.", "Adaptive Runge-Kutta was selected.");
         break;
       case BULIRSCH_STOER:
-        printf((char*)"Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
-        fflush(stdout);
+        printWarningForTracking("\"non-adaptive runge-kutta\" integrator is recommended.", "Bulirsch-Stoer was selected.");
         break;
       case NA_RUNGE_KUTTA:
         break;

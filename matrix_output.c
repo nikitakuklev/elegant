@@ -468,25 +468,25 @@ void run_matrix_output(
 	SDDS_SetError("Unable to erase matrix data (run_matrix_output)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
-      /*
-      if (n_elem_no_matrix)
-	printf("warning: %ld elements had no matrix\n", n_elem_no_matrix);
-      fflush(stdout);
-      */
+      if (n_elem_no_matrix) {
+        char warningText[1024];
+        snprintf(warningText, 1024, "%ld elements had no matrix", n_elem_no_matrix);
+	printWarning("Some elements had no matrix.", warningText);
+      }
     }
     if (fp_printout[i_output]) {
       if (n_elem_no_matrix)
-	sprintf(s, "full matrix---WARNING: %ld ELEMENTS HAD NO MATRIX",
+        snprintf(s, 256, "full matrix---WARNING: %ld ELEMENTS HAD NO MATRIX",
 		n_elem_no_matrix);
       else
-	sprintf(s, "full matrix");
+	strcpy(s, "full matrix");
       SWAP_LONG(M1->order, print_order[i_output]);
       print_matrices1(fp_printout[i_output], s, printoutFormat[i_output], M1);
       SWAP_LONG(M1->order, print_order[i_output]);
 
       if (mathematicaFullMatrix[i_output]) {
         long i, j;
-        char sbuffer[100];
+        char sbuffer[1024];
         FILE *fptmp;
         if (fpMathematica[i_output]) 
           fptmp = fpMathematica[i_output];
@@ -496,7 +496,7 @@ void run_matrix_output(
         for (i=0; i<6; i++) {
           fprintf(fptmp, "{");
           for (j=0; j<6; j++) {
-            sprintf(sbuffer, "%21.15e", M1->R[i][j]);
+            snprintf(sbuffer, 1024, "%21.15e", M1->R[i][j]);
             edit_string(sbuffer, "%/e/*10^(/ei/)");
             fprintf(fptmp, "%s%s",
                     sbuffer, j==5? (i==5? "}\n" : "},\n") : ",");

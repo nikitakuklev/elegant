@@ -785,14 +785,10 @@ double beam_width(double fraction, double **coord, long n_part,
   /* find indices of particles that are at +/- fraction/2 from the median */
   i_median = n_part/2;
   if ((i_lo = i_median - fraction/2.*n_part)<0) {
-    printf("warning: i_lo < 0 in beam_width\ni_median = %ld, n_part = %ld, fraction = %e\n",
-            i_lo, n_part, fraction);
-    fflush(stdout);
+    printWarning("Difficulty determining beam width using percentiles", "May be resolved using more particles");
   }
   if ((i_hi = i_median + fraction/2.*n_part)>=n_part) {
-    printf("warning: i_hi >= n_part in beam_width!\ni_median = %ld, n_part = %ld, fraction = %e\n",
-            i_hi, n_part, fraction);
-    fflush(stdout);
+    printWarning("Difficulty determining beam width using percentiles", "May be resolved using more particles");
   }
 
   if (i_lo!=0 && i_hi!=(n_part-1)) {

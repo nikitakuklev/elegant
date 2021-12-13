@@ -143,7 +143,7 @@ extern int myid;
 extern int partOnMaster; /* indicate if the particle information is available on master */
 extern long lessPartAllowed;
 extern MPI_Comm workers; /* The communicator will contain the slave processors only */
-extern int fd;
+extern int fd; /* save the duplicated file descriptor stdout to use it latter */
 extern int dumpAcceptance; /* A flag to indicate if the initial coordinates of transmitted particles will be dumped */
 extern long do_find_aperture; /* A flag to set singlePart tracking in dynamic aperture optimization for Pelegant */
 extern long watch_not_allowed; /* A flag to indicate the watch point is not allowed for aperture searching for Pelegant */
@@ -1212,7 +1212,8 @@ typedef struct {
 #define MAT_CHW_ENERGY     0x00000100UL
 /* Element can be automatically divided */
 #define DIVIDE_OK          0x00000200UL
-/* set this flag to prevent dictionary output of experimental elements */
+/* set this flag to prevent dictionary output of experimental elements or elements that
+ * are not intended to be inserted by users */
 #define NO_DICT_OUTPUT     0x00000400UL
 /* indicates element that can only be done by a single processor at this time */
 #define UNIPROCESSOR       0x00000800UL

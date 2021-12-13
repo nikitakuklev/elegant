@@ -3299,7 +3299,7 @@ void ellipsoidalBeamKick
   qx += dpx/(pMass*c_mks*P0);
   qy += dpy/(pMass*c_mks*P0);
   
-  delta = 1 - sqrt(qx*qx + qy*qy + qz*qz);
+  delta = sqrt(qx*qx + qy*qy + qz*qz) - 1;
   coord[1] = qx/qz;
   coord[3] = qy/qz;
   coord[5] = delta;

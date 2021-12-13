@@ -71,8 +71,8 @@ static char *load_mode[LOAD_MODES] = {
 
 long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamline);
 
-static long missingElementWarningsLeft = 100, missingParameterWarningsLeft = 100, printingEnabled = 1;
-
+/* static long missingElementWarningsLeft = 100, missingParameterWarningsLeft = 100; */
+static long printingEnabled = 1;
 
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
@@ -163,13 +163,12 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
 
   if (!SDDS_InitializeInputFromSearchPath(&load_request[load_requests].table, 
                                           load_request[load_requests].filename)) {
-    if (printingEnabled) {
-      printf("%s: couldn't initialize SDDS input for load_parameters file %s\n", 
-	      allow_missing_files?"warning":"error", 
-	      load_request[load_requests].filename);
-      fflush(stdout);
-    }
+    if (printingEnabled && allow_missing_files)
+        printWarning("Couldn't initialize SDDS input for load_parameters file", 
+                     load_request[load_requests].filename);
     if (!allow_missing_files) {
+      printf("Error: couldn't initialize SDDS input for load_parameters file %s\n", 
+                     load_request[load_requests].filename);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
@@ -362,11 +361,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       free(load_request[i].element);
       load_request[i].element = NULL;
       if (code<0) {
-	if (printingEnabled) {
-	  printf("warning: file %s ends unexpectedly (code=%ld)\n", load_request[i].filename,
-		  code);
-	  fflush(stdout);
-	}
+	if (printingEnabled)
+          printWarning("load_parameters input file ends unexpectedly.", load_request[i].filename);
         load_request[i].flags |= COMMAND_FLAG_IGNORE;
         continue;
       }
@@ -498,31 +494,25 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       /* if occurence is available, we can take advantage of hash table */
       if ((occurence && (!find_element_hash(element[j], occurence[j], &eptr, beamline->elem))) ||
 	  (!occurence && (!find_element_hash(element[j], 1,  &eptr, beamline->elem))))  {
+        char warningText[16384];
 	if (occurence) {
-	  if (missingElementWarningsLeft || !(load_request[i].flags&ALLOW_MISSING_ELEMENTS)) {
-	    if (printingEnabled) {
-	      printf("%s: unable to find occurence %" PRId32 " of element %s (do_load_parameters)\n", 
-		      (load_request[i].flags&ALLOW_MISSING_ELEMENTS)?"Warning":"Error",
-		      occurence[j], element[j]);
-	      if ((load_request[i].flags&ALLOW_MISSING_ELEMENTS) && --missingElementWarningsLeft==0)
-		printf("Further missing elements warnings suppressed\n");
-	      fflush(stdout);
-	    }
-	  }
+          snprintf(warningText, 16834, 
+                   "unable to find occurence %" PRId32 " of element %s for load_parameters.", 
+                   occurence[j], element[j]);
+          if (load_request[i].flags&ALLOW_MISSING_ELEMENTS) {
+            if (printingEnabled)
+              printWarning("Missing element in load_parameters.", warningText);
+          } else
+            bombElegant("Missing element in load_parameters", warningText);
 	} else {
-	  if (missingElementWarningsLeft || !(load_request[i].flags&ALLOW_MISSING_ELEMENTS)) {
-	    if (printingEnabled) {
-	      printf("%s: unable to find element %s (do_load_parameters)\n", 
-		      (load_request[i].flags&ALLOW_MISSING_ELEMENTS)?"Warning":"Error",
-		      element[j]);
-	      if ((load_request[i].flags&ALLOW_MISSING_ELEMENTS) && --missingElementWarningsLeft==0)
-		printf("Further missing elements warnings suppressed\n");
-	      fflush(stdout);
-	    }
-	  }
-	}
-	if (!(load_request[i].flags&ALLOW_MISSING_ELEMENTS))
-	  exitElegant(1);
+          snprintf(warningText, 16384, "unable to find element %s for load_parameters.", 
+                   element[j]);
+          if (load_request[i].flags&ALLOW_MISSING_ELEMENTS) {
+            if (printingEnabled)
+              printWarning("Missing element in load_parameters.", warningText);
+          } else
+            bombElegant("Missing element in load_parameters", warningText);
+        }
 	element_missing = 1;
       }
   
@@ -535,27 +525,15 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       lastMissingElement[0] = 0;
       lastMissingOccurence = 0;
       if ((param = confirm_parameter(parameter[j], eptr->type))<0) {
-        if (missingParameterWarningsLeft || !(load_request[i].flags&ALLOW_MISSING_PARAMETERS)) {
-	  if (printingEnabled) {
-#if !USE_MPI
-	    printf("%s: element %s does not have a parameter %s (do_load_parameters)\n",
-		    (load_request[i].flags&ALLOW_MISSING_PARAMETERS)?"Warning":"Error",
-		    eptr->name, parameter[j]);
-#else
-	    if ((load_request[i].flags&ALLOW_MISSING_PARAMETERS))
-	      printf("%s: element %s does not have a parameter %s (do_load_parameters)\n",
-		      "Warning", eptr->name, parameter[j]);
-	    else
-	      fprintf(stderr, "%s: element %s does not have a parameter %s (do_load_parameters)\n",
-		      "Error", eptr->name, parameter[j]);
-#endif
-	    if ((load_request[i].flags&ALLOW_MISSING_PARAMETERS) && --missingParameterWarningsLeft==0)
-	      printf("Further missing parameters warnings suppressed\n");
-	    fflush(stdout);
-	  }
-        }
-        if (!(load_request[i].flags&ALLOW_MISSING_PARAMETERS))
-          exitElegant(1);
+        char warningText[16384];
+        snprintf(warningText, 16384,
+                 "element %s does not have a parameter %s",
+                 eptr->name, parameter[j]);
+        if (load_request[i].flags&ALLOW_MISSING_PARAMETERS) {
+          if (printingEnabled)
+            printWarning("Attempt to load parameter that element lacks.", warningText);
+        } else 
+          bombElegantVA("Attempt to load parameter that element lacks: %s", warningText);
         continue;
       }
       mode_flags = 0;
@@ -895,8 +873,8 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline, long s
   static long iElementName, iElementParameter, iParameterValue, iElementType, iOccurence, iElementGroup, iParameterValueString;
 
   if (suppressDefaults) {
-    printWarning("use of suppress_parameter_defaults (run_setup) can lead to unexpected results",
-                 "problems may particularly appear in conjunction with alter_elements or load_parameters");
+    printWarning("Use of suppress_parameter_defaults (run_setup) can lead to unexpected results.",
+                 "Problems may particularly appear in conjunction with alter_elements or load_parameters.");
   }
 
   SDDSout = &SDDS_dumpLattice;

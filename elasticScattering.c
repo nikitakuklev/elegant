@@ -321,18 +321,24 @@ long runElasticScattering(
   nElem = nElements;
   nTotal = nElem*n_theta*n_phi;
   if (nTotal%nWorkingProcessors!=0) {
-    printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (n_theta=%ld, n_phi=%ld, nElem=%ld)\n",
-           nWorkingProcessors, n_theta, n_phi, nElem);
-    fflush(stdout);
+    char warningText[1024];
+    snprintf(warningText, 1024,
+             "%ld working processors with n_theta=%ld, n_phi=%ld, nElem=%ld\n",
+             nWorkingProcessors, n_theta, n_phi, nElem);
+    printWarning("The number of working processors) does not evenly divide into the number of particles for elastic scattering simulatin.", warningText);
     nEachProcessor =  (nTotal/nWorkingProcessors)+1;
   } else {
     nEachProcessor = nTotal/nWorkingProcessors;
   }
   if (nWorkingProcessors%n_theta==0) {
-    printf("*** Warning!: The number of working processors (%ld) is a multiple of n_theta (%ld)!\nThis will probably give very poor load balancing and poor parallel performance!\n", nWorkingProcessors, n_theta);
+    char warningText[1024];
+    snprintf(warningText, 1024, "%ld working processors with n_theta=%ld, which may give very poor load balancing and poor parallel performance", nWorkingProcessors, n_theta);
+    printWarning("The number of working processors is a multiple of n_theta for elastic scattering.", warningText);
   }
   if (nWorkingProcessors%n_phi==0) {
-    printf("*** Warning!: The number of working processors (%ld) is a multiple of n_phi (%ld)!\nThis will probably give very poor load balancing and poor parallel performance!\n", nWorkingProcessors, n_phi);
+    char warningText[1024];
+    snprintf(warningText, 1024, "%ld working processors with n_phi=%ld, which may give very poor load balancing and poor parallel performance", nWorkingProcessors, n_phi);
+    printWarning("The number of working processors is a multiple of n_phi for elastic scattering.", warningText);
   }
 
   if (myid==0 || mpiDebug) {
@@ -582,13 +588,18 @@ long runElasticScattering(
     free_czarray_2d((void**)coord, 1, totalPropertiesPerParticle);
     free_czarray_2d((void**)lostParticles, nLost, totalPropertiesPerParticle);	 
     if (badThetaMin) {
-      printf("*** Warning: in %ld cases, a particle that was on the inner ring (theta = theta_min) was lost.\n",
-             badThetaMin);
-      printf("*** You should reduce theta_min and/or use twiss_scaling, and re-rerun.\n");
+      char warningText[1024];
+      snprintf(warningText, 1024, 
+               "Occurred in %ld cases. You should reduce theta_min and/or use twiss_scaling, and re-rerun.",
+               badThetaMin);
+      printWarning("Some inner-ring particles lost for elastic scattering simulation", warningText);
     }
     if (nThetaMax!=nElements*n_phi) {
-      printf("*** Warning: %ld particles on the outer theta ring were not lost.\n", nElements*n_phi-nThetaMax);
-      printf("*** You should increase theta_max and re-rerun.\n");
+      char warningText[1024];
+      snprintf(warningText, 1024, 
+               "Occurred in %ld cases. You should increase theta_max and re-rerun.",
+               nElements*n_phi-nThetaMax);
+      printWarning("Some outer-ring particles *not* lost for elastic scattering simulation", warningText);
     }
   }
   else {

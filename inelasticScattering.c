@@ -109,7 +109,8 @@ void readMomentumAperture(char *momApFile)
   }
 
   if (SDDS_ReadPage(&SDDSma)>1)
-    printf("*** Warning: File %s has more than one page---only the first page is used.\n", momApFile);
+    printWarning("Inelastic scattering momentum acceptance file has more than one page",
+                 "Only the first page is used.");
  
 }
   
@@ -377,9 +378,12 @@ long runInelasticScattering(
   nElem = nElements;
   nTotal = nElem*n_k;
   if (nTotal%nWorkingProcessors!=0) {
-    printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (n_k=%ld, nElem=%ld)\n",
-           nWorkingProcessors, n_k, nElem);
-    fflush(stdout);
+    char warningText[1024];
+    snprintf(warningText, 1024, 
+             "%ld working processors, %ld k values, %ld elements",
+             nWorkingProcessors, n_k, nElem);
+    printWarning("The number of working processors does not evenly divide the number of particles for inelastic_scattering",
+                 warningText);
     nEachProcessor =  (nTotal/nWorkingProcessors)+1;
   } else {
     nEachProcessor = nTotal/nWorkingProcessors;
@@ -616,16 +620,16 @@ long runInelasticScattering(
     free_czarray_2d((void**)coord, 1, totalPropertiesPerParticle);
     free_czarray_2d((void**)lostParticles, nLost, totalPropertiesPerParticle);	 
     if (badDeltaMin) {
-      printf("*** Warning: in %ld cases, a particle that was on the inner ring (delta = k_min) was lost.\n",
-             badDeltaMin);
       if (momentum_aperture)
-	  printf("*** You should reduce momentum_aperture_scale and re-rerun.\n");
+        printWarning("One or more particles at the minimum delta limit were lost for inelastic_scattering simulation",
+                     "Reduce momentum_aperture_scale and re-rerun.");
       else
-	  printf("*** You should reduce k_min and re-rerun.\n");
+        printWarning("One or more particles at the minimum delta limit were lost for inelastic_scattering simulation",
+                     "Reduce k_min and re-rerun.");
     }
     if (nDeltaMax!=nElements)
-      printf("*** Warning: %ld particles (of %ld expected) on the outer delta ring were not lost.\n", 
-             nElements-nDeltaMax, nElements);
+      printWarning("One or more particles on the outer delta ring were not lost.", 
+                   "Consider tracking more turns or adding physical apertures.");
   }
   else {
     free_czarray_2d((void**)coord, nEachProcessor, totalPropertiesPerParticle);

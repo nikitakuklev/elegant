@@ -133,18 +133,8 @@ void track_through_trfmode(
   if (!trfmode->doX && !trfmode->doY)
     bombElegant("x and y turned off for TRFMODE---this shouldn't happen", NULL);
   
-  if (!been_warned) {        
-    if (trfmode->freq<1e3 && trfmode->freq)  {
-      printf("\7\7\7warning: your TRFMODE frequency is less than 1kHz--this may be an error\n");
-      fflush(stdout);
-      been_warned = 1;
-    }
-    if (been_warned) {
-      printf("units of parameters for TRFMODE are as follows:\n");
-      fflush(stdout);
-      print_dictionary_entry(stdout, T_TRFMODE, 0, 0);
-    }
-  }
+  if (trfmode->freq<1e3 && trfmode->freq)
+    printWarningForTracking("TRFMODE frequency is less than 1kHz.", "This may be an error. Consult manual for units.");
 
   if (!trfmode->initialized)
     bombElegant("track_through_trfmode called with uninitialized element", NULL);
@@ -292,9 +282,9 @@ void track_through_trfmode(
       n_binned=0;
     MPI_Allreduce(&n_binned, &binned_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     if (binned_total!=np_total && myid==0) {
-      printf("Warning: only %ld of %ld particles binned (TRFMODE)\n",
-              binned_total, np_total);
-      fflush(stdout);
+      char warningBuffer[1024];
+      snprintf(warningBuffer, 1024, "%ld of %ld particles binned.", binned_total, np_total);
+      printWarningForTracking("Some particles not binned in TRFMODE", warningBuffer);
     }
     if (isSlave) {
       long lastBin_global, firstBin_global;         
@@ -314,9 +304,9 @@ void track_through_trfmode(
     }
 #else
     if (n_binned!=np) {
-      printf("Warning: only %ld of %ld particles binned (TRFMODE)\n",
-              n_binned, np);
-      fflush(stdout);
+      char warningBuffer[1024];
+      snprintf(warningBuffer, 1024, "%ld of %ld particles binned.", n_binned, np);
+      printWarningForTracking("Some particles not binned in TRFMODE", warningBuffer);
     }
 #endif
 
@@ -346,10 +336,8 @@ void track_through_trfmode(
 
         /* advance cavity to this time */
         damping_factor = exp(-(t-trfmode->last_t)/tau);
-        if (damping_factor>1) {
-          printf("*** Warning: damping factor = %le (>1) for TRFMODE\n", damping_factor);
-          fflush(stdout);
-        }
+        if (damping_factor>1)
+          printWarningForTracking("Damping factor >1 for TRFMODE.", "This may happen if the bunch and binning region are very long.");
         if (trfmode->doX) {
           /* -- x plane */
           phase = trfmode->last_xphase + omega*(t - trfmode->last_t);
@@ -687,18 +675,8 @@ void runBinlessTrfMode(
   if (!trfmode->doX && !trfmode->doY)
     bombElegant("x and y turned off for TRFMODE---this shouldn't happen", NULL);
   
-  if (!been_warned) {        
-    if (trfmode->freq<1e3 && trfmode->freq)  {
-      printf("\7\7\7warning: your TRFMODE frequency is less than 1kHz--this may be an error\n");
-      fflush(stdout);
-      been_warned = 1;
-    }
-    if (been_warned) {
-      printf("units of parameters for TRFMODE are as follows:\n");
-      fflush(stdout);
-      print_dictionary_entry(stdout, T_TRFMODE, 0, 0);
-    }
-  }
+  if (trfmode->freq<1e3 && trfmode->freq)
+    printWarningForTracking("TRFMODE frequency is less than 1kHz", "This may be an error. Consult manual for units.");
 
   if (!trfmode->initialized)
     bombElegant("track_through_trfmode called with uninitialized element", NULL);

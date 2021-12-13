@@ -153,11 +153,11 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
   beamline->flags |= BEAMLINE_MATRICES_NEEDED;
   if (emittances_from_twiss_command) {
     if (!(beamline->flags&BEAMLINE_TWISS_DONE)) {
-      fprintf(stderr, "***WARNING: emittances_from_twiss_command was set but twiss calculations not seen\n");
+      printWarning("coupled_twiss_output has emittances_from_twiss_command=1, but twiss calculations not seen", NULL);
       return(1);
     }
     if (!(beamline->flags&BEAMLINE_RADINT_DONE)) {
-      fprintf(stderr, "*** WARNING: emittances_from_twiss_command was set but radiation integral calculations not seen\n");
+      printWarning("coupled_twiss_output has emittances_from_twiss_command=1, but twiss calculations don't include radiation integrals", NULL);
       return(1);
     }
     emit_x = beamline->radIntegrals.ex0;

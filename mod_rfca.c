@@ -36,24 +36,11 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
 
     log_entry("modulated_rf_cavity");
 
-    if (!been_warned) {        
-        if (modrf->freq<1e3 && modrf->freq)  {
-            printf("\7\7\7warning: your MODRF frequency is less than 1kHz--this may be an error\n");
-            fflush(stdout);
-            been_warned = 1;
-            }
-        if (fabs(modrf->volt)<100 && modrf->volt) {
-            printf("\7\7\7warning: your MODRF voltage is less than 100V--this may be an error\n");
-            fflush(stdout);
-            been_warned = 1;
-            }
-        if (been_warned) {
-            printf("units of parameters for MODRF are as follows:\n");
-            fflush(stdout);
-            print_dictionary_entry(stdout, T_MODRF, 0, 0);
-            }
-        }
-
+    if (modrf->freq<1e3 && modrf->freq) 
+      printWarningForTracking("MODRF frequency is less than 1kHz", "This may be an error. Check manual for units.");
+    if (fabs(modrf->volt)<100 && modrf->volt)
+      printWarning("MODRF voltage is less than 100V", "This may be an error. Check manual for units.");
+    
 #if USE_MPI
     if  (!isMaster) {
 #endif

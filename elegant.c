@@ -86,18 +86,18 @@ void showUsageOrGreeting (unsigned long mode)
 #if USE_MPI
  #if HAVE_GPU
   char *USAGE="usage: mpirun -np <number of processes> gpu-Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is gpu-Pelegant 2021.4.0 ALPHA RELEASE, "__DATE__", by M. Borland, K. Amyx, J. Calvey, M. Carla', N. Carmignani, AJ Dick, Z. Duan, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is gpu-Pelegant 2021.5Beta1 ALPHA RELEASE, "__DATE__", by M. Borland, K. Amyx, J. Calvey, M. Carla', N. Carmignani, AJ Dick, Z. Duan, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #else
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is elegant 2021.4.0 "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, AJ Dick, Z. Duan, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 2021.5Beta1 "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, AJ Dick, Z. Duan, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #endif
 #else
  #if HAVE_GPU
   char *USAGE="usage: gpu-elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is gpu-elegant 2021.4.0 ALPHA RELEASE, "__DATE__", by M. Borland, K. Amyx, J. Calvey, M. Carla', N. Carmignani, AJ Dick, Z. Duan, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is gpu-elegant 2021.5Beta1 ALPHA RELEASE, "__DATE__", by M. Borland, K. Amyx, J. Calvey, M. Carla', N. Carmignani, AJ Dick, Z. Duan, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is elegant 2021.4.0, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, AJ Dick, Z. Duan, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 2021.5Beta1, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, AJ Dick, Z. Duan, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #endif
 #endif
   time_t timeNow;
@@ -414,13 +414,13 @@ char **argv;
     printf("Process %d on %s\n", myid, processor_name);
 #else   
     /* duplicate an open file descriptor, tested with gcc */
-    fd = dup(fileno(stdout));
-    /* redirect output, only the master processor will write on screen or files */
+    /* redirect output, only the master processor and first slave will write on screen */
+    fd = dup(fileno(stdout)); /* duplicate and save stdout in case needed */
 #if defined(_WIN32)
     freopen("NUL","w",stdout);
     /* freopen("NUL","w",stderr); */
 #else
-    freopen("/dev/null","w",stdout);
+    freopen("/dev/null","w", stdout);
     /*    freopen("/dev/null","w",stderr); */
 #endif
 #endif
@@ -569,11 +569,11 @@ char **argv;
           sched_setaffinity(0, sizeof(processorMask), &processorMask);
           */
         }
-#else /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)) */
-        printf("warning: CPU list ignored\n");
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)) */
+#else /* (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)) */
+        printWarning("CPU list ignored", "Incompatible with Linux kernal version");
+#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)) */
 #else /*(!USE_MPI && defined(linux)) */
-        printf("warning: CPU list ignored\n");
+        printWarning("CPU list ignored", "Incompatible with MPI version");
 #endif /*(!USE_MPI && defined(linux)) */
         break;
       case DEFINE_RPN_DEFNS:
@@ -731,8 +731,8 @@ char **argv;
       if (echoNamelists) print_namelist(stdout, &run_setup);
 
       if (concat_order!=0)
-        printWarning("concat_order is non-zero in run_setup, which is deprecated", 
-                     "Using matrix concatenation is rarely needed and reduces accuracy.");
+        printWarning("concat_order is non-zero in run_setup.",
+                     "This is deprecated. Using matrix concatenation is rarely needed and reduces accuracy.");
 
       setSearchPath(search_path);
       /* check for validity of namelist inputs */
@@ -891,17 +891,10 @@ char **argv;
         magnets = semaphore_file = parameters = rfc_reference_output = NULL;
       }
 
-#if USE_MPI
-      if (myid==0)
-#endif
       manageSemaphoreFiles(semaphore_file, rootname, semaphoreFile);
      
       /* output the magnet layout */
-      if (magnets
-#if USE_MPI
-	  && myid==0
-#endif
-	  )
+      if (magnets)
         output_magnets(magnets, lattice, beamline);
 
       delete_phase_references();    /* necessary for multi-step runs */
@@ -1610,7 +1603,6 @@ char **argv;
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
 		if (soft_failure) {
 		  printWarning("Closed orbit not found", ". Continuing to next step\n");
-		  fflush(stdout);
 		  failed = 1;
 		  break;
 		} else
@@ -2909,7 +2901,7 @@ void process_particle_command(NAMELIST_TEXT *nltext)
     particleMass, particleRadius, particleCharge, particleMassMV, particleRelSign);
     */
   printWarning("Changing the particle type is not a fully tested feature",
-               ". Please be alert for results that don't make sense.");
+               ". Please be alert for and report results that don't make sense.");
 }
 
 void processGlobalSettings(NAMELIST_TEXT *nltext)
@@ -3201,6 +3193,11 @@ void manageSemaphoreFiles(char *semaphore_file, char *rootname, char *semaphoreF
 {
   char *lastSem;
   long i;
+
+#if USE_MPI
+  if (myid!=0)
+    return;
+#endif
 
   if (semaphore_file && fexists(semaphore_file)) {
     if (allowOverwrite) 

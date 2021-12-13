@@ -199,8 +199,11 @@ void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELI
   
   if (optimization_data->method==OPTIM_METHOD_SWARM || optimization_data->method==OPTIM_METHOD_GENETIC) {
     if (population_size < n_processors) {
-      fprintf (stdout, "Warning: The population size (%ld) can not be less than the number of processors (%d). The population size will be set as %d.\n",
-               population_size, n_processors, n_processors);
+      char warningBuffer[1024];
+      snprintf(warningBuffer, 1024,
+               "The population size will be increased to %d.", n_processors);
+      printWarning("The population set equal to the number of processors",
+                   warningBuffer);
       population_size = n_processors;
     }
   }
@@ -248,6 +251,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     /* these are used to append a dummy name to the variables list for use with final parameters output: */
     static char *extra_name[3] = {"optimized", "optimizationFunction", "bestOptimizationFunction"};
     static char *extra_unit[3] = {"", "", ""};
+    char warningBuffer[1024];
     long i, extras = 3;
     char *ptr;
     
@@ -340,7 +344,11 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     variables->force_inside[n_variables] = force_inside;
     if (variables->initial_value[n_variables]>upper_limit) {
       if (force_inside) {
-	printf("Warning: Initial value (%e) is greater than upper limit\n", variables->initial_value[n_variables]);
+        snprintf(warningBuffer, 1024, 
+                 "Initial value (%e) is greater than the upper limit (%le) for %s.%s.",
+                 variables->initial_value[n_variables], upper_limit,
+                 name, item);
+        printWarning("Initial value is greater than the upper limit.", warningBuffer);
 	variables->initial_value[n_variables] = variables->varied_quan_value[n_variables] = upper_limit;
       } else {
 	printf("Error: Initial value (%e) is greater than upper limit\n", variables->initial_value[n_variables]);
@@ -349,6 +357,12 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     }
     if (variables->initial_value[n_variables]<lower_limit) {
       if (force_inside) {
+        snprintf(warningBuffer, 1024, 
+                 "Initial value (%e) is smaller than the lower limit (%le) for %s.%s.",
+                 variables->initial_value[n_variables], lower_limit,
+                 name, item);
+        printWarning("Initial value is smaller than the lower limit.", warningBuffer);
+
 	printf("Warning: Initial value (%e) is smaller than lower limit\n", variables->initial_value[n_variables]);
 	variables->initial_value[n_variables] = variables->varied_quan_value[n_variables] = lower_limit;
       } else {
@@ -414,7 +428,7 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
         SDDS_ReadPage(&SDDSin)!=1)
       SDDS_Bomb("problem reading optimization term input file");
     if ((nFileTerms=SDDS_RowCount(&SDDSin))==0) {
-      printf("Warning: No rows loaded from file!\n");
+      printWarning("No rows loaded from optimization term file.", NULL);
       return ;
     }
     if (SDDS_GetNamedColumnType(&SDDSin, optimization_term_struct.input_column)!=SDDS_STRING) {
@@ -1167,10 +1181,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
             if (!optimization_data->soft_failure)
               bombElegant("optimization unsuccessful--aborting", NULL);
             else
-              fputs("warning: optimization unsuccessful--continuing\n", stdout);
+              printWarning("Optimization unsuccessful.", "Continuing.");
           }
           else
-            fputs("warning: maximum number of passes reached in simplex optimization", stdout);
+            printWarning("Maximum number of passes reached in simplex optimization", NULL);
         }
 #ifdef DEBUG
         printf("Exited from simplexMin\n");
@@ -1274,10 +1288,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
             if (!optimization_data->soft_failure)
               bombElegant("optimization unsuccessful--aborting", NULL);
             else
-              fputs("warning: optimization unsuccessful--continuing\n", stdout);
+              printWarning("Optimization unsuccessful.", "Continuing.");
           }
           else
-            fputs("warning: maximum number of passes reached in powell optimization", stdout);
+            printWarning("Maximum number of passes reached in powell optimization.", NULL);
         }
         break;
       case OPTIM_METHOD_GRID:
@@ -1289,7 +1303,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           if (!optimization_data->soft_failure)
             bombElegant("optimization unsuccessful--aborting", NULL);
           else 
-            fputs("warning: optimization unsuccessful--continuing", stdout);
+            printWarning("Optimization unsuccessful.", "Continuing.");
         }
         if (optimAbort(0))
           stopOptimization = 1;
@@ -1304,7 +1318,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           if (!optimization_data->soft_failure)
             bombElegant("optimization unsuccessful--aborting", NULL);
           else
-            fputs("warning: optimization unsuccessful--continuing", stdout);
+            printWarning("Optimization unsuccessful.", "Continuing.");
         }
         if (optimAbort(0))
           stopOptimization = 1;
@@ -1318,7 +1332,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           if (!optimization_data->soft_failure)
             bombElegant("optimization unsuccessful--aborting", NULL);
           else
-            fputs("warning: optimization unsuccessful--continuing", stdout);
+            printWarning("Optimization unsuccessful.", "Continuing.");
         }
         if (optimAbort(0))
           stopOptimization = 1;
@@ -1334,7 +1348,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           if (!optimization_data->soft_failure)
             bombElegant("optimization unsuccessful--aborting", NULL);
           else
-            fputs("warning: optimization unsuccessful--continuing", stdout);
+            printWarning("Optimization unsuccessful.", "Continuing.");
         }
         if (optimAbort(0))
           stopOptimization = 1;
@@ -2074,35 +2088,30 @@ double optimization_function(double *value, long *invalid)
   if (doClosedOrbit &&
       !run_closed_orbit(run, beamline, startingOrbitCoord, beam, 0)) {
     *invalid = 1;
-    printf("warning: unable to find closed orbit\n");
-    fflush(stdout);
+    printWarning("Unable to find closed orbit while optimizing.", NULL);
   }
   if (!*invalid && orbitCorrMode!=-1 && 
       !do_correction(orbitCorrData, run, beamline, startingOrbitCoord, beam, control->i_step, 
                      INITIAL_CORRECTION+NO_OUTPUT_CORRECTION)) {
     *invalid = 1;
-    printf("warning: unable to perform orbit correction\n");
-    fflush(stdout);
+    printWarning("Unable to perform orbit correction while optimizing.", NULL);
   }
   if (!*invalid && doTuneCorr &&
       !do_tune_correction(tuneCorrData, run, beamline, startingOrbitCoord, doClosedOrbit,
                                   0, 0)) {
     *invalid = 1;
-    printf("warning: unable to do tune correction\n");
-    fflush(stdout);
+    printWarning("Unable to do tune correction while optimizing.", NULL);
   }
   if (!*invalid && doChromCorr &&
       !do_chromaticity_correction(chromCorrData, run, beamline, startingOrbitCoord, doClosedOrbit,
                                   0, 0)) {
     *invalid = 1;
-    printf("warning: unable to do chromaticity correction\n");
-    fflush(stdout);
+    printWarning("Unable to do chromaticity correction while optimizing.", NULL);
   }
   if (!*invalid && doClosedOrbit &&
       !run_closed_orbit(run, beamline, startingOrbitCoord, beam, 0)) {
     *invalid = 1;
-    printf("warning: unable to find closed orbit\n");
-    fflush(stdout);
+    printWarning("Unable to find closed orbit while optimizing.", NULL);
   }
 
   if (!*invalid && doResponse) {

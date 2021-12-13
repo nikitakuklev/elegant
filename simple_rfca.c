@@ -356,23 +356,10 @@ long trackRfCavityWithWakes
       }
     }
     
-    if (!been_warned) {        
-        if (rfca->freq<1e3 && rfca->freq)  {
-            printf("\7\7\7warning: your RFCA frequency is less than 1kHz--this may be an error\n");
-            fflush(stdout);
-            been_warned = 1;
-            }
-        if (fabs(rfca->volt)<100 && rfca->volt) {
-            printf("\7\7\7warning: your RFCA voltage is less than 100V--this may be an error\n");
-            fflush(stdout);
-            been_warned = 1;
-            }
-        if (been_warned) {
-            printf("units of parameters for RFCA are as follows:\n");
-            fflush(stdout);
-            print_dictionary_entry(stdout, T_RFCA, 0, 0);
-            }
-        }
+    if (rfca->freq<1e3 && rfca->freq)
+      printWarningForTracking("RFCA frequency is less than 1kHz.", "This may be an error. Consult manual for units.");
+    if (fabs(rfca->volt)<100 && rfca->volt)
+      printWarningForTracking("RFCA voltage is less than 100V.", "This may be an error. Consult manual for units.");
     if (isSlave) {
       if (!part)
         bombElegant("NULL particle data pointer (trackRfCavityWithWakes)", NULL);
@@ -1070,10 +1057,8 @@ long track_through_rfcw
   static long warned = 0;
   if (rfcw->cellLength<=0) 
     bombElegant("invalid cell length for RFCW", NULL);
-  if (rfcw->length==0 && !warned) {
-    printf("** Warning: length of RFCW element is zero. Wakefields will scale to 0!\n");
-    warned = 1;
-  }
+  if (rfcw->length==0)
+    printWarningForTracking("RFCW element has zero length, so wakefields will scale to 0", NULL);
   /* set up the RFCA, TRWAKE, and WAKE structures */
   rfcw->rfca.length = rfcw->length;
   rfcw->rfca.volt = rfcw->volt;

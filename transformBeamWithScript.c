@@ -50,16 +50,11 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 #endif
   if (!forceSerial) {
     if (script->useParticleID && script->determineLossesFromParticleID) {
-      static long warned = 0;
-      if (isMaster && !warned) {
-        printf("Warning: the DETERMINE_LOSSES_FROM_PID flag of the SCRIPT element is ignored in Pelegant\n");
-        warned = 1;
-      }
+      if (isMaster)
+        printWarningForTracking("The DETERMINE_LOSSES_FROM_PID flag of the SCRIPT element is ignored in Pelegant", NULL);
     }
     return transformBeamWithScript_p(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence, backtrack);
   } else {
-    if (myid!=0)
-      printf("*** Warning: myid=%d in forced serial transformBeamWithScript\n", myid);
     return transformBeamWithScript_s(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence, backtrack);
   }
 #else
@@ -308,12 +303,9 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
 	!check_sdds_column(&SDDSin, "t", "s")) {
       if (!check_sdds_column(&SDDSin, "p", "m$be$nc") &&
 	  check_sdds_column(&SDDSin, "p", NULL)) {
-	printf("Warning: p has no units in script output file.  Expected m$be$nc\n");
-	fflush(stdout);
+	printWarningForTracking("p has no units in script output file.", "Expected m$be$nc.");
       } else {
-	printf(
-	       "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in script output");
-	fflush(stdout);
+        printf("Error: necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in script output");
 	exitElegant(1);
       }
     }
@@ -357,10 +349,8 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
       for (k=1; k<npNew; k++) 
         if (pID2[k-1] == pID2[k])
           found++;
-      if (found) {
-        printf("*** Warning: %ld duplicate particleID values in script output file\n*** Loss accounting is suspect!\n", found);
-        fflush(stdout);
-      }
+      if (found)
+        printWarning("Duplicate particleID values in script output file.", "Loss accounting is suspect!\n");
       free(pID2);
       /* Figure out which particles if any were lost by matching particleID from the input and output */
       /* Otherwise, we just load the particleID data with no loss accounting. */
@@ -473,11 +463,9 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
     charge->macroParticleCharge = 0;
     if (npNew)
       charge->macroParticleCharge = totalCharge/npNew;
-    if (oldMacroParticleCharge!=0 && fabs((charge->macroParticleCharge-oldMacroParticleCharge)/oldMacroParticleCharge)>1e-8) {
-      printf("*** Warning: macro-particle charge changed after SCRIPT element, from %le to %le. This may indicate a problem.\n",
-	     oldMacroParticleCharge, charge->macroParticleCharge);
-      printf("             Please ensure that the Charge parameter is set correctly in the output file from your script.\n");
-    }
+    if (oldMacroParticleCharge!=0 && fabs((charge->macroParticleCharge-oldMacroParticleCharge)/oldMacroParticleCharge)>1e-8)
+      printWarningForTracking("Macro-particle charge changed after SCRIPT element.", 
+                              "This may indicate a problem with the script.");
   }
 
   if (script->rpnParameters) {
@@ -711,8 +699,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
         !check_sdds_column(&SDDSin, "t", "s")) {
       if (!check_sdds_column(&SDDSin, "p", "m$be$nc") &&
           check_sdds_column(&SDDSin, "p", NULL)) {
-        printf("Warning: p has no units in script output file.  Expected m$be$nc\n");
-        fflush(stdout);
+        printWarningForTracking("p has no units in script output file.", "Expected m$be$nc.");
       } else {
         printf(
                 "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in script output");
@@ -891,9 +878,8 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
         if (npNewTotal)
           charge->macroParticleCharge = totalCharge/npNewTotal;
       if (oldMacroParticleCharge!=0 && fabs((charge->macroParticleCharge-oldMacroParticleCharge)/oldMacroParticleCharge)>1e-8) {
-        printf("*** Warning: macro-particle charge changed after SCRIPT element, from %le to %le. This may indicate a problem.\n",
-               oldMacroParticleCharge, charge->macroParticleCharge);
-        printf("             Please ensure that the Charge parameter is set correctly in the output file from your script.\n");
+        printWarningForTracking("Macro-particle charge changed after SCRIPT element.",
+                                "This may indicate a problem with the script.");
       }
     }
   }

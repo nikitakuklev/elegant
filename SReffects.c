@@ -93,8 +93,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects0, double Po,
       /* this is a temporary kludge to ensure that all particles get lost when this happens */
       for (ip=0; ip<np; ip++)
 	coord[ip][5] = -1;
-      printf("Warning: SReffects parameters are unphysical, particles being dumped.\n");
-      fflush(stdout);
+      printWarningForTracking("SReffects parameters are unphysical.", "Particles are being dumped.");
       return;
     }
 #endif    

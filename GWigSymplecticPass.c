@@ -417,7 +417,7 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
     double phase;
     phase = fmod(cwiggler->ByData[5], PIx2);
     if (cwiggler->BMax==0 && cwiggler->ByMax==0)
-      printf("*** Warning: BMAX=0 and BYMAX=0 for CWIGGLER with BY Harmonics\n");
+      printWarningForTracking("BMAX=0 and BYMAX=0 for CWIGGLER with BY Harmonics", NULL);
     if (phase==0 || phase==PI || !cwiggler->forceMatched) {
       cwiggler->zEndPointH[0] = 0;
       cwiggler->zEndPointH[1] = cwiggler->length;
@@ -438,7 +438,7 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
     double phase;
     phase = fmod(cwiggler->BxData[5], PIx2);
     if (cwiggler->BMax==0 && cwiggler->BxMax==0)
-      printf("*** Warning: BMAX=0 and BXMAX=0 for CWIGGLER WITH BX Harmonics\n");
+      printWarningForTracking("BMAX=0 and BXMAX=0 for CWIGGLER WITH BX Harmonics", NULL);
     if (phase==0 || phase==PI || !cwiggler->forceMatched) {
       cwiggler->zEndPointV[0] = 0;
       cwiggler->zEndPointV[1] = cwiggler->length;
@@ -546,7 +546,7 @@ long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *na
     exitElegant(1);
   }    
   if (!SDDS_Terminate(&SDDSin))
-    printf("*** Warning: problem terminating CWIGGLER input file\n");
+    printWarning("Problem terminating CWIGGLER input file", NULL);
 
   free(Cmn);
   free(kx);

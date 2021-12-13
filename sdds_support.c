@@ -76,16 +76,12 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exitElegant(1);
             }
-        if (last_index==-1 && flags&SDDS_EOS_NEWFILE && index!=0) {
-            printf("\7\7\7WARNING: first defined parameter index for SDDS file %s is not 0--this will probably cause unexpected results\n", filename);
-            fflush(stdout);
-	}
-        if (last_index!=-1 && index!=(last_index+1)) {
-            printf("\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
-            fflush(stdout);
-	}
+        if (last_index==-1 && flags&SDDS_EOS_NEWFILE && index!=0)
+          printWarning("First-defined parameter index for SDDS file is not 0.", filename);
+        if (last_index!=-1 && index!=(last_index+1))
+          printWarning("Parameter indices for SDDS file are not sequential.", filename);
         last_index = index;
-        }
+    }
 
 #if MPI_DEBUG
     printf("SDDS_ElegantOutputSetup 2 for filename = %s\n", filename);
@@ -104,14 +100,10 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exitElegant(1);
             }
-        if (last_index==-1 && flags&SDDS_EOS_NEWFILE && index!=0) {
-            printf("\7\7\7WARNING: first defined column index for SDDS file %s is not 0--this will probably cause unexpected results\n", filename);
-            fflush(stdout);
-	}
-        if (last_index!=-1 && index!=(last_index+1)) {
-            printf("\7\7\7WARNING: column indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
-            fflush(stdout);
-	}
+        if (last_index==-1 && flags&SDDS_EOS_NEWFILE && index!=0)
+          printWarning("First-defined column index for SDDS file is not 0", filename);
+        if (last_index!=-1 && index!=(last_index+1))
+          printWarning("Column indices for SDDS file are not sequential", filename);
         last_index = index;
     }
 

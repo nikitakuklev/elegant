@@ -99,7 +99,7 @@ void initialize_polynomialSeries(POLYNOMIALSERIES *polynomialSeries)
       /* presently make having zero rows an error 
 	 later we can make the default behavior of 0 rows be
 	 equivalent to unity map. */
-      printf("Warning: no data in POLYNOMIALSERIES file %s\n", polynomialSeries->filename);
+      printWarningForTracking("No data in POLYNOMIALSERIES file.", polynomialSeries->filename);
       fflush(stdout);
       SDDS_Terminate(&SDDSin);
       return;

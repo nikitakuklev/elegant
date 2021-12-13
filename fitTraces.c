@@ -899,21 +899,24 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
         }
       }
       if (ftp->lowerLimit && ftp->lowerLimit[i]>ftp->definedValue[i]) {
-        printf("Warning: parameter %s (%e) of element %s is already < lower limit (%e)\n",
-                ftp->parameterName[i], ftp->definedValue[i], ftp->elementName[i], ftp->lowerLimit[i]);
-        fflush(stdout);
+        char warningText[16834];
+        snprintf(warningText, 16384,"Value %e of %s.%s is lower than %e\n",
+                 ftp->definedValue[i], ftp->elementName[i], ftp->parameterName[i], ftp->lowerLimit[i]);
+        printf("Initial value is less than lower limit for trace fitting",
+               warningText);
       }
       if (ftp->upperLimit && ftp->upperLimit[i]<ftp->definedValue[i]) {
-        printf("Warning: parameter %s (%e) of element %s is already > upper limit (%e)\n",
-                ftp->parameterName[i], ftp->definedValue[i], ftp->elementName[i], ftp->upperLimit[i]);
-        fflush(stdout);
+        snprintf(warningText, 16384,"Value %e of %s.%s is greater than %e\n",
+                 ftp->definedValue[i], ftp->elementName[i], ftp->parameterName[i], ftp->upperLimit[i]);
+        printf("Initial value is greater than upper limit for trace fitting",
+               warningText);
       }
     }
   }
   
   if (SDDS_ReadPage(&SDDSin)>1)
-    printf("Warning: file %s has multiple pages---only the first is used.\n", dataFile);
-    fflush(stdout);
+    printfWarning("Only the first page of fit_traces input file is used", 
+                  "Input file provided has multiple pages.");
   SDDS_Terminate(&SDDSin);
 
   if (bpmCalibrations)

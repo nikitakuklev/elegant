@@ -229,11 +229,11 @@ int TouschekRate(LINE_LIST *beamline, long nElement)
     B1 = c1*(1-sh2*dx_2/sxb2)+c2*(1-sh2*dy_2/syb2);
     B2 = sqr(B1)-c0*c3;   	  
     if (B2<0) {
-      if (fabs(B2/sqr(B1))<1e-7) {
-        printf("warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eptr->name, eptr->occurence);
-      } else {
+      if (fabs(B2/sqr(B1))<1e-7)
+        printWarningForTracking("B2^2<0 for Touschek scattering simulation.", 
+                                "Please seek expert help.\n");
+      else
         B2 = 0;
-      }
     }
     B2=sqrt(B2);   	  
 
@@ -290,7 +290,7 @@ void FIntegral(double tm, double b1, double b2, double *F)
     if (FABS(sum/intF)<test) 
       break;
     if ( i== maxRegion) 
-      fprintf( stdout, "**Warning** Integral did not converge till tau= %g.\n",tau);
+      printWarning("Integral did not converge in Touschek scattering simulation.", NULL);
   }
 
   *F = intF;
@@ -603,9 +603,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
           }
 	  /*          printf("scatted particles %ld.\n", tsptr->simuCount); */
         }
-        if (total_event*11 > (long)2e9)  {
-          printf("warning: The total random number used > 2e9. Use less n_simulated or use small delta");
-          fflush(stdout);
+        if (total_event*11 > (long)2e9) {
+          printWarning("The total number of random numbers used > 2e9 in Tousheck scattering.", 
+                       "Use less n_simulated or use smaller delta.");
           break;
         }
       }
@@ -616,10 +616,11 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
    
       if (total_event/tsptr->simuCount > 20) {
         if (distribution_cutoff[0]<5 || distribution_cutoff[1]<5 ) 
-          printf("warning: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
+          printWarning("Scattering rate is low for Touschek scattering.", 
+                       "Please use >=5 sigma beam for better simulation.");
         else
-          printf("warning: Scattering rate is very low, please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only\n"); 
-	fflush(stdout);
+          printWarning("Scattering rate is very low for Touschek scattering.", 
+                       "Please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only."); 
       }
       tsptr->factor = tsptr->factor / (double)(total_event);
       tsptr->s_rate = tsptr->totalWeight * tsptr->factor;
@@ -1049,8 +1050,7 @@ void init_TSPEC (RUN *run, LINE_LIST *beamline, long nElement)
       bombElegant("The input FullDist is not valid for this calculation - not same element location!", NULL);
   } else if (TranDist) {
     if (!ZDist) {
-      printf("warning: ZDist need be given with TranDist. The input file is ignored\n");
-      fflush(stdout);
+      printWarning("ZDist needs be given with TranDist.", "The input distribution file is ignored.");
       tsSpec->distIn = 0;
     } else {
       tsSpec->ipage_his = calloc(sizeof(long), nElement);
@@ -1061,8 +1061,7 @@ void init_TSPEC (RUN *run, LINE_LIST *beamline, long nElement)
     }
   } else if (XDist || YDist || ZDist) {
     if (!XDist || !YDist || !ZDist) {
-      printf("warning: [XYZ]Dist need be given at the same time. The input file is ignored\n");
-      fflush(stdout);
+      printWarning("[XYZ]Dist need be given at the same time.", "The input distribution file is ignored.");
       tsSpec->distIn = 0;
     } else {
       tsSpec->ipage_his = calloc(sizeof(long), nElement);

@@ -192,7 +192,7 @@ void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp)
   for (i=sum=0; i<TFB_FILTER_LENGTH; i++)
     sum += tfbp->a[i];
   if (fabs(sum)>1e-6)
-    printf("Warning: sum of a[i] is nonzero for TFBPICKUP\n");
+    printWarningForTracking("Sum of a[i] is nonzero for TFBPICKUP.", "This may produce unexpected results.");
 
   for (i=TFB_FILTER_LENGTH-1; i>=0; i--) {
     if (tfbp->a[i]!=0)

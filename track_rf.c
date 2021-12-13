@@ -399,11 +399,8 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
 
   if (rf_param->voltageNoiseGroup) {
     DefineNoiseGroup(rf_param->voltageNoiseGroup);
-    if (rf_param->phaseNoiseGroup==rf_param->voltageNoiseGroup) {
-      printf("*** Warning: VOLTAGE_NOISE_GROUP and PHASE_NOISE_GROUP are identical for %s\n",
-	     tContext.elementName);
-      printf("This is probably a mistake!\n");
-    }
+    if (rf_param->phaseNoiseGroup==rf_param->voltageNoiseGroup)
+      printWarningForTracking("VOLTAGE_NOISE_GROUP and PHASE_NOISE_GROUP are identical", "This is probably a mistake.");
   } else if (rf_param->groupVoltageNoise) {
     printf("Error: GROUP_VOLTAGE_NOISE is nonzero but VOLTAGE_NOISE_GROUP is zero for %s\n",
 	   tContext.elementName);
@@ -502,11 +499,8 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
 
   if (rf_param->voltageNoiseGroup) {
     DefineNoiseGroup(rf_param->voltageNoiseGroup);
-    if (rf_param->phaseNoiseGroup==rf_param->voltageNoiseGroup) {
-      printf("*** Warning: VOLTAGE_NOISE_GROUP and PHASE_NOISE_GROUP are identical for %s\n",
-	     tContext.elementName);
-      printf("This is probably a mistake!\n");
-    }
+    if (rf_param->phaseNoiseGroup==rf_param->voltageNoiseGroup)
+      printWarning("VOLTAGE_NOISE_GROUP and PHASE_NOISE_GROUP are identical.", "This is probably a mistake.");
   } else if (rf_param->groupVoltageNoise) {
     printf("Error: GROUP_VOLTAGE_NOISE is nonzero but VOLTAGE_NOISE_GROUP is zero for %s\n",
 	   tContext.elementName);

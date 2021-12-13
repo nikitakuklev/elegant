@@ -270,6 +270,7 @@ long doMomentumApertureSearch(
   long code, outputRow;
   long processElements, skipElements, deltaSign, split, slot;
   char s[1000];
+  char warningBuffer[1024];
   unsigned long fiducial_flag_save;
 #if defined(DEBUG)
   static FILE *fpdeb = NULL;
@@ -311,18 +312,18 @@ long doMomentumApertureSearch(
   switch (output_mode) {
   case 1:
     if ((2*nElem)%n_processors!=0 && (myid==0)) {
-      printf("Warning: for best parallel efficiency in output_mode=1, the number of tasks (twice the number of elements) divided by the number of processors should be an integer or slightly below an integer. \nThe number of tasks is %ld. The number of processors is %d.\n", 
+      snprintf(warningBuffer, 1024, "The number of tasks is %ld. The number of processors is %d.", 
              2*nElem, n_processors);
-      fflush(stdout);
+      printWarning("For best parallel efficiency, the number of tasks (twice the number of elements) divided by the number of processors should be an integer or slightly below an integer.", warningBuffer);
     }    
     break;
   case 2:
     break;
   default:
     if (nElem%n_processors!=0 && (myid==0)) {
-      printf("Warning: for best parallel efficiency in output_mode=%ld, the number of elements divided by the number of processors should be an integer or slightly below an integer. \nThe number of elements is %ld. The number of processors is %d.\n", 
-             output_mode, nElem, n_processors);
-      fflush(stdout);
+      snprintf(warningBuffer, 1024, "The number of tasks is %ld. The number of processors is %d.", 
+             nElem, n_processors);
+      printWarning("For best parallel efficiency, the number of elements divided by the number of processors should be an integer or slightly below an integer.", warningBuffer);
     }    
     break;
   }
@@ -330,7 +331,7 @@ long doMomentumApertureSearch(
   if (verbosity) {
     verbosity = 0;
     if (myid == 0)
-      printf ("Warning: In parallel version, limited intermediate information will be provided\n");
+      printf ("In parallel version, limited intermediate information will be provided\n");
       fflush(stdout);
   }
 #endif
@@ -635,8 +636,9 @@ long doMomentumApertureSearch(
 		printf("Error: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
 		exit(1);
 	      }
-              printf("Warning: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
-	      fflush(stdout);
+              snprintf(warningBuffer, 1024, "Location %s#%ld at s=%em.",
+                       elem->name, elem->occurence, elem->end_pos);                       
+              printWarning("No survivor found for initial scan.", warningBuffer);
 	      deltaSurvived[slot][outputRow] = 0;
 	      survivorFound[slot][outputRow] = 1;
 	      split = splits;
@@ -859,6 +861,7 @@ long multiparticleLocalMomentumAcceptance(
   short **loserFound;
   long n_working_processors = n_processors - 1;
   double **lostParticles;
+  char warningBuffer[1024];
 
   if (myid==0) {
     printf("Started multi-particle  LMA algorithm\n");
@@ -871,9 +874,10 @@ long multiparticleLocalMomentumAcceptance(
   ideltaCutover = (delta_negative_start-delta_negative_limit)/deltaStep + 0.5;
   nTotal = nElem*nDelta;
   if (nTotal%n_working_processors!=0) {
-    printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (nDelta=%ld, nElem=%ld)\n",
+    snprintf(warningBuffer, 1024, "%ld working processors, nDelta = %ld, nElem = %ld.",
             n_working_processors, nDelta, nElem);
-    fflush(stdout);
+    printWarning("The number of working processors does not evenly divide into the number of particles.",
+                 warningBuffer);
     nEachProcessor =  (nTotal/n_working_processors)+1;
   } else {
     nEachProcessor = nTotal/n_working_processors;
@@ -1134,7 +1138,7 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 		  &dummy, 0.0, 1.0, turnByTurnCoord[0], turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12, 0, 0)!=1) {
-    printf("Warning: NAFF failed for tune analysis from tracking (x).\n");
+    printWarning("NAFF failed for tune analysis from tracking (x).", NULL);
     return 0;
   }
 
@@ -1142,7 +1146,7 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 		  &dummy, 0.0, 1.0, turnByTurnCoord[1], turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,0, 0)!=1) {
-    printf("Warning: NAFF failed for tune analysis from tracking (xp).\n");
+    printWarning("NAFF failed for tune analysis from tracking (xp).", NULL);
     return 0;
   }
 
@@ -1150,7 +1154,7 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 		  &dummy, 0.0, 1.0, turnByTurnCoord[2], turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12, 0, 0)!=1) {
-    printf("Warning: NAFF failed for tune analysis from tracking (y).\n");
+    printWarning("NAFF failed for tune analysis from tracking (y).", NULL);
     return 0;
   }
 
@@ -1158,7 +1162,7 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 		  &dummy, 0.0, 1.0, turnByTurnCoord[3], turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12, 0, 0)!=1) {
-    printf("Warning: NAFF failed for tune analysis from tracking (yp).\n");
+    printWarning("NAFF failed for tune analysis from tracking (yp).", NULL);
     return 0;
   }
 

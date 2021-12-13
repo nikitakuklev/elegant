@@ -288,6 +288,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   static long tunes_saved=0;
   unsigned long unstable;
   double *K1ptr;
+  char warningBuffer[1024];
 
 #ifdef DEBUG
   printf("do_tune_correction\n");
@@ -368,8 +369,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
       MsError = sqr(beamline->tune[0]-tune->tunex)+sqr(beamline->tune[1]-tune->tuney);
       if (MsError>LastMsError) {
 	/* reset to minimum gain */
-	printf("Warning: tune correction diverging---gain reduced 10-fold\n");
-	fflush(stdout);
+        printWarning("Tune correction diverging.", "Gain reduced 10-fold.");
 	gain /= 10;
 	steps_since_gain_change = 0;
       }
@@ -493,11 +493,19 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
         if (tune->lowerLimit && K1<tune->lowerLimit[i]) {
           K1 = *K1ptr = tune->lowerLimit[i];
           nLimit++;
-          printf("warning: %s#%ld is at the lower limit (K1=%le).\n", context->name, context->occurence, K1);
+          snprintf(warningBuffer, 1024, 
+                   "%s#%ld is at the lower limit (K1=%le, limit=%le).\n", 
+                   context->name, context->occurence, K1, tune->lowerLimit[i]
+                   );
+          printWarning("Quadrupole at lower limit during tune correction.", warningBuffer);
         } else if (tune->upperLimit && K1>tune->upperLimit[i]) {
           K1 = *K1ptr = tune->upperLimit[i];
           nLimit++;
-          printf("warning: %s#%ld is at the upper limit (K1=%le).\n", context->name, context->occurence, K1);
+          snprintf(warningBuffer, 1024, 
+                   "%s#%ld is at the upper limit (K1=%le, limit=%le).\n", 
+                   context->name, context->occurence, K1, tune->upperLimit[i]
+                   );
+          printWarning("Quadrupole at upper limit during tune correction.", warningBuffer);
         }
         if (context->matrix) {
           free_matrices(context->matrix);

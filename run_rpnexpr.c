@@ -120,7 +120,7 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
 
   if (!load_parameters) {
     if ((columnName = SDDS_GetColumnNames(&SDDSin, &columns))==NULL) {
-      printf("Warning: No columns in file!\n");
+      printWarning("No columns in file for rpn_load.", NULL);
       return;
     }
 
@@ -198,7 +198,7 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
   } else {
     /* load data from parameters */
     if ((parameterName = SDDS_GetParameterNames(&SDDSin, &parameters))==NULL) {
-      printf("Warning: No parameters in file!\n");
+      printWarning("No parameters in file for rpn_load.", NULL);
       return;
     }
 

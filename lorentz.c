@@ -439,14 +439,14 @@ long do_lorentz_integration(double *coord, void *field)
                 break;
             default:
                 if ((exvalue = (*exit_function)(NULL, q, central_length))>exit_toler)  {
-                    printf("warning: exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
-                    fflush(stdout);
-                    log_exit("do_lorentz_integration");
-                    if (!isLost) {
-                      isLost = 1;
-                      memcpy(&lostParticleCoordinate, &q, sizeof(q[0])*8);
-                    }
-                    return(0);
+                  char warningText[1024];
+                  snprintf(warningText, 1024, "Exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
+                  printWarningForTracking("Problem in numerical integration", warningText);
+                  if (!isLost) {
+                    isLost = 1;
+                    memcpy(&lostParticleCoordinate, &q, sizeof(q[0])*8);
+                  }
+                  return(0);
                 }
                 break;
             }
@@ -522,7 +522,6 @@ void lorentz_setup(
     BMAPXY *bmapxy;
     BMAPXYZ *bmapxyz;
     double alpha, Kg;
-    static long warning_given = 0;
     static double last_fse=0;
 
     log_entry("lorentz_setup");
@@ -601,11 +600,8 @@ void lorentz_setup(
               nibend->e[nibend->e2Index]    *= -1;
               nibend->angleSign = -1;
             }
-            if (nibend->e[nibend->e1Index]!=nibend->e[nibend->e2Index] && !warning_given) {
-                printf("warning: e1!=e2 for NIBEND--this may cause orbit distortions\n");
-                fflush(stdout);
-                warning_given = 1;
-                }
+            if (nibend->e[nibend->e1Index]!=nibend->e[nibend->e2Index])
+              printWarningForTracking("E1!=E2 for NIBEND, which may cause orbit distortions", NULL);
             nibend->rho0 = nibend->length/nibend->angle;
             S0 = 1/nibend->rho0;
             central_length = nibend->length + flen; 
@@ -2167,10 +2163,8 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
 	   );
     if (data->zmin<0) {
       if (bmapxyz->injectAtZero) {
-	printf("**************** WARNING ****************\n");
-	printf("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero. Be aware that particles will start inside the element!\n");
-	printf("The insertion length (L) and any difference from the field length is ignored.\n");
-	fflush(stdout);
+        printWarningForTracking("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero.",
+                               "Particles will start inside the element. The insertion length (L) and any difference from the field length is ignored.");
       } else {
 	data->zmax = data->zmax - data->zmin;
 	data->zmin = 0;
@@ -2286,10 +2280,8 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
 	   );
     if (data->zmin<0) {
       if (bmapxyz->injectAtZero) {
-	printf("**************** WARNING ****************\n");
-	printf("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero. Be aware that particles will start inside the element!\n");
-	printf("The insertion length (L) and any difference from the field length is ignored.\n");
-	fflush(stdout);
+	printWarningForTracking("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero.",
+                                "Particles will start inside the element. The insertion length (L) and any difference from the field length is ignored.");
       } else {
 	data->zmax = data->zmax - data->zmin;
 	data->zmin = 0;

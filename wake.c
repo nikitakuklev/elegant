@@ -35,10 +35,10 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
   long *ibParticle = NULL;        /* array to record which bucket each particle is in */
   long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
-  short shortBunchWarning = 0;
   long ib, nb=0, n_binned=0;
   long iBucket, nBuckets, max_np=0, ip, np;
   double factor, tmin, tmax, tmean=0, dt=0, Po, rampFactor;
+  char warningBuffer[1024];
 #if USE_MPI
   double *buffer;
 #if MPI_DEBUG
@@ -138,10 +138,17 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
                     tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
             exit(1);
           }
-          printf("Warning: The beam is longer than the longitudinal wake function.\nThis may produce unphysical results.\n");
-          printf("The beam length is %le s, while the wake length is %le s\n",
-                  tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
-          /*
+#if USE_MPI
+          if (myid==1) dup2(fd, fileno(stdout));
+#endif
+          snprintf(warningBuffer, 1024,
+                   "This may produce unphysical results. The beam length is %le s, while the wake length is %le s\n",
+                   tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);  
+          printWarningForTracking("The beam is longer than the longitudinal wake function.", warningBuffer);
+#if USE_MPI
+          if (myid==1) close(fd);
+#endif
+           /*
             if (abs(tmax-tmean)<abs(tmin-tmean)) 
             tmin = tmax - (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
             else
@@ -150,14 +157,16 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
         }
 
         dt = wakeData->dt;
-        if (np>1 && (tmax-tmin)<20*dt && !shortBunchWarning) {
-          printf("Warning: The beam is shorter than 20*DT, where DT is the spacing of the wake points.\n");
-          printf("         Depending on the longitudinal distribution and shape of the wake, this may produce poor results.\n");
-          printf("         Consider using a wake with finer time spacing in WAKE elements.\n");
-          fflush(stdout);
-          shortBunchWarning = 1;
+        if (np>1 && (tmax-tmin)<20*dt) {
+#if USE_MPI
+          if (myid==1) dup2(fd, fileno(stdout));
+#endif
+          printWarningForTracking("Beam shorter than 20 time the spacing of the wake points.",
+                                  "May produce poor results. Consider using finer time spacing in wake data.");
+#if USE_MPI
+          if (myid==1) close(fd);
+#endif
         }
-        
         if (wakeData->n_bins) {
           nb = wakeData->n_bins;
           tmin = tmean-dt*nb/2.0;
@@ -168,9 +177,8 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
           tmax += dt;
         }
         if (nb<=0) {
-          printf("Warning: Number of wake bins is 0 or negative\n");
-          printf("probably indicating an extremely long bunch\n");
-          printf("Wake ignored!\n");
+          printWarningForTracking("Number of wake bins is 0 or negative.", 
+                                  "Probably indicates an extremely long bunch. Wake ignored!");
           return;
         }
 #ifdef DEBUG
@@ -188,27 +196,27 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
 
       if (!USE_MPI || !notSinglePart) {
         if (n_binned!=np) {
-          printf("warning: only %ld of %ld particles were binned (WAKE)\n", n_binned, np);
-          printf("consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
-          fflush(stdout);
-          return;
+          snprintf(warningBuffer, 1024, 
+                   "Only %ld of %ld particles were binned. Consider setting n_bins=0 to invoke autoscaling.",
+                   n_binned, np);
+          printWarningForTracking("Some particles not binned in WAKE.", warningBuffer);
+          /* return; */
         }
       }
 #if USE_MPI
-else if (isSlave) {
-  int all_binned, result = 1;
-
-  result = ((n_binned==np) ? 1 : 0);		             
-  MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
-  if (!all_binned) {
-    if (myid==1) {  
-      /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
-      printf("warning: Not all of %ld particles were binned (WAKE)\n", np);
-      printf("consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
-      fflush(stdout); 
-    }
-  }
-}
+      else if (isSlave) {
+        int all_binned, result = 1;
+        
+        result = ((n_binned==np) ? 1 : 0);		             
+        MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
+        if (!all_binned) {
+          if (myid==1) {  
+            /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
+            printWarningForTracking("Some particles not binned in WAKE.",
+                                    "Consider setting N_BINS=0 to invoke autoscaling.");
+          }
+        }
+      }
       
       if (isSlave && notSinglePart) {
         buffer = malloc(sizeof(double) * nb);

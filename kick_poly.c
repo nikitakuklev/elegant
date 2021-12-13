@@ -48,10 +48,8 @@ long polynomial_kicks(
     if (kpoly->plane && (kpoly->plane[0]=='y' || kpoly->plane[0]=='Y'))
         yplane = 1;
     else {
-        if (kpoly->plane && !(kpoly->plane[0]=='x' || kpoly->plane[0]=='X')) {
-            fputs("warning: KPOLY plane not recognized--x plane assumed.", stdout);
-            cp_str(&kpoly->plane, "x");
-            }
+        if (kpoly->plane && !(kpoly->plane[0]=='x' || kpoly->plane[0]=='X'))
+          bombElegantVA("KPOLY plane value of %c not recognized", kpoly->plane[0]);
         yplane = 0;
         }
 

@@ -8,8 +8,10 @@ extern "C" {
 #endif
 
 /* instances of these globals are in csbend.c */
+/*
 extern long negativeWarningsLeft;
 extern long dipoleFringeWarning;
+*/
 extern long expansionOrder1;  /* order of expansion+1 */
 extern long hasSkew, hasNormal;
 extern double rho0, rho_actual, rad_coef, isrConstant;

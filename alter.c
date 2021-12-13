@@ -398,7 +398,7 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
       if (nMatches==0)  {
         if (alterSpec[i].allow_missing_elements) {
           if (printingEnabled)
-            printWarning("alter_elements: No matches for name", alterSpec[i].name);
+            printWarning("alter_elements: No matches for name.", alterSpec[i].name);
         } else {
           if (printingEnabled)
             printf("Error: no matches for %s\n", alterSpec[i].name);

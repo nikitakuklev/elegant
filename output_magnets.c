@@ -27,6 +27,11 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
 
     log_entry("output_magnets");
 
+#if USE_MPI
+    if (myid==0)
+      return;
+#endif
+
     /* total_length = 0; */
     eptr = beamline->elem;
 

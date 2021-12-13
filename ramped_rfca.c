@@ -38,23 +38,10 @@ long ramped_rf_cavity(
 
     log_entry("ramped_rf_cavity");
 
-    if (!been_warned) {        
-        if (ramprf->freq<1e3 && ramprf->freq)  {
-            printf("\7\7\7warning: your RAMPRF frequency is less than 1kHz--this may be an error\n");
-            fflush(stdout);
-            been_warned = 1;
-            }
-        if (fabs(ramprf->volt)<100 && ramprf->volt) {
-            printf("\7\7\7warning: your RAMPRF voltage is less than 100V--this may be an error\n");
-            fflush(stdout);
-            been_warned = 1;
-            }
-        if (been_warned) {
-            printf("units of parameters for RAMPRF are as follows:\n");
-            fflush(stdout);
-            print_dictionary_entry(stdout, T_RAMPRF, 0, 0);
-            }
-        }
+    if (ramprf->freq<1e3 && ramprf->freq)
+      printWarningForTracking("RAMPRF frequency is less than 1kHz.", "This may be an error. Consult manual for units.");
+    if (fabs(ramprf->volt)<100 && ramprf->volt)
+      printWarningForTracking("RAMPRF voltage is less than 100V.", "This may be an error. Consult manual for units.");
 #if (!USE_MPI)
     if (np<=0) {
         log_exit("ramped_rf_cavity");

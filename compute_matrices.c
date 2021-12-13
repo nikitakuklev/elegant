@@ -1096,7 +1096,7 @@ VMATRIX *compute_matrix(
 	cwiggler = (CWIGGLER*)elem->p_elem;
         InitializeCWiggler(cwiggler, elem->name);
 	if (cwiggler->BPeak[0]==0 && cwiggler->BPeak[1]==0) {
-          printWarningForTracking("zero field in both planes", NULL);
+          printWarningForTracking("CWIGGLER has zero field in both planes.", NULL);
           elem->matrix = drift_matrix(cwiggler->length, run->default_order);
           cwiggler->radiusInternal[0] = cwiggler->radiusInternal[1] = HUGE_VAL;
 	} else {
@@ -1119,7 +1119,7 @@ VMATRIX *compute_matrix(
 	apple = (APPLE*)elem->p_elem;
         InitializeAPPLE(apple->Input, apple);
 	if (apple->BPeak[0]==0 && apple->BPeak[1]==0) {
-	  printWarningForTracking("zero field in both planes", NULL);
+	  printWarningForTracking("GFWIGGLER has zero field in both planes.", NULL);
           elem->matrix = drift_matrix(apple->length, run->default_order);
           apple->radiusInternal[0] = apple->radiusInternal[1] = HUGE_VAL;
 	} else {

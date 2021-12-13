@@ -176,17 +176,10 @@ void track_through_rfmode(
     if (pass%rfmode->pass_interval)
       return;
     
-    if (isMaster && (!been_warned)) {        
-      if (rfmode->freq<1e3 && rfmode->freq)  {
-        printf((char*)"warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
-        fflush(stdout);
-        been_warned = 1;
-      }
-      if (been_warned) {
-        printf((char*)"units of parameters for RFMODE are as follows:\n");
-        fflush(stdout);
-        print_dictionary_entry(stdout, T_RFMODE, 0, 0);
-      }
+    if (isMaster) {
+      if (rfmode->freq<1e3 && rfmode->freq)
+        printWarningForTracking((char*)"RFMODE frequency is less than 1kHz.",
+                                (char*)"This may be an error. Consult manual for units.");
     }
     
     if (rfmode->mp_charge==0 && rfmode->voltageSetpoint==0) {
@@ -1028,7 +1021,7 @@ void track_through_rfmode(
                                        (char*)"PhaseCavity", n_summed?atan2(Vci_sum/n_summed, Vcr_sum/n_summed):0.0,
                                        NULL))) {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-              printf("Warning: problem setting up data for RFMODE record file, row %ld\n", rfmode->sample_counter);
+              printWarningForTracking((char*)"Problem setting up data for RFMODE record file", NULL);
             }
             /*
             if (rfmode->sample_counter%100==0 && !SDDS_UpdatePage(rfmode->SDDSrec, 0)) {
@@ -1248,10 +1241,8 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
       charge = rfmode->preloadCharge;
     else
       charge = rfmode->charge;
-    if (rfmode->fwaveform || rfmode->Qwaveform) {
-      printf((char*)"Warning: preloading of RFMODE doesn't work properly with frequency or Q waveforms\n");
-      printf((char*)"unless the initial values of the frequency and Q factors are 1.\n");
-    }
+    if (rfmode->fwaveform || rfmode->Qwaveform)
+      printWarningForTracking((char*)"Preloading of RFMODE doesn't work properly with frequency or Q waveforms unless the initial values of the frequency and Q factors are 1.", NULL);
     To = total_length/(Po*c_mks/sqrt(sqr(Po)+1));
     if (rfmode->preloadHarmonic)
       fref = rfmode->preloadHarmonic/To;
@@ -1437,18 +1428,9 @@ void runBinlessRfMode(
   if (pass%rfmode->pass_interval)
     return;
     
-  if (!been_warned) {        
-    if (rfmode->freq<1e3 && rfmode->freq)  {
-      printf((char*)"\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
-      fflush(stdout);
-      been_warned = 1;
-    }
-    if (been_warned) {
-      printf((char*)"units of parameters for RFMODE are as follows:\n");
-      fflush(stdout);
-      print_dictionary_entry(stdout, T_RFMODE, 0, 0);
-    }
-  }
+  if (rfmode->freq<1e3 && rfmode->freq)
+    printWarningForTracking((char*)"RFMODE frequency is less than 1kHz.", 
+                            (char*)"This may be an error. Consult manual for units.");
 
   if (rfmode->mp_charge==0) {
     return ;

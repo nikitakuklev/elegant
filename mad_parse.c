@@ -267,11 +267,12 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
 
     eptr->name = get_token_t(s, " ,\011");
     if (((long)strlen(eptr->name))>max_name_length) {
-        printf("warning: element name %s truncated to %ld  characters\n",
-                eptr->name, max_name_length);
-        fflush(stdout);
-        eptr->name[max_name_length] = 0;
-        }
+      char warningText[1024];
+      snprintf(warningText, 1024, "Element name truncated to %ld  characters",
+               max_name_length);
+      printWarning(warningText, eptr->name);
+      eptr->name[max_name_length] = 0;
+    }
     cp_str(&eptr->definition_text, s);
     eptr->matrix = NULL;
     eptr->group = NULL;
@@ -367,11 +368,12 @@ void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
     delete_bounding(match, "\"");
 
     if (((long)strlen(name))>max_name_length) {
-        printf("warning: element name %s truncated to %ld characters\n",
-                eptr->name, max_name_length);
-        fflush(stdout);
-        name[max_name_length] = 0;
-        }
+      char warningText[1024];
+      snprintf(warningText, 1024, "Element name truncated to %ld  characters",
+               max_name_length);
+      printWarning(warningText, name);
+      name[max_name_length] = 0;
+    }
 
 #ifdef DEBUG
     printf("seeking match for name %s to copy for defining name %s\n",
@@ -774,10 +776,9 @@ long tell_type(char *s, ELEMENT_LIST *elem)
      */
     while (elem && elem->name) {
         if ((comparison=strcmp(elem->name, ptr))==0) {
-            if (match_found) {
-                printf("warning: reference to item %s is ambiguous--assuming element copy desired\n", ptr);
-                fflush(stdout);
-	    }
+            if (match_found)
+              printWarning("Element reference is ambiguous---assuming element copy desired",
+                           ptr);
             if (!elem->definition_text)
                 bombElegant("element copy with no definition_text--internal error", NULL);
             buffer = tmalloc(sizeof(*buffer)*(strlen(elem->definition_text)+strlen(s)+1));
@@ -1197,8 +1198,11 @@ unsigned long interpretScraperDirection(char *insert_from, long oldDirectionCode
     }
   }
   if (!direction) {
-    printf("**** Warning: invalid insert_from parameter: %s\n", insert_from ? insert_from : "NULL");
-    printf("insert_from axis letter is not one of x, h, y, or v\n");
+    char warningText[1024];
+    snprintf(warningText, 1024, 
+             "Value is %s, should be one of one of x, h, y, or v, optionally preceeded by + or -", 
+             insert_from ? insert_from : "NULL");
+    printWarning("Invalid insert_from parameter for SCRAPER.", warningText);
   }
   return direction;
 }
