@@ -1427,7 +1427,8 @@ particles.
 \begin{verbatim}
 &change_start
           STRING element_name = NULL;
-          STRING element_occurence = -1;
+          long element_occurence = -1;
+          long delta_position = 0;
 &end
 \end{verbatim}
 
@@ -1436,6 +1437,8 @@ particles.
   elements upstream of the named element. If the element occurs more than once, the first instance is used.
   The named element will be the first element in the lattice.
 \item \verb|element_occurence| --- Occurrence number of the element to use. By default, uses the last occurrence.
+\item \verb|delta_position| --- The number of elements before (if negative) or after (if positive) by which to
+  offset the end position.
 \end{itemize}
 
 %\begin{latexonly}
@@ -1485,8 +1488,9 @@ particles.
 \begin{verbatim}
 &change_start
           STRING element_name = NULL;
-          STRING element_occurence = 1;
+          long element_occurence = 1;
           long ring_mode = 0;
+          long delta_position = 0;
 &end
 \end{verbatim}
 
@@ -1497,6 +1501,8 @@ particles.
 \item \verb|element_occurence| --- Occurrence number of the element to use.
 \item \verb|ring_mode| --- If nonzero, the ring structure of the lattice is preserved by moving the elements 
   upstream of the named element to the end of the lattice.
+\item \verb|delta_position| --- The number of elements before (if negative) or after (if positive) by which to
+  offset the end position.
 \end{itemize}
 
 %\begin{latexonly}
