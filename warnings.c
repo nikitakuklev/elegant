@@ -1,11 +1,16 @@
 #include "mdb.h"
 #include "track.h"
 
+typedef struct {
+  char *text;
+  long count;
+} WARNING_RECORD;
+
+WARNING_RECORD **warningRecord = NULL;
 static long warnings = 0;
-static char **warningText = NULL;
-static long *warningCount = NULL;
 static FILE *fpWarn = NULL;
 static htab *hash_table = NULL;
+
 
 void setWarningFilePointer(FILE *fp)
 {
@@ -34,30 +39,32 @@ void printWarningForTracking(char *text, char *detail)
 
 void printWarningWithContext(char *context1, char  *context2, char *text,  char *detail)
 {
-  long *counterPtr;
+  WARNING_RECORD *wrPointer = NULL;
 
   if (!hash_table)
     hash_table = hcreate(12);
   if (hcount(hash_table)==0 ||
       hfind(hash_table, text, strlen(text))==FALSE) {
-    if (!(warningText = SDDS_Realloc(warningText, sizeof(*warningText)*(warnings+1))))
+    if (!(warningRecord = SDDS_Realloc(warningRecord, sizeof(*warningRecord)*(warnings+1))))
       bombElegant("Memory allocation error in printWarning\n", NULL);
-    if (!(warningCount = SDDS_Realloc(warningCount, sizeof(*warningCount)*(warnings+1))))
-      bombElegant("Memory allocation error in printWarning\n", NULL);
-    cp_str(&warningText[warnings], text);
-    warningCount[warnings] = 1;
-    counterPtr = &warningCount[warnings];
-    hadd(hash_table, warningText[warnings], strlen(warningText[warnings]), 
-         (void*)&warningCount[warnings]);
+    warningRecord[warnings] = malloc(sizeof(**warningRecord));
+    cp_str(&(warningRecord[warnings]->text), text);
+    warningRecord[warnings]->count = 1;
+    wrPointer = warningRecord[warnings];
+    hadd(hash_table, warningRecord[warnings]->text, strlen(warningRecord[warnings]->text),
+         (void*)warningRecord[warnings]);
     warnings++;
   } else {
-    counterPtr = hstuff(hash_table);
-    *counterPtr += 1;
+    wrPointer = hstuff(hash_table);
+    if (!wrPointer)
+      bombElegantVA("Warning counter pointer undefined. Text is %s.\n",
+                    text);
+    wrPointer->count += 1;
   }
 
   if (!fpWarn)
     fpWarn = stdout;
-  if ((*counterPtr)<=warningCountLimit) {
+  if ((wrPointer->count)<=warningCountLimit) {
     fprintf(fpWarn, "*** Warning: %s", text);
     if (context1 && strlen(context1)) {
       if (context2 && strlen(context2)) {
@@ -79,7 +86,7 @@ void printWarningWithContext(char *context1, char  *context2, char *text,  char 
       else
         fprintf(fpWarn, "\n");
     }
-    if ((*counterPtr)==warningCountLimit)
+    if (wrPointer->count==warningCountLimit)
       fprintf(fpWarn, "Further warnings of this type will be suppressed.\n");
     fflush(fpWarn);
   }
@@ -95,17 +102,15 @@ void summarizeWarnings()
     fprintf(fpWarn, "%ld types of warnings were recorded:\n", warnings);
     for (i=0; i<warnings; i++) {
       fprintf(fpWarn, "%ld* %s\n",
-             warningCount[i], warningText[i]);
-      free(warningText[i]);
-      warningCount[i] = 0;
-      warningText[i] = NULL;
+              warningRecord[i]->count, warningRecord[i]->text);
+      free(warningRecord[i]->text);
+      free(warningRecord[i]);
     }
     fprintf(fpWarn, "*****************************************************************************\n\n");
 
     warnings = 0;
     hdestroy(hash_table);
     hash_table = NULL;
-    free(warningText);
-    free(warningCount);
+    free(warningRecord);
   }
 }
