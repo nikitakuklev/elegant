@@ -203,7 +203,7 @@ void traceback_handler(int sig)
             break;
         default:      printf("\nTerminated by unknown signal\n"); break;
         }   
-    printf("Program trace-back:\n");
+    printf("\nProgram trace-back:\n");
     for (i=0; i<trace_level; i++) {
         fputs(routine_name[i], stdout);
         fputc('\n', stdout);
@@ -221,7 +221,7 @@ void show_traceback(FILE *fp)
     long i;
     if (!traceback_on && !trace_on)
       return ;
-    printf("Program trace-back:\n");
+    printf("\nProgram trace-back:\n");
     for (i=0; i<trace_level; i++) {
         fputs(routine_name[i], stdout);
         fputc('\n', stdout);
