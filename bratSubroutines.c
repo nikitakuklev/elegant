@@ -109,7 +109,7 @@ static double global_delta;
 
 static long isLost = 0;
 #ifndef ABRAT_PROGRAM
-static double lossCoordinates[3]; /* X, Z, thetaX */
+static double lossCoordinates[4]; /* X, Z, thetaX, y */
 #endif
 
 #define TOLERANCE_FACTOR 1e-14
@@ -501,7 +501,12 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 	  !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bx", "T", SDDS_FLOAT) ||
 	  !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "By", "T", SDDS_FLOAT) ||
 	  !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bz", "m", SDDS_FLOAT) ||
-	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "particleID", NULL, SDDS_LONG)) {
+	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "particleID", NULL, SDDS_LONG) ||
+	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "XLoss", "m", SDDS_FLOAT) ||
+	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "yLoss", "m", SDDS_FLOAT) ||
+	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "ZLoss", "m", SDDS_FLOAT) ||
+	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "thetaLoss", NULL, SDDS_FLOAT) 
+	  ) {
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	exitElegant(1);
       }
@@ -606,6 +611,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       if (globalLossCoordOffset!=-1)
         for (ic=0; ic<GLOBAL_LOSS_PROPERTIES_PER_PARTICLE; ic++) 
           part[ip][globalLossCoordOffset+ic] = lossCoordinates[ic];
+      part[ip][2] = lossCoordinates[3];
       part[ip][5] = pCentral*(1+global_delta);
       swapParticles(part[ip], part[itop]);
       if (accepted) 
@@ -623,8 +629,14 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 	SDDS_SetError("Problem starting SDDS table (BRAT)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
-      if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "particleID", 
-			      (long)part[iOut][particleIDIndex], NULL)) {
+      if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			      "particleID", 
+			      (long)part[iOut][particleIDIndex], 
+			      "XLoss", (float)lossCoordinates[0], 
+			      "yLoss", (float)lossCoordinates[3],
+			      "ZLoss", (float)lossCoordinates[1], 
+			      "thetaLoss", (float)lossCoordinates[2], 
+			      NULL)) {
 	SDDS_SetError("Problem setting data in SDDS table (BRAT)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
@@ -1730,6 +1742,7 @@ void BRAT_B_field(double *F, double *Qg)
   z = Q[0];
   x = Q[1];
   y = Q[2];
+  lossCoordinates[3] = y; /* just in case it is needed */
   xSlope = 0;
   if (Qg[3]!=0)
     xSlope = Qg[4]/Qg[3];
