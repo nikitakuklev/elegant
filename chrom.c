@@ -373,7 +373,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     short has_wc;
     long nTotal, nLimit, nChanged;
     double K20;
-    char warningText1[1024], warningText2[1024];
+    char warningText[1024];
 
     log_entry("do_chromaticity_correction");
 
@@ -505,24 +505,18 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
           nTotal++;
           if (chrom->strengthLimit>0 && chrom->strengthLimit<fabs(K2)) {
             K2 = *K2ptr = SIGN(K2)*chrom->strengthLimit;
-            snprintf(warningText1, 1024, "Warning: %s#%ld is at the strength limit during chromaticity correction", 
-                    context->name, context->occurence);
-            snprintf(warningText2, 1024, "K2=%le", K2);
-            printWarning(warningText1, warningText2);
+            snprintf(warningText, 1024, "%s#%ld has K2=%le", context->name, context->occurence, K2);
+            printWarning("Sextupole at strength limit during chromaticity correction", warningText);
             nLimit ++;
           } else if (chrom->lowerLimit && K2<chrom->lowerLimit[i]) {
             K2 = *K2ptr = chrom->lowerLimit[i]; 
-            snprintf(warningText1, 1024, "Warning: %s#%ld is at the lower limit during chromaticity correction", 
-                    context->name, context->occurence);
-            snprintf(warningText2, 1024, "K2=%le", K2);
-            printWarning(warningText1, warningText2);
+            snprintf(warningText, 1024, "%s#%ld has K2=%le", context->name, context->occurence, K2);
+            printWarning("Sextupole at lower limit during chromaticity correction", warningText);
             nLimit ++;
           } else  if (chrom->upperLimit && K2>chrom->upperLimit[i]) {
             K2 = *K2ptr = chrom->upperLimit[i];
-            snprintf(warningText1, 1024, "Warning: %s#%ld is that the upper limit during chromaticity correction", 
-                    context->name, context->occurence);
-            snprintf(warningText2, 1024, "K2=%le", K2);
-            printWarning(warningText1, warningText2);
+            snprintf(warningText, 1024, "%s#%ld has K2=%le", context->name, context->occurence, K2);
+            printWarning("Sextupole at upper limit during chromaticity correction", warningText);
             nLimit ++;
           }
           if (K2!=K20)
