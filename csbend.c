@@ -2258,12 +2258,12 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	derbenevRatio = (Sx/Sz)/pow(rho0/Sz, 1./3.);
 	if (derbenevRatio>0.1) {
 	  if (code==DERBENEV_CRITERION_EVAL) {
-            printWarningForTracking("Warning: Using 1-D CSR formalism but Derbenev criterion not satisfied (ratio > 0.1).",
-                                    "CSR applied regardless");
+            printWarningForTracking("Using 1-D CSR formalism but Derbenev criterion not satisfied (ratio > 0.1).",
+                                    "CSR applied regardless per setting of DERBENEV_CRITERION_MODE.");
           } else {
 	    csrInhibit = 1;
-            printWarningForTracking("Warning: Using 1-D CSR formalism but Derbenev criterion not satisfied (ratio > 0.1).",
-                                    "CSR not applied");
+            printWarningForTracking("Using 1-D CSR formalism but Derbenev criterion not satisfied (ratio > 0.1).",
+                                    "CSR not applied per setting of DERBENEV_CRITERION_MODE.");
 	  }
 	}
 	break;
@@ -2967,7 +2967,6 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   static char *wavelengthMode[3] = {"sigmaz", "bunchlength", "peak-to-peak"};
   static char *bunchlengthMode[3] = {"rms", "68-percentile", "90-percentile"};
   unsigned long mode;
-  static long warned = 0;
   long nBins1;
   TRACKING_CONTEXT tContext;
 #if USE_MPI 
@@ -3051,11 +3050,8 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   if (mode&CSRDRIFT_STUPAKOV)
     return track_through_driftCSR_Stupakov(part, np, csrDrift, Po, accepted, zStart, charge, rootname);
 
-  if (!warned) {
-    printWarningForTracking("USE_STUPAKOV=1 is recommended for CSRDRIFT elements.",
-                            "This is the most physical model available in elegant.");
-    warned = 1;
-  }
+  printWarningForTracking("USE_STUPAKOV=1 is recommended for CSRDRIFT elements.",
+                          "This is the most physical model available in elegant.");
   
   dct = csrWake.dctBin;
   if (csrDrift->dz>0) {
@@ -3376,8 +3372,8 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
     *n = xEnd/(100*dx);
     if (*n>100000) {
       *n = 100000;
-      printWarningForTracking("The CSR drift wake decay table size hit the limit of 100k points", 
-                              "Check results with a different CSR model");
+      printWarningForTracking("The CSR drift wake decay table size hit the limit of 100k points.", 
+                              "Check results with a different CSR model.");
     }
   } else 
     dx = dx0;

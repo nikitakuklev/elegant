@@ -742,7 +742,7 @@ char **argv;
 
       if (concat_order!=0)
         printWarning("concat_order is non-zero in run_setup.",
-                     "This is deprecated. Using matrix concatenation is rarely needed and reduces accuracy.");
+                     "Using matrix concatenation is rarely needed and reduces accuracy.");
 
       setSearchPath(search_path);
       /* check for validity of namelist inputs */
@@ -1102,7 +1102,7 @@ char **argv;
         if (do_closed_orbit && 
             !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
 	  if (soft_failure) {
-	    printWarning("Closed orbit not found", ". Continuing to next step");
+	    printWarning("Closed orbit not found.", "Continuing to next step.");
 	    continue;
 	  } else
 	    bombElegant("Closed orbit not found", NULL);
@@ -1110,7 +1110,7 @@ char **argv;
         /* Compute twiss parameters with starting_coord as the start of the orbit */
         if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 0)) {
 	  if (soft_failure) {
-	    printWarning("Twiss parameters not defined", ". Continuing to next step");
+	    printWarning("Twiss parameters not defined.", "Continuing to next step.");
 	    continue;
 	  } else
 	    bombElegant("Twiss parameters not defined", NULL);
@@ -1144,14 +1144,14 @@ char **argv;
                 !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
                                run_control.i_step, 
                                (i==0?INITIAL_CORRECTION:0)+(i==correction_iterations-1?FINAL_CORRECTION:0))) {
-              printWarning("Orbit correction failed", ". Continuing with next step");
+              printWarning("Orbit correction failed.", "Continuing with next step.");
               continue;
             }
             if (fl_do_tune_correction) {
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
 		if (soft_failure) {
-		  printWarning("Closed orbit not found", ". Continuing to next step");
+		  printWarning("Closed orbit not found.", "Continuing to next step.");
 		  failed = 1;
 		  break;
 		} else
@@ -1160,7 +1160,7 @@ char **argv;
               if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
                                       run_control.i_step, i==correction_iterations-1)) { 
 		if (soft_failure) {
-		  printWarning("Tune correction failed", ". Continuing to next step");
+		  printWarning("Tune correction failed.", "Continuing to next step.");
 		  failed = 1;
 		  break;
 		} else
@@ -1171,7 +1171,7 @@ char **argv;
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
 		if (soft_failure) {
-		  printWarning("Closed orbit not found", ". Continuing to next step");
+		  printWarning("Closed orbit not found.", "Continuing to next step.");
 		  failed = 1;
 		  break;
 		} else
@@ -1180,7 +1180,7 @@ char **argv;
               if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
                                               run_control.i_step, i==correction_iterations-1)) {
 		if (!soft_failure) {
-		  printWarning("Chromaticity correction failed", ". Continuing to next step");
+		  printWarning("Chromaticity correction failed.", "Continuing to next step.");
 		  failed = 1;
 		  break;
 		} else
@@ -1212,7 +1212,7 @@ char **argv;
         /* Do post-correction output */
         if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1)) {
 	  if (soft_failure) {
-	    printWarning("Closed orbit not found", ". Continuing to next step");
+	    printWarning("Closed orbit not found.", "Continuing to next step.");
 	    continue;
 	  }
 	  else 
@@ -1220,7 +1220,7 @@ char **argv;
 	}
         if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 1)) {
 	  if (soft_failure) {
-	    printWarning("Twiss parameters not defined", ". Continuing to next step");
+	    printWarning("Twiss parameters not defined.", "Continuing to next step.");
 	    continue;
 	  }
 	  else 
@@ -1233,10 +1233,10 @@ char **argv;
         if (do_coupled_twiss_output &&
             run_coupled_twiss_output(&run_conditions, beamline, starting_coord)) {
 	  if (soft_failure) {
-	    printWarning("Coupled twiss parameters computation failed", NULL);
+	    printWarning("Coupled twiss parameters computation failed.", NULL);
 	    continue;
 	  } else
-	    bombElegant("Coupled twiss parameters computation failed", NULL);
+	    bombElegant("Coupled twiss parameters computation failed.", NULL);
         }
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
@@ -1586,14 +1586,14 @@ char **argv;
                 !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
                                run_control.i_step, 
                                (i==0?INITIAL_CORRECTION:0)+(i==correction_iterations-1?FINAL_CORRECTION:0))) {
-              printWarning("Orbit correction failed", ". Continuing with next step");
+              printWarning("Orbit correction failed.", "Continuing with next step.");
               continue;
             }
             if (fl_do_tune_correction) {
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
 		if (soft_failure) {
-		  printWarning("Closed orbit not found", ". Continuing to next step");
+		  printWarning("Closed orbit not found.", "Continuing to next step.");
 		  break;
 		} else
 		  bombElegant("Closed orbit not found", NULL);
@@ -1601,7 +1601,7 @@ char **argv;
               if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
                                       run_control.i_step, i==correction_iterations-1)) {
 		if (soft_failure) {
-		  printWarning("Tune correction failed", ". Continuing to next step");
+		  printWarning("Tune correction failed.", "Continuing to next step.");
 		  failed = 1;
 		  break;
 		} else 
@@ -1612,7 +1612,7 @@ char **argv;
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
 		if (soft_failure) {
-		  printWarning("Closed orbit not found", ". Continuing to next step\n");
+		  printWarning("Closed orbit not found.", "Continuing to next step.");
 		  failed = 1;
 		  break;
 		} else
@@ -1621,8 +1621,7 @@ char **argv;
               if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
                                               run_control.i_step, i==correction_iterations-1)) {
 		if (soft_failure) {
-		  printf("Chromaticity correction failed---continuing to next step\n");
-		  fflush(stdout);
+		  printWarning("Chromaticity correction failed.", "Continuing to next step.");
 		  failed = 1;
 		  break;
 		} else
@@ -1643,8 +1642,7 @@ char **argv;
         if (do_closed_orbit && 
             !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1)) {
 	  if (soft_failure) {
-	    printf("Closed orbit not found---continuing to next step\n");
-	    fflush(stdout);
+	    printWarning("Closed orbit not found.", "Continuing to next step.");
 	    continue;
 	  } else 
 	    bombElegant("Closed orbit not found", NULL);
@@ -1652,8 +1650,7 @@ char **argv;
         if (do_twiss_output && 
             !run_twiss_output(&run_conditions, beamline, starting_coord, 1)) {
 	  if (soft_failure) {
-	    printf("Twiss parameters not defined---continuing to next step\n");
-	    fflush(stdout);
+	    printWarning("Twiss parameters not defined.", "Continuing to next step.");
 	    continue;
 	  } else
 	    bombElegant("Twiss parameters not defined", NULL);
@@ -1661,8 +1658,8 @@ char **argv;
         if (do_coupled_twiss_output &&
             run_coupled_twiss_output(&run_conditions, beamline, starting_coord)) {
 	  if (soft_failure) {
-	    printf("Coupled twiss parameters calculation failed.\n");
-	    fflush(stdout);
+	    printWarning("Coupled twiss parameters calculation failed.", NULL);
+            /* Should we continue to next step ?? */
 	  } else
 	    bombElegant("Coupled twiss parameters calculation failed", NULL);
         }
@@ -1925,14 +1922,14 @@ char **argv;
       if (!run_setuped)
         bombElegant("run_setup must precede insert_element namelist", NULL);
       if (lastCommandCode!=RUN_SETUP && lastCommandCode!=INSERT_ELEMENTS && lastCommandCode!=REPLACE_ELEMENTS)
-        printWarning("To avoid possible calculation errors, insert_elements commands should immediately follow run_setup", NULL);
+        printWarning("To avoid possible calculation errors, insert_elements commands should immediately follow run_setup.", NULL);
       do_insert_elements(&namelist_text, &run_conditions, beamline);
       break;
     case REPLACE_ELEMENTS:
       if (!run_setuped)
         bombElegant("run_setup must precede replace_element namelist", NULL);
       if (lastCommandCode!=RUN_SETUP && lastCommandCode!=INSERT_ELEMENTS && lastCommandCode!=REPLACE_ELEMENTS)
-        printWarning("To avoid possible calculation errors, replace_elements commands should immediately follow run_setup", NULL);
+        printWarning("To avoid possible calculation errors, replace_elements commands should immediately follow run_setup.", NULL);
       do_replace_elements(&namelist_text, &run_conditions, beamline);
       break;
     case TWISS_ANALYSIS:
@@ -1953,7 +1950,6 @@ char **argv;
       bombElegant("The obstruction_data command is not implemented for the GPU version of elegant.", NULL);
 #endif
       readObstructionInput(&namelist_text, &run_conditions);
-      printWarning("The obstruction_data command and implementation are experimental. See the manual for limitations.", NULL);
       break;
     case LINEAR_CHROMATIC_TRACKING_SETUP:
       beamline->flags |= BEAMLINE_MATRICES_NEEDED;
@@ -2091,7 +2087,7 @@ double find_beam_p_central(char *input)
   if (SDDS_ReadPage(&SDDSin)>0) {
     char buffer[16384];
     snprintf(buffer, 16384, ": %s", input);
-    printWarning("Only the first page of a file is used by expand_for", buffer);
+    printWarning("Only the first page of a file is used by expand_for.", buffer);
     fflush(stdout);
   }
   SDDS_Terminate(&SDDSin);
