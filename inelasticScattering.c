@@ -109,7 +109,7 @@ void readMomentumAperture(char *momApFile)
   }
 
   if (SDDS_ReadPage(&SDDSma)>1)
-    printWarning("Inelastic scattering momentum acceptance file has more than one page",
+    printWarning("inelastic_scattering: momentum acceptance file has more than one page.",
                  "Only the first page is used.");
  
 }
@@ -382,7 +382,7 @@ long runInelasticScattering(
     snprintf(warningText, 1024, 
              "%ld working processors, %ld k values, %ld elements",
              nWorkingProcessors, n_k, nElem);
-    printWarning("The number of working processors does not evenly divide the number of particles for inelastic_scattering",
+    printWarning("inelastic_scattering: The number of working processors does not evenly divide the number of particles.",
                  warningText);
     nEachProcessor =  (nTotal/nWorkingProcessors)+1;
   } else {
@@ -621,14 +621,14 @@ long runInelasticScattering(
     free_czarray_2d((void**)lostParticles, nLost, totalPropertiesPerParticle);	 
     if (badDeltaMin) {
       if (momentum_aperture)
-        printWarning("One or more particles at the minimum delta limit were lost for inelastic_scattering simulation",
+        printWarning("inelastic_scattering: One or more particles at the minimum delta limit were lost, results suspect.",
                      "Reduce momentum_aperture_scale and re-rerun.");
       else
-        printWarning("One or more particles at the minimum delta limit were lost for inelastic_scattering simulation",
+        printWarning("inelastic_scattering: One or more particles at the minimum delta limit were lost, results suspect.", 
                      "Reduce k_min and re-rerun.");
     }
     if (nDeltaMax!=nElements)
-      printWarning("One or more particles on the outer delta ring were not lost.", 
+      printWarning("inelastic_scattering: One or more particles on the outer delta ring were not lost, results suspect.", 
                    "Consider tracking more turns or adding physical apertures.");
   }
   else {

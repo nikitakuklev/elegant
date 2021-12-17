@@ -900,22 +900,22 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
       }
       if (ftp->lowerLimit && ftp->lowerLimit[i]>ftp->definedValue[i]) {
         char warningText[16834];
-        snprintf(warningText, 16384,"Value %e of %s.%s is lower than %e\n",
+        snprintf(warningText, 16384,"Value %e of %s.%s is below lower limit of %e.",
                  ftp->definedValue[i], ftp->elementName[i], ftp->parameterName[i], ftp->lowerLimit[i]);
-        printf("Initial value is less than lower limit for trace fitting",
+        printWarning("Initial value is less than lower limit for trace fitting.",
                warningText);
       }
       if (ftp->upperLimit && ftp->upperLimit[i]<ftp->definedValue[i]) {
-        snprintf(warningText, 16384,"Value %e of %s.%s is greater than %e\n",
+        snprintf(warningText, 16384,"Value %e of %s.%s is above lower limit of %e.",
                  ftp->definedValue[i], ftp->elementName[i], ftp->parameterName[i], ftp->upperLimit[i]);
-        printf("Initial value is greater than upper limit for trace fitting",
+        printWarning("Initial value is greater than upper limit for trace fitting.",
                warningText);
       }
     }
   }
   
   if (SDDS_ReadPage(&SDDSin)>1)
-    printfWarning("Only the first page of fit_traces input file is used", 
+    printfWarning("Only the first page of fit_traces input file is used.", 
                   "Input file provided has multiple pages.");
   SDDS_Terminate(&SDDSin);
 

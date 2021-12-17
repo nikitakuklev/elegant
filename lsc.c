@@ -155,8 +155,8 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     if (n_binned!=np) {
       char warningText[1024];
       snprintf(warningText, 1024, 
-               "%ld of %ld particles were binned", n_binned, np);
-      printWarningForTracking("Some particles were not binned in LSCDRIFT, which shouldn't happen",
+               "Only %ld of %ld particles were binned. This shouldn't happen.", n_binned, np);
+      printWarningForTracking("Some particles were not binned in LSCDRIFT.",
                               warningText);
     }
   }
@@ -170,7 +170,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     if (!all_binned) {
       if (myid==1) {  
 	/* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant to avoid communications */ 
-        printWarningForTracking("Some particles were not binned in LSCDRIFT, which shouldn't happen", NULL);
+        printWarningForTracking("Some particles were not binned in LSCDRIFT.", "This shouldn't happen.");
       }
     }
   }
@@ -454,8 +454,8 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   if (n_binned!=np && !USE_MPI) {/* This will not be checked in Pelegant to avoid communications */
     char warningText[1024];
     snprintf(warningText, 1024, 
-             "%ld of %ld particles were binned", n_binned, np);
-    printWarningForTracking("Some particles were not binned in LSCDRIFT, which shouldn't happen",
+             "Only %ld of %ld particles were binned, which shouldn't happen.", n_binned, np);
+    printWarningForTracking("Some particles were not binned in LSCDRIFT."
                             warningText);
   }
 

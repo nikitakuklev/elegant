@@ -62,6 +62,8 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 \begin{itemize}
 \item The unified warning system has now been (essentially) completed. All warnings from commands go through this
   system and are collected in the summary at the end of the run.
+  The \verb|global_settings| command has a new parameter, \verb|warning_limit|, the controls how many similar
+  warnings will be shown in detail before such warning are suppressed.
 \item Added the \verb|element_occurence| parameter to the \verb|change_start| command, which allows
   changing the starting location in a beamline.
 \item Added the \verb|change_end| command, which allows changing the end of the beamline.
@@ -2638,6 +2640,7 @@ programs such as TRACY and MAD \cite{BuesingPC}.
     double tracking_matrix_step_factor = 1;
     double tracking_matrix_points = 9;
     double tracking_matrix_step_size[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
+    long warning_limit = 10;
 &end
 \end{verbatim}
 
@@ -2703,6 +2706,10 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   (The run time scales approximately as the sixth power of this value.)
 \item \verb|tracking_matrix_step_size| --- Sets the step sizes, in each of the six coordinates,
   used for tracking-based matrix determination
+\item \verb|warning_limit| --- Allows setting a limit on the number of similar warnings that are printed in detail.
+  Set to 0 to see no detailed warnings, only the summary; this is not recommended.
+  Set to -1 to see all detailed warnings; this is suggested for debugging only, since it may create large log files
+  and reduce performance.
 \end{itemize}
 
 

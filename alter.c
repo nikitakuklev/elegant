@@ -194,7 +194,6 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
     char *p_elem0;
     char **changedDefinedParameter = NULL;
     long nChangedDefinedParameter = 0;
-    long warningCountDown = 25;
     long i;
     
     for (i=0; i<alterSpecs; i++) {
@@ -227,17 +226,14 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
           iParam = confirm_parameter(alterSpec[i].item, thisType);
         }
         if (iParam<0) {
-          if (printingEnabled && warningCountDown>0) {
+          if (printingEnabled) {
             char buffer[16834];
             if (alterSpec[i].allow_missing_parameters) {
               snprintf(buffer, 16384, "element %s, parameter %s",
                        eptr->name, alterSpec[i].item);
               printWarning("alter_elements: element does not have parameter", buffer);
-              if (--warningCountDown==0 && alterSpec[i].allow_missing_parameters)
-                fprintf(stderr, "*** Further messages suppressed!\n");
             } else 
-              printf("Element does not have parameter %s: %s",
-                     alterSpec[i].item, eptr->name);
+              printf("Element does not have parameter %s: %s", alterSpec[i].item, eptr->name);
           }
           if (!alterSpec[i].allow_missing_parameters)
             exitElegant(1);

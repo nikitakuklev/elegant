@@ -71,7 +71,6 @@ static char *load_mode[LOAD_MODES] = {
 
 long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamline);
 
-/* static long missingElementWarningsLeft = 100, missingParameterWarningsLeft = 100; */
 static long printingEnabled = 1;
 
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
@@ -164,7 +163,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
   if (!SDDS_InitializeInputFromSearchPath(&load_request[load_requests].table, 
                                           load_request[load_requests].filename)) {
     if (printingEnabled && allow_missing_files)
-        printWarning("Couldn't initialize SDDS input for load_parameters file", 
+        printWarning("load_parameters: Couldn't initialize SDDS input for a file.", 
                      load_request[load_requests].filename);
     if (!allow_missing_files) {
       printf("Error: couldn't initialize SDDS input for load_parameters file %s\n", 
@@ -362,7 +361,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       load_request[i].element = NULL;
       if (code<0) {
 	if (printingEnabled)
-          printWarning("load_parameters input file ends unexpectedly.", load_request[i].filename);
+          printWarning("load_parameters: input file ends unexpectedly.", load_request[i].filename);
         load_request[i].flags |= COMMAND_FLAG_IGNORE;
         continue;
       }
@@ -497,21 +496,21 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         char warningText[16384];
 	if (occurence) {
           snprintf(warningText, 16834, 
-                   "Unable to find occurence %" PRId32 " of element %s for load_parameters.", 
-                   occurence[j], element[j]);
+                   "Unable to find occurence %" PRId32 " of element %s, listed in file %s.", 
+                   occurence[j], element[j], load_request[i].filename);
           if (load_request[i].flags&ALLOW_MISSING_ELEMENTS) {
             if (printingEnabled)
-              printWarning("Missing element in load_parameters.", warningText);
+              printWarning("load_parameters: Data provided for element occurence that is missing from beamline.", warningText);
           } else
-            bombElegant("Missing element in load_parameters", warningText);
+            bombElegant("Data provided for element occurence that is missing from beamline.", warningText);
 	} else {
-          snprintf(warningText, 16384, "Unable to find element %s for load_parameters.", 
-                   element[j]);
+          snprintf(warningText, 16384, "Unable to find element %s, listed in file %s.", 
+                   element[j], load_request[i].filename);
           if (load_request[i].flags&ALLOW_MISSING_ELEMENTS) {
             if (printingEnabled)
-              printWarning("Missing element in load_parameters.", warningText);
+              printWarning("load_parameters: Data provided for element that is missing from beamline.", warningText);
           } else
-            bombElegant("Missing element in load_parameters", warningText);
+            bombElegant("Data provided for element that is missing from beamline.", warningText);
         }
 	element_missing = 1;
       }
@@ -527,11 +526,11 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if ((param = confirm_parameter(parameter[j], eptr->type))<0) {
         char warningText[16384];
         snprintf(warningText, 16384,
-                 "Element %s does not have a parameter %s",
-                 eptr->name, parameter[j]);
+                 "Element %s does not have a parameter %s (input file %s)",
+                 eptr->name, parameter[j], load_request[i].filename);
         if (load_request[i].flags&ALLOW_MISSING_PARAMETERS) {
           if (printingEnabled)
-            printWarning("Attempt to load parameter that element lacks.", warningText);
+            printWarning("load_parameters: Attempt to load parameter that element lacks.", warningText);
         } else 
           bombElegantVA("Attempt to load parameter that element lacks: %s", warningText);
         continue;

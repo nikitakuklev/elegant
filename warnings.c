@@ -64,7 +64,7 @@ void printWarningWithContext(char *context1, char  *context2, char *text,  char 
 
   if (!fpWarn)
     fpWarn = stdout;
-  if ((wrPointer->count)<=warningCountLimit) {
+  if (warningCountLimit<0 || (wrPointer->count-1)<warningCountLimit) {
     fprintf(fpWarn, "*** Warning: %s", text);
     if (context1 && strlen(context1)) {
       if (context2 && strlen(context2)) {
@@ -86,8 +86,8 @@ void printWarningWithContext(char *context1, char  *context2, char *text,  char 
       else
         fprintf(fpWarn, "\n");
     }
-    if (wrPointer->count==warningCountLimit)
-      fprintf(fpWarn, "Further warnings of this type will be suppressed.\n");
+    if (warningCountLimit>0 && wrPointer->count==warningCountLimit)
+      fprintf(fpWarn, "Further warnings of this type will be suppressed. Increase warning_limit with global_settings to see more, or set to zero to see everything.\n");
     fflush(fpWarn);
   }
 }

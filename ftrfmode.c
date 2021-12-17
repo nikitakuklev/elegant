@@ -249,7 +249,7 @@ void track_through_ftrfmode(
 #if USE_MPI
       if (myid==0)
 #endif
-        printWarning("Time range overlap between buckets for FTRFMODE", "Consider using fewer bins or smaller bins");
+        printWarningForTracking("Time range overlap between buckets for FTRFMODE.", "Consider using fewer bins or smaller bins.");
     }
     last_tmax = tmax;
 

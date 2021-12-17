@@ -440,8 +440,8 @@ long do_lorentz_integration(double *coord, void *field)
             default:
                 if ((exvalue = (*exit_function)(NULL, q, central_length))>exit_toler)  {
                   char warningText[1024];
-                  snprintf(warningText, 1024, "Exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
-                  printWarningForTracking("Problem in numerical integration", warningText);
+                  snprintf(warningText, 1024, "Exit value of %e exceeds tolerance of %e--particle lost.", exvalue, exit_toler);
+                  printWarningForTracking("Problem in numerical integration.", warningText);
                   if (!isLost) {
                     isLost = 1;
                     memcpy(&lostParticleCoordinate, &q, sizeof(q[0])*8);
