@@ -497,7 +497,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         char warningText[16384];
 	if (occurence) {
           snprintf(warningText, 16834, 
-                   "unable to find occurence %" PRId32 " of element %s for load_parameters.", 
+                   "Unable to find occurence %" PRId32 " of element %s for load_parameters.", 
                    occurence[j], element[j]);
           if (load_request[i].flags&ALLOW_MISSING_ELEMENTS) {
             if (printingEnabled)
@@ -505,7 +505,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           } else
             bombElegant("Missing element in load_parameters", warningText);
 	} else {
-          snprintf(warningText, 16384, "unable to find element %s for load_parameters.", 
+          snprintf(warningText, 16384, "Unable to find element %s for load_parameters.", 
                    element[j]);
           if (load_request[i].flags&ALLOW_MISSING_ELEMENTS) {
             if (printingEnabled)
@@ -527,7 +527,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if ((param = confirm_parameter(parameter[j], eptr->type))<0) {
         char warningText[16384];
         snprintf(warningText, 16384,
-                 "element %s does not have a parameter %s",
+                 "Element %s does not have a parameter %s",
                  eptr->name, parameter[j]);
         if (load_request[i].flags&ALLOW_MISSING_PARAMETERS) {
           if (printingEnabled)
