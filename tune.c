@@ -494,7 +494,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
           K1 = *K1ptr = tune->lowerLimit[i];
           nLimit++;
           snprintf(warningBuffer, 1024, 
-                   "%s#%ld is at the lower limit (K1=%le, limit=%le).\n", 
+                   "%s#%ld is at the lower limit (K1=%le, limit=%le).", 
                    context->name, context->occurence, K1, tune->lowerLimit[i]
                    );
           printWarning("Quadrupole at lower limit during tune correction.", warningBuffer);
@@ -502,7 +502,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
           K1 = *K1ptr = tune->upperLimit[i];
           nLimit++;
           snprintf(warningBuffer, 1024, 
-                   "%s#%ld is at the upper limit (K1=%le, limit=%le).\n", 
+                   "%s#%ld is at the upper limit (K1=%le, limit=%le).", 
                    context->name, context->occurence, K1, tune->upperLimit[i]
                    );
           printWarning("Quadrupole at upper limit during tune correction.", warningBuffer);
