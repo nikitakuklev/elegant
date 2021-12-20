@@ -116,8 +116,8 @@ void setup_sdds_beam(
   if (prebunched!=-1) {
     track_pages_separately = prebunched;
     prebunched = -1;
-    printWarning("The prebunched qualifier of sdds_beam is deprecated and may be ignored in future versions.",
-                 "Use track_pages_separately instead.");
+    printWarning("sdds_beam: the prebunched qualifier is deprecated.",
+                 "This qualifier may be ignored in future versions. Use track_pages_separately instead.");
   }
 
   /* check for validity of namelist inputs */
@@ -216,7 +216,7 @@ long new_sdds_beam(
     if (beam->original==NULL)
       bombElegant("can't retrack with previous bunch--there isn't one!", NULL);
     if (n_particles_per_ring!=1) {
-      printWarning("Can't do retracking with previous bunch when n_particles_per_ring!=1.", 
+      printWarning("sdds_beam: can't do retracking when n_particles_per_ring!=1.", 
                    "Will use a new bunch generated from previously read data.");
       generate_new_bunch = 1;
     }
@@ -868,7 +868,7 @@ long get_sdds_particles(double ***particle,
         }
         if (!check_sdds_column(&SDDS_input, "p", "m$be$nc")) {
           if (check_sdds_column(&SDDS_input, "p", NULL)) {
-            printWarning("Column p in file given to sdds_beam has no units.", inputFile[inputFileIndex]);
+            printWarning("sdds_beam: column p in given file has no units.", inputFile[inputFileIndex]);
           } else
             bombElegantVA("Column p in file %s is missing or units are not recognized.",
                           inputFile[inputFileIndex]);

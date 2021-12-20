@@ -1056,7 +1056,7 @@ long track_through_rfcw
   if (rfcw->cellLength<=0) 
     bombElegant("invalid cell length for RFCW", NULL);
   if (rfcw->length==0)
-    printWarningForTracking("RFCW element has zero length, so wakefields will scale to 0", NULL);
+    printWarningForTracking("RFCW element has zero length, so wakefields will scale to 0.", NULL);
   /* set up the RFCA, TRWAKE, and WAKE structures */
   rfcw->rfca.length = rfcw->length;
   rfcw->rfca.volt = rfcw->volt;

@@ -76,7 +76,8 @@ static char *variable_description[5] = {
 #define SET_3DFIELDMAP 27
 #define SET_USE_FTABLE 28
 #define SET_INTERPOLATE 29
-#define N_OPTIONS 30
+#define SET_WEIGHT 30
+#define N_OPTIONS 31
 
 static char *option[N_OPTIONS] = {
   "tolerance", "theta", "output",
@@ -86,7 +87,7 @@ static char *option[N_OPTIONS] = {
   "dxdipole", "zduplicate", "dzdipole", "arcscan",
   "nominalEntrance", "nominalExit",
   "rigidity", "ideal", "fseLimit", "dxLimit", "dzLimit", "yawLimit", "yawDipole",
-  "3dfieldfile", "ftable", "interpolate"};
+  "3dfieldfile", "ftable", "interpolate", "weight"};
 
 static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,<edgeAngleInDeg>}\n"
   " [-3dFieldFile] [-interpolateField=<parameterName>[,order=<order>(1)][,extrapolate][,permissive]]\n"
@@ -97,7 +98,8 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
   " [-output=filename] [-singleScan | -arcScan=<sName>,<fieldName>,<rhoIdeal>]\n"
   " [-fsc=<value>] [-dxDipole=<m>] [-dzDipole=<m>] [-yawDipole=<value>]\n"
   " {[-optimize[=verbose][{fse,dx,dz,yaw}]]\n"
-  "  -fseLimit=<min>,<max> -dxLimit=<min>,<max> -dzLimit=<min>,<max> -yawLimit=<min>,<max>}\n"
+  "  -fseLimit=<min>,<max> -dxLimit=<min>,<max> -dzLimit=<min>,<max> -yawLimit=<min>,<max>\n"
+  "  -weight=<xfWeight>,<xfpWeight>}\n"
   " [-fieldmapOutput=filename,zmin,zmax,nz,xmin,xmax,nx]\n"
   " [-tolerance=integration-tolerance]\n"
   " [-gap=<meters>] [-ftable=<kicks>] [-quiet]\n"
@@ -149,6 +151,7 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
   " -dxLimit          Set range for dx of dipole in optimization\n"
   " -dzLimit          Set range for dz of dipole in optimization\n"
   " -yawLimit         Set range for yaw of dipole in optimization\n"
+  " -weight           Set optimization weights for x and x'\n"
   " -fieldMapOutput   outputs the field data to a file for checking\n"
   " -extendData       extend data in x dimension as needed so particles see field\n"
   " -zDuplicate       reflect copy of -z data into +z\n"
@@ -158,7 +161,7 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
   "                   compute the edge-field integral.\n"
   " -ftable           use FTABLE method (see elegant manual).\n"
   " -quiet            Suppress informational printouts.\n\n"
-  "Program by Michael Borland  (Version 8, August 2018).\n";
+  "Program by Michael Borland  (Version 9, December 2021).\n";
 
 unsigned long optimizeFlags;
 #define OPTIMIZE_ON 0x0001
@@ -532,6 +535,16 @@ int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inpu
                   yawLimit[0] >= yawLimit[1])
                 {
                   fprintf(stderr, "invalid -yawLimit syntax/values\n");
+                  return (1);
+                }
+              break;
+            case SET_WEIGHT:
+              if (scanned[i_arg].n_items != 3 ||
+                  sscanf(scanned[i_arg].list[1], "%lf", &xfWeight) != 1 ||
+                  sscanf(scanned[i_arg].list[2], "%lf", &xfpWeight) != 1 ||
+                  xfWeight<0 || xfpWeight<0 || (xfWeight==0 && xfpWeight==0))
+                {
+                  fprintf(stderr, "invalid -weight syntax/values\n");
                   return (1);
                 }
               break;

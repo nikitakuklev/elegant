@@ -178,7 +178,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     }
   } else {
     if (bnCheck || skewCheck) {
-      printWarningForTracking("Steering multipole file%s has systematic bn or skew columns, which are ignored.",
+      printWarningForTracking("Steering multipole file has systematic bn or skew columns, which are ignored.",
                               warningBuffer);
     }
   }

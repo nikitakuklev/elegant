@@ -230,8 +230,8 @@ int TouschekRate(LINE_LIST *beamline, long nElement)
     B2 = sqr(B1)-c0*c3;   	  
     if (B2<0) {
       if (fabs(B2/sqr(B1))<1e-7)
-        printWarningForTracking("B2^2<0 for Touschek scattering simulation.", 
-                                "Please seek expert help.\n");
+        printWarningForTracking("touschek_scatter: B2^2<0.", 
+                                "Please seek expert help.");
       else
         B2 = 0;
     }
@@ -290,7 +290,7 @@ void FIntegral(double tm, double b1, double b2, double *F)
     if (FABS(sum/intF)<test) 
       break;
     if ( i== maxRegion) 
-      printWarning("Integral did not converge in Touschek scattering simulation.", NULL);
+      printWarning("touschek_scatter: integral did not converge.", NULL);
   }
 
   *F = intF;
@@ -604,22 +604,22 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 	  /*          printf("scatted particles %ld.\n", tsptr->simuCount); */
         }
         if (total_event*11 > (long)2e9) {
-          printWarning("The total number of random numbers used > 2e9 in Tousheck scattering.", 
-                       "Use less n_simulated or use smaller delta.");
+          printWarning("touschek_scatter: the total number of random numbers used exceeded 2e9.", 
+                       "Use smaller n_simulated or smaller delta.");
           break;
         }
       }
       if (verbosity)
         report_stats(stdout, "After particle generation: ");
       if (tsptr->simuCount == 0)
- 	  bombElegant("You must have a very large momentum aperture. No need on doing touscheck simulation.\n If you think this is a wrong statement, send your input to xiaoam@aps.anl.gov for debugging \n", NULL);
+ 	  bombElegant("It appears that the Touschek lifetime is extremely wrong and there is no need to perform Touschek simulation.\n If you think this is a wrong statement, send input to developers for evaluation.\n", NULL);
    
       if (total_event/tsptr->simuCount > 20) {
         if (distribution_cutoff[0]<5 || distribution_cutoff[1]<5 ) 
-          printWarning("Scattering rate is low for Touschek scattering.", 
+          printWarning("touschek_scatter: scattering rate is low.",
                        "Please use >=5 sigma beam for better simulation.");
         else
-          printWarning("Scattering rate is very low for Touschek scattering.", 
+          printWarning("touschek_scatter: Sscattering rate is very low.",
                        "Please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only."); 
       }
       tsptr->factor = tsptr->factor / (double)(total_event);
@@ -1050,7 +1050,7 @@ void init_TSPEC (RUN *run, LINE_LIST *beamline, long nElement)
       bombElegant("The input FullDist is not valid for this calculation - not same element location!", NULL);
   } else if (TranDist) {
     if (!ZDist) {
-      printWarning("ZDist needs be given with TranDist.", "The input distribution file is ignored.");
+      printWarning("touschek_scatter: ZDist needs be given with TranDist.", "The input distribution file is ignored.");
       tsSpec->distIn = 0;
     } else {
       tsSpec->ipage_his = calloc(sizeof(long), nElement);
@@ -1061,7 +1061,7 @@ void init_TSPEC (RUN *run, LINE_LIST *beamline, long nElement)
     }
   } else if (XDist || YDist || ZDist) {
     if (!XDist || !YDist || !ZDist) {
-      printWarning("[XYZ]Dist need be given at the same time.", "The input distribution file is ignored.");
+      printWarning("touschek_scatter: [XYZ]Dist need be given at the same time.", "The input distribution file is ignored.");
       tsSpec->distIn = 0;
     } else {
       tsSpec->ipage_his = calloc(sizeof(long), nElement);

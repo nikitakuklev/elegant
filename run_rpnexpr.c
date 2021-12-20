@@ -54,7 +54,8 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
   if (echoNamelists) print_namelist(stdout, &rpn_load);
 
   if (!tag || strlen(tag)==0) 
-    printWarning("rpn_load: tag is blank, which could cause confusion with internal variables", "use of a tag is strongly encouraged");
+    printWarning("rpn_load: tag is blank.", 
+                 "This could cause confusion with internal variables. Use of a tag is strongly encouraged.");
 
   if (match_column && strlen(match_column)) {
     if (use_row!=-1) {
@@ -120,7 +121,7 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
 
   if (!load_parameters) {
     if ((columnName = SDDS_GetColumnNames(&SDDSin, &columns))==NULL) {
-      printWarning("No columns in file for rpn_load.", NULL);
+      printWarning("rpn_load: No columns in given file.", filename);
       return;
     }
 
@@ -198,7 +199,7 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
   } else {
     /* load data from parameters */
     if ((parameterName = SDDS_GetParameterNames(&SDDSin, &parameters))==NULL) {
-      printWarning("No parameters in file for rpn_load.", NULL);
+      printWarning("rpn_load: no parameters in given file.", filename);
       return;
     }
 

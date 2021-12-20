@@ -56,6 +56,7 @@ static double deltaByInside = 0;
 static double BMaxOnTrajectory = -DBL_MAX;
 static double BSignOnTrajectory = 0;
 static char *interpolationParameterUnits = NULL;
+static double xfWeight = 1, xfpWeight = 1;
 
 #define BRAT_INTERP_EXTRAPOLATE 0x001UL
 #define BRAT_INTERP_PERMISSIVE  0x002UL
@@ -705,7 +706,7 @@ double BRAT_optim_function(double *param, long *invalid)
   BRAT_lorentz_integration(accelCoord, q, 0, NULL);
   *invalid = 0;
   w = q+3;
-  result = sqrt(sqr(accelCoord[0]) + sqr(accelCoord[1]));
+  result = sqrt(xfWeight*sqr(accelCoord[0]) + xfpWeight*sqr(accelCoord[1]));
   if (verbose_optimize && !quiet)
     printf("optim_function called: FSE = %e   dX = %e   w1/w0 = %e  sf = %e  penalty function = %e\n", 
            param[0], param[1], w[1]/w[0], fabs(accelCoord[4]), result); 

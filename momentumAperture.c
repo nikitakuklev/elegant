@@ -312,18 +312,18 @@ long doMomentumApertureSearch(
   switch (output_mode) {
   case 1:
     if ((2*nElem)%n_processors!=0 && (myid==0)) {
-      snprintf(warningBuffer, 1024, "The number of tasks is %ld. The number of processors is %d.", 
+      snprintf(warningBuffer, 1024, "Parallel efficiency may be poor. The number of tasks (twice the number of elements) is %ld. The number of processors is %d.", 
              2*nElem, n_processors);
-      printWarning("For best parallel efficiency, the number of tasks (twice the number of elements) divided by the number of processors should be an integer or slightly below an integer.", warningBuffer);
+      printWarning("momentum_aperture: The number of tasks divided by the number of processors should be an integer or slightly below an integer.", warningBuffer);
     }    
     break;
   case 2:
     break;
   default:
     if (nElem%n_processors!=0 && (myid==0)) {
-      snprintf(warningBuffer, 1024, "The number of tasks is %ld. The number of processors is %d.", 
+      snprintf(warningBuffer, 1024, "Parallel efficiency may be poor. The number of tasks is %ld. The number of processors is %d.", 
              nElem, n_processors);
-      printWarning("For best parallel efficiency, the number of elements divided by the number of processors should be an integer or slightly below an integer.", warningBuffer);
+      printWarning("momentum_aperture: The number of elements divided by the number of processors should be an integer or slightly below an integer.", warningBuffer);
     }    
     break;
   }
@@ -636,9 +636,9 @@ long doMomentumApertureSearch(
 		printf("Error: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
 		exit(1);
 	      }
-              snprintf(warningBuffer, 1024, "Location %s#%ld at s=%em.",
+              snprintf(warningBuffer, 1024, "Element %s#%ld at s=%em.",
                        elem->name, elem->occurence, elem->end_pos);                       
-              printWarning("No survivor found for initial scan.", warningBuffer);
+              printWarning("momentum_aperture: No survivor found for initial scan.", warningBuffer);
 	      deltaSurvived[slot][outputRow] = 0;
 	      survivorFound[slot][outputRow] = 1;
 	      split = splits;
@@ -874,9 +874,9 @@ long multiparticleLocalMomentumAcceptance(
   ideltaCutover = (delta_negative_start-delta_negative_limit)/deltaStep + 0.5;
   nTotal = nElem*nDelta;
   if (nTotal%n_working_processors!=0) {
-    snprintf(warningBuffer, 1024, "%ld working processors, nDelta = %ld, nElem = %ld.",
+    snprintf(warningBuffer, 1024, "Parallel efficiency may be poor. %ld working processors, nDelta = %ld, nElem = %ld.",
             n_working_processors, nDelta, nElem);
-    printWarning("The number of working processors does not evenly divide into the number of particles.",
+    printWarning("momentum_aperture: The number of working processors does not evenly divide into the number of particles.",
                  warningBuffer);
     nEachProcessor =  (nTotal/n_working_processors)+1;
   } else {

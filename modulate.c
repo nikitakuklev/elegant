@@ -326,14 +326,14 @@ long applyElementModulations(MODULATION_DATA *modData, LINE_LIST *beamline, doub
       if (t<=modData->timeData[jMod][0]) {
         char buffer[16384];
         modulation = modData->modulationData[jMod][0];
-        snprintf(buffer, 16384, "t=%21.15le is below modulation table range [%21.15le, %21.15le] for element %s, parameter %s\n",
+        snprintf(buffer, 16384, "t=%21.15le is below modulation table range [%21.15le, %21.15le] for element %s, parameter %s. Value is taken from first table entry.",
                 t, modData->timeData[jMod][0], modData->timeData[jMod][modData->nData[jMod]-1], modData->element[jMod]->name,
                 entity_description[type].parameter[param].name);
         printWarning("Interpolation below modulation table range.", buffer);
       } else if (t>=modData->timeData[jMod][modData->nData[jMod]-1]) {
         char buffer[16384];
         modulation = modData->modulationData[jMod][modData->nData[jMod]-1];
-        snprintf(buffer, 16384, "t=%21.15le is above modulation table range [%21.15le, %21.15le] for element %s, parameter %s\n",
+        snprintf(buffer, 16384, "t=%21.15le is above modulation table range [%21.15le, %21.15le] for element %s, parameter %s. Value is taken from last table entry.",
                 t, modData->timeData[jMod][0], modData->timeData[jMod][modData->nData[jMod]-1], modData->element[jMod]->name,
                 entity_description[type].parameter[param].name);
         printWarning("Interpolation above modulation table range.", buffer);

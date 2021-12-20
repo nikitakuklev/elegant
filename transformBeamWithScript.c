@@ -51,7 +51,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   if (!forceSerial) {
     if (script->useParticleID && script->determineLossesFromParticleID) {
       if (isMaster)
-        printWarningForTracking("The DETERMINE_LOSSES_FROM_PID flag of the SCRIPT element is ignored in Pelegant", NULL);
+        printWarningForTracking("The DETERMINE_LOSSES_FROM_PID flag of the SCRIPT element is ignored in Pelegant.", NULL);
     }
     return transformBeamWithScript_p(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence, backtrack);
   } else {
@@ -350,7 +350,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
         if (pID2[k-1] == pID2[k])
           found++;
       if (found)
-        printWarning("Duplicate particleID values in script output file.", "Loss accounting is suspect!\n");
+        printWarning("Duplicate particleID values in script output file.", "Loss accounting is suspect!");
       free(pID2);
       /* Figure out which particles if any were lost by matching particleID from the input and output */
       /* Otherwise, we just load the particleID data with no loss accounting. */

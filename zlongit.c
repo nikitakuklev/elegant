@@ -280,12 +280,11 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       }
 #if (!USE_MPI)
       if (n_binned!=np) {
-        printf("Warning: only %ld of %ld particles were binned (ZLONGIT)!\n", n_binned, np);
-        if (!not_first_call) {
-          printf("*** Not all particles binned in ZLONGIT. This may produce unphysical results.  Your impedance needs smaller frequency\n");
-          printf("    spacing to cover a longer time span. Invoking auto-scaling may help for broad-band impedances. \n");
-        }
-        fflush(stdout);
+        char warningBuffer[1024];
+        snprintf(warningBuffer, 1024, "Only %ld of %ld particles were binned; results suspect. Reduce impedance frequency spacing for file-based impedances or invoking auto-scaling for broad-band impedances.",
+                 n_binned, np);
+        printWarningForTracking("Not all particles binned in ZLONGIT.",
+                                warningBuffer);
       }
 #else
       if (USE_MPI) {

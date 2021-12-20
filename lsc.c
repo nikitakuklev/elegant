@@ -455,7 +455,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
     char warningText[1024];
     snprintf(warningText, 1024, 
              "Only %ld of %ld particles were binned, which shouldn't happen.", n_binned, np);
-    printWarningForTracking("Some particles were not binned in LSCDRIFT."
+    printWarningForTracking("Some particles were not binned in LSCDRIFT.",
                             warningText);
   }
 

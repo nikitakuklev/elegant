@@ -563,11 +563,11 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
       bombElegant("Error: Must have GAP<PERIOD for CORGPIPE element", NULL);
     
     if (corgpipe->period*6>=corgpipe->radius)
-      fprintf(stderr, "*** Warning: CORGPIPE PERIOD should be << RADIUS\n");
+      printWarningForTracking("CORGPIPE PERIOD should be << RADIUS.", NULL);
     if (corgpipe->depth*6>=corgpipe->radius)
-      fprintf(stderr, "*** Warning: CORGPIPE DEPTH should be << RADIUS\n");
+      printWarningForTracking("CORGPIPE DEPTH should be << RADIUS.", NULL);
     if (corgpipe->depth<corgpipe->period/1.5)
-      fprintf(stderr, "** Warning: CORGPIPE DEPTH should be >~ PERIOD\n");
+      printWarningForTracking("CORGPIPE DEPTH should be >~ PERIOD.", NULL);
 #if USE_MPI
   }
 #endif
@@ -623,7 +623,8 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
   }
 
   if ((1.0*np)/n_bins<100)
-    printf("*** Warning: less than 100 particles per bin on average for CORGPIPE. Considering increasing the number of particles.\n");
+    printWarningForTracking("Fewer than 100 particles per bin on average for CORGPIPE.",
+                            "Considering increasing the number of particles.");
   
   wakeData.factor = 1;
   wakeData.n_bins = n_bins;

@@ -321,9 +321,9 @@ VMATRIX *compute_periodic_twiss(
   for (i=0; i<4; i+=2 ) {
     if (fabs(cos_phi = (R[i][i] + R[i+1][i+1])/2)>1) {
       if (i==0)
-        printWarning((char*)"Beamline unstable for x plane.", (char*)"Can't match beta functions.");
+        printWarning((char*)"twiss_output: beamline unstable for x plane.", (char*)"Can't find periodic lattice functions.");
       else
-        printWarning((char*)"Beamline unstable for y plane.", (char*)"Can't match beta functions.");
+        printWarning((char*)"twiss_output: beamline unstable for y plane.", (char*)"Can't find periodic lattice functions.");
       *unstable |= (i==0?1:2);
       sin_phi = 1e-6;
     }
@@ -669,9 +669,9 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                    S[plane]*Sp[plane]*gamma[plane])/detR[plane];
         /* use R12=S to find sin(dphi) */
         if ((sin_dphi=S[plane]/sqrt(beta[plane]*func[0]))>1) {
+          printWarning((char*)"twiss_output: argument of asin() is >1 when propagating twiss parameters", NULL);
           if (asinWarning>0) {
             asinWarning--;
-            printWarning((char*)"Argument of asin() is >1 when propagating twiss parameters", NULL);
             printf((char*)"Argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
             printf((char*)"element is %s at z=%em\n", elem->name, elem->end_pos);
             printf((char*)"%c-plane matrix:  C = %e,  S = %e,  ",
@@ -684,9 +684,9 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
           cos_dphi = 0;
         }
         else if (sin_dphi<-1) {
+          printWarning((char*)"twiss_output: argument of asin() is < -1 when propagating twiss parameters", NULL);
           if (asinWarning>0) {
             asinWarning--;
-            printWarning((char*)"Argument of asin() is < -1 when propagating twiss parameters", NULL);
             printf((char*)"Argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
             printf((char*)"element is %s at z=%em\n", elem->name, elem->end_pos);
             printf((char*)"%c-plane matrix:  C = %e,  S = %e,  ",
@@ -3497,9 +3497,9 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	tune_shift_with_amplitude_struct.x1 = (upperLimit[0] + 2*lowerLimit[0])/3;
 	tune_shift_with_amplitude_struct.y1 = (upperLimit[1] + 2*lowerLimit[1])/3;
         snprintf(warningBuffer, 1024, 
-                 "Reducing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le.",
+                 "Setting tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le.",
 		tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
-        printWarning((char*)"The amplitude you specified for tune shift with amplitude is too large.", 
+        printWarning((char*)"tune_shift_with_amplitude: the amplitude specified for calculations too large.", 
                      warningBuffer);
 	if (tries==0) 
 	  tries = 1;   /* ensures we don't exit on amplitude too large */
@@ -3952,12 +3952,6 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 		  tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0)!=1) {
     printWarning((char*)"NAFF failed for tune analysis from tracking (xp).\n", NULL);
-    /*
-    printf((char*)"Warning: NAFF failed for tune analysis from tracking (xp).\n");
-    printf((char*)"Limits: %e, %e\n",
-	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
-	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
-    */
     return 0;
   }
 #ifdef DEBUG
@@ -3972,12 +3966,6 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  tuneLowerLimit?(tuneLowerLimit[1]>0.5 ? 1-tuneLowerLimit[1] : tuneLowerLimit[1]):0,
 		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1) {
     printWarning((char*)"NAFF failed for tune analysis from tracking (y).\n", NULL);
-    /*
-    printf((char*)"Warning: NAFF failed for tune analysis from tracking (y).\n");
-    printf((char*)"Limits: %e, %e\n",
-	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
-	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
-    */
     return 0;
   }
 #ifdef DEBUG
@@ -3992,12 +3980,6 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  tuneLowerLimit?(tuneLowerLimit[1]>0.5 ? 1-tuneLowerLimit[1] : tuneLowerLimit[1]):0,
 		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1 ) {
     printWarning((char*)"NAFF failed for tune analysis from tracking (yp).\n", NULL);
-    /*
-    printf((char*)"Warning: NAFF failed for tune analysis from tracking (yp).\n");
-    printf((char*)"Limits: %e, %e\n",
-	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
-	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
-    */
     return 0;
   }
 
