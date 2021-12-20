@@ -28,7 +28,11 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
     log_entry("output_magnets");
 
 #if USE_MPI
-    if (myid==0)
+#ifdef MPI_DEBUG
+    printf("output_magnets called, myid=%d\n", myid);
+    fflush(stdout);
+#endif
+    if (myid!=0)
       return;
 #endif
 
