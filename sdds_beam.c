@@ -808,18 +808,23 @@ long get_sdds_particles(double ***particle,
   printMessageAndTime(stdout, "Starting to read beam from SDDS file.\n");
 
   retval = data_seen = np = np_new = 0;
-#if SDDS_MPI_IO
-  if (SDDS_input.MPI_dataset == NULL) /* For the case of one_dump, this setup should be only called once */
-    SDDS_MPI_Setup(&SDDS_input, 1, n_processors, myid, MPI_COMM_WORLD, 0); /* Only slaves will read the input data */  
-#endif
   while (inputFileIndex<inputFiles) {
+#if SDDS_MPI_IO
+    if (SDDS_input.MPI_dataset == NULL) { /* For the case of one dump, this setup should be only called once */
+      SDDS_MPI_Setup(&SDDS_input, 1, n_processors, myid, MPI_COMM_WORLD, 0); /* Only slaves will read the input data */  
+    }
+#endif
     if (!input_initialized) {
+      printf("Opening file \"%s\"\n", inputFile[inputFileIndex]);
+      fflush(stdout);
 #if SDDS_MPI_IO
       if (!SDDS_MPI_InitializeInputFromSearchPath(&SDDS_input, inputFile[inputFileIndex])) 
 #else
       if (!SDDS_InitializeInputFromSearchPath(&SDDS_input, inputFile[inputFileIndex])) 
 #endif
       {
+        printf("Problem opening beam input file %s\n", inputFile[inputFileIndex]);
+        fflush(stdout);
         sprintf(s, "Problem opening beam input file %s", inputFile[inputFileIndex]);
         SDDS_SetError(s);
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -1046,9 +1051,12 @@ long get_sdds_particles(double ***particle,
 	break;
     }
 #endif
-    printf("Checking next file\n");
-    fflush(stdout);
-  }    
+    if (inputFileIndex<inputFiles) {
+      printf("Moving on to next file (%s, %ld of %ld)\n", inputFile[inputFileIndex],
+             inputFileIndex+1, inputFiles);
+      fflush(stdout);
+    }
+  }
   
   if (input_initialized && !SDDS_ShortenTable(&SDDS_input, 1)) {
     SDDS_SetError("Problem releasing table memory when reading SDDS beam file.");
