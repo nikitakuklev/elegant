@@ -54,16 +54,16 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The unified warning system has now been (essentially) completed. All warnings from elements go through this
+\item The unified warning system has now been completed. All warnings from elements go through this
   system and are collected in the summary at the end of the run.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The unified warning system has now been (essentially) completed. All warnings from commands go through this
+\item The unified warning system has now been completed. All warnings from commands go through this
   system and are collected in the summary at the end of the run.
-  The \verb|global_settings| command has a new parameter, \verb|warning_limit|, the controls how many similar
-  warnings will be shown in detail before such warning are suppressed.
+\item The \verb|global_settings| command has a new parameter, \verb|warning_limit|, the controls how many similar
+  warnings will be shown in detail before such warnings are suppressed.
 \item Added the \verb|element_occurence| parameter to the \verb|change_start| command, which allows
   changing the starting location in a beamline.
 \item Added the \verb|change_end| command, which allows changing the end of the beamline.
@@ -72,7 +72,8 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 \subsection{Changes Specific to the MPI Parallel Version}
 
 \begin{itemize}
-\item None.
+\item A bug was fixed in the \verb|sdds_beam| command that resulted in a crash when multiple beam input files
+  were given.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
