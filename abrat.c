@@ -77,7 +77,8 @@ static char *variable_description[5] = {
 #define SET_USE_FTABLE 28
 #define SET_INTERPOLATE 29
 #define SET_WEIGHT 30
-#define N_OPTIONS 31
+#define SET_DX_DZ_FACTOR 31
+#define N_OPTIONS 32
 
 static char *option[N_OPTIONS] = {
   "tolerance", "theta", "output",
@@ -87,7 +88,7 @@ static char *option[N_OPTIONS] = {
   "dxdipole", "zduplicate", "dzdipole", "arcscan",
   "nominalEntrance", "nominalExit",
   "rigidity", "ideal", "fseLimit", "dxLimit", "dzLimit", "yawLimit", "yawDipole",
-  "3dfieldfile", "ftable", "interpolate", "weight"};
+  "3dfieldfile", "ftable", "interpolate", "weight", "dxDzFactor"};
 
 static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,<edgeAngleInDeg>}\n"
   " [-3dFieldFile] [-interpolateField=<parameterName>[,order=<order>(1)][,extrapolate][,permissive]]\n"
@@ -99,7 +100,7 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
   " [-fsc=<value>] [-dxDipole=<m>] [-dzDipole=<m>] [-yawDipole=<value>]\n"
   " {[-optimize[=verbose][{fse,dx,dz,yaw}]]\n"
   "  -fseLimit=<min>,<max> -dxLimit=<min>,<max> -dzLimit=<min>,<max> -yawLimit=<min>,<max>\n"
-  "  -weight=<xfWeight>,<xfpWeight>}\n"
+  "  -weight=<xfWeight>,<xfpWeight> -dxDzFactor=<value>}\n"
   " [-fieldmapOutput=filename,zmin,zmax,nz,xmin,xmax,nx]\n"
   " [-tolerance=integration-tolerance]\n"
   " [-gap=<meters>] [-ftable=<kicks>] [-quiet]\n"
@@ -152,6 +153,7 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
   " -dzLimit          Set range for dz of dipole in optimization\n"
   " -yawLimit         Set range for yaw of dipole in optimization\n"
   " -weight           Set optimization weights for x and x'\n"
+  " -dxDzFactor       Link DX to DZ: DZ=factor*DX\n"
   " -fieldMapOutput   outputs the field data to a file for checking\n"
   " -extendData       extend data in x dimension as needed so particles see field\n"
   " -zDuplicate       reflect copy of -z data into +z\n"
@@ -548,6 +550,14 @@ int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inpu
                   return (1);
                 }
               break;
+            case SET_DX_DZ_FACTOR:
+              if (scanned[i_arg].n_items != 2 ||
+                  sscanf(scanned[i_arg].list[1], "%lf", &dxDzFactor) != 1)
+                {
+                  fprintf(stderr, "invalid -weight syntax/values\n");
+                  return (1);
+                }
+              break;
             case SET_Z_DUPLICATE:
               zDuplicate = 1;
               break;
@@ -792,7 +802,7 @@ int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inpu
                                       "xf", accelCoord[0], "xpf", accelCoord[1],
                                       "yf", accelCoord[2], "ypf", accelCoord[3],
                                       "sf", accelCoord[4], "FSE", fse,
-                                      "dXDipole", dXOffset, "dZDipole", dZOffset,
+                                      "dXDipole", dXOffset+dZOffset*dxDzFactor, "dZDipole", dZOffset,
                                       "YawDipole", magnetYaw,
                                       "BReference", Breference,
                                       (variable == -1 ? NULL : initial_variable_name[variable]), value,

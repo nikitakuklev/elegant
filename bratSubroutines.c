@@ -57,6 +57,7 @@ static double BMaxOnTrajectory = -DBL_MAX;
 static double BSignOnTrajectory = 0;
 static char *interpolationParameterUnits = NULL;
 static double xfWeight = 1, xfpWeight = 1;
+static double dxDzFactor;
 
 #define BRAT_INTERP_EXTRAPOLATE 0x001UL
 #define BRAT_INTERP_PERMISSIVE  0x002UL
@@ -797,7 +798,7 @@ void BRAT_optimize_magnet(unsigned long flags)
   if (!quiet) {
     printf("penalty function after optimization: %e\n", result);
     printf("FSE = %.15e\n", x[0]);
-    printf("dX  = %.15e\n", x[1]);
+    printf("dX  = %.15e\n", x[1] + x[2]*dxDzFactor);
     printf("dZ  = %.15e\n", x[2]);
     printf("Yaw = %.15e\n", x[3]);
     if (length2dMapList>1) 
@@ -1767,15 +1768,14 @@ void BRAT_B_field(double *F, double *Qg)
     Q[0] =  Qy[0]*cos(magnetYaw) + Qy[1]*sin(magnetYaw);
     Q[1] = -Qy[0]*sin(magnetYaw) + Qy[1]*cos(magnetYaw);
   }
-  x = Q[1] - dXOffset;
-  y = Q[2] - dYOffset;
-
   z = Q[0];
   if (zDuplicate && z>0) {
     z = -fabs(z);
     derivSign = -1;
   }
 
+  x = Q[1] - dXOffset + dZOffset*dxDzFactor;
+  y = Q[2] - dYOffset;
   z -= dZOffset;
   
   F[0] = F[1] = F[2] = 0;
