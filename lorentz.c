@@ -882,7 +882,7 @@ void lorentz_setup(
               if (!SDDS_InitializeOutputElegant(bmapxyz->SDDSpo, SDDS_BINARY, 1, 
                                          NULL, NULL, bmapxyz->particleOutputFile) ||
                   0>SDDS_DefineParameter(bmapxyz->SDDSpo, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
-                  !SDDS_DefineSimpleParameter(bmapxyz->SDDSpo, "particleID", NULL, SDDS_LONG) ||
+                  !SDDS_DefineSimpleParameter(bmapxyz->SDDSpo, "particleID", NULL, SDDS_ULONG64) ||
                   !SDDS_DefineSimpleParameter(bmapxyz->SDDSpo, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
                   (bmapxyz->poIndex[0]=SDDS_DefineColumn(bmapxyz->SDDSpo, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
                   (bmapxyz->poIndex[1]=SDDS_DefineColumn(bmapxyz->SDDSpo, "xp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||

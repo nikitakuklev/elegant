@@ -163,6 +163,7 @@ static void deltaOffsetFunction(double **coord, long np, long pass, long i_elem,
       */
 #endif
       if ((particleID = coord[ip][6])<0) {
+        /* We should never actually get here */
 #if MPI_DEBUG
         /*
         printf("buffer particle, skipping\n");
@@ -458,9 +459,9 @@ long runInelasticScattering(
        */
       coord[ip][6] = myid-1 + ip*nWorkingProcessors;
       if (coord[ip][6]>=nTotal) {
-        /* Don't track more buffer particles than needed */
+        /* Don't track more particles than needed */
         coord[ip][6] = -1;
-        nLeft = ip+1;
+        nLeft = ip;
       }
     }
     setTrackingOmniWedgeFunction(deltaOffsetFunction); 

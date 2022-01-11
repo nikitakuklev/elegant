@@ -503,7 +503,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 	  !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bx", "T", SDDS_FLOAT) ||
 	  !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "By", "T", SDDS_FLOAT) ||
 	  !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bz", "m", SDDS_FLOAT) ||
-	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "particleID", NULL, SDDS_LONG) ||
+	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "particleID", NULL, SDDS_ULONG64) ||
 	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "XLoss", "m", SDDS_FLOAT) ||
 	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "yLoss", "m", SDDS_FLOAT) ||
 	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "ZLoss", "m", SDDS_FLOAT) ||
@@ -633,7 +633,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       }
       if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			      "particleID", 
-			      (long)part[iOut][particleIDIndex], 
+			      (uint64_t)part[iOut][particleIDIndex], 
 			      "XLoss", (float)lossCoordinates[0], 
 			      "yLoss", (float)lossCoordinates[3],
 			      "ZLoss", (float)lossCoordinates[1], 

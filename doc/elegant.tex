@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2021.5\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 2022.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,7 +35,7 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2021.5}
+\section{Highlights of What's New in Version 2022.0}
 
 Here is a summary of what's changed since release 2021.4.  Historical change logs are collected in Section
 \ref{sect:changeLog}.
@@ -54,19 +54,27 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The unified warning system has now been completed. All warnings from elements go through this
-  system and are collected in the summary at the end of the run.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The unified warning system has now been completed. All warnings from commands go through this
-  system and are collected in the summary at the end of the run.
 \item The \verb|global_settings| command has a new parameter, \verb|warning_limit|, the controls how many similar
-  warnings will be shown in detail before such warnings are suppressed.
+  warnings will be shown in detail before such warnings are suppressed. The default is 10.
 \item Added the \verb|element_occurence| parameter to the \verb|change_start| command, which allows
   changing the starting location in a beamline.
 \item Added the \verb|change_end| command, which allows changing the end of the beamline.
+\end{itemize}
+
+\subsection{Other Changes}
+
+\begin{itemize}
+\item The unified warning system has now been completed. All warnings from commands go through this
+  system and are collected in the summary at the end of the run.
+\item The type of the \verb|particleID| field in beam output files was changed from \verb|long| (typically
+  a 32-bit signed integer) to \verb|ulong64| (a 64-bit signed integer). Internally, only 52 bits are used.
+  This is a step toward increasing the number of particles that can be tracked, which is presently limited
+  to $2^{31}$.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}

@@ -159,7 +159,7 @@ static SDDS_DEFINITION phase_space_column[PHASE_SPACE_COLUMNS] = {
     {"yp", "&column name=yp, symbol=\"y'\", type=double &end"},
     {"t", "&column name=t, units=s, type=double &end"},
     {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
-    {"particleID", "&column name=particleID, type=long &end"},
+    {"particleID", "&column name=particleID, type=ulong64 &end"},
     } ;
 
 #define PHASE_SPACE_PARAMETERS 8
@@ -211,7 +211,7 @@ static SDDS_DEFINITION beam_loss_column[BEAM_LOSS_COLUMNS_BASIC+BEAM_LOSS_COLUMN
     {"yp", "&column name=yp, symbol=\"y'\", type=double &end"},
     {"s", "&column name=s, units=m, type=double &end"},
     {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
-    {"particleID", "&column name=particleID, type=long &end"},
+    {"particleID", "&column name=particleID, type=ulong64 &end"},
     {"Pass", "&column name=Pass, type=long &end"},
     {"X", "&column name=X, units=m, type=double &end"},
     {"Z", "&column name=Z, units=m, type=double &end"},
@@ -482,7 +482,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
         exitElegant(1);
       }
     }
-    if ((watch->IDIndex = SDDS_DefineColumn(SDDS_table, "particleID", NULL, NULL, NULL, NULL, SDDS_LONG, 0))<0) {
+    if ((watch->IDIndex = SDDS_DefineColumn(SDDS_table, "particleID", NULL, NULL, NULL, NULL, SDDS_ULONG64, 0))<0) {
       printf("Unable to define SDDS columns t, dt, and p for file %s (%s)\n",
               filename, caller);
       fflush(stdout);
@@ -819,7 +819,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
         }
       }
       if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row++,
-                             watch->IDIndex, (long)particle[i][6], -1)) {
+                             watch->IDIndex, (uint64_t)particle[i][6], -1)) {
         SDDS_SetError("Problem setting SDDS row values (dump_watch_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -1606,7 +1606,7 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                                0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
                                4, particle[i][4]/(c_mks*p/sqrt(sqr(p)+1)), 5, p, 
-                               6, (long)particle[i][6], -1)) {
+                               6, (uint64_t)particle[i][6], -1)) {
             SDDS_SetError("Problem setting SDDS row values (dump_phase_space)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
@@ -1727,7 +1727,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double *sLimit, double **partic
 	if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
 			       0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
 			       4, particle[i][4], 5, particle[i][5],
-			       6, (long)particle[i][6], 7, (long) particle[i][lossPassIndex], -1)) {
+			       6, (uint64_t)particle[i][6], 7, (long) particle[i][lossPassIndex], -1)) {
 	  SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	} 
@@ -2067,7 +2067,7 @@ static SDDS_DEFINITION beam_scatter_column[BEAM_SCATTER_COLUMNS] = {
     {"yp", "&column name=yp, symbol=\"y'\", type=double &end"},
     {"t", "&column name=t, units=s, type=double &end"},
     {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
-    {"particleID", "&column name=particleID, type=long &end"},
+    {"particleID", "&column name=particleID, type=ulong64 &end"},
     {"LRate", "&column name=LRate, units=\"1/s\", type=double, description=\"represents local scattering rate\" &end"},
     {"TRate", "&column name=TRate, units=\"1/s\", type=double, description=\"represents total scattering rate between 2 TSCATTER elements of a beam\" &end"},
 };
@@ -2111,7 +2111,7 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                                0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
                                4, particle[i][4]/c_mks, 5, (particle[i][5]+1.)*tsptr->betagamma,
-                               6, (long)particle[i][6], 7, weight[i], 8, rate, -1)) {
+                               6, (uint64_t)particle[i][6], 7, weight[i], 8, rate, -1)) {
             SDDS_SetError("Problem setting SDDS row values (dump_scattered_particles)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
@@ -2149,7 +2149,7 @@ static SDDS_DEFINITION beam_scatter_loss_column[BEAM_SCATTER_LOSS_COLUMNS] = {
     {"yp0", "&column name=yp0, symbol=\"y'\", type=double &end"},
     {"t0", "&column name=t0, units=s, type=double &end"},
     {"p0", "&column name=p0, units=\"m$be$nc\", type=double &end"},
-    {"particleID", "&column name=particleID, type=long &end"},
+    {"particleID", "&column name=particleID, type=ulong64 &end"},
     {"s0", "&column name=s0, units=m, type=double &end"},
     {"x", "&column name=x, units=m, type=double &end"},
     {"xp", "&column name=xp, type=double &end"},
@@ -2227,7 +2227,7 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
                                BEAM_SCATTER_LOSS_X0+3, particleOri[j][3],
                                BEAM_SCATTER_LOSS_X0+4, particleOri[j][4]/c_mks,
                                BEAM_SCATTER_LOSS_X0+5, (1.+particleOri[j][5])*tsptr->betagamma, 
-                               BEAM_SCATTER_LOSS_X0+6, (long)particleOri[j][6],
+                               BEAM_SCATTER_LOSS_X0+6, (uint64_t)particleOri[j][6],
                                BEAM_SCATTER_LOSS_X0+7, tsptr->s, 
                                BEAM_SCATTER_LOSS_X1+0, particleLos[i][0],
                                BEAM_SCATTER_LOSS_X1+1, particleLos[i][1],
