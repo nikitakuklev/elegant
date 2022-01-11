@@ -343,7 +343,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       /* extend the list for accommodating new element */
       extend_elem_list(&eptr);
       /* add new element to linked-list */
-      s = getElemDefinition();
+      cp_str(&s, getElemDefinition());
       if ((type = tell_type(s, elem))==T_NODEF) {
         if (!is_blank(s))
           printWarning("no recognized statement on line", s);
