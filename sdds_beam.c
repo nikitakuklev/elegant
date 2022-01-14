@@ -502,6 +502,9 @@ long new_sdds_beam(
       printf("Arrays resized\n");
 #endif
       j = n0;
+      if (n_duplicates>=1 && duplicate_stagger[4]<0) {
+        printWarning("duplicate_stagger[4] < 0", "This would put higher-numbered bunches in front of lower-numbered bunches, which is incorrect per elegant's conventions.");
+      }
       duplicate_stagger[4] *= c_mks*p_central/sqrt(sqr(p_central)+1); /* convert dt to ds=beta*c*dt */
       for (idup=1; idup<n_duplicates; idup++) {
 #ifdef MPI_DEBUG
@@ -511,7 +514,10 @@ long new_sdds_beam(
           for (k=0; k<6; k++) {
             beam->particle[j][k] = beam->original[i][k] + idup*duplicate_stagger[k];
           }
-          beam->particle[j][particleIDIndex] = beam->original[i][particleIDIndex] + idup*n0Total;
+          if (beam->id_slots_per_bunch)
+            beam->particle[j][particleIDIndex] = beam->original[i][particleIDIndex] + idup*beam->id_slots_per_bunch;
+          else
+            beam->particle[j][particleIDIndex] = beam->original[i][particleIDIndex] + idup*n0Total;
           beam->particle[j][lossPassIndex] = -1;
           beam->particle[j][bunchIndex] = -1;
           beam->particle[j][weightIndex] = 1;
@@ -721,7 +727,6 @@ long new_sdds_beam(
     setFiducializationBunch(-1, -1);
 
   if (beam->id_slots_per_bunch) {
-    htab *hashTable;
     char buffer[10];
 #if DEBUG
     char *ptr;
@@ -730,7 +735,10 @@ long new_sdds_beam(
     printf("Assigning bunch IDs to particles (%ld PIDs per slot)\n", beam->id_slots_per_bunch);
     fflush(stdout);
 #endif
+#if !USE_MPI
+    htab *hashTable;
     hashTable = hcreate(12);
+#endif
     for (i=0; i<beam->n_particle; i++) {
       beam->particle[i][bunchIndex] = (beam->particle[i][particleIDIndex]-1)/beam->id_slots_per_bunch;
 #if DEBUG
@@ -743,10 +751,14 @@ long new_sdds_beam(
       if (beam->particle[i][bunchIndex]<minBunch)
         minBunch = beam->particle[i][bunchIndex];
 #endif
+#if !USE_MPI
       sprintf(buffer, "%ld", (long)beam->particle[i][bunchIndex]);
       hadd(hashTable, buffer, strlen(buffer), NULL);
+#endif
     }
+#if !USE_MPI
     printf("%d bunches present\n", (int)hcount(hashTable));
+#endif
 #if DEBUG
     printf("id:[%ld, %ld], b:[%ld, %ld]\n", (long)hcount(hashTable), minID, maxID,
            minBunch, maxBunch);
@@ -757,7 +769,9 @@ long new_sdds_beam(
         break;
     }
 #endif
+#if !USE_MPI
     hdestroy(hashTable);
+#endif
   }
 
   log_exit("new_sdds_beam");

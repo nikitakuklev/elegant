@@ -51,6 +51,10 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 \begin{itemize}
 \item A bug was fixed that resulted in incorrect reporting of the element definition in informational messages
   issued by the \verb|insert_elements| command.
+\item The \verb|sdds_beam| command previously accepted negative values for \verb|duplicate_stagger[4]| (the time
+  offset between duplicated bunches. This doesn't make sense and can cause problems with multi-bunch wakes.
+  A warning is now issued.
+  Forum user \verb|Siwei_Wang| pointed out the issue.
 \end{itemize}
 
 \subsection{New and Modified Elements}
