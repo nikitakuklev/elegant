@@ -1133,7 +1133,7 @@ extern char *entity_text[N_TYPES];
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
 #define N_BMAPXYZ_PARAMS 22
-#define N_BRAT_PARAMS 28
+#define N_BRAT_PARAMS 31
 #define N_BGGEXP_PARAMS 35
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
@@ -3062,12 +3062,13 @@ typedef struct {
 extern PARAMETER brat_param[N_BRAT_PARAMS];
 typedef struct {
   double length, angle, fse, accuracy;
-  char *method, *filename;
+  char *method, *filename, *filenameAdditional;
   double xVertex, zVertex;
   double xEntry, zEntry;
   double xExit, zExit;
   double dxMap, dyMap, dzMap;
   double yawMap;
+  double mainFactor, additionalFactor;
   double fieldFactor, deltaByInside;
   short useFTABLE, xyInterpolationOrder, xyGridExcess, xyExtrapolate, useSbenMatrix, singlePrecision;
   short limitX, limitY;
@@ -3076,7 +3077,7 @@ typedef struct {
   long particleOutputSelectionInterval, particleOutputSampleInterval;
   /* these are set by the program when the file is read */
   short initialized;
-  long dataIndex;
+  long dataIndex, dataIndexAdditional;
   SDDS_DATASET *SDDSparticleOutput;
 } BRAT;
 

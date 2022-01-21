@@ -42,13 +42,14 @@ void BRAT_store_data_permuted(double p0, double *p, double *q1, double *B, doubl
 static long verbose_optimize = 0;
 void clear2dMapList();
 void add2dMapList(double interpValue);
+void readBratFieldFile(BRAT *brat, char *filename, short additionalFile);
 
 /* parameters of element needed for integration */
 static double theta, fse=0, interpParameter=0;
 static long interpOrder = 1;
 static double dXOffset = 0, dYOffset = 0, dZOffset = 0;
 static double magnetYaw = 0;
-static double fieldFactor = 1;
+static double fieldFactor = 1, mainFactor = 1;
 static long zDuplicate = 0;
 static double rhoMax = 0;
 static double fieldSign = 1;
@@ -69,6 +70,9 @@ static double **Bnorm, **dBnormdz, **dBnormdx;
 static double *BxNorm, *ByNorm, *BzNorm;
 static float *Bx1Norm, *By1Norm, *Bz1Norm;
 static short singlePrecision = 0;
+static double additionalFactor = 0;
+static double *BxNormAdditional, *ByNormAdditional, *BzNormAdditional;
+static float *Bx1NormAdditional, *By1NormAdditional, *Bz1NormAdditional;
 /* these are used to store multiple 2D field maps for interpolation for abrat program */
 /* the results of interpolation are loaded into Bnorm, dBnormdz, and dBnormdx */
 static double *interpolationParameterValue = NULL;
@@ -139,9 +143,13 @@ static double yawLimit[2] = {-1, 1};
 typedef struct {
   char *filename;
   long nx, ny, nz;
-  short singlePrecision;
-  double *Bx, *By, *Bz;   /* used if singlePrecision=0 */
-  float *Bx1, *By1, *Bz1; /* used if singlePrecision!=0 */
+  short singlePrecision, additionalMap;
+  /* used if singlePrecision=0 */
+  double *Bx, *By, *Bz;   
+  double *BxAdditional, *ByAdditional, *BzAdditional;
+  /* used if singlePrecision!=0 */
+  float *Bx1, *By1, *Bz1; 
+  float *Bx1Additional, *By1Additional, *Bz1Bend;
   double xi, xf, dx;
   double yi, yf, dy;
   double zi, zf, dz;
@@ -162,328 +170,11 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
     double Bmin, Bmax;
     long i, rows, idata;
     SDDS_DATASET SDDS_table;
-    
-    /* See if we've read this file already---should use a hash table */
-    for (i=0; i<nBrat3dData; i++) {
-      if (strcmp(brat->filename, brat3dData[i].filename)==0)
-        break;
-    }
 
-    if (i!=nBrat3dData) {
-      if ((brat->singlePrecision && !brat3dData[i].singlePrecision) ||
-	  (!brat->singlePrecision && brat3dData[i].singlePrecision))
-	bombElegantVA("Error: inconsistent SINGLE_PRECISION settings for use of field map %s", brat->filename);
-      brat->dataIndex = i;
-    } else if (!brat->singlePrecision) {
-      double *xd, *yd, *zd, *Bxd, *Byd, *Bzd;
-      xd = yd = zd = Bxd = Byd = Bzd = NULL;
-    
-      /* read data from file */
-      
-      printf("Reading BRAT field data from %s\n", brat->filename);
-      fflush(stdout);
-
-      if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, brat->filename) || !SDDS_ReadPage(&SDDS_table)) {
-        SDDS_SetError("Unable to read BRAT data file");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      }
-      if (!(rows=SDDS_CountRowsOfInterest(&SDDS_table)))
-        bomb("no data in BRAT field file", NULL);
-      printf("%ld rows of data\n", rows);
-      fflush(stdout);
-      if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-          SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-          SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
-        printf("units wrong on x, y, or z\n");
-        fflush(stdout);
-        exit(1);
-      }
-      printf("x, y, and z found with expected units\n");
-      fflush(stdout);
-      if (!(xd = SDDS_GetColumnInDoubles(&SDDS_table, "x")) ||
-          !(yd = SDDS_GetColumnInDoubles(&SDDS_table, "y")) ||
-          !(zd = SDDS_GetColumnInDoubles(&SDDS_table, "z")) ) {
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      }
-      if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-          SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-          SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
-        printf("units wrong on Bx, By, or Bz\n");
-        fflush(stdout);
-        exit(1);
-      }
-      printf("Bx, By, and Bz found with expected units\n");
-      fflush(stdout);
-      if (!(Bxd = SDDS_GetColumnInDoubles(&SDDS_table, "Bx")) ||
-          !(Byd = SDDS_GetColumnInDoubles(&SDDS_table, "By")) ||
-          !(Bzd = SDDS_GetColumnInDoubles(&SDDS_table, "Bz"))) {
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      }
-      if (!SDDS_Terminate(&SDDS_table)) 
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      printf("Finished reading data from file\n");
-      fflush(stdout);
-
-      /* It is assumed that the data is ordered so that x changes fastest.
-       * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
-       * The points are assumed to be equipspaced.
-       */
-      nx = 1;
-      xi = xd[0];
-      while (nx<rows) {
-        if (xd[nx-1]>xd[nx])
-          break;
-        nx ++;
-      }
-      if (nx==rows) {
-        fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (x)\n");
-        fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-        exit(1);
-      }  
-      xf = xd[nx-1];
-      dx = (xf-xi)/(nx-1);
-      
-      ny = 1;
-      yi = yd[0];
-      while (ny<(rows/nx)) {
-        if (yd[(ny-1)*nx]>yd[ny*nx])
-          break;
-        ny++;
-      }
-      if (ny==rows) {
-        fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (y)\n");
-        fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-        exit(1);
-      }
-      yf = yd[(ny-1)*nx];
-      dy = (yf-yi)/(ny-1);
-      
-      if (nx<=1 || ny<=1 || (nz = rows/(nx*ny))<=1) {
-        fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (z)\n");
-        fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-        exit(1);
-      }
-      zi = zd[0];
-      zf = zd[rows-1];
-      dz = (zf-zi)/(nz-1);
-      
-      Bmin = -(Bmax = -DBL_MAX);
-      for (idata=0; idata<rows; idata++) {
-        /* if (fabs(yd[idata])<dy/2 && fabs(xd[idata])<dx/2) { */
-          if (Byd[idata]>Bmax)
-            Bmax = Byd[idata];
-          if (Byd[idata]<Bmin)
-            Bmin = Byd[idata];
-          /* } */
-      }
-      free(xd);
-      free(yd);
-      free(zd);
-      if (Bmax==-DBL_MAX) {
-        fprintf(stderr, "BRAT file doesn't have valid Bmax value\n");
-        fprintf(stderr, "Bmax = %le, Bmin = %le\n", Bmax, Bmin);
-        exit(1);
-      }
-      if (fabs(Bmin)>fabs(Bmax))
-        SWAP_DOUBLE(Bmin, Bmax);
-      
-      if (!quiet) 
-        printf("3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%21.15e, dy=%21.15e, dz=%21.15e\nx:[%21.15e, %21.15e], y:[%21.15e, %21.15e], z:[%21.15e, %21.15e]\nBy:[%21.15e, %21.15e]\n",
-                nx, ny, nz, dx, dy, dz,
-                xi, xf, yi, yf, zi, zf,
-                Bmin, Bmax
-                );
-
-      /* copy to storage area */
-      if (!(brat3dData = SDDS_Realloc(brat3dData, sizeof(*brat3dData)*(nBrat3dData+1))))
-        bombElegant("memory allocation failure storage BRAT data", NULL);
-
-      brat3dData[nBrat3dData].Bmin = Bmin;
-      brat3dData[nBrat3dData].Bmax = Bmax;
-      
-      brat3dData[nBrat3dData].Bx1 = brat3dData[nBrat3dData].By1 = brat3dData[nBrat3dData].Bz1 = NULL;
-
-      brat3dData[nBrat3dData].Bx = Bxd;
-      brat3dData[nBrat3dData].xi = xi;
-      brat3dData[nBrat3dData].xf = xf;
-      brat3dData[nBrat3dData].dx = dx;
-      brat3dData[nBrat3dData].nx = nx;
-
-      brat3dData[nBrat3dData].By = Byd;
-      brat3dData[nBrat3dData].yi = yi;
-      brat3dData[nBrat3dData].yf = yf;
-      brat3dData[nBrat3dData].dy = dy;
-      brat3dData[nBrat3dData].ny = ny;
-
-      brat3dData[nBrat3dData].Bz = Bzd;
-      brat3dData[nBrat3dData].zi = zi;
-      brat3dData[nBrat3dData].zf = zf;
-      brat3dData[nBrat3dData].dz = dz;
-      brat3dData[nBrat3dData].nz = nz;
-      cp_str(&brat3dData[nBrat3dData].filename, brat->filename);
-
-      brat3dData[nBrat3dData].singlePrecision = 0;
-
-      brat->dataIndex = nBrat3dData;
-      nBrat3dData += 1;
-      printf("Done reading BRAT field data from %s\n", brat->filename);
-      fflush(stdout);
-    } else {
-      /* single-precision data */
-      float *xd, *yd, *zd, *Bxd, *Byd, *Bzd;
-      xd = yd = zd = Bxd = Byd = Bzd = NULL;
-    
-      /* read data from file */
-      
-      printf("Reading BRAT field data from %s\n", brat->filename);
-      fflush(stdout);
-
-      if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, brat->filename) || !SDDS_ReadPage(&SDDS_table)) {
-        SDDS_SetError("Unable to read BRAT data file");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      }
-      if (!(rows=SDDS_CountRowsOfInterest(&SDDS_table)))
-        bomb("no data in BRAT field file", NULL);
-      printf("%ld rows of data\n", rows);
-      fflush(stdout);
-      if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-          SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-          SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
-        printf("units wrong on x, y, or z\n");
-        fflush(stdout);
-        exit(1);
-      }
-      printf("x, y, and z found with expected units\n");
-      fflush(stdout);
-      if (!(xd = SDDS_GetColumnInFloats(&SDDS_table, "x")) ||
-          !(yd = SDDS_GetColumnInFloats(&SDDS_table, "y")) ||
-          !(zd = SDDS_GetColumnInFloats(&SDDS_table, "z")) ) {
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      }
-      if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-          SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-          SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
-        printf("units wrong on Bx, By, or Bz\n");
-        fflush(stdout);
-        exit(1);
-      }
-      printf("Bx, By, and Bz found with expected units\n");
-      fflush(stdout);
-      if (!(Bxd = SDDS_GetColumnInFloats(&SDDS_table, "Bx")) ||
-          !(Byd = SDDS_GetColumnInFloats(&SDDS_table, "By")) ||
-          !(Bzd = SDDS_GetColumnInFloats(&SDDS_table, "Bz"))) {
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      }
-      if (!SDDS_Terminate(&SDDS_table)) 
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      printf("Finished reading data from file\n");
-      fflush(stdout);
-
-      /* It is assumed that the data is ordered so that x changes fastest.
-       * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
-       * The points are assumed to be equipspaced.
-       */
-      nx = 1;
-      xi = xd[0];
-      while (nx<rows) {
-        if (xd[nx-1]>xd[nx])
-          break;
-        nx ++;
-      }
-      if (nx==rows) {
-        fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (x)\n");
-        fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-        exit(1);
-      }  
-      xf = xd[nx-1];
-      dx = (xf-xi)/(nx-1);
-      
-      ny = 1;
-      yi = yd[0];
-      while (ny<(rows/nx)) {
-        if (yd[(ny-1)*nx]>yd[ny*nx])
-          break;
-        ny++;
-      }
-      if (ny==rows) {
-        fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (y)\n");
-        fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-        exit(1);
-      }
-      yf = yd[(ny-1)*nx];
-      dy = (yf-yi)/(ny-1);
-      
-      if (nx<=1 || ny<=1 || (nz = rows/(nx*ny))<=1) {
-        fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (z)\n");
-        fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-        exit(1);
-      }
-      zi = zd[0];
-      zf = zd[rows-1];
-      dz = (zf-zi)/(nz-1);
-      
-      Bmin = -(Bmax = -DBL_MAX);
-      for (idata=0; idata<rows; idata++) {
-        /* if (fabs(yd[idata])<dy/2 && fabs(xd[idata])<dx/2) { */
-          if (Byd[idata]>Bmax)
-            Bmax = Byd[idata];
-          if (Byd[idata]<Bmin)
-            Bmin = Byd[idata];
-          /* } */
-      }
-      free(xd);
-      free(yd);
-      free(zd);
-      if (Bmax==-DBL_MAX) {
-        fprintf(stderr, "BRAT file doesn't have valid Bmax value\n");
-        fprintf(stderr, "Bmax = %le, Bmin = %le\n", Bmax, Bmin);
-        exit(1);
-      }
-      if (fabs(Bmin)>fabs(Bmax))
-        SWAP_DOUBLE(Bmin, Bmax);
-      
-      if (!quiet) 
-        printf("3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%21.15e, dy=%21.15e, dz=%21.15e\nx:[%21.15e, %21.15e], y:[%21.15e, %21.15e], z:[%21.15e, %21.15e]\nBy:[%21.15e, %21.15e]\n",
-                nx, ny, nz, dx, dy, dz,
-                xi, xf, yi, yf, zi, zf,
-                Bmin, Bmax
-                );
-
-	/* copy to storage area */
-      if (!(brat3dData = SDDS_Realloc(brat3dData, sizeof(*brat3dData)*(nBrat3dData+1))))
-        bombElegant("memory allocation failure storage BRAT data", NULL);
-
-      brat3dData[nBrat3dData].Bx = brat3dData[nBrat3dData].By = brat3dData[nBrat3dData].Bz = NULL;
-      
-      brat3dData[nBrat3dData].Bmin = Bmin;
-      brat3dData[nBrat3dData].Bmax = Bmax;
-      
-      brat3dData[nBrat3dData].Bx1 = Bxd;
-      brat3dData[nBrat3dData].xi = xi;
-      brat3dData[nBrat3dData].xf = xf;
-      brat3dData[nBrat3dData].dx = dx;
-      brat3dData[nBrat3dData].nx = nx;
-
-      brat3dData[nBrat3dData].By1 = Byd;
-      brat3dData[nBrat3dData].yi = yi;
-      brat3dData[nBrat3dData].yf = yf;
-      brat3dData[nBrat3dData].dy = dy;
-      brat3dData[nBrat3dData].ny = ny;
-
-      brat3dData[nBrat3dData].Bz1 = Bzd;
-      brat3dData[nBrat3dData].zi = zi;
-      brat3dData[nBrat3dData].zf = zf;
-      brat3dData[nBrat3dData].dz = dz;
-      brat3dData[nBrat3dData].nz = nz;
-      cp_str(&brat3dData[nBrat3dData].filename, brat->filename);
-      
-      brat3dData[nBrat3dData].singlePrecision = 1;
-
-      brat->dataIndex = nBrat3dData;
-      nBrat3dData += 1;
-      printf("Done reading BRAT field data from %s\n", brat->filename);
-      fflush(stdout);
-    }
+    brat->dataIndex = brat->dataIndexAdditional = -1;
+    readBratFieldFile(brat, brat->filename, 0);
+    if (brat->filenameAdditional && strlen(brat->filenameAdditional)) 
+      readBratFieldFile(brat, brat->filenameAdditional, 1);
 
 #ifndef ABRAT_PROGRAM
     if (brat->particleOutput && strlen(brat->particleOutput) && isSlave) {
@@ -532,7 +223,67 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
     bombElegant("BRAT data indexing bug (1). Please report.", NULL);
   if (strcmp(brat->filename, brat3dData[brat->dataIndex].filename)!=0)
     bombElegant("BRAT data indexing bug (2). Please report.", NULL);
-  
+  if (brat->filenameAdditional && strlen(brat->filenameAdditional)) {
+    if (brat->dataIndexAdditional<0 || brat->dataIndexAdditional>=nBrat3dData)
+      bombElegant("BRAT data indexing bug (3). Please report.", NULL);
+
+    if (strcmp(brat->filenameAdditional, brat3dData[brat->dataIndexAdditional].filename)!=0)
+      bombElegant("BRAT data indexing bug (4). Please report.", NULL);
+
+    if (brat3dData[brat->dataIndex].nx != brat3dData[brat->dataIndexAdditional].nx) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different number of x grid points (%ld vs %ld).\n", 
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename,
+		    brat3dData[brat->dataIndex].nx, brat3dData[brat->dataIndexAdditional].nx);
+    if (brat3dData[brat->dataIndex].ny != brat3dData[brat->dataIndexAdditional].ny) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different number of y grid points.\n", 
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].nz != brat3dData[brat->dataIndexAdditional].nz) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different number of z grid points.\n", 
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename);
+
+    if (brat3dData[brat->dataIndex].xi != brat3dData[brat->dataIndexAdditional].xi) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different x lower limit.\n",
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].yi != brat3dData[brat->dataIndexAdditional].yi) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different y lower limit.\n",
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].zi != brat3dData[brat->dataIndexAdditional].zi) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different z lower limit.\n",
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename);
+
+    if (brat3dData[brat->dataIndex].xf != brat3dData[brat->dataIndexAdditional].xf) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different x upper limit.\n",
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].yf != brat3dData[brat->dataIndexAdditional].yf) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different y upper limit.\n",
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].zf != brat3dData[brat->dataIndexAdditional].zf) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different z upper limit.\n",
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename);
+
+    if (brat3dData[brat->dataIndex].dx != brat3dData[brat->dataIndexAdditional].dx) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different x grid spacing.\n",
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].dy != brat3dData[brat->dataIndexAdditional].dy) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different y grid spacing.\n",
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].dz != brat3dData[brat->dataIndexAdditional].dz) 
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different z grid spacing.\n",
+		    brat3dData[brat->dataIndex].filename,
+		    brat3dData[brat->dataIndexAdditional].filename);
+  }
+
   BxNorm = brat3dData[brat->dataIndex].Bx;
   Bx1Norm = brat3dData[brat->dataIndex].Bx1;
   xi = brat3dData[brat->dataIndex].xi;
@@ -554,6 +305,17 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   dz = brat3dData[brat->dataIndex].dz;
   nz = brat3dData[brat->dataIndex].nz;
 
+  additionalFactor = 0;
+  if (brat->filenameAdditional && strlen(brat->filenameAdditional)) {
+    BxNormAdditional = brat3dData[brat->dataIndexAdditional].Bx;
+    Bx1NormAdditional = brat3dData[brat->dataIndexAdditional].Bx1;
+    ByNormAdditional = brat3dData[brat->dataIndexAdditional].By;
+    By1NormAdditional = brat3dData[brat->dataIndexAdditional].By1;
+    BzNormAdditional = brat3dData[brat->dataIndexAdditional].Bz;
+    Bz1NormAdditional = brat3dData[brat->dataIndexAdditional].Bz1;
+    additionalFactor = brat->additionalFactor;
+  }
+
   xyInterpolationOrder = brat->xyInterpolationOrder;
   xyGridExcess = brat->xyGridExcess;
   xyExtrapolate = brat->xyExtrapolate;
@@ -565,6 +327,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   fieldMapDimension = 3;
 
   fieldFactor = brat->fieldFactor;
+  mainFactor = brat->mainFactor;
   theta = brat->angle;
   fse = brat->fse;
   dXOffset = brat->dxMap;
@@ -1124,7 +887,7 @@ void BRAT_deriv_function(double *qp, double *q, double s)
   qp[0] = w[0];
   qp[1] = w[1];
   qp[2] = w[2];
-  factor = fieldFactor/(rigidity*(1+global_delta));
+  factor = 1/(rigidity*(1+global_delta));
   wp[0] = (w[2]*F[1]-w[1]*F[2])*factor;
   wp[1] = (w[0]*F[2]-w[2]*F[0])*factor;
   wp[2] = (w[1]*F[0]-w[0]*F[1])*factor;
@@ -1904,7 +1667,7 @@ void BRAT_B_field(double *F, double *Qg)
   } else {
     long iq;
     double Finterp1[2][2], Finterp2[2];
-    double *Fq[3], Freturn[3];
+    double *Fq[3], Freturn[3]={0,0,0};
     float *Fq1[3];
     Fq[0] = BzNorm;
     Fq[1] = BxNorm;
@@ -1979,6 +1742,85 @@ void BRAT_B_field(double *F, double *Qg)
 	Freturn[iq] = (1-fx)*Finterp2[0] + fx*Finterp2[1];
       }
     }
+    for (iq=0; iq<3; iq++)
+      Freturn[iq] *= mainFactor*fieldFactor;
+
+    if (additionalFactor) {
+      Fq[0] = BzNormAdditional;
+      Fq[1] = BxNormAdditional;
+      Fq[2] = ByNormAdditional;
+      Fq1[0] = Bz1NormAdditional;
+      Fq1[1] = Bx1NormAdditional;
+      Fq1[2] = By1NormAdditional;
+
+#ifdef DEBUG
+      fprintf(stderr, "Doing 3d interpolation: x=(%le, %le, %le), i=(%ld, %ld, %ld), f=(%le, %le, %le)\n", 
+	      x, y, z, ix, iy, iz, fx, fy, fz);
+#endif
+      
+      if (xyInterpolationOrder>1) {
+	double FOutput1[3], FOutput2[3];
+	long offset;
+	offset = iz*nx*ny;
+	if (!singlePrecision) 
+	  interpolate2dFieldMapHigherOrder2(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
+					    Fq[0], Fq[1], Fq[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+	else 
+	  interpolate2dFieldMapHigherOrder2(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
+					    Fq1[0], Fq1[1], Fq1[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+	
+	offset = (iz+1)*nx*ny;
+	if (!singlePrecision) 
+	  interpolate2dFieldMapHigherOrder2(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
+					    Fq[0], Fq[1], Fq[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+	else 
+	  interpolate2dFieldMapHigherOrder2(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
+					    Fq1[0], Fq1[1], Fq1[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+	
+	for (iq=0; iq<3; iq++)
+	  Freturn[iq] += additionalFactor*fieldFactor*((1-fz)*FOutput1[iq] + fz*FOutput2[iq]);
+      } else {
+	for (iq=0; iq<3; iq++) {
+	  /* interpolate vs z to get four points in a x-y grid */
+	  if (!singlePrecision) {
+	    /* (ix, iy) */
+	    Finterp1[0][0] = (1-fz)*(*(Fq[iq]+(ix+0)+iy*nx + iz*nx*ny)) +
+	      fz*(*(Fq[iq]+(ix+0)+iy*nx + (iz+1)*nx*ny));
+	    /* (ix+1, iy) */        
+	    Finterp1[1][0] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+0)*nx + iz*nx*ny)) +
+	      fz*(*(Fq[iq]+(ix+1)+(iy+0)*nx + (iz+1)*nx*ny));
+	    /* (ix, iy+1) */
+	    Finterp1[0][1] = (1-fz)*(*(Fq[iq]+(ix+0)+(iy+1)*nx + iz*nx*ny)) +
+	      fz*(*(Fq[iq]+(ix+0)+(iy+1)*nx + (iz+1)*nx*ny));
+	    /* (ix+1, iy+1) */
+	    Finterp1[1][1] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+1)*nx + iz*nx*ny)) +
+	      fz*(*(Fq[iq]+(ix+1)+(iy+1)*nx + (iz+1)*nx*ny));
+	  } else {
+	    Finterp1[0][0] = (1-fz)*(*(Fq1[iq]+(ix+0)+iy*nx + iz*nx*ny)) +
+	      fz*(*(Fq1[iq]+(ix+0)+iy*nx + (iz+1)*nx*ny));
+	    /* (ix+1, iy) */        
+	    Finterp1[1][0] = (1-fz)*(*(Fq1[iq]+(ix+1)+(iy+0)*nx + iz*nx*ny)) +
+	      fz*(*(Fq1[iq]+(ix+1)+(iy+0)*nx + (iz+1)*nx*ny));
+	    /* (ix, iy+1) */
+	    Finterp1[0][1] = (1-fz)*(*(Fq1[iq]+(ix+0)+(iy+1)*nx + iz*nx*ny)) +
+	      fz*(*(Fq1[iq]+(ix+0)+(iy+1)*nx + (iz+1)*nx*ny));
+	    /* (ix+1, iy+1) */
+	    Finterp1[1][1] = (1-fz)*(*(Fq1[iq]+(ix+1)+(iy+1)*nx + iz*nx*ny)) +
+	      fz*(*(Fq1[iq]+(ix+1)+(iy+1)*nx + (iz+1)*nx*ny));
+	  }
+	  
+	  /* interpolate vs y to get two points spaced by dx */
+	  /* ix */
+	  Finterp2[0] = (1-fy)*Finterp1[0][0] + fy*Finterp1[0][1];
+	  /* ix+1 */
+	  Finterp2[1] = (1-fy)*Finterp1[1][0] + fy*Finterp1[1][1];
+	  
+	  /* interpolate vs x to get 1 value */
+	  Freturn[iq] += additionalFactor*fieldFactor*((1-fx)*Finterp2[0] + fx*Finterp2[1]);
+	}
+      }
+    }
+
     F[0] = Freturn[0];
     F[1] = Freturn[1];
     F[2] = Freturn[2];
@@ -2461,4 +2303,337 @@ int interpolate2dFieldMapHigherOrder2
   }
 
   return 1;
+}
+
+void readBratFieldFile(BRAT *brat, char *filename, short additionalFile)
+{
+  long i, idata, rows;
+  long nx, ny, nz;
+  SDDS_DATASET SDDS_table;
+  double Bmin, Bmax;
+
+  /* See if we've read this file already---should use a hash table */
+  for (i=0; i<nBrat3dData; i++) {
+    if (strcmp(filename, brat3dData[i].filename)==0) {
+      printf("Using previously-read data for BRAT file %s\n",
+	     filename);
+      break;
+    }
+  }
+
+  if (i!=nBrat3dData) {
+    if ((brat->singlePrecision && !brat3dData[i].singlePrecision) ||
+	(!brat->singlePrecision && brat3dData[i].singlePrecision))
+      bombElegantVA("Error: inconsistent SINGLE_PRECISION settings for use of field map %s", filename);
+    if (!additionalFile) 
+      brat->dataIndex = i;
+    else
+      brat->dataIndexAdditional = i;
+    return;
+  } else if (!brat->singlePrecision) {
+    double *xd, *yd, *zd, *Bxd, *Byd, *Bzd;
+    xd = yd = zd = Bxd = Byd = Bzd = NULL;
+    
+    /* read data from file */
+    
+    printf("Reading BRAT field data from %s\n", filename);
+    fflush(stdout);
+    
+    if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, filename) || !SDDS_ReadPage(&SDDS_table)) {
+      SDDS_SetError("Unable to read BRAT data file");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (!(rows=SDDS_CountRowsOfInterest(&SDDS_table)))
+      bomb("no data in BRAT field file", NULL);
+    printf("%ld rows of data\n", rows);
+    fflush(stdout);
+    if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
+	SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
+	SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+      printf("units wrong on x, y, or z\n");
+      fflush(stdout);
+      exit(1);
+    }
+    printf("x, y, and z found with expected units\n");
+    fflush(stdout);
+    if (!(xd = SDDS_GetColumnInDoubles(&SDDS_table, "x")) ||
+	!(yd = SDDS_GetColumnInDoubles(&SDDS_table, "y")) ||
+	!(zd = SDDS_GetColumnInDoubles(&SDDS_table, "z")) ) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
+	SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
+	SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+      printf("units wrong on Bx, By, or Bz\n");
+      fflush(stdout);
+      exit(1);
+    }
+    printf("Bx, By, and Bz found with expected units\n");
+    fflush(stdout);
+    if (!(Bxd = SDDS_GetColumnInDoubles(&SDDS_table, "Bx")) ||
+	!(Byd = SDDS_GetColumnInDoubles(&SDDS_table, "By")) ||
+	!(Bzd = SDDS_GetColumnInDoubles(&SDDS_table, "Bz"))) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    if (!SDDS_Terminate(&SDDS_table)) 
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    printf("Finished reading data from file\n");
+    fflush(stdout);
+    
+    /* It is assumed that the data is ordered so that x changes fastest.
+     * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
+     * The points are assumed to be equipspaced.
+     */
+    nx = 1;
+    xi = xd[0];
+    while (nx<rows) {
+      if (xd[nx-1]>xd[nx])
+	break;
+      nx ++;
+    }
+    if (nx==rows) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (x)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }  
+    xf = xd[nx-1];
+    dx = (xf-xi)/(nx-1);
+      
+    ny = 1;
+    yi = yd[0];
+    while (ny<(rows/nx)) {
+      if (yd[(ny-1)*nx]>yd[ny*nx])
+	break;
+      ny++;
+    }
+    if (ny==rows) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (y)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }
+    yf = yd[(ny-1)*nx];
+    dy = (yf-yi)/(ny-1);
+      
+    if (nx<=1 || ny<=1 || (nz = rows/(nx*ny))<=1) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (z)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }
+    zi = zd[0];
+    zf = zd[rows-1];
+    dz = (zf-zi)/(nz-1);
+      
+    Bmin = -(Bmax = -DBL_MAX);
+    for (idata=0; idata<rows; idata++) {
+      /* if (fabs(yd[idata])<dy/2 && fabs(xd[idata])<dx/2) { */
+      if (Byd[idata]>Bmax)
+	Bmax = Byd[idata];
+      if (Byd[idata]<Bmin)
+	Bmin = Byd[idata];
+      /* } */
+    }
+    free(xd);
+    free(yd);
+    free(zd);
+    if (Bmax==-DBL_MAX) {
+      fprintf(stderr, "BRAT file doesn't have valid Bmax value\n");
+      fprintf(stderr, "Bmax = %le, Bmin = %le\n", Bmax, Bmin);
+      exit(1);
+    }
+    if (fabs(Bmin)>fabs(Bmax))
+      SWAP_DOUBLE(Bmin, Bmax);
+      
+    if (!quiet) 
+      printf("3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%21.15e, dy=%21.15e, dz=%21.15e\nx:[%21.15e, %21.15e], y:[%21.15e, %21.15e], z:[%21.15e, %21.15e]\nBy:[%21.15e, %21.15e]\n",
+	     nx, ny, nz, dx, dy, dz,
+	     xi, xf, yi, yf, zi, zf,
+	     Bmin, Bmax
+	     );
+
+    /* copy to storage area */
+    if (!(brat3dData = SDDS_Realloc(brat3dData, sizeof(*brat3dData)*(nBrat3dData+1))))
+      bombElegant("memory allocation failure storage BRAT data", NULL);
+
+    brat3dData[nBrat3dData].Bmin = Bmin;
+    brat3dData[nBrat3dData].Bmax = Bmax;
+      
+    brat3dData[nBrat3dData].Bx1 = brat3dData[nBrat3dData].By1 = brat3dData[nBrat3dData].Bz1 = NULL;
+
+    brat3dData[nBrat3dData].Bx = Bxd;
+    brat3dData[nBrat3dData].xi = xi;
+    brat3dData[nBrat3dData].xf = xf;
+    brat3dData[nBrat3dData].dx = dx;
+    brat3dData[nBrat3dData].nx = nx;
+
+    brat3dData[nBrat3dData].By = Byd;
+    brat3dData[nBrat3dData].yi = yi;
+    brat3dData[nBrat3dData].yf = yf;
+    brat3dData[nBrat3dData].dy = dy;
+    brat3dData[nBrat3dData].ny = ny;
+
+    brat3dData[nBrat3dData].Bz = Bzd;
+    brat3dData[nBrat3dData].zi = zi;
+    brat3dData[nBrat3dData].zf = zf;
+    brat3dData[nBrat3dData].dz = dz;
+    brat3dData[nBrat3dData].nz = nz;
+
+    brat3dData[nBrat3dData].singlePrecision = 0;
+  } else {
+    /* single-precision data */
+    float *xd, *yd, *zd, *Bxd, *Byd, *Bzd;
+    xd = yd = zd = Bxd = Byd = Bzd = NULL;
+    
+    /* read data from file */
+      
+    printf("Reading BRAT field data from %s\n", filename);
+    fflush(stdout);
+
+    if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, filename) || !SDDS_ReadPage(&SDDS_table)) {
+      SDDS_SetError("Unable to read BRAT data file");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (!(rows=SDDS_CountRowsOfInterest(&SDDS_table)))
+      bomb("no data in BRAT field file", NULL);
+    printf("%ld rows of data\n", rows);
+    fflush(stdout);
+    if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
+	SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
+	SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+      printf("units wrong on x, y, or z\n");
+      fflush(stdout);
+      exit(1);
+    }
+    printf("x, y, and z found with expected units\n");
+    fflush(stdout);
+    if (!(xd = SDDS_GetColumnInFloats(&SDDS_table, "x")) ||
+	!(yd = SDDS_GetColumnInFloats(&SDDS_table, "y")) ||
+	!(zd = SDDS_GetColumnInFloats(&SDDS_table, "z")) ) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
+	SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
+	SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+      printf("units wrong on Bx, By, or Bz\n");
+      fflush(stdout);
+      exit(1);
+    }
+    printf("Bx, By, and Bz found with expected units\n");
+    fflush(stdout);
+    if (!(Bxd = SDDS_GetColumnInFloats(&SDDS_table, "Bx")) ||
+	!(Byd = SDDS_GetColumnInFloats(&SDDS_table, "By")) ||
+	!(Bzd = SDDS_GetColumnInFloats(&SDDS_table, "Bz"))) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    if (!SDDS_Terminate(&SDDS_table)) 
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    printf("Finished reading data from file\n");
+    fflush(stdout);
+
+    /* It is assumed that the data is ordered so that x changes fastest.
+     * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
+     * The points are assumed to be equipspaced.
+     */
+    nx = 1;
+    xi = xd[0];
+    while (nx<rows) {
+      if (xd[nx-1]>xd[nx])
+	break;
+      nx ++;
+    }
+    if (nx==rows) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (x)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }  
+    xf = xd[nx-1];
+    dx = (xf-xi)/(nx-1);
+      
+    ny = 1;
+    yi = yd[0];
+    while (ny<(rows/nx)) {
+      if (yd[(ny-1)*nx]>yd[ny*nx])
+	break;
+      ny++;
+    }
+    if (ny==rows) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (y)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }
+    yf = yd[(ny-1)*nx];
+    dy = (yf-yi)/(ny-1);
+      
+    if (nx<=1 || ny<=1 || (nz = rows/(nx*ny))<=1) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (z)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }
+    zi = zd[0];
+    zf = zd[rows-1];
+    dz = (zf-zi)/(nz-1);
+      
+    Bmin = -(Bmax = -DBL_MAX);
+    for (idata=0; idata<rows; idata++) {
+      /* if (fabs(yd[idata])<dy/2 && fabs(xd[idata])<dx/2) { */
+      if (Byd[idata]>Bmax)
+	Bmax = Byd[idata];
+      if (Byd[idata]<Bmin)
+	Bmin = Byd[idata];
+      /* } */
+    }
+    free(xd);
+    free(yd);
+    free(zd);
+    if (Bmax==-DBL_MAX) {
+      fprintf(stderr, "BRAT file doesn't have valid Bmax value\n");
+      fprintf(stderr, "Bmax = %le, Bmin = %le\n", Bmax, Bmin);
+      exit(1);
+    }
+    if (fabs(Bmin)>fabs(Bmax))
+      SWAP_DOUBLE(Bmin, Bmax);
+      
+    if (!quiet) 
+      printf("3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%21.15e, dy=%21.15e, dz=%21.15e\nx:[%21.15e, %21.15e], y:[%21.15e, %21.15e], z:[%21.15e, %21.15e]\nBy:[%21.15e, %21.15e]\n",
+	     nx, ny, nz, dx, dy, dz,
+	     xi, xf, yi, yf, zi, zf,
+	     Bmin, Bmax
+	     );
+
+    /* copy to storage area */
+    if (!(brat3dData = SDDS_Realloc(brat3dData, sizeof(*brat3dData)*(nBrat3dData+1))))
+      bombElegant("memory allocation failure storage BRAT data", NULL);
+
+    brat3dData[nBrat3dData].Bx = brat3dData[nBrat3dData].By = brat3dData[nBrat3dData].Bz = NULL;
+      
+    brat3dData[nBrat3dData].Bmin = Bmin;
+    brat3dData[nBrat3dData].Bmax = Bmax;
+
+    brat3dData[nBrat3dData].Bx1 = Bxd;
+    brat3dData[nBrat3dData].xi = xi;
+    brat3dData[nBrat3dData].xf = xf;
+    brat3dData[nBrat3dData].dx = dx;
+    brat3dData[nBrat3dData].nx = nx;
+
+    brat3dData[nBrat3dData].By1 = Byd;
+    brat3dData[nBrat3dData].yi = yi;
+    brat3dData[nBrat3dData].yf = yf;
+    brat3dData[nBrat3dData].dy = dy;
+    brat3dData[nBrat3dData].ny = ny;
+
+    brat3dData[nBrat3dData].Bz1 = Bzd;
+    brat3dData[nBrat3dData].zi = zi;
+    brat3dData[nBrat3dData].zf = zf;
+    brat3dData[nBrat3dData].dz = dz;
+    brat3dData[nBrat3dData].nz = nz;
+      
+    brat3dData[nBrat3dData].singlePrecision = 1;
+  }
+  cp_str(&brat3dData[nBrat3dData].filename, filename);
+  if (additionalFile)
+    brat->dataIndexAdditional = nBrat3dData;
+  else
+    brat->dataIndex = nBrat3dData;
+  nBrat3dData += 1;
+  printf("Done reading BRAT field data from %s\n", filename);
+  fflush(stdout);
 }

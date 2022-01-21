@@ -233,7 +233,7 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
                        eptr->name, alterSpec[i].item);
               printWarning("alter_elements: element does not have parameter", buffer);
             } else 
-              printf("Element does not have parameter %s: %s", alterSpec[i].item, eptr->name);
+              printf("Element does not have parameter %s: %s\n", alterSpec[i].item, eptr->name);
           }
           if (!alterSpec[i].allow_missing_parameters)
             exitElegant(1);
