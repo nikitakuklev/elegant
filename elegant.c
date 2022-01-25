@@ -188,7 +188,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define SET_BUNCHED_BEAM_MOMENTS 71
 #define CHANGE_START 72
 #define CHANGE_END 73
-#define N_COMMANDS      74
+#define INCLUDE_COMMANDS 74
+#define N_COMMANDS      75
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -205,7 +206,7 @@ char *command[N_COMMANDS] = {
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
     "tune_footprint", "ion_effects", "elastic_scattering", "inelastic_scattering", "ignore_elements",
     "set_reference_particle_output", "obstruction_data", "bunched_beam_moments", "change_start",
-    "change_end",
+    "change_end", "include_commands",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -283,6 +284,7 @@ char *description[N_COMMANDS] = {
     "bunched_beam_moments             defines beam distribution using user-supplied beam moments",
     "change_start                     modify the beamline to start at a named location",
     "change_end                       modify the beamline to end at a named location",
+    "include_commands                 include commands from a file",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -346,15 +348,15 @@ long runInelasticScattering(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST
 void finishInelasticScattering();
 
 int main(argc, argv)
-int argc;
-char **argv;
+     int argc;
+     char **argv;
 {
   char **macroTag, **macroValue=NULL;
   long macros;
   LINE_LIST *beamline=NULL;        /* pointer to root of linked list */
-  FILE *fp_in=NULL;
+  FILE **fpIn = NULL;
   char *inputfile, *inputFileArray[2] = {NULL, NULL};
-  long iInput;
+  long iInput, fpIndex, maxIncludedFiles;
   SCANNED_ARG *scanned;
   char s[NAMELIST_BUFLEN], *ptr;
   long i, verbose = 0;
@@ -488,7 +490,7 @@ char **argv;
     mallopt(M_MXFAST, 1024);
     mallopt(M_NLBLKS, 8);
     #endif
-    */
+  */
   
   argc = scanargs(&scanned, argc, argv);
   if (argc<2) {
@@ -543,7 +545,7 @@ char **argv;
 #if USE_MPI
 	      if (myid==0)
 #endif
-	      printf("macro: %s --> %s\n", macroTag[macros], macroValue[macros]);
+		printf("macro: %s --> %s\n", macroTag[macros], macroValue[macros]);
 	    }
             macros++;
           }
@@ -569,9 +571,9 @@ char **argv;
             processorMask |= (unsigned long)(ipow(2, k)+0.5);
           }
           /*
-             This code isn't valid with the current version of sched_setaffinity
-          printf("processorMask = %lx\n", processorMask);
-          sched_setaffinity(0, sizeof(processorMask), &processorMask);
+	    This code isn't valid with the current version of sched_setaffinity
+	    printf("processorMask = %lx\n", processorMask);
+	    sched_setaffinity(0, sizeof(processorMask), &processorMask);
           */
         }
 #else /* (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)) */
@@ -598,7 +600,7 @@ char **argv;
     else { 
       /* filenames */
       if (!inputfile)
-        fp_in = fopen_e(inputfile = scanned[i].list[0], "r", 0);
+        inputfile = scanned[i].list[0];
       else {
         printf("Too many file names listed.\n");
         showUsageOrGreeting(SHOW_USAGE);
@@ -677,1328 +679,1354 @@ char **argv;
   }
 
   iInput = 0;
+  fpIn = tmalloc(sizeof(*fpIn)*1);
+  maxIncludedFiles = 1;
+  fpIndex = 0;
   while (iInput<2 && (inputfile=inputFileArray[iInput++])!=NULL) {
+    fpIn[0] = NULL;
+    fpIndex = 0;
     if (strcmp(inputfile, "stdin")==0) 
-      fp_in = stdin;
+      fpIn[0] = stdin;
     else
-      fp_in = fopen_e(inputfile, "r", 0);
-    commandCode = -1;
-  while (get_namelist_e(s, NAMELIST_BUFLEN, fp_in, &namelistErrorCode)) {
-    if (namelistErrorCode!=NAMELIST_NO_ERROR)
-      break;
-    substituteTagValue(s, NAMELIST_BUFLEN, macroTag, macroValue, macros);
+      fpIn[0] = fopen_e(inputfile, "r", 0);
+    while (fpIndex>=0) {
+      commandCode = -1;
+      while (get_namelist_e(s, NAMELIST_BUFLEN, fpIn[fpIndex], &namelistErrorCode)) {
+	if (namelistErrorCode!=NAMELIST_NO_ERROR)
+	  break;
+	substituteTagValue(s, NAMELIST_BUFLEN, macroTag, macroValue, macros);
 #if DEBUG
-    fprintf(stderr, "%s\n", s);
+	fprintf(stderr, "%s\n", s);
 #endif
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
-    report_stats(stdout, "statistics: ");
-    fflush(stdout);
+	report_stats(stdout, "statistics: ");
+	fflush(stdout);
 #endif
-    if (namelists_read)
-      free_namelist_text(&namelist_text);
-    scan_namelist(&namelist_text, s);
-    namelists_read = 1;
+	if (namelists_read)
+	  free_namelist_text(&namelist_text);
+	scan_namelist(&namelist_text, s);
+	namelists_read = 1;
 #if USE_MPI /* synchronize all the processes before execute an input statement */ 
-    MPI_Barrier (MPI_COMM_WORLD);
+	MPI_Barrier (MPI_COMM_WORLD);
 #endif
-    lastCommandCode = commandCode;
-    switch ((commandCode=match_string(namelist_text.group_name, command, N_COMMANDS, EXACT_MATCH))) {
-    case CHANGE_PARTICLE:
-      if (run_setuped)
-        bombElegant("particle command should precede run_setup", NULL);  /* to ensure nothing is inconsistent */
-      process_particle_command(&namelist_text);
-      break;
-    case CHANGE_START:
-      if (run_setuped)
-        bombElegant("change_start command must preceed run_setup", NULL);
-      process_change_start(&namelist_text, &changeStart);
-      break;
-    case CHANGE_END:
-      if (run_setuped)
-        bombElegant("change_end command must preceed run_setup", NULL);
-      process_change_end(&namelist_text, &changeEnd);
-      break;
-    case RUN_SETUP:
-      beam_type = -1;
-      initialize_structures(NULL, &run_control, &error_control, &correct, &beam, &output_data,
-                            &optimize, &chrom_corr_data, &tune_corr_data, &links);
-      reset_alter_specifications();
-      clearSliceAnalysis();
-      finish_load_parameters();
-      run_setuped = run_controled = error_controled = correction_setuped = ionEffectsSeen = 0;
+	lastCommandCode = commandCode;
+	switch ((commandCode=match_string(namelist_text.group_name, command, N_COMMANDS, EXACT_MATCH))) {
+	case INCLUDE_COMMANDS:
+	  include_commands_struct.filename = NULL;
+	  include_commands_struct.disable = 0;
+	  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+	  set_print_namelist_flags(0);
+	  if (processNamelist(&include_commands, &namelist_text)==NAMELIST_ERROR)
+	    bombElegant(NULL, NULL);
+	  if (echoNamelists) print_namelist(stdout, &include_commands);
+	  fflush(stdout);
+	  if (!include_commands_struct.disable) {
+	    fpIndex ++;
+	    if (fpIndex>=maxIncludedFiles) 
+	      fpIn = SDDS_Realloc(fpIn, sizeof(*fpIn)*(++maxIncludedFiles));
+	    if (!(fpIn[fpIndex] = fopen_e(include_commands_struct.filename, "r", 0)))
+	      bombElegant(NULL, NULL);
+	  }
+	  break;
+	case CHANGE_PARTICLE:
+	  if (run_setuped)
+	    bombElegant("particle command should precede run_setup", NULL);  /* to ensure nothing is inconsistent */
+	  process_particle_command(&namelist_text);
+	  break;
+	case CHANGE_START:
+	  if (run_setuped)
+	    bombElegant("change_start command must preceed run_setup", NULL);
+	  process_change_start(&namelist_text, &changeStart);
+	  break;
+	case CHANGE_END:
+	  if (run_setuped)
+	    bombElegant("change_end command must preceed run_setup", NULL);
+	  process_change_end(&namelist_text, &changeEnd);
+	  break;
+	case RUN_SETUP:
+	  beam_type = -1;
+	  initialize_structures(NULL, &run_control, &error_control, &correct, &beam, &output_data,
+				&optimize, &chrom_corr_data, &tune_corr_data, &links);
+	  reset_alter_specifications();
+	  clearSliceAnalysis();
+	  finish_load_parameters();
+	  run_setuped = run_controled = error_controled = correction_setuped = ionEffectsSeen = 0;
       
-      run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
-        fl_do_tune_correction = do_floor_coordinates = 0;
-      do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = 
-        do_find_aperture = do_rf_setup = 0;
-      linear_chromatic_tracking_setup_done = losses_include_global_coordinates = 0;
-      losses_s_limit[0] = -(losses_s_limit[1] = DBL_MAX);
+	  run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
+	    fl_do_tune_correction = do_floor_coordinates = 0;
+	  do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = 
+	    do_find_aperture = do_rf_setup = 0;
+	  linear_chromatic_tracking_setup_done = losses_include_global_coordinates = 0;
+	  losses_s_limit[0] = -(losses_s_limit[1] = DBL_MAX);
 
-      set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
-      set_print_namelist_flags(0);
-      if (processNamelist(&run_setup, &namelist_text)==NAMELIST_ERROR)
-        bombElegant(NULL, NULL);
-      if (echoNamelists) print_namelist(stdout, &run_setup);
+	  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+	  set_print_namelist_flags(0);
+	  if (processNamelist(&run_setup, &namelist_text)==NAMELIST_ERROR)
+	    bombElegant(NULL, NULL);
+	  if (echoNamelists) print_namelist(stdout, &run_setup);
 
-      if (concat_order!=0)
-        printWarning("concat_order is non-zero in run_setup.",
-                     "Using matrix concatenation is rarely needed and reduces accuracy.");
+	  if (concat_order!=0)
+	    printWarning("concat_order is non-zero in run_setup.",
+			 "Using matrix concatenation is rarely needed and reduces accuracy.");
 
-      setSearchPath(search_path);
-      /* check for validity of namelist inputs */
-      if (lattice==NULL) {
-        if (!saved_lattice)
-          bombElegant("no lattice supplied", NULL);
-        if (default_order!=last_default_order)
-          delete_matrix_data(NULL);
-      }
-      else {
-        /* free previous lattice info */
-	if (beamline)
-          closeBeamlineOutputFiles(beamline);
-        free_elements(NULL);
-        free_beamlines(NULL);
-        freeInputObjects();
-        saved_lattice = lattice;
-      }
-      free_beamdata(&beam);
-      if (default_order<1 || default_order>3)
-        bombElegant("default_order is out of range", NULL);
-      if (concat_order>3)
-        bombElegant("concat_order is out of range", NULL);
-      if (p_central && p_central_mev)
-        bombElegant("give only one of p_central and p_central_mev", NULL);
-      if (p_central_mev!=0 && p_central==0)
-        p_central = p_central_mev/particleMassMV;
-      if (p_central<=0 && !expand_for)
-        bombElegant("p_central<=0 and p_central_mev<=0", NULL);
-      if (expand_for)
-        p_central = find_beam_p_central(expand_for);
-      if (random_number_seed==0) {
-        random_number_seed = (long)time(NULL);
-        random_number_seed = 2*(random_number_seed/2) + 1;
-        printf("clock-generated random_number_seed = %ld\n", random_number_seed);
-        fflush(stdout);
-      }
+	  setSearchPath(search_path);
+	  /* check for validity of namelist inputs */
+	  if (lattice==NULL) {
+	    if (!saved_lattice)
+	      bombElegant("no lattice supplied", NULL);
+	    if (default_order!=last_default_order)
+	      delete_matrix_data(NULL);
+	  }
+	  else {
+	    /* free previous lattice info */
+	    if (beamline)
+	      closeBeamlineOutputFiles(beamline);
+	    free_elements(NULL);
+	    free_beamlines(NULL);
+	    freeInputObjects();
+	    saved_lattice = lattice;
+	  }
+	  free_beamdata(&beam);
+	  if (default_order<1 || default_order>3)
+	    bombElegant("default_order is out of range", NULL);
+	  if (concat_order>3)
+	    bombElegant("concat_order is out of range", NULL);
+	  if (p_central && p_central_mev)
+	    bombElegant("give only one of p_central and p_central_mev", NULL);
+	  if (p_central_mev!=0 && p_central==0)
+	    p_central = p_central_mev/particleMassMV;
+	  if (p_central<=0 && !expand_for)
+	    bombElegant("p_central<=0 and p_central_mev<=0", NULL);
+	  if (expand_for)
+	    p_central = find_beam_p_central(expand_for);
+	  if (random_number_seed==0) {
+	    random_number_seed = (long)time(NULL);
+	    random_number_seed = 2*(random_number_seed/2) + 1;
+	    printf("clock-generated random_number_seed = %ld\n", random_number_seed);
+	    fflush(stdout);
+	  }
       
-      /* copy run data into run_conditions structure */
-      run_conditions.ideal_gamma = sqrt(sqr(p_central)+1);
-      run_conditions.p_central = p_central;
-      run_conditions.default_order = default_order;
-      run_conditions.concat_order = concat_order;
-      run_conditions.print_statistics = print_statistics;
-      run_conditions.combine_bunch_statistics = combine_bunch_statistics;
-      run_conditions.wrap_around = wrap_around;
-      run_conditions.showElementTiming = show_element_timing;
-      run_conditions.monitorMemoryUsage = monitor_memory_usage;
-      run_conditions.backtrack = back_tracking; 
-      if ((run_conditions.lossLimit[0]=losses_s_limit[0])>(run_conditions.lossLimit[1]=losses_s_limit[1]))
-	  bombElegant("losses_s_limit[0] can't be greater than losses_s_limit[1]", NULL);
-      if ((run_conditions.lossesIncludeGlobalCoordinates = losses_include_global_coordinates)) {
-        globalLossCoordOffset = COORDINATES_PER_PARTICLE + BASIC_PROPERTIES_PER_PARTICLE;
-        totalPropertiesPerParticle = COORDINATES_PER_PARTICLE + BASIC_PROPERTIES_PER_PARTICLE + GLOBAL_LOSS_PROPERTIES_PER_PARTICLE;
-      } else {
-        globalLossCoordOffset = -1;
-        totalPropertiesPerParticle = COORDINATES_PER_PARTICLE + BASIC_PROPERTIES_PER_PARTICLE;
-      }
-      sizeOfParticle = totalPropertiesPerParticle*sizeof(double);
-      if (starting_coord)
-        free(starting_coord);
-      starting_coord = tmalloc(sizeOfParticle);
-      if ((run_conditions.final_pass = final_pass))
-        run_conditions.wrap_around = 1;
-      run_conditions.tracking_updates = tracking_updates;
-      run_conditions.always_change_p0 = always_change_p0;
-      run_conditions.load_balancing_on = load_balancing_on;
-      run_conditions.random_sequence_No = random_sequence_No;
-      remaining_sequence_No = random_sequence_No; /* For Pelegant regression test */
+	  /* copy run data into run_conditions structure */
+	  run_conditions.ideal_gamma = sqrt(sqr(p_central)+1);
+	  run_conditions.p_central = p_central;
+	  run_conditions.default_order = default_order;
+	  run_conditions.concat_order = concat_order;
+	  run_conditions.print_statistics = print_statistics;
+	  run_conditions.combine_bunch_statistics = combine_bunch_statistics;
+	  run_conditions.wrap_around = wrap_around;
+	  run_conditions.showElementTiming = show_element_timing;
+	  run_conditions.monitorMemoryUsage = monitor_memory_usage;
+	  run_conditions.backtrack = back_tracking; 
+	  if ((run_conditions.lossLimit[0]=losses_s_limit[0])>(run_conditions.lossLimit[1]=losses_s_limit[1]))
+	    bombElegant("losses_s_limit[0] can't be greater than losses_s_limit[1]", NULL);
+	  if ((run_conditions.lossesIncludeGlobalCoordinates = losses_include_global_coordinates)) {
+	    globalLossCoordOffset = COORDINATES_PER_PARTICLE + BASIC_PROPERTIES_PER_PARTICLE;
+	    totalPropertiesPerParticle = COORDINATES_PER_PARTICLE + BASIC_PROPERTIES_PER_PARTICLE + GLOBAL_LOSS_PROPERTIES_PER_PARTICLE;
+	  } else {
+	    globalLossCoordOffset = -1;
+	    totalPropertiesPerParticle = COORDINATES_PER_PARTICLE + BASIC_PROPERTIES_PER_PARTICLE;
+	  }
+	  sizeOfParticle = totalPropertiesPerParticle*sizeof(double);
+	  if (starting_coord)
+	    free(starting_coord);
+	  starting_coord = tmalloc(sizeOfParticle);
+	  if ((run_conditions.final_pass = final_pass))
+	    run_conditions.wrap_around = 1;
+	  run_conditions.tracking_updates = tracking_updates;
+	  run_conditions.always_change_p0 = always_change_p0;
+	  run_conditions.load_balancing_on = load_balancing_on;
+	  run_conditions.random_sequence_No = random_sequence_No;
+	  remaining_sequence_No = random_sequence_No; /* For Pelegant regression test */
 
-      /* extract the root filename from the input filename */
-      strcpy_ss(s, inputfile);
-      if (rootname==NULL) {
-        clean_filename(s);
-        if ((ptr=strrchr(s, '.')))
-          *ptr = 0;
-        cp_str(&rootname, s);
-        run_conditions.rootname = rootname;
-        run_conditions.runfile  = inputfile;
-      }
-      else {
-        run_conditions.rootname = rootname;
-        run_conditions.runfile  = compose_filename(inputfile, rootname);
-      }
+	  /* extract the root filename from the input filename */
+	  strcpy_ss(s, inputfile);
+	  if (rootname==NULL) {
+	    clean_filename(s);
+	    if ((ptr=strrchr(s, '.')))
+	      *ptr = 0;
+	    cp_str(&rootname, s);
+	    run_conditions.rootname = rootname;
+	    run_conditions.runfile  = inputfile;
+	  }
+	  else {
+	    run_conditions.rootname = rootname;
+	    run_conditions.runfile  = compose_filename(inputfile, rootname);
+	  }
 
-      seedElegantRandomNumbers(random_number_seed, 0);
+	  seedElegantRandomNumbers(random_number_seed, 0);
 
-      /* In the version with parallel I/O, these file names need to be known by all the processors, otherwise there
-	 will be a synchronization issue when calculated accumulated sum in do_tracking */
-      run_conditions.acceptance = compose_filename(acceptance, rootname);
+	  /* In the version with parallel I/O, these file names need to be known by all the processors, otherwise there
+	     will be a synchronization issue when calculated accumulated sum in do_tracking */
+	  run_conditions.acceptance = compose_filename(acceptance, rootname);
 #if USE_MPI
-     if (run_conditions.acceptance)
-        dumpAcceptance = 1;
+	  if (run_conditions.acceptance)
+	    dumpAcceptance = 1;
 #endif
-      run_conditions.centroid   = compose_filename(centroid, rootname);
-      run_conditions.bpmCentroid   = compose_filename(bpm_centroid, rootname);
-      run_conditions.sigma      = compose_filename(sigma, rootname);
+	  run_conditions.centroid   = compose_filename(centroid, rootname);
+	  run_conditions.bpmCentroid   = compose_filename(bpm_centroid, rootname);
+	  run_conditions.sigma      = compose_filename(sigma, rootname);
 
-      if (countIgnoreElementsSpecs(0)!=0) {
-        if ((run_conditions.centroid && strlen(run_conditions.centroid)) ||
-            (run_conditions.bpmCentroid && strlen(run_conditions.bpmCentroid)))
-          bombElegant("Can't request centroid output if ignore_elements command with completely=0 is in force", NULL);
-        if (run_conditions.sigma && strlen(run_conditions.sigma))
-          bombElegant("Can't request sigma output if ignore_elements command with completely=0 is in force", NULL);
-      }
+	  if (countIgnoreElementsSpecs(0)!=0) {
+	    if ((run_conditions.centroid && strlen(run_conditions.centroid)) ||
+		(run_conditions.bpmCentroid && strlen(run_conditions.bpmCentroid)))
+	      bombElegant("Can't request centroid output if ignore_elements command with completely=0 is in force", NULL);
+	    if (run_conditions.sigma && strlen(run_conditions.sigma))
+	      bombElegant("Can't request sigma output if ignore_elements command with completely=0 is in force", NULL);
+	  }
 
-      if (run_conditions.apertureData.initialized && !run_conditions.apertureData.persistent)
-        resetApertureData(&(run_conditions.apertureData)); 
+	  if (run_conditions.apertureData.initialized && !run_conditions.apertureData.persistent)
+	    resetApertureData(&(run_conditions.apertureData)); 
 
-      /* parse the lattice file and create the beamline */
-      run_conditions.lattice = compose_filename(saved_lattice, rootname);
-      if (element_divisions>1)
-        addDivisionSpec("*", NULL, NULL, NULL, element_divisions, 0.0);
+	  /* parse the lattice file and create the beamline */
+	  run_conditions.lattice = compose_filename(saved_lattice, rootname);
+	  if (element_divisions>1)
+	    addDivisionSpec("*", NULL, NULL, NULL, element_divisions, 0.0);
 #ifdef USE_MPE /* use the MPE library */
-      if (USE_MPE) {
-        int event1a, event1b;
-	event1a = MPE_Log_get_event_number();
-	event1b = MPE_Log_get_event_number();
-	if(isMaster) 
-	  MPE_Describe_state(event1a, event1b, "get_beamline", "blue");
-	MPE_Log_event(event1a, 0, "start get_beamline"); /* record time spent on reading input */ 
+	  if (USE_MPE) {
+	    int event1a, event1b;
+	    event1a = MPE_Log_get_event_number();
+	    event1b = MPE_Log_get_event_number();
+	    if(isMaster) 
+	      MPE_Describe_state(event1a, event1b, "get_beamline", "blue");
+	    MPE_Log_event(event1a, 0, "start get_beamline"); /* record time spent on reading input */ 
 #endif
-        beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice, back_tracking, &changeStart, &changeEnd);
-        changeStart.active = 0;
+	    beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice, back_tracking, &changeStart, &changeEnd);
+	    changeStart.active = 0;
 #ifdef  USE_MPE
-	      MPE_Log_event(event1b, 0, "end get_beamline");
-      }
+	    MPE_Log_event(event1b, 0, "end get_beamline");
+	  }
 #endif
-      printf("length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
-      fflush(stdout);
-      lattice = saved_lattice;
+	  printf("length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
+	  fflush(stdout);
+	  lattice = saved_lattice;
 
-      if ((final && strlen(final)) || sceffects_inserted)
-        beamline->flags |= BEAMLINE_MATRICES_NEEDED;
+	  if ((final && strlen(final)) || sceffects_inserted)
+	    beamline->flags |= BEAMLINE_MATRICES_NEEDED;
       
 #if !SDDS_MPI_IO
-      if (isMaster)
+	  if (isMaster)
 #endif
-      {
-	run_conditions.output     = compose_filename(output, rootname);
-	run_conditions.losses     = compose_filename(losses, rootname);
-	run_conditions.final      = compose_filename(final, rootname);
-      }
+	    {
+	      run_conditions.output     = compose_filename(output, rootname);
+	      run_conditions.losses     = compose_filename(losses, rootname);
+	      run_conditions.final      = compose_filename(final, rootname);
+	    }
 #if !SDDS_MPI_IO
-      else
-	run_conditions.final = run_conditions.output = run_conditions.losses = NULL;
+	  else
+	    run_conditions.final = run_conditions.output = run_conditions.losses = NULL;
 #endif     
 
-      if (isMaster) { /* These files will be written by master */
-	magnets                   = compose_filename(magnets, rootname);
-	semaphore_file            = compose_filename(semaphore_file, rootname);
-	parameters                = compose_filename(parameters, rootname);        
-        rfc_reference_output      = compose_filename(rfc_reference_output, rootname);
-      }
-      else {
-        magnets = semaphore_file = parameters = rfc_reference_output = NULL;
-      }
+	  if (isMaster) { /* These files will be written by master */
+	    magnets                   = compose_filename(magnets, rootname);
+	    semaphore_file            = compose_filename(semaphore_file, rootname);
+	    parameters                = compose_filename(parameters, rootname);        
+	    rfc_reference_output      = compose_filename(rfc_reference_output, rootname);
+	  }
+	  else {
+	    magnets = semaphore_file = parameters = rfc_reference_output = NULL;
+	  }
 
-      manageSemaphoreFiles(semaphore_file, rootname, semaphoreFile);
+	  manageSemaphoreFiles(semaphore_file, rootname, semaphoreFile);
      
-      /* output the magnet layout */
-      if (magnets)
-        output_magnets(magnets, lattice, beamline);
+	  /* output the magnet layout */
+	  if (magnets)
+	    output_magnets(magnets, lattice, beamline);
 
-      delete_phase_references();    /* necessary for multi-step runs */
-      reset_special_elements(beamline, RESET_INCLUDE_ALL);
-      reset_driftCSR();
-      last_default_order = default_order;
-      run_setuped = 1;
-      break;
-    case GLOBAL_SETTINGS:
-      processGlobalSettings(&namelist_text);
-      break;
-    case RUN_CONTROL:
-      if (!run_setuped)
-        bombElegant("run_setup must precede run_control namelist", NULL);
-      vary_setup(&run_control, &namelist_text, &run_conditions, beamline);
-      run_control.ready = 1;
-      run_controled = 1;
-      beamline->fiducial_flag = run_control.fiducial_flag;
-      break;
-    case VARY_ELEMENT:
-      if (!run_controled)
-        bombElegant("run_control must precede vary_element namelists", NULL);
-      if (beam_type!=-1)
-        bombElegant("vary_element statements must come before beam definition", NULL);
-      add_varied_element(&run_control, &namelist_text, &run_conditions, beamline);
-      break;
-    case ERROR_CONTROL:
-      if (!run_setuped || !run_controled)
-        bombElegant("run_setup and run_control must precede error_control namelist", NULL);
-      if (beam_type!=-1)
-        bombElegant("error specifications must be completed before beam type is specified", NULL);
-      error_setup(&error_control, &namelist_text, &run_conditions, beamline);
-      error_controled = 1;
-      break;                    
-    case ERROR_ELEMENT:
-      if (beam_type!=-1)
-        bombElegant("error_element statements must come before beam definition", NULL);
-      if (!error_controled)
-        bombElegant("error_control namelist must precede error_element namelists", NULL);
-      add_error_element(&error_control, &namelist_text, beamline);
-      break;
-    case CORRECTION_SETUP:
-      if (!run_setuped)
-        bombElegant("run_setup must precede correction", NULL);
-      if (beam_type!=-1)
-        bombElegant("beam setup (bunched_beam or sdds_beam) must follow correction setup", NULL);
-      correction_setuped = 1;
-      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
-      correction_setup(&correct, &namelist_text, &run_conditions, beamline); 
-      delete_phase_references();
-      reset_special_elements(beamline, RESET_INCLUDE_RF);
-      reset_driftCSR();
-      break;
-    case SET_AWE_BEAM: 
-      printf("This program no longer supports awe-format files.\n");
-      printf("Use awe2sdds to convert your data files, and use\n");
-      printf("the sdds_beam command instead of awe_beam.\n");
-      exit(1);
-      break;
-    case SET_BUNCHED_BEAM:
-      if (!run_setuped || !run_controled)
-        bombElegant("run_setup and run_control must precede bunched_beam namelist", NULL);
-      if (beam_type!=-1)
-        bombElegant("a beam definition was already given for this run sequence", NULL);
-      setup_bunched_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, &optimize.variables,
-                         &output_data, beamline, beamline->n_elems,
-                         correct.mode!=-1 && 
-                         (correct.track_before_and_after || correct.start_from_centroid));
-      setup_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, beamline);
-      beam_type = SET_BUNCHED_BEAM;
-      break;
-    case SET_BUNCHED_BEAM_MOMENTS:
-      if (!run_setuped || !run_controled)
-        bombElegant("run_setup and run_control must precede bunched_beam_moments namelist", NULL);
-      if (beam_type!=-1)
-        bombElegant("a beam definition was already given for this run sequence", NULL);
-      setup_bunched_beam_moments(&beam, &namelist_text, &run_conditions, &run_control, &error_control, &optimize.variables,
-                                 &output_data, beamline, beamline->n_elems,
-                                 correct.mode!=-1 && 
-                                 (correct.track_before_and_after || correct.start_from_centroid));
-      setup_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, beamline);
-      beam_type = SET_BUNCHED_BEAM;
-      break;
-    case SET_SDDS_BEAM: 
+	  delete_phase_references();    /* necessary for multi-step runs */
+	  reset_special_elements(beamline, RESET_INCLUDE_ALL);
+	  reset_driftCSR();
+	  last_default_order = default_order;
+	  run_setuped = 1;
+	  break;
+	case GLOBAL_SETTINGS:
+	  processGlobalSettings(&namelist_text);
+	  break;
+	case RUN_CONTROL:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede run_control namelist", NULL);
+	  vary_setup(&run_control, &namelist_text, &run_conditions, beamline);
+	  run_control.ready = 1;
+	  run_controled = 1;
+	  beamline->fiducial_flag = run_control.fiducial_flag;
+	  break;
+	case VARY_ELEMENT:
+	  if (!run_controled)
+	    bombElegant("run_control must precede vary_element namelists", NULL);
+	  if (beam_type!=-1)
+	    bombElegant("vary_element statements must come before beam definition", NULL);
+	  add_varied_element(&run_control, &namelist_text, &run_conditions, beamline);
+	  break;
+	case ERROR_CONTROL:
+	  if (!run_setuped || !run_controled)
+	    bombElegant("run_setup and run_control must precede error_control namelist", NULL);
+	  if (beam_type!=-1)
+	    bombElegant("error specifications must be completed before beam type is specified", NULL);
+	  error_setup(&error_control, &namelist_text, &run_conditions, beamline);
+	  error_controled = 1;
+	  break;                    
+	case ERROR_ELEMENT:
+	  if (beam_type!=-1)
+	    bombElegant("error_element statements must come before beam definition", NULL);
+	  if (!error_controled)
+	    bombElegant("error_control namelist must precede error_element namelists", NULL);
+	  add_error_element(&error_control, &namelist_text, beamline);
+	  break;
+	case CORRECTION_SETUP:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede correction", NULL);
+	  if (beam_type!=-1)
+	    bombElegant("beam setup (bunched_beam or sdds_beam) must follow correction setup", NULL);
+	  correction_setuped = 1;
+	  beamline->flags |= BEAMLINE_MATRICES_NEEDED;
+	  correction_setup(&correct, &namelist_text, &run_conditions, beamline); 
+	  delete_phase_references();
+	  reset_special_elements(beamline, RESET_INCLUDE_RF);
+	  reset_driftCSR();
+	  break;
+	case SET_AWE_BEAM: 
+	  printf("This program no longer supports awe-format files.\n");
+	  printf("Use awe2sdds to convert your data files, and use\n");
+	  printf("the sdds_beam command instead of awe_beam.\n");
+	  exit(1);
+	  break;
+	case SET_BUNCHED_BEAM:
+	  if (!run_setuped || !run_controled)
+	    bombElegant("run_setup and run_control must precede bunched_beam namelist", NULL);
+	  if (beam_type!=-1)
+	    bombElegant("a beam definition was already given for this run sequence", NULL);
+	  setup_bunched_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, &optimize.variables,
+			     &output_data, beamline, beamline->n_elems,
+			     correct.mode!=-1 && 
+			     (correct.track_before_and_after || correct.start_from_centroid));
+	  setup_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, beamline);
+	  beam_type = SET_BUNCHED_BEAM;
+	  break;
+	case SET_BUNCHED_BEAM_MOMENTS:
+	  if (!run_setuped || !run_controled)
+	    bombElegant("run_setup and run_control must precede bunched_beam_moments namelist", NULL);
+	  if (beam_type!=-1)
+	    bombElegant("a beam definition was already given for this run sequence", NULL);
+	  setup_bunched_beam_moments(&beam, &namelist_text, &run_conditions, &run_control, &error_control, &optimize.variables,
+				     &output_data, beamline, beamline->n_elems,
+				     correct.mode!=-1 && 
+				     (correct.track_before_and_after || correct.start_from_centroid));
+	  setup_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, beamline);
+	  beam_type = SET_BUNCHED_BEAM;
+	  break;
+	case SET_SDDS_BEAM: 
 #if USE_MPI
-    notSinglePart = 1; 
+	  notSinglePart = 1; 
 #endif      
-      if (!run_setuped || !run_controled)
-        bombElegant("run_setup and run_control must precede sdds_beam namelist", NULL);
-      if (beam_type!=-1)
-        bombElegant("a beam definition was already given for this run sequence", NULL);
-      setup_sdds_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, 
-                      &optimize.variables, &output_data, beamline, beamline->n_elems,
-                      correct.mode!=-1 && 
-                      (correct.track_before_and_after || correct.start_from_centroid));
-      setup_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, beamline);
-      beam_type = SET_SDDS_BEAM;
-      break;
-    case ION_EFFECTS:
-      if (!run_setuped)
-        bombElegant("run_setup must precede ion_effects namelist", NULL);
-      setupIonEffects(&namelist_text, &run_control, &run_conditions);
-      ionEffectsSeen = 1;
-      break;
-    case TRACK:
-    case ANALYZE_MAP:
-    case TOUSCHEK_SCATTER:
-      switch (commandCode) {
-      case TRACK:
-        if (!run_setuped || !run_controled || beam_type==-1) 
-          bombElegant("run_setup, run_control, and beam definition must precede track namelist", NULL);
-        set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
-        set_print_namelist_flags(0);
-        if (processNamelist(&track, &namelist_text)==NAMELIST_ERROR)
-          bombElegant(NULL, NULL);
-        if (echoNamelists) print_namelist(stdout, &track);
-        run_conditions.stopTrackingParticleLimit = stop_tracking_particle_limit;
-	run_conditions.checkBeamStructure = check_beam_structure;
-        if (interrupt_file && strlen(interrupt_file)) {
-          run_conditions.trackingInterruptFile = compose_filename(interrupt_file, rootname);
-          run_conditions.trackingInterruptFileMtime = 0;
-          if (fexists(run_conditions.trackingInterruptFile))
-            run_conditions.trackingInterruptFileMtime = get_mtime(run_conditions.trackingInterruptFile);
-        }
-        /*
-#if USE_MPI
-        if (stop_tracking_particle_limit!=-1)
-          bombElegant("stop_tracking_particle_limit feature not supported in Pelegant", NULL);
-#endif
-        */
-        if (use_linear_chromatic_matrix && 
-            !(linear_chromatic_tracking_setup_done || twiss_computed || do_twiss_output))
-          bombElegant("you must compute twiss parameters or give linear_chromatic_tracking_setup to do linear chromatic tracking", NULL);
-        if (longitudinal_ring_only && !(twiss_computed || do_twiss_output))
-          bombElegant("you must compute twiss parameters to do longitudinal ring tracking", NULL);
-        if (use_linear_chromatic_matrix && longitudinal_ring_only)
-          bombElegant("can't do linear chromatic tracking and longitudinal-only tracking together", NULL);
-        if (beam_type==-1)
-          bombElegant("beam must be defined prior to tracking", NULL);
-        if (ionEffectsSeen)
-          completeIonEffectsSetup(&run_conditions, beamline);
-        break;
-      case ANALYZE_MAP:
-        if (!run_setuped || !run_controled)
-          bombElegant("run_setup and run_control must precede analyze_map namelist", NULL);
-        setup_transport_analysis(&namelist_text, &run_conditions, &run_control, &error_control);
-        break;
-      case TOUSCHEK_SCATTER:
-	if (!run_setuped || !(twiss_computed || do_twiss_output))
-	  bombElegant("run_setup and twiss_output must precede touschek_scatter namelist", NULL);
-	break;
-      }
-      firstPass = 1;
-      if (run_controled)
-	soft_failure = !(run_control.terminate_on_failure);
-      else
-	soft_failure = 0;
-      while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
-        /* vary_beamline asserts changes due to vary_element, error_element, and load_parameters */
-        fill_double_array(starting_coord, 6, 0.0);
-        /* correctionDone = 0; */
-        new_beam_flags = 0;
-        if (correct.mode!=-1 && (correct.track_before_and_after || correct.start_from_centroid)) {
-          if (beam_type==SET_SDDS_BEAM) {
-            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
-              break;
-          }
-          else
-            new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
-          new_beam_flags = TRACK_PREVIOUS_BUNCH;
-          if (commandCode==TRACK && correct.track_before_and_after) {
-            track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
-                       beamline, &beam, &output_data, 
-                       PRECORRECTION_BEAM, 0, &finalCharge);
-            /* This is needed to put the original bunch back in the tracking buffer, since it may
-             * be needed as the starting point for orbit/trajectory correction 
-             */
-            if (beam_type==SET_SDDS_BEAM) {
-              if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
-                break;
-            }
-            else
-              new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
-            new_beam_flags = TRACK_PREVIOUS_BUNCH;
-          }
-        }
+	  if (!run_setuped || !run_controled)
+	    bombElegant("run_setup and run_control must precede sdds_beam namelist", NULL);
+	  if (beam_type!=-1)
+	    bombElegant("a beam definition was already given for this run sequence", NULL);
+	  setup_sdds_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, 
+			  &optimize.variables, &output_data, beamline, beamline->n_elems,
+			  correct.mode!=-1 && 
+			  (correct.track_before_and_after || correct.start_from_centroid));
+	  setup_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, beamline);
+	  beam_type = SET_SDDS_BEAM;
+	  break;
+	case ION_EFFECTS:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede ion_effects namelist", NULL);
+	  setupIonEffects(&namelist_text, &run_control, &run_conditions);
+	  ionEffectsSeen = 1;
+	  break;
+	case TRACK:
+	case ANALYZE_MAP:
+	case TOUSCHEK_SCATTER:
+	  switch (commandCode) {
+	  case TRACK:
+	    if (!run_setuped || !run_controled || beam_type==-1) 
+	      bombElegant("run_setup, run_control, and beam definition must precede track namelist", NULL);
+	    set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+	    set_print_namelist_flags(0);
+	    if (processNamelist(&track, &namelist_text)==NAMELIST_ERROR)
+	      bombElegant(NULL, NULL);
+	    if (echoNamelists) print_namelist(stdout, &track);
+	    run_conditions.stopTrackingParticleLimit = stop_tracking_particle_limit;
+	    run_conditions.checkBeamStructure = check_beam_structure;
+	    if (interrupt_file && strlen(interrupt_file)) {
+	      run_conditions.trackingInterruptFile = compose_filename(interrupt_file, rootname);
+	      run_conditions.trackingInterruptFileMtime = 0;
+	      if (fexists(run_conditions.trackingInterruptFile))
+		run_conditions.trackingInterruptFileMtime = get_mtime(run_conditions.trackingInterruptFile);
+	    }
+	    /*
+	      #if USE_MPI
+	      if (stop_tracking_particle_limit!=-1)
+	      bombElegant("stop_tracking_particle_limit feature not supported in Pelegant", NULL);
+	      #endif
+	    */
+	    if (use_linear_chromatic_matrix && 
+		!(linear_chromatic_tracking_setup_done || twiss_computed || do_twiss_output))
+	      bombElegant("you must compute twiss parameters or give linear_chromatic_tracking_setup to do linear chromatic tracking", NULL);
+	    if (longitudinal_ring_only && !(twiss_computed || do_twiss_output))
+	      bombElegant("you must compute twiss parameters to do longitudinal ring tracking", NULL);
+	    if (use_linear_chromatic_matrix && longitudinal_ring_only)
+	      bombElegant("can't do linear chromatic tracking and longitudinal-only tracking together", NULL);
+	    if (beam_type==-1)
+	      bombElegant("beam must be defined prior to tracking", NULL);
+	    if (ionEffectsSeen)
+	      completeIonEffectsSetup(&run_conditions, beamline);
+	    break;
+	  case ANALYZE_MAP:
+	    if (!run_setuped || !run_controled)
+	      bombElegant("run_setup and run_control must precede analyze_map namelist", NULL);
+	    setup_transport_analysis(&namelist_text, &run_conditions, &run_control, &error_control);
+	    break;
+	  case TOUSCHEK_SCATTER:
+	    if (!run_setuped || !(twiss_computed || do_twiss_output))
+	      bombElegant("run_setup and twiss_output must precede touschek_scatter namelist", NULL);
+	    break;
+	  }
+	  firstPass = 1;
+	  if (run_controled)
+	    soft_failure = !(run_control.terminate_on_failure);
+	  else
+	    soft_failure = 0;
+	  while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
+	    /* vary_beamline asserts changes due to vary_element, error_element, and load_parameters */
+	    fill_double_array(starting_coord, 6, 0.0);
+	    /* correctionDone = 0; */
+	    new_beam_flags = 0;
+	    if (correct.mode!=-1 && (correct.track_before_and_after || correct.start_from_centroid)) {
+	      if (beam_type==SET_SDDS_BEAM) {
+		if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
+		  break;
+	      }
+	      else
+		new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
+	      new_beam_flags = TRACK_PREVIOUS_BUNCH;
+	      if (commandCode==TRACK && correct.track_before_and_after) {
+		track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
+			   beamline, &beam, &output_data, 
+			   PRECORRECTION_BEAM, 0, &finalCharge);
+		/* This is needed to put the original bunch back in the tracking buffer, since it may
+		 * be needed as the starting point for orbit/trajectory correction 
+		 */
+		if (beam_type==SET_SDDS_BEAM) {
+		  if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
+		    break;
+		}
+		else
+		  new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
+		new_beam_flags = TRACK_PREVIOUS_BUNCH;
+	      }
+	    }
         
 
-        /* If needed, find closed orbit, twiss parameters, moments, and response matrix, but don't write
-         * output unless requested to do so "pre-correction"
-         */
-         /* If closed orbit is calculated, starting_coord will store the closed orbit at the start of
-          * the beamline 
-          */
-        if (do_closed_orbit && 
-            !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
-	  if (soft_failure) {
-	    printWarning("Closed orbit not found.", "Continuing to next step.");
-	    continue;
-	  } else
-	    bombElegant("Closed orbit not found", NULL);
-        }
-        /* Compute twiss parameters with starting_coord as the start of the orbit */
-        if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 0)) {
-	  if (soft_failure) {
-	    printWarning("Twiss parameters not defined.", "Continuing to next step.");
-	    continue;
-	  } else
-	    bombElegant("Twiss parameters not defined", NULL);
-        }
-        if (do_rf_setup)
-          run_rf_setup(&run_conditions, beamline, 0);
-        /* compute moments with starting_coord as the start of the orbit/trajectory */
-        if (do_moments_output)
-          runMomentsOutput(&run_conditions, beamline, starting_coord, 0, 1);
-        if (do_response_output)
-          run_response_output(&run_conditions, beamline, &correct, 0);
+	    /* If needed, find closed orbit, twiss parameters, moments, and response matrix, but don't write
+	     * output unless requested to do so "pre-correction"
+	     */
+	    /* If closed orbit is calculated, starting_coord will store the closed orbit at the start of
+	     * the beamline 
+	     */
+	    if (do_closed_orbit && 
+		!run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
+	      if (soft_failure) {
+		printWarning("Closed orbit not found.", "Continuing to next step.");
+		continue;
+	      } else
+		bombElegant("Closed orbit not found", NULL);
+	    }
+	    /* Compute twiss parameters with starting_coord as the start of the orbit */
+	    if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 0)) {
+	      if (soft_failure) {
+		printWarning("Twiss parameters not defined.", "Continuing to next step.");
+		continue;
+	      } else
+		bombElegant("Twiss parameters not defined", NULL);
+	    }
+	    if (do_rf_setup)
+	      run_rf_setup(&run_conditions, beamline, 0);
+	    /* compute moments with starting_coord as the start of the orbit/trajectory */
+	    if (do_moments_output)
+	      runMomentsOutput(&run_conditions, beamline, starting_coord, 0, 1);
+	    if (do_response_output)
+	      run_response_output(&run_conditions, beamline, &correct, 0);
 
-        if (correct.mode!=-1 || fl_do_tune_correction || do_chromatic_correction) {
-          /* Perform orbit, tune, and/or chromaticity correction */
-          if (correct.use_actual_beam && correct.mode==TRAJECTORY_CORRECTION) {
-            if (beam_type==SET_SDDS_BEAM) {
-              if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
-                break;
-            }
-            else
-              new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
-            new_beam_flags = TRACK_PREVIOUS_BUNCH;
-          }
-          for (i=failed=0; i<correction_iterations; i++) {
-            if (correction_iterations>1) {
-              printf("\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
-              fflush(stdout);
-            }
-            /* Orbit/trajectory correction */
-            if (correct.mode!=-1 && 
-                !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
-                               run_control.i_step, 
-                               (i==0?INITIAL_CORRECTION:0)+(i==correction_iterations-1?FINAL_CORRECTION:0))) {
-              printWarning("Orbit correction failed.", "Continuing with next step.");
-              continue;
-            }
-            if (fl_do_tune_correction) {
-              if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
-		if (soft_failure) {
-		  printWarning("Closed orbit not found.", "Continuing to next step.");
-		  failed = 1;
-		  break;
-		} else
-		  bombElegant("Closed orbit not found", NULL);
-              }
-              if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
-                                      run_control.i_step, i==correction_iterations-1)) { 
-		if (soft_failure) {
-		  printWarning("Tune correction failed.", "Continuing to next step.");
-		  failed = 1;
-		  break;
-		} else
-		  bombElegant("Tune correction failed", NULL);
-              }
-            }
-            if (do_chromatic_correction) {
-              if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
-		if (soft_failure) {
-		  printWarning("Closed orbit not found.", "Continuing to next step.");
-		  failed = 1;
-		  break;
-		} else
-		  bombElegant("Closed orbit not found", NULL);
-              }
-              if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
-                                              run_control.i_step, i==correction_iterations-1)) {
-		if (!soft_failure) {
-		  printWarning("Chromaticity correction failed.", "Continuing to next step.");
-		  failed = 1;
-		  break;
-		} else
-		  bombElegant("Chromaticity correction failed", NULL);
-              }
-            }
-            /* correctionDone = 1; */
-          }
-          if (failed)
-            continue;
-        }
+	    if (correct.mode!=-1 || fl_do_tune_correction || do_chromatic_correction) {
+	      /* Perform orbit, tune, and/or chromaticity correction */
+	      if (correct.use_actual_beam && correct.mode==TRAJECTORY_CORRECTION) {
+		if (beam_type==SET_SDDS_BEAM) {
+		  if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
+		    break;
+		}
+		else
+		  new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
+		new_beam_flags = TRACK_PREVIOUS_BUNCH;
+	      }
+	      for (i=failed=0; i<correction_iterations; i++) {
+		if (correction_iterations>1) {
+		  printf("\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
+		  fflush(stdout);
+		}
+		/* Orbit/trajectory correction */
+		if (correct.mode!=-1 && 
+		    !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
+				   run_control.i_step, 
+				   (i==0?INITIAL_CORRECTION:0)+(i==correction_iterations-1?FINAL_CORRECTION:0))) {
+		  printWarning("Orbit correction failed.", "Continuing with next step.");
+		  continue;
+		}
+		if (fl_do_tune_correction) {
+		  if (do_closed_orbit && 
+		      !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
+		    if (soft_failure) {
+		      printWarning("Closed orbit not found.", "Continuing to next step.");
+		      failed = 1;
+		      break;
+		    } else
+		      bombElegant("Closed orbit not found", NULL);
+		  }
+		  if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
+					  run_control.i_step, i==correction_iterations-1)) { 
+		    if (soft_failure) {
+		      printWarning("Tune correction failed.", "Continuing to next step.");
+		      failed = 1;
+		      break;
+		    } else
+		      bombElegant("Tune correction failed", NULL);
+		  }
+		}
+		if (do_chromatic_correction) {
+		  if (do_closed_orbit && 
+		      !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
+		    if (soft_failure) {
+		      printWarning("Closed orbit not found.", "Continuing to next step.");
+		      failed = 1;
+		      break;
+		    } else
+		      bombElegant("Closed orbit not found", NULL);
+		  }
+		  if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
+						  run_control.i_step, i==correction_iterations-1)) {
+		    if (!soft_failure) {
+		      printWarning("Chromaticity correction failed.", "Continuing to next step.");
+		      failed = 1;
+		      break;
+		    } else
+		      bombElegant("Chromaticity correction failed", NULL);
+		  }
+		}
+		/* correctionDone = 1; */
+	      }
+	      if (failed)
+		continue;
+	    }
 
-        if (correct.mode!=-1 && (correct.track_before_and_after || (correct.start_from_centroid && correct.mode==TRAJECTORY_CORRECTION))) {
-          /* If we are performing orbit/trajectory correction and tracking before/after correction, we need to
-             generate a beam (will in fact just restore the beam generated above.
-             Also, if we need the beam to give the starting point for trajectory correction, we need to genrate a beam.
-          */ 
-          if (beam_type==SET_SDDS_BEAM) {
-            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
-              break;
-          }
-          else if (beam_type==SET_BUNCHED_BEAM)
-            new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
-        } 
+	    if (correct.mode!=-1 && (correct.track_before_and_after || (correct.start_from_centroid && correct.mode==TRAJECTORY_CORRECTION))) {
+	      /* If we are performing orbit/trajectory correction and tracking before/after correction, we need to
+		 generate a beam (will in fact just restore the beam generated above.
+		 Also, if we need the beam to give the starting point for trajectory correction, we need to genrate a beam.
+	      */ 
+	      if (beam_type==SET_SDDS_BEAM) {
+		if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
+		  break;
+	      }
+	      else if (beam_type==SET_BUNCHED_BEAM)
+		new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
+	    } 
 
-        /* Assert post-correction perturbations */
-        perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
+	    /* Assert post-correction perturbations */
+	    perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
 
-        /* Do post-correction output */
-        if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1)) {
-	  if (soft_failure) {
-	    printWarning("Closed orbit not found.", "Continuing to next step.");
-	    continue;
+	    /* Do post-correction output */
+	    if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1)) {
+	      if (soft_failure) {
+		printWarning("Closed orbit not found.", "Continuing to next step.");
+		continue;
+	      }
+	      else 
+		bombElegant("Closed orbit not found", NULL);
+	    }
+	    if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 1)) {
+	      if (soft_failure) {
+		printWarning("Twiss parameters not defined.", "Continuing to next step.");
+		continue;
+	      }
+	      else 
+		bombElegant("Twiss parameters not defined", NULL);
+	    }
+	    if (do_rf_setup)
+	      run_rf_setup(&run_conditions, beamline, 1);
+	    if (do_moments_output)
+	      runMomentsOutput(&run_conditions, beamline, starting_coord, 1, 1);
+	    if (do_coupled_twiss_output &&
+		run_coupled_twiss_output(&run_conditions, beamline, starting_coord)) {
+	      if (soft_failure) {
+		printWarning("Coupled twiss parameters computation failed.", NULL);
+		continue;
+	      } else
+		bombElegant("Coupled twiss parameters computation failed.", NULL);
+	    }
+	    if (do_response_output)
+	      run_response_output(&run_conditions, beamline, &correct, 1);
+
+	    if (!(correct.mode!=-1 &&
+		  (correct.track_before_and_after || (correct.start_from_centroid && correct.mode==TRAJECTORY_CORRECTION)))) {
+	      /* This is where we normally generate the beam, unless it was needed prior to trajectory correction */
+	      if (beam_type==SET_SDDS_BEAM) {
+		if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
+		  break;
+	      }
+	      else if (beam_type==SET_BUNCHED_BEAM)
+		new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
+	    }
+
+	    if (center_on_orbit)
+	      center_beam_on_coords(beam.particle, beam.n_to_track, starting_coord, center_momentum_also);
+	    else if (offset_by_orbit)
+	      offset_beam_by_coords(beam.particle, beam.n_to_track, starting_coord, offset_momentum_also);
+	    run_matrix_output(&run_conditions, &run_control, beamline);
+	    if (firstPass) {
+	      /* prevent fiducialization of RF etc. by correction etc. */
+	      delete_phase_references();
+	      reset_special_elements(beamline, RESET_INCLUDE_RF);
+	      reset_driftCSR();
+	    }
+	    firstPass = 0;
+	    switch (commandCode) {
+	    case TRACK:
+	      /* Finally, do tracking */
+	      track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
+			 beamline, &beam, &output_data, 
+			 (use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0)+
+			 (longitudinal_ring_only?LONGITUDINAL_RING_ONLY:0)+
+			 (ibs_only?IBS_ONLY_TRACKING:0), 0, &finalCharge);
+	      break;
+	    case ANALYZE_MAP:
+	      do_transport_analysis(&run_conditions, &run_control, &error_control, beamline, 
+				    (do_closed_orbit || correct.mode!=-1?starting_coord:NULL));
+	      break;
+	    case TOUSCHEK_SCATTER:
+	      TouschekEffect(&run_conditions, &run_control, &error_control, beamline, &namelist_text);
+	      break;
+	    }
+	    if (parameters)
+	      dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
+	    if (rfc_reference_output)
+	      dumpRfcReferenceData(rfc_reference_output, &run_conditions, beamline);
+	    /* Reset corrector magnets for before/after tracking mode */
+	    if (correct.mode!=-1 && commandCode==TRACK && correct.track_before_and_after)
+	      zero_correctors(beamline->elem_recirc?beamline->elem_recirc:beamline->elem, &run_conditions, &correct);
 	  }
-	  else 
-	    bombElegant("Closed orbit not found", NULL);
-	}
-        if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 1)) {
-	  if (soft_failure) {
-	    printWarning("Twiss parameters not defined.", "Continuing to next step.");
-	    continue;
+	  if (commandCode==TRACK)
+	    finish_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, 
+			  beamline, beamline->n_elems, &beam, finalCharge);
+	  if (beam_type)
+	    free_beamdata(&beam);
+	  if (do_closed_orbit)
+	    finish_clorb_output();
+	  if (do_twiss_output)
+	    finish_twiss_output(beamline);
+	  if (do_moments_output)
+	    finishMomentsOutput();
+	  if (do_coupled_twiss_output)
+	    finish_coupled_twiss_output();
+	  if (do_response_output)
+	    finish_response_output();
+	  if (parameters)
+	    finishLatticeParametersFile();
+	  if (rfc_reference_output)
+	    finishRfcDataFile();
+	  if (correct.mode!=-1)
+	    finishCorrectionOutput();
+#ifdef SUNOS4
+	  check_heap();
+#endif
+	  switch (commandCode) {
+	  case TRACK:
+	    printf("Finished tracking.\n");
+	    break;
+	  case ANALYZE_MAP:
+	    printf("Finished transport analysis.\n");
+	    break;
 	  }
-	  else 
-	    bombElegant("Twiss parameters not defined", NULL);
-	}
-        if (do_rf_setup)
-          run_rf_setup(&run_conditions, beamline, 1);
-        if (do_moments_output)
-          runMomentsOutput(&run_conditions, beamline, starting_coord, 1, 1);
-        if (do_coupled_twiss_output &&
-            run_coupled_twiss_output(&run_conditions, beamline, starting_coord)) {
-	  if (soft_failure) {
-	    printWarning("Coupled twiss parameters computation failed.", NULL);
-	    continue;
-	  } else
-	    bombElegant("Coupled twiss parameters computation failed.", NULL);
-        }
-        if (do_response_output)
-          run_response_output(&run_conditions, beamline, &correct, 1);
-
-        if (!(correct.mode!=-1 &&
-              (correct.track_before_and_after || (correct.start_from_centroid && correct.mode==TRAJECTORY_CORRECTION)))) {
-          /* This is where we normally generate the beam, unless it was needed prior to trajectory correction */
-          if (beam_type==SET_SDDS_BEAM) {
-            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
-              break;
-          }
-          else if (beam_type==SET_BUNCHED_BEAM)
-            new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
-        }
-
-        if (center_on_orbit)
-          center_beam_on_coords(beam.particle, beam.n_to_track, starting_coord, center_momentum_also);
-	else if (offset_by_orbit)
-          offset_beam_by_coords(beam.particle, beam.n_to_track, starting_coord, offset_momentum_also);
-        run_matrix_output(&run_conditions, &run_control, beamline);
-        if (firstPass) {
-          /* prevent fiducialization of RF etc. by correction etc. */
-          delete_phase_references();
-          reset_special_elements(beamline, RESET_INCLUDE_RF);
-          reset_driftCSR();
-        }
-        firstPass = 0;
-        switch (commandCode) {
-        case TRACK:
-          /* Finally, do tracking */
-          track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
-                     beamline, &beam, &output_data, 
-                     (use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0)+
-                     (longitudinal_ring_only?LONGITUDINAL_RING_ONLY:0)+
-                     (ibs_only?IBS_ONLY_TRACKING:0), 0, &finalCharge);
-          break;
-        case ANALYZE_MAP:
-          do_transport_analysis(&run_conditions, &run_control, &error_control, beamline, 
-                                (do_closed_orbit || correct.mode!=-1?starting_coord:NULL));
-          break;
-	case TOUSCHEK_SCATTER:
-	  TouschekEffect(&run_conditions, &run_control, &error_control, beamline, &namelist_text);
+	  fflush(stdout);
+	  /* reassert defaults for namelist run_setup */
+	  lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses = 
+	    parameters = NULL;
+	  combine_bunch_statistics = 0;
+	  random_number_seed = 987654321;
+	  wrap_around = 1;
+	  final_pass = 0;
+	  default_order = 2;
+	  concat_order = 0;
+	  tracking_updates = 1;
+	  show_element_timing = monitor_memory_usage = 0;
+	  concat_order = print_statistics = p_central = 0;
+	  run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
+	    fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
+	    ionEffectsSeen = back_tracking = losses_include_global_coordinates = 0;
+	  element_divisions = 0;;
 	  break;
-        }
-        if (parameters)
-          dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
-        if (rfc_reference_output)
-          dumpRfcReferenceData(rfc_reference_output, &run_conditions, beamline);
-        /* Reset corrector magnets for before/after tracking mode */
-        if (correct.mode!=-1 && commandCode==TRACK && correct.track_before_and_after)
-          zero_correctors(beamline->elem_recirc?beamline->elem_recirc:beamline->elem, &run_conditions, &correct);
-      }
-      if (commandCode==TRACK)
-        finish_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, 
-                      beamline, beamline->n_elems, &beam, finalCharge);
-      if (beam_type)
-        free_beamdata(&beam);
-      if (do_closed_orbit)
-        finish_clorb_output();
-      if (do_twiss_output)
-        finish_twiss_output(beamline);
-      if (do_moments_output)
-        finishMomentsOutput();
-      if (do_coupled_twiss_output)
-        finish_coupled_twiss_output();
-      if (do_response_output)
-        finish_response_output();
-      if (parameters)
-        finishLatticeParametersFile();
-      if (rfc_reference_output)
-        finishRfcDataFile();
-      if (correct.mode!=-1)
-        finishCorrectionOutput();
-#ifdef SUNOS4
-      check_heap();
-#endif
-      switch (commandCode) {
-      case TRACK:
-        printf("Finished tracking.\n");
-        break;
-      case ANALYZE_MAP:
-        printf("Finished transport analysis.\n");
-        break;
-      }
-      fflush(stdout);
-      /* reassert defaults for namelist run_setup */
-      lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses = 
-        parameters = NULL;
-      combine_bunch_statistics = 0;
-      random_number_seed = 987654321;
-      wrap_around = 1;
-      final_pass = 0;
-      default_order = 2;
-      concat_order = 0;
-      tracking_updates = 1;
-      show_element_timing = monitor_memory_usage = 0;
-      concat_order = print_statistics = p_central = 0;
-      run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
-        ionEffectsSeen = back_tracking = losses_include_global_coordinates = 0;
-      element_divisions = 0;;
-      break;
-    case MATRIX_OUTPUT:
-      if (!run_setuped)
-        bombElegant("run_setup must precede matrix_output namelist", NULL);
-      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
-      setup_matrix_output(&namelist_text, &run_conditions, run_controled?&run_control:NULL, beamline);
-      do_matrix_output = 1;
-      break;
-    case TWISS_OUTPUT:
-      if (!run_setuped)
-        bombElegant("run_setup must precede twiss_output namelist", NULL);
-      setup_twiss_output(&namelist_text, &run_conditions, beamline, &do_twiss_output,
-                         run_conditions.default_order);
-      if (!do_twiss_output) {
-        twiss_computed = 1;
-        run_twiss_output(&run_conditions, beamline, NULL, -1);
-        delete_phase_references();
-        reset_special_elements(beamline, RESET_INCLUDE_RF);
-        reset_driftCSR();
-        finish_twiss_output(beamline);
-      }
-      break;
-    case RF_SETUP:
-      if (!run_setuped)
-        bombElegant("run_setup must precede rf_setup namelist", NULL);
-      setup_rf_setup(&namelist_text, &run_conditions, beamline, do_twiss_output, &do_rf_setup);
-      break;
-    case MOMENTS_OUTPUT:
-      if (!run_setuped)
-        bombElegant("run_setup must precede moments_output namelist", NULL);
-      setupMomentsOutput(&namelist_text, &run_conditions, beamline, &do_moments_output,
-                         run_conditions.default_order);
-      if (!do_moments_output) {
-        /* moments_computed = 1; */
-        runMomentsOutput(&run_conditions, beamline, NULL, -1, 1);
-        delete_phase_references();
-        reset_special_elements(beamline, RESET_INCLUDE_RF);
-        reset_driftCSR();
-        finishMomentsOutput();
-      }
-      break;
-    case COUPLED_TWISS_OUTPUT:
-      if (!run_setuped)
-        bombElegant("run_setup must precede coupled_twiss_output namelist", NULL);
-      setup_coupled_twiss_output(&namelist_text, &run_conditions, beamline, &do_coupled_twiss_output,
-                                 run_conditions.default_order);
-      if (!do_coupled_twiss_output) {
-        run_coupled_twiss_output(&run_conditions, beamline, NULL);
-        delete_phase_references();
-        reset_special_elements(beamline, RESET_INCLUDE_RF);
-        reset_driftCSR();
-        finish_coupled_twiss_output();
-      }
-      break;
-    case TUNE_SHIFT_WITH_AMPLITUDE:
-      if (do_twiss_output)
-        bombElegant("you must give tune_shift_with_amplitude before twiss_output", NULL);
-      setupTuneShiftWithAmplitude(&namelist_text, &run_conditions);
-      break;
-    case SEMAPHORES:
-      if (run_setuped)
-        bombElegant("you must give the semaphores command before run_setup", NULL);
-      do_semaphore_setup(semaphoreFile, &namelist_text);
-      break;
-    case STOP:
-      lorentz_report();
-      finish_load_parameters();
-      /* if (semaphore_file)
-        createSemaphoreFile(semaphore_file);
-      if (semaphoreFile[1])
-        createSemaphoreFile(semaphoreFile[1]);
-      */
-      free_beamdata(&beam);
-      printFarewell(stdout);
-      exitElegant(0);
-      break;
-    case OPTIMIZATION_SETUP:
-      if (beam_type!=-1)
-        bombElegant("optimization statements must come before beam definition", NULL);
-      do_optimization_setup(&optimize, &namelist_text, &run_conditions, beamline);
-      break;
-#if USE_MPI
-    case PARALLEL_OPTIMIZATION_SETUP:
-      if (beam_type!=-1)
-        bombElegant("optimization statements must come before beam definition", NULL);
-      do_parallel_optimization_setup(&optimize, &namelist_text, &run_conditions, beamline);
-      break;
-#endif
-    case OPTIMIZE_CMD:
-      if (beam_type==-1)
-        bombElegant("beam definition must come before optimize command", NULL);
-      while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
-        do_optimize(&namelist_text, &run_conditions, &run_control, &error_control, beamline, &beam,
-                    &output_data, &optimize, &chrom_corr_data, beam_type, do_closed_orbit,
-                    do_chromatic_correction, &correct, correct.mode, &tune_corr_data, 
-                    fl_do_tune_correction, do_find_aperture, do_response_output);
-        if (parameters)
-          dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
-      }
-      if (parameters)
-        finishLatticeParametersFile();
-      /* reassert defaults for namelist run_setup */
-      lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses =
-        parameters = NULL;
-      combine_bunch_statistics = 0;
-      random_number_seed = 987654321;
-      wrap_around = 1;
-      final_pass = 0;
-      default_order = 2;
-      concat_order = 0;
-      tracking_updates = 1;
-      show_element_timing = monitor_memory_usage = 0;
-      concat_order = print_statistics = p_central = 0;
-      run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
-        ionEffectsSeen = 0;
-#if USE_MPI
-      runInSinglePartMode = 0; /* We should set the flag to the normal parallel tracking after parallel optimization */
-#endif
-      break;
-    case OPTIMIZATION_VARIABLE:
-      if (beam_type!=-1)
-        bombElegant("optimization statements must come before beam definition", NULL);
-      add_optimization_variable(&optimize, &namelist_text, &run_conditions, beamline);
-      break;
-    case OPTIMIZATION_CONSTRAINT:
-      if (beam_type!=-1)
-        bombElegant("optimization statements must come before beam definition", NULL);
-      add_optimization_constraint(&optimize, &namelist_text, &run_conditions, beamline);
-      break;
-    case OPTIMIZATION_COVARIABLE:
-      if (beam_type!=-1)
-        bombElegant("optimization statements must come before beam definition", NULL);
-      add_optimization_covariable(&optimize, &namelist_text, &run_conditions, beamline);
-      break;
-    case SET_REFERENCE_PARTICLE_OUTPUT:
-      if (beam_type!=-1)
-        bombElegant("optimization statements must come before beam definition", NULL);
-      do_set_reference_particle_output(&optimize, &namelist_text, &run_conditions, beamline);
-      break;
-    case OPTIMIZATION_TERM:
-      if (beam_type!=-1)
-        bombElegant("optimization statements must come before beam definition", NULL);
-      add_optimization_term(&optimize, &namelist_text, &run_conditions, beamline);
-      break;
-    case SAVE_LATTICE:
-      do_save_lattice(&namelist_text, &run_conditions, beamline);
-      break;
-    case RPN_EXPRESSION:
-      run_rpn_expression(&namelist_text);
-      break;
-    case RPN_LOAD:
-      run_rpn_load(&namelist_text, &run_conditions);
-      break;
-    case PROGRAM_TRACE:
-      process_trace_request(&namelist_text);
-      break;
-    case CHROMATICITY:
-      setup_chromaticity_correction(&namelist_text, &run_conditions, beamline, &chrom_corr_data);
-      do_chromatic_correction = 1;
-      break;
-    case CORRECT_TUNES:
-      setup_tune_correction(&namelist_text, &run_conditions, beamline, &tune_corr_data);
-      fl_do_tune_correction = 1;
-      break;
-    case CLOSED_ORBIT:
-      do_closed_orbit = setup_closed_orbit(&namelist_text, &run_conditions, beamline);
-      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
-      if (do_closed_orbit==2) {
-	/* immediate mode */
-	run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1);
-	do_closed_orbit = 0;
-      }
-      /*
-      if (correction_setuped)
-        printWarning("You've asked to do both closed-orbit calculation and orbit correction, which may duplicate effort.\n");
-      */
-      fflush(stdout);
-      break;
-    case TUNE_FOOTPRINT:
-    case FIND_APERTURE:
-    case FREQUENCY_MAP:
-    case MOMENTUM_APERTURE:
-    case ELASTIC_SCATTERING:
-    case INELASTIC_SCATTERING:
-    case CHAOS_MAP:
-      switch (commandCode) {
-        long code;
-      case TUNE_FOOTPRINT:
-        if (!run_setuped || !run_controled)
-          bombElegant("run_setup and run_control must precede tune_footprint namelist", NULL);
-        code = setupTuneFootprint(&namelist_text, &run_conditions, &run_control);
-        if (code==1) {
-          /* immediate output to files */
-          doTuneFootprint(&run_conditions, &run_control, starting_coord, beamline, NULL);
-          outputTuneFootprint(&run_control);
-          continue;
-        } else if (code==2) {
-          /* used by optimizer (or other), no output */
-          continue;
-        }
-          /* will compute footprint and output below */
-        break;
-      case FIND_APERTURE:
-        setup_aperture_search(&namelist_text, &run_conditions, &run_control, &do_find_aperture);
-        if (do_find_aperture) continue;
-        break;
-      case FREQUENCY_MAP:
-        setupFrequencyMap(&namelist_text, &run_conditions, &run_control);
-        break;
-      case MOMENTUM_APERTURE:
-        setupMomentumApertureSearch(&namelist_text, &run_conditions, &run_control);
-        break;
-      case ELASTIC_SCATTERING:
-        setupElasticScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output||twiss_computed);
-        beamline->flags |= BEAMLINE_MATRICES_NEEDED;
-        break;
-      case INELASTIC_SCATTERING:
-        setupInelasticScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output||twiss_computed);
-        beamline->flags |= BEAMLINE_MATRICES_NEEDED;
-        break;
-      case CHAOS_MAP:
-        setupChaosMap(&namelist_text, &run_conditions, &run_control);
-        break;
-      }
-      if (run_controled)
-	soft_failure = !(run_control.terminate_on_failure);
-      else
-	soft_failure = 0;
-      while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
-#if DEBUG
-	printf("semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
-#endif  
-        fill_double_array(starting_coord, 6, 0.0);
-        if (correct.mode!=-1 || fl_do_tune_correction || do_chromatic_correction) {
-          for (i=failed=0; i<correction_iterations; i++) {
-            if (run_control.reset_rf_each_step)
-              delete_phase_references();
-            reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_RF:0);
-            runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 0, 0);
-            if (correction_iterations>1) {
-              printf("\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
-              fflush(stdout);
-            }
-            if (correct.mode!=-1 && 
-                !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
-                               run_control.i_step, 
-                               (i==0?INITIAL_CORRECTION:0)+(i==correction_iterations-1?FINAL_CORRECTION:0))) {
-              printWarning("Orbit correction failed.", "Continuing with next step.");
-              continue;
-            }
-            if (fl_do_tune_correction) {
-              if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
-		if (soft_failure) {
-		  printWarning("Closed orbit not found.", "Continuing to next step.");
-		  break;
-		} else
-		  bombElegant("Closed orbit not found", NULL);
-              }
-              if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
-                                      run_control.i_step, i==correction_iterations-1)) {
-		if (soft_failure) {
-		  printWarning("Tune correction failed.", "Continuing to next step.");
-		  failed = 1;
-		  break;
-		} else 
-		  bombElegant("Tune correction failed", NULL);
-              }
-            }
-            if (do_chromatic_correction) {
-              if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
-		if (soft_failure) {
-		  printWarning("Closed orbit not found.", "Continuing to next step.");
-		  failed = 1;
-		  break;
-		} else
-		  bombElegant("Closed orbit not found", NULL);
-              }
-              if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
-                                              run_control.i_step, i==correction_iterations-1)) {
-		if (soft_failure) {
-		  printWarning("Chromaticity correction failed.", "Continuing to next step.");
-		  failed = 1;
-		  break;
-		} else
-		  bombElegant("Chromaticity correction failed", NULL);
-              }
-            }
-            /* correctionDone = 1; */
+	case MATRIX_OUTPUT:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede matrix_output namelist", NULL);
+	  beamline->flags |= BEAMLINE_MATRICES_NEEDED;
+	  setup_matrix_output(&namelist_text, &run_conditions, run_controled?&run_control:NULL, beamline);
+	  do_matrix_output = 1;
+	  break;
+	case TWISS_OUTPUT:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede twiss_output namelist", NULL);
+	  setup_twiss_output(&namelist_text, &run_conditions, beamline, &do_twiss_output,
+			     run_conditions.default_order);
+	  if (!do_twiss_output) {
+	    twiss_computed = 1;
+	    run_twiss_output(&run_conditions, beamline, NULL, -1);
+	    delete_phase_references();
+	    reset_special_elements(beamline, RESET_INCLUDE_RF);
+	    reset_driftCSR();
+	    finish_twiss_output(beamline);
 	  }
-	  if (failed)
-	    continue;
-	}
-	
-        if (run_control.reset_rf_each_step)
-          delete_phase_references();
-        reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_RF:0);
-        runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 1, 1);
-        perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
-        if (do_closed_orbit && 
-            !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1)) {
-	  if (soft_failure) {
-	    printWarning("Closed orbit not found.", "Continuing to next step.");
-	    continue;
-	  } else 
-	    bombElegant("Closed orbit not found", NULL);
-        }
-        if (do_twiss_output && 
-            !run_twiss_output(&run_conditions, beamline, starting_coord, 1)) {
-	  if (soft_failure) {
-	    printWarning("Twiss parameters not defined.", "Continuing to next step.");
-	    continue;
-	  } else
-	    bombElegant("Twiss parameters not defined", NULL);
-        }
-        if (do_coupled_twiss_output &&
-            run_coupled_twiss_output(&run_conditions, beamline, starting_coord)) {
-	  if (soft_failure) {
-	    printWarning("Coupled twiss parameters calculation failed.", NULL);
-            /* Should we continue to next step ?? */
-	  } else
-	    bombElegant("Coupled twiss parameters calculation failed", NULL);
-        }
-        run_matrix_output(&run_conditions, &run_control, beamline);
-        if (do_response_output)
-          run_response_output(&run_conditions, beamline, &correct, 1);
-        if (do_rf_setup)
-          run_rf_setup(&run_conditions, beamline, 0);
-        if (do_moments_output)
-          runMomentsOutput(&run_conditions, beamline, starting_coord, 1, 1);
-        if (parameters)
-          dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
-        switch (commandCode) {
-        case FIND_APERTURE:
-          do_aperture_search(&run_conditions, &run_control, starting_coord,
-			     &error_control, beamline, &apertureReturn);
-          break;
-        case FREQUENCY_MAP:
-          doFrequencyMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
-          break;
-        case MOMENTUM_APERTURE:
-          doMomentumApertureSearch(&run_conditions, &run_control, &error_control, beamline, 
-                                   (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
-          break;
-        case ELASTIC_SCATTERING:
-          runElasticScattering(&run_conditions, &run_control, &error_control, beamline, 
-                           (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
-          break;
-        case INELASTIC_SCATTERING:
-          runInelasticScattering(&run_conditions, &run_control, &error_control, beamline, 
-                           (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
-          break;
-        case CHAOS_MAP:
-          doChaosMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
-          break;
-        case TUNE_FOOTPRINT:
-          doTuneFootprint(&run_conditions, &run_control, starting_coord, beamline, NULL);
-          outputTuneFootprint(&run_control);
-          break;
-        }
-      }
-      printf("Finished all tracking steps.\n"); fflush(stdout);
-      fflush(stdout);
-      switch (commandCode) {
-      case FIND_APERTURE:
-        finish_aperture_search(&run_conditions, &run_control, &error_control, beamline);
-        break;
-      case FREQUENCY_MAP:
-        finishFrequencyMap();
-        break;
-      case MOMENTUM_APERTURE:
-        finishMomentumApertureSearch();
-        break;
-      case ELASTIC_SCATTERING:
-        finishElasticScattering();
-        break;
-      case INELASTIC_SCATTERING:
-        finishInelasticScattering();
-        break;
-      case CHAOS_MAP:
-        finishChaosMap();
-        break;
-      }
-      if (do_closed_orbit)
-        finish_clorb_output();
-      if (parameters)
-        finishLatticeParametersFile();
-      if (beam_type!=-1)
-        free_beamdata(&beam);
-      if (do_closed_orbit)
-        finish_clorb_output();
-      if (do_twiss_output)
-        finish_twiss_output(beamline);
-      if (do_response_output)
-        finish_response_output();
-      if (correct.mode!=-1)
-        finishCorrectionOutput();
-#ifdef SUNOS4
-      check_heap();
-#endif
-      switch (commandCode) {
-      case FIND_APERTURE:
-	printf("Finished dynamic aperture search.\n");
-        break;
-      case FREQUENCY_MAP:
-	printf("Finished frequency map analysis.\n");
-        break;
-      case MOMENTUM_APERTURE:
-	printf("Finished momentum aperture search.\n");
-        break;
-      case ELASTIC_SCATTERING:
-	printf("Finished elastic scattering.\n");
-        break;
-      case INELASTIC_SCATTERING:
-	printf("Finished inelastic scattering.\n");
-        break;
-      case CHAOS_MAP:
-	printf("Finished chaos map analysis.\n");
-        break;
-      }
-#if DEBUG
-      printf("semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
-#endif  
-      fflush(stdout);
-      /* reassert defaults for namelist run_setup */
-      lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses =
-        parameters = NULL;
-      combine_bunch_statistics = 0;
-      random_number_seed = 987654321;
-      wrap_around = 1;
-      final_pass = 0;
-      default_order = 2;
-      concat_order = 0;
-      tracking_updates = 1;
-      show_element_timing = monitor_memory_usage = 0;
-      concat_order = print_statistics = p_central = 0;
-      run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
-        ionEffectsSeen = 0;
-      break;
-    case LINK_CONTROL:
-      if (!run_setuped || !run_controled)
-        bombElegant("run_setup and run_control must precede link_control namelist", NULL);
-      element_link_control(&links, &namelist_text, &run_conditions, beamline);
-      break;                    
-    case LINK_ELEMENTS:
-      if (!run_setuped || !run_controled)
-        bombElegant("run_setup and run_control must precede link_elements namelist", NULL);
-      if (!beamline)
-        bombElegant("beamline not defined--can't add element links", NULL);
-      add_element_links(&links, &namelist_text, beamline);
-      /* links_present = 1; */
-      beamline->links = &links;
-      break;
-    case STEERING_ELEMENT:
-      if (correction_setuped)
-        bombElegant("you must define steering elements prior to giving the 'correct' namelist", NULL);
-      add_steering_element(&correct, beamline, &run_conditions, &namelist_text);
-      break;
-    case AMPLIF_FACTORS:
-      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
-      if (parameters)
-          dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
-      compute_amplification_factors(&namelist_text, &run_conditions, &correct, do_closed_orbit, beamline);
-      break;
-    case PRINT_DICTIONARY:
-      set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
-      set_print_namelist_flags(0);
-      if (processNamelist(&print_dictionary, &namelist_text)==NAMELIST_ERROR)
-        bombElegant(NULL, NULL);
-      if (echoNamelists) print_namelist(stdout, &print_dictionary);
-      do_print_dictionary(filename, latex_form, SDDS_form);
-      break;
-    case FLOOR_COORDINATES:
-      if (!run_setuped)
-        bombElegant("run_setup must precede floor_coordinates namelist", NULL);
-      output_floor_coordinates(&namelist_text, &run_conditions, beamline);
-      do_floor_coordinates = 1;
-      break;
-    case CORRECTION_MATRIX_OUTPUT:
-      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
-      if (!run_setuped)
-        bombElegant("run setup must precede correction_matrix_output namelist", NULL);
-      setup_correction_matrix_output(&namelist_text, &run_conditions, beamline, &correct,
-                                     &do_response_output, 
-                                     do_twiss_output+do_matrix_output+twiss_computed);
-      if (!do_response_output) {
-        run_response_output(&run_conditions, beamline, &correct, -1);
-        delete_phase_references();
-        reset_special_elements(beamline, RESET_INCLUDE_RF);
-        reset_driftCSR();
-        finish_response_output();
-      }
-      break;
-    case LOAD_PARAMETERS:
-      if (!run_setuped)
-        bombElegant("run_setup must precede load_parameters namelists", NULL);
-      if (run_controled)
-        bombElegant("load_parameters namelists must precede run_control namelist", NULL);
-      if (error_controled)
-        bombElegant("load_parameters namelists must precede error_control and error namelists", NULL);
-      if (setup_load_parameters(&namelist_text, &run_conditions, beamline) && magnets)
-        /* make sure the magnet output is right in case loading parameters changed something */
-        output_magnets(magnets, lattice, beamline);
-      break;
-    case SUBPROCESS:
-      if (isMaster)
-        run_subprocess(&namelist_text, &run_conditions);
-      break;
-    case FIT_TRACES:
-#if 0
-      do_fit_trace_data(&namelist_text, &run_conditions, beamline);
-      if (parameters) {
-        dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
-        finishLatticeParametersFile();
-      }
-      /* reassert defaults for namelist run_setup */
-      lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses =
-        parameters = NULL;
-      combine_bunch_statistics = 0;
-      random_number_seed = 987654321;
-      wrap_around = 1;
-      final_pass = 0;
-      default_order = 2;
-      concat_order = 0;
-      tracking_updates = 1;
-      show_element_timing = monitor_memory_usage = 0;
-      concat_order = print_statistics = p_central = 0;
-      run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
-        ionEffectsSeed = 0;
-#endif
-      break;
-    case SASEFEL_AT_END:
-      if (!run_setuped)
-        bombElegant("run_setup must precede sasefel namelist", NULL);
-      if (beam_type!=-1)
-        bombElegant("sasefel namelist must precede beam definition", NULL);
-      setupSASEFELAtEnd(&namelist_text, &run_conditions, &output_data);
-      break;
-    case ALTER_ELEMENTS:
-      if (!run_setuped)
-        bombElegant("run_setup must precede alter_element namelist", NULL);
-      setup_alter_element(&namelist_text, &run_conditions, beamline);
-      break;
-    case SLICE_ANALYSIS:
+	  break;
+	case RF_SETUP:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede rf_setup namelist", NULL);
+	  setup_rf_setup(&namelist_text, &run_conditions, beamline, do_twiss_output, &do_rf_setup);
+	  break;
+	case MOMENTS_OUTPUT:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede moments_output namelist", NULL);
+	  setupMomentsOutput(&namelist_text, &run_conditions, beamline, &do_moments_output,
+			     run_conditions.default_order);
+	  if (!do_moments_output) {
+	    /* moments_computed = 1; */
+	    runMomentsOutput(&run_conditions, beamline, NULL, -1, 1);
+	    delete_phase_references();
+	    reset_special_elements(beamline, RESET_INCLUDE_RF);
+	    reset_driftCSR();
+	    finishMomentsOutput();
+	  }
+	  break;
+	case COUPLED_TWISS_OUTPUT:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede coupled_twiss_output namelist", NULL);
+	  setup_coupled_twiss_output(&namelist_text, &run_conditions, beamline, &do_coupled_twiss_output,
+				     run_conditions.default_order);
+	  if (!do_coupled_twiss_output) {
+	    run_coupled_twiss_output(&run_conditions, beamline, NULL);
+	    delete_phase_references();
+	    reset_special_elements(beamline, RESET_INCLUDE_RF);
+	    reset_driftCSR();
+	    finish_coupled_twiss_output();
+	  }
+	  break;
+	case TUNE_SHIFT_WITH_AMPLITUDE:
+	  if (do_twiss_output)
+	    bombElegant("you must give tune_shift_with_amplitude before twiss_output", NULL);
+	  setupTuneShiftWithAmplitude(&namelist_text, &run_conditions);
+	  break;
+	case SEMAPHORES:
+	  if (run_setuped)
+	    bombElegant("you must give the semaphores command before run_setup", NULL);
+	  do_semaphore_setup(semaphoreFile, &namelist_text);
+	  break;
+	case STOP:
+	  lorentz_report();
+	  finish_load_parameters();
+	  /* if (semaphore_file)
+	     createSemaphoreFile(semaphore_file);
+	     if (semaphoreFile[1])
+	     createSemaphoreFile(semaphoreFile[1]);
+	  */
+	  free_beamdata(&beam);
+	  printFarewell(stdout);
+	  exitElegant(0);
+	  break;
+	case OPTIMIZATION_SETUP:
+	  if (beam_type!=-1)
+	    bombElegant("optimization statements must come before beam definition", NULL);
+	  do_optimization_setup(&optimize, &namelist_text, &run_conditions, beamline);
+	  break;
 #if USE_MPI
-      printf("\n********\nslice_analysis not supported for parallel version\n********\n\n");
-      fflush(stdout);
-#else
-      if (!run_setuped)
-        bombElegant("run_setup must precede slice_analysis namelist", NULL);
-      if (beam_type!=-1)
-        bombElegant("slice_analysis namelist must precede beam definition", NULL);
-      setupSliceAnalysis(&namelist_text, &run_conditions, &output_data);
+	case PARALLEL_OPTIMIZATION_SETUP:
+	  if (beam_type!=-1)
+	    bombElegant("optimization statements must come before beam definition", NULL);
+	  do_parallel_optimization_setup(&optimize, &namelist_text, &run_conditions, beamline);
+	  break;
 #endif
-      break;
-    case DIVIDE_ELEMENTS: 
-      if (run_setuped)
-        bombElegant("divide_elements must precede run_setup", NULL);
-      setupDivideElements(&namelist_text, &run_conditions, beamline);
-      break;
-    case TRANSMUTE_ELEMENTS:
-      if (run_setuped)
-        bombElegant("transmute_elements must precede run_setup", NULL);
-      setupTransmuteElements(&namelist_text, &run_conditions, beamline);
-      break;
-    case IGNORE_ELEMENTS:
-      if (run_setuped)
-        bombElegant("ignore_elements must precede run_setup", NULL);
-      setupIgnoreElements(&namelist_text, &run_conditions, beamline);
-      break;
-    case INSERT_SCEFFECTS:
-      if (run_setuped)
-        bombElegant("insert_sceffects must precede run_setup", NULL);
-      setupSCEffect(&namelist_text, &run_conditions, beamline);
-      sceffects_inserted = 1;
-      break;
-    case INSERT_ELEMENTS:
-      if (!run_setuped)
-        bombElegant("run_setup must precede insert_element namelist", NULL);
-      if (lastCommandCode!=RUN_SETUP && lastCommandCode!=INSERT_ELEMENTS && lastCommandCode!=REPLACE_ELEMENTS)
-        printWarning("To avoid possible calculation errors, insert_elements commands should immediately follow run_setup.", NULL);
-      do_insert_elements(&namelist_text, &run_conditions, beamline);
-      break;
-    case REPLACE_ELEMENTS:
-      if (!run_setuped)
-        bombElegant("run_setup must precede replace_element namelist", NULL);
-      if (lastCommandCode!=RUN_SETUP && lastCommandCode!=INSERT_ELEMENTS && lastCommandCode!=REPLACE_ELEMENTS)
-        printWarning("To avoid possible calculation errors, replace_elements commands should immediately follow run_setup.", NULL);
-      do_replace_elements(&namelist_text, &run_conditions, beamline);
-      break;
-    case TWISS_ANALYSIS:
-      if (do_twiss_output)
-        bombElegant("twiss_analysis must come before twiss_output", NULL);
-      setupTwissAnalysisRequest(&namelist_text, &run_conditions, beamline);
-      break;
-    case APERTURE_INPUT:
-    case APERTURE_DATAX:
-      readApertureInput(&namelist_text, &run_conditions);
-      break;
-    case OBSTRUCTION_DATA:
-      if (!run_setuped)
-        bombElegant("run_setup must precede obstruction_data namelist", NULL);
-      if (!do_floor_coordinates)
-        bombElegant("floor_coordinate command required for obstruction_data to work", NULL);
-#if HAVE_GPU
-      bombElegant("The obstruction_data command is not implemented for the GPU version of elegant.", NULL);
+	case OPTIMIZE_CMD:
+	  if (beam_type==-1)
+	    bombElegant("beam definition must come before optimize command", NULL);
+	  while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
+	    do_optimize(&namelist_text, &run_conditions, &run_control, &error_control, beamline, &beam,
+			&output_data, &optimize, &chrom_corr_data, beam_type, do_closed_orbit,
+			do_chromatic_correction, &correct, correct.mode, &tune_corr_data, 
+			fl_do_tune_correction, do_find_aperture, do_response_output);
+	    if (parameters)
+	      dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
+	  }
+	  if (parameters)
+	    finishLatticeParametersFile();
+	  /* reassert defaults for namelist run_setup */
+	  lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses =
+	    parameters = NULL;
+	  combine_bunch_statistics = 0;
+	  random_number_seed = 987654321;
+	  wrap_around = 1;
+	  final_pass = 0;
+	  default_order = 2;
+	  concat_order = 0;
+	  tracking_updates = 1;
+	  show_element_timing = monitor_memory_usage = 0;
+	  concat_order = print_statistics = p_central = 0;
+	  run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
+	    fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
+	    ionEffectsSeen = 0;
+#if USE_MPI
+	  runInSinglePartMode = 0; /* We should set the flag to the normal parallel tracking after parallel optimization */
 #endif
-      readObstructionInput(&namelist_text, &run_conditions);
-      break;
-    case LINEAR_CHROMATIC_TRACKING_SETUP:
-      beamline->flags |= BEAMLINE_MATRICES_NEEDED;
-      if (do_twiss_output)
-        bombElegant("you can't give twiss_output and linear_chromatic_tracking_setup together", NULL);
-      if (!run_setuped)
-        bombElegant("run_setup must precede linear_chromatic_tracking_setup", NULL);
-      setupLinearChromaticTracking(&namelist_text, beamline);
-      linear_chromatic_tracking_setup_done = 1;
-      break;
-    case MODULATE_ELEMENTS:
-      if (!run_setuped)
-        bombElegant("run_setup must precede modulate_elements", NULL);
-      addModulationElements(&(run_conditions.modulationData), &namelist_text, beamline, &run_conditions);
-      break;
-    case RAMP_ELEMENTS:
-      if (!run_setuped)
-        bombElegant("run_setup must precede ramp_elements", NULL);
-      addRampElements(&(run_conditions.rampData), &namelist_text, beamline, &run_conditions);
-      break;
-    default:
-      printf("unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);
-      fflush(stdout);
-      for (i=0; i<N_COMMANDS; i++)
-        printf("%s\n", description[i]);
-      fflush(stdout);
-      exitElegant(1);
-      break;
-    }
+	  break;
+	case OPTIMIZATION_VARIABLE:
+	  if (beam_type!=-1)
+	    bombElegant("optimization statements must come before beam definition", NULL);
+	  add_optimization_variable(&optimize, &namelist_text, &run_conditions, beamline);
+	  break;
+	case OPTIMIZATION_CONSTRAINT:
+	  if (beam_type!=-1)
+	    bombElegant("optimization statements must come before beam definition", NULL);
+	  add_optimization_constraint(&optimize, &namelist_text, &run_conditions, beamline);
+	  break;
+	case OPTIMIZATION_COVARIABLE:
+	  if (beam_type!=-1)
+	    bombElegant("optimization statements must come before beam definition", NULL);
+	  add_optimization_covariable(&optimize, &namelist_text, &run_conditions, beamline);
+	  break;
+	case SET_REFERENCE_PARTICLE_OUTPUT:
+	  if (beam_type!=-1)
+	    bombElegant("optimization statements must come before beam definition", NULL);
+	  do_set_reference_particle_output(&optimize, &namelist_text, &run_conditions, beamline);
+	  break;
+	case OPTIMIZATION_TERM:
+	  if (beam_type!=-1)
+	    bombElegant("optimization statements must come before beam definition", NULL);
+	  add_optimization_term(&optimize, &namelist_text, &run_conditions, beamline);
+	  break;
+	case SAVE_LATTICE:
+	  do_save_lattice(&namelist_text, &run_conditions, beamline);
+	  break;
+	case RPN_EXPRESSION:
+	  run_rpn_expression(&namelist_text);
+	  break;
+	case RPN_LOAD:
+	  run_rpn_load(&namelist_text, &run_conditions);
+	  break;
+	case PROGRAM_TRACE:
+	  process_trace_request(&namelist_text);
+	  break;
+	case CHROMATICITY:
+	  setup_chromaticity_correction(&namelist_text, &run_conditions, beamline, &chrom_corr_data);
+	  do_chromatic_correction = 1;
+	  break;
+	case CORRECT_TUNES:
+	  setup_tune_correction(&namelist_text, &run_conditions, beamline, &tune_corr_data);
+	  fl_do_tune_correction = 1;
+	  break;
+	case CLOSED_ORBIT:
+	  do_closed_orbit = setup_closed_orbit(&namelist_text, &run_conditions, beamline);
+	  beamline->flags |= BEAMLINE_MATRICES_NEEDED;
+	  if (do_closed_orbit==2) {
+	    /* immediate mode */
+	    run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1);
+	    do_closed_orbit = 0;
+	  }
+	  /*
+	    if (correction_setuped)
+	    printWarning("You've asked to do both closed-orbit calculation and orbit correction, which may duplicate effort.\n");
+	  */
+	  fflush(stdout);
+	  break;
+	case TUNE_FOOTPRINT:
+	case FIND_APERTURE:
+	case FREQUENCY_MAP:
+	case MOMENTUM_APERTURE:
+	case ELASTIC_SCATTERING:
+	case INELASTIC_SCATTERING:
+	case CHAOS_MAP:
+	  switch (commandCode) {
+	    long code;
+	  case TUNE_FOOTPRINT:
+	    if (!run_setuped || !run_controled)
+	      bombElegant("run_setup and run_control must precede tune_footprint namelist", NULL);
+	    code = setupTuneFootprint(&namelist_text, &run_conditions, &run_control);
+	    if (code==1) {
+	      /* immediate output to files */
+	      doTuneFootprint(&run_conditions, &run_control, starting_coord, beamline, NULL);
+	      outputTuneFootprint(&run_control);
+	      continue;
+	    } else if (code==2) {
+	      /* used by optimizer (or other), no output */
+	      continue;
+	    }
+	    /* will compute footprint and output below */
+	    break;
+	  case FIND_APERTURE:
+	    setup_aperture_search(&namelist_text, &run_conditions, &run_control, &do_find_aperture);
+	    if (do_find_aperture) continue;
+	    break;
+	  case FREQUENCY_MAP:
+	    setupFrequencyMap(&namelist_text, &run_conditions, &run_control);
+	    break;
+	  case MOMENTUM_APERTURE:
+	    setupMomentumApertureSearch(&namelist_text, &run_conditions, &run_control);
+	    break;
+	  case ELASTIC_SCATTERING:
+	    setupElasticScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output||twiss_computed);
+	    beamline->flags |= BEAMLINE_MATRICES_NEEDED;
+	    break;
+	  case INELASTIC_SCATTERING:
+	    setupInelasticScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output||twiss_computed);
+	    beamline->flags |= BEAMLINE_MATRICES_NEEDED;
+	    break;
+	  case CHAOS_MAP:
+	    setupChaosMap(&namelist_text, &run_conditions, &run_control);
+	    break;
+	  }
+	  if (run_controled)
+	    soft_failure = !(run_control.terminate_on_failure);
+	  else
+	    soft_failure = 0;
+	  while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
+#if DEBUG
+	    printf("semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
+#endif  
+	    fill_double_array(starting_coord, 6, 0.0);
+	    if (correct.mode!=-1 || fl_do_tune_correction || do_chromatic_correction) {
+	      for (i=failed=0; i<correction_iterations; i++) {
+		if (run_control.reset_rf_each_step)
+		  delete_phase_references();
+		reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_RF:0);
+		runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 0, 0);
+		if (correction_iterations>1) {
+		  printf("\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
+		  fflush(stdout);
+		}
+		if (correct.mode!=-1 && 
+		    !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
+				   run_control.i_step, 
+				   (i==0?INITIAL_CORRECTION:0)+(i==correction_iterations-1?FINAL_CORRECTION:0))) {
+		  printWarning("Orbit correction failed.", "Continuing with next step.");
+		  continue;
+		}
+		if (fl_do_tune_correction) {
+		  if (do_closed_orbit && 
+		      !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
+		    if (soft_failure) {
+		      printWarning("Closed orbit not found.", "Continuing to next step.");
+		      break;
+		    } else
+		      bombElegant("Closed orbit not found", NULL);
+		  }
+		  if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
+					  run_control.i_step, i==correction_iterations-1)) {
+		    if (soft_failure) {
+		      printWarning("Tune correction failed.", "Continuing to next step.");
+		      failed = 1;
+		      break;
+		    } else 
+		      bombElegant("Tune correction failed", NULL);
+		  }
+		}
+		if (do_chromatic_correction) {
+		  if (do_closed_orbit && 
+		      !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0)) {
+		    if (soft_failure) {
+		      printWarning("Closed orbit not found.", "Continuing to next step.");
+		      failed = 1;
+		      break;
+		    } else
+		      bombElegant("Closed orbit not found", NULL);
+		  }
+		  if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
+						  run_control.i_step, i==correction_iterations-1)) {
+		    if (soft_failure) {
+		      printWarning("Chromaticity correction failed.", "Continuing to next step.");
+		      failed = 1;
+		      break;
+		    } else
+		      bombElegant("Chromaticity correction failed", NULL);
+		  }
+		}
+		/* correctionDone = 1; */
+	      }
+	      if (failed)
+		continue;
+	    }
+	
+	    if (run_control.reset_rf_each_step)
+	      delete_phase_references();
+	    reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_RF:0);
+	    runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 1, 1);
+	    perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
+	    if (do_closed_orbit && 
+		!run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1)) {
+	      if (soft_failure) {
+		printWarning("Closed orbit not found.", "Continuing to next step.");
+		continue;
+	      } else 
+		bombElegant("Closed orbit not found", NULL);
+	    }
+	    if (do_twiss_output && 
+		!run_twiss_output(&run_conditions, beamline, starting_coord, 1)) {
+	      if (soft_failure) {
+		printWarning("Twiss parameters not defined.", "Continuing to next step.");
+		continue;
+	      } else
+		bombElegant("Twiss parameters not defined", NULL);
+	    }
+	    if (do_coupled_twiss_output &&
+		run_coupled_twiss_output(&run_conditions, beamline, starting_coord)) {
+	      if (soft_failure) {
+		printWarning("Coupled twiss parameters calculation failed.", NULL);
+		/* Should we continue to next step ?? */
+	      } else
+		bombElegant("Coupled twiss parameters calculation failed", NULL);
+	    }
+	    run_matrix_output(&run_conditions, &run_control, beamline);
+	    if (do_response_output)
+	      run_response_output(&run_conditions, beamline, &correct, 1);
+	    if (do_rf_setup)
+	      run_rf_setup(&run_conditions, beamline, 0);
+	    if (do_moments_output)
+	      runMomentsOutput(&run_conditions, beamline, starting_coord, 1, 1);
+	    if (parameters)
+	      dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
+	    switch (commandCode) {
+	    case FIND_APERTURE:
+	      do_aperture_search(&run_conditions, &run_control, starting_coord,
+				 &error_control, beamline, &apertureReturn);
+	      break;
+	    case FREQUENCY_MAP:
+	      doFrequencyMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
+	      break;
+	    case MOMENTUM_APERTURE:
+	      doMomentumApertureSearch(&run_conditions, &run_control, &error_control, beamline, 
+				       (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
+	      break;
+	    case ELASTIC_SCATTERING:
+	      runElasticScattering(&run_conditions, &run_control, &error_control, beamline, 
+				   (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
+	      break;
+	    case INELASTIC_SCATTERING:
+	      runInelasticScattering(&run_conditions, &run_control, &error_control, beamline, 
+				     (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
+	      break;
+	    case CHAOS_MAP:
+	      doChaosMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
+	      break;
+	    case TUNE_FOOTPRINT:
+	      doTuneFootprint(&run_conditions, &run_control, starting_coord, beamline, NULL);
+	      outputTuneFootprint(&run_control);
+	      break;
+	    }
+	  }
+	  printf("Finished all tracking steps.\n"); fflush(stdout);
+	  fflush(stdout);
+	  switch (commandCode) {
+	  case FIND_APERTURE:
+	    finish_aperture_search(&run_conditions, &run_control, &error_control, beamline);
+	    break;
+	  case FREQUENCY_MAP:
+	    finishFrequencyMap();
+	    break;
+	  case MOMENTUM_APERTURE:
+	    finishMomentumApertureSearch();
+	    break;
+	  case ELASTIC_SCATTERING:
+	    finishElasticScattering();
+	    break;
+	  case INELASTIC_SCATTERING:
+	    finishInelasticScattering();
+	    break;
+	  case CHAOS_MAP:
+	    finishChaosMap();
+	    break;
+	  }
+	  if (do_closed_orbit)
+	    finish_clorb_output();
+	  if (parameters)
+	    finishLatticeParametersFile();
+	  if (beam_type!=-1)
+	    free_beamdata(&beam);
+	  if (do_closed_orbit)
+	    finish_clorb_output();
+	  if (do_twiss_output)
+	    finish_twiss_output(beamline);
+	  if (do_response_output)
+	    finish_response_output();
+	  if (correct.mode!=-1)
+	    finishCorrectionOutput();
 #ifdef SUNOS4
-    check_heap();
+	  check_heap();
 #endif
+	  switch (commandCode) {
+	  case FIND_APERTURE:
+	    printf("Finished dynamic aperture search.\n");
+	    break;
+	  case FREQUENCY_MAP:
+	    printf("Finished frequency map analysis.\n");
+	    break;
+	  case MOMENTUM_APERTURE:
+	    printf("Finished momentum aperture search.\n");
+	    break;
+	  case ELASTIC_SCATTERING:
+	    printf("Finished elastic scattering.\n");
+	    break;
+	  case INELASTIC_SCATTERING:
+	    printf("Finished inelastic scattering.\n");
+	    break;
+	  case CHAOS_MAP:
+	    printf("Finished chaos map analysis.\n");
+	    break;
+	  }
+#if DEBUG
+	  printf("semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
+#endif  
+	  fflush(stdout);
+	  /* reassert defaults for namelist run_setup */
+	  lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses =
+	    parameters = NULL;
+	  combine_bunch_statistics = 0;
+	  random_number_seed = 987654321;
+	  wrap_around = 1;
+	  final_pass = 0;
+	  default_order = 2;
+	  concat_order = 0;
+	  tracking_updates = 1;
+	  show_element_timing = monitor_memory_usage = 0;
+	  concat_order = print_statistics = p_central = 0;
+	  run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
+	    fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
+	    ionEffectsSeen = 0;
+	  break;
+	case LINK_CONTROL:
+	  if (!run_setuped || !run_controled)
+	    bombElegant("run_setup and run_control must precede link_control namelist", NULL);
+	  element_link_control(&links, &namelist_text, &run_conditions, beamline);
+	  break;                    
+	case LINK_ELEMENTS:
+	  if (!run_setuped || !run_controled)
+	    bombElegant("run_setup and run_control must precede link_elements namelist", NULL);
+	  if (!beamline)
+	    bombElegant("beamline not defined--can't add element links", NULL);
+	  add_element_links(&links, &namelist_text, beamline);
+	  /* links_present = 1; */
+	  beamline->links = &links;
+	  break;
+	case STEERING_ELEMENT:
+	  if (correction_setuped)
+	    bombElegant("you must define steering elements prior to giving the 'correct' namelist", NULL);
+	  add_steering_element(&correct, beamline, &run_conditions, &namelist_text);
+	  break;
+	case AMPLIF_FACTORS:
+	  beamline->flags |= BEAMLINE_MATRICES_NEEDED;
+	  if (parameters)
+	    dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
+	  compute_amplification_factors(&namelist_text, &run_conditions, &correct, do_closed_orbit, beamline);
+	  break;
+	case PRINT_DICTIONARY:
+	  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+	  set_print_namelist_flags(0);
+	  if (processNamelist(&print_dictionary, &namelist_text)==NAMELIST_ERROR)
+	    bombElegant(NULL, NULL);
+	  if (echoNamelists) print_namelist(stdout, &print_dictionary);
+	  do_print_dictionary(filename, latex_form, SDDS_form);
+	  break;
+	case FLOOR_COORDINATES:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede floor_coordinates namelist", NULL);
+	  output_floor_coordinates(&namelist_text, &run_conditions, beamline);
+	  do_floor_coordinates = 1;
+	  break;
+	case CORRECTION_MATRIX_OUTPUT:
+	  beamline->flags |= BEAMLINE_MATRICES_NEEDED;
+	  if (!run_setuped)
+	    bombElegant("run setup must precede correction_matrix_output namelist", NULL);
+	  setup_correction_matrix_output(&namelist_text, &run_conditions, beamline, &correct,
+					 &do_response_output, 
+					 do_twiss_output+do_matrix_output+twiss_computed);
+	  if (!do_response_output) {
+	    run_response_output(&run_conditions, beamline, &correct, -1);
+	    delete_phase_references();
+	    reset_special_elements(beamline, RESET_INCLUDE_RF);
+	    reset_driftCSR();
+	    finish_response_output();
+	  }
+	  break;
+	case LOAD_PARAMETERS:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede load_parameters namelists", NULL);
+	  if (run_controled)
+	    bombElegant("load_parameters namelists must precede run_control namelist", NULL);
+	  if (error_controled)
+	    bombElegant("load_parameters namelists must precede error_control and error namelists", NULL);
+	  if (setup_load_parameters(&namelist_text, &run_conditions, beamline) && magnets)
+	    /* make sure the magnet output is right in case loading parameters changed something */
+	    output_magnets(magnets, lattice, beamline);
+	  break;
+	case SUBPROCESS:
+	  if (isMaster)
+	    run_subprocess(&namelist_text, &run_conditions);
+	  break;
+	case FIT_TRACES:
+#if 0
+	  do_fit_trace_data(&namelist_text, &run_conditions, beamline);
+	  if (parameters) {
+	    dumpLatticeParameters(parameters, &run_conditions, beamline, suppress_parameter_defaults);
+	    finishLatticeParametersFile();
+	  }
+	  /* reassert defaults for namelist run_setup */
+	  lattice = use_beamline = acceptance = centroid = bpm_centroid = sigma = final = output = rootname = losses =
+	    parameters = NULL;
+	  combine_bunch_statistics = 0;
+	  random_number_seed = 987654321;
+	  wrap_around = 1;
+	  final_pass = 0;
+	  default_order = 2;
+	  concat_order = 0;
+	  tracking_updates = 1;
+	  show_element_timing = monitor_memory_usage = 0;
+	  concat_order = print_statistics = p_central = 0;
+	  run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
+	    fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
+	    ionEffectsSeed = 0;
+#endif
+	  break;
+	case SASEFEL_AT_END:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede sasefel namelist", NULL);
+	  if (beam_type!=-1)
+	    bombElegant("sasefel namelist must precede beam definition", NULL);
+	  setupSASEFELAtEnd(&namelist_text, &run_conditions, &output_data);
+	  break;
+	case ALTER_ELEMENTS:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede alter_element namelist", NULL);
+	  setup_alter_element(&namelist_text, &run_conditions, beamline);
+	  break;
+	case SLICE_ANALYSIS:
+#if USE_MPI
+	  printf("\n********\nslice_analysis not supported for parallel version\n********\n\n");
+	  fflush(stdout);
+#else
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede slice_analysis namelist", NULL);
+	  if (beam_type!=-1)
+	    bombElegant("slice_analysis namelist must precede beam definition", NULL);
+	  setupSliceAnalysis(&namelist_text, &run_conditions, &output_data);
+#endif
+	  break;
+	case DIVIDE_ELEMENTS: 
+	  if (run_setuped)
+	    bombElegant("divide_elements must precede run_setup", NULL);
+	  setupDivideElements(&namelist_text, &run_conditions, beamline);
+	  break;
+	case TRANSMUTE_ELEMENTS:
+	  if (run_setuped)
+	    bombElegant("transmute_elements must precede run_setup", NULL);
+	  setupTransmuteElements(&namelist_text, &run_conditions, beamline);
+	  break;
+	case IGNORE_ELEMENTS:
+	  if (run_setuped)
+	    bombElegant("ignore_elements must precede run_setup", NULL);
+	  setupIgnoreElements(&namelist_text, &run_conditions, beamline);
+	  break;
+	case INSERT_SCEFFECTS:
+	  if (run_setuped)
+	    bombElegant("insert_sceffects must precede run_setup", NULL);
+	  setupSCEffect(&namelist_text, &run_conditions, beamline);
+	  sceffects_inserted = 1;
+	  break;
+	case INSERT_ELEMENTS:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede insert_element namelist", NULL);
+	  if (lastCommandCode!=RUN_SETUP && lastCommandCode!=INSERT_ELEMENTS && lastCommandCode!=REPLACE_ELEMENTS)
+	    printWarning("To avoid possible calculation errors, insert_elements commands should immediately follow run_setup.", NULL);
+	  do_insert_elements(&namelist_text, &run_conditions, beamline);
+	  break;
+	case REPLACE_ELEMENTS:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede replace_element namelist", NULL);
+	  if (lastCommandCode!=RUN_SETUP && lastCommandCode!=INSERT_ELEMENTS && lastCommandCode!=REPLACE_ELEMENTS)
+	    printWarning("To avoid possible calculation errors, replace_elements commands should immediately follow run_setup.", NULL);
+	  do_replace_elements(&namelist_text, &run_conditions, beamline);
+	  break;
+	case TWISS_ANALYSIS:
+	  if (do_twiss_output)
+	    bombElegant("twiss_analysis must come before twiss_output", NULL);
+	  setupTwissAnalysisRequest(&namelist_text, &run_conditions, beamline);
+	  break;
+	case APERTURE_INPUT:
+	case APERTURE_DATAX:
+	  readApertureInput(&namelist_text, &run_conditions);
+	  break;
+	case OBSTRUCTION_DATA:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede obstruction_data namelist", NULL);
+	  if (!do_floor_coordinates)
+	    bombElegant("floor_coordinate command required for obstruction_data to work", NULL);
+#if HAVE_GPU
+	  bombElegant("The obstruction_data command is not implemented for the GPU version of elegant.", NULL);
+#endif
+	  readObstructionInput(&namelist_text, &run_conditions);
+	  break;
+	case LINEAR_CHROMATIC_TRACKING_SETUP:
+	  beamline->flags |= BEAMLINE_MATRICES_NEEDED;
+	  if (do_twiss_output)
+	    bombElegant("you can't give twiss_output and linear_chromatic_tracking_setup together", NULL);
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede linear_chromatic_tracking_setup", NULL);
+	  setupLinearChromaticTracking(&namelist_text, beamline);
+	  linear_chromatic_tracking_setup_done = 1;
+	  break;
+	case MODULATE_ELEMENTS:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede modulate_elements", NULL);
+	  addModulationElements(&(run_conditions.modulationData), &namelist_text, beamline, &run_conditions);
+	  break;
+	case RAMP_ELEMENTS:
+	  if (!run_setuped)
+	    bombElegant("run_setup must precede ramp_elements", NULL);
+	  addRampElements(&(run_conditions.rampData), &namelist_text, beamline, &run_conditions);
+	  break;
+	default:
+	  printf("unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);
+	  fflush(stdout);
+	  for (i=0; i<N_COMMANDS; i++)
+	    printf("%s\n", description[i]);
+	  fflush(stdout);
+	  exitElegant(1);
+	  break;
+	}
+#ifdef SUNOS4
+	check_heap();
+#endif
+      }
+
+      switch (namelistErrorCode) {
+      case NAMELIST_NO_ERROR:
+	break;
+      case NAMELIST_BUFFER_TOO_SMALL:
+	bombElegant("Error: namelist buffer too small. Check for improper construction.\n", NULL);
+	break;
+      case NAMELIST_IMPROPER_CONSTRUCTION:
+	bombElegant("Error: namelist construction error. Check for missing &end.\n", NULL);
+	break;
+      default:
+	bombElegant("Error: Invalid return from namelist scan. Seek expert help.\n", NULL);
+	break;
+      }
+      
+      fclose(fpIn[fpIndex--]);
+    }
   }
 
-  switch (namelistErrorCode) {
-  case NAMELIST_NO_ERROR:
-    break;
-  case NAMELIST_BUFFER_TOO_SMALL:
-    bombElegant("Error: namelist buffer too small. Check for improper construction.\n", NULL);
-    break;
-  case NAMELIST_IMPROPER_CONSTRUCTION:
-    bombElegant("Error: namelist construction error. Check for missing &end.\n", NULL);
-    break;
-  default:
-    bombElegant("Error: Invalid return from namelist scan. Seek expert help.\n", NULL);
-      break;
-  }
-
-  }
 #if DEBUG
   printf("semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
 #endif  

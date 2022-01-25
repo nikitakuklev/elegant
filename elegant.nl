@@ -114,3 +114,8 @@
         STRING done = "%s.done";
         STRING failed = "%s.failed";
 #end
+
+#namelist include_commands,struct
+	  STRING filename = NULL;
+	  long disable = 0;
+#end
