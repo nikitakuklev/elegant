@@ -59,7 +59,8 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None.
+\item Added the ability to sum two field maps for \verb|BRAT|. This uses the new \verb|ADDITIONAL_FILENAME|, 
+  \verb|MAIN_FACTOR|, and \verb|ADDITIONAL_FACTOR| parameters.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -69,6 +70,7 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 \item Added the \verb|element_occurence| parameter to the \verb|change_start| command, which allows
   changing the starting location in a beamline.
 \item Added the \verb|change_end| command, which allows changing the end of the beamline.
+\item Added the \verb|include_commands| command, which allows including commands from another file.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -738,6 +740,7 @@ Command name & Type & Description \\\hline
 \hyperref[subsec:floorcoordinates]{\tt floor\_coordinates} & action & Compute and output floor coordinates. \\ \hline
 \hyperref[subsec:frequencymap]{\tt frequency\_map} & major action & Compute and output frequency map. \\ \hline
 \hyperref[subsec:globalsettings]{\tt global\_settings} & action & Change global settings.\\ \hline
+\hyperref[subsec:includecommands]{\tt include\_commands} & action & Read commands from another file.\\ \hline
 \hyperref[subsec:ignoreelements]{\tt ignore\_elements} & setup & Ignore specified elements during tracking. \\ \hline
 \hyperref[subsec:inelasticscattering]{\tt inelastic\_scattering} & major action & Use tracking to determine local scattering aperture and loss locations due to inelastic gas scattering.\\ \hline
 \hyperref[subsec:insertelements]{\tt insert\_elements} & action & Insert elements into the lattice at many places. \\ \hline
@@ -2778,6 +2781,34 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   from \verb|run_setup|.)
 \end{itemize}
 
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|include_commands|}\end{center}
+%\end{latexonly}
+\subsection{include\_commands \label{subsec:includecommands}}
+
+\begin{itemize}
+\item type: setup command.
+\item function: reads commands from another file.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
+\item notes: 
+	\begin{itemize}
+	\item Any number of these commands may be given.
+        \item This command may be used from within other included command files without any limit.
+	\end{itemize}
+\end{itemize}
+
+\begin{verbatim}
+&include_commands
+        STRING filename = NULL,
+        long disable = 0;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|filename| --- Name of file from which to read commands.
+\item \verb|disable| --- If nonzero, the command is ignored.
+\end{itemize}
 
 %\begin{latexonly}
 \newpage
