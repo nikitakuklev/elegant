@@ -1695,19 +1695,21 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double *sLimit, double **partic
             abort();
             }
 	if (particle[i][6]<=0) {
+	  /*
 #if USE_MPI
 	  if (!badPID) 
 	    dup2(fd, fileno(stdout));
 #endif
-	  printf("particle %ld has bad PID: %ld\n", i, (long)particle[i][6]);
+	  printf("particle %ld has bad PID: %ld\n", i, (long)particle[i][6]); 
+	  */
 	  badPID++;
 	}
     }
     if (badPID) {
 #if USE_MPI
-      printf("%ld particles with bad PID on processor %d\n", badPID, myid);
+      printf("%ld particles with \"bad\" PID on processor %d\n", badPID, myid);
 #else
-      printf("%ld particles with bad PID\n", badPID);
+      printf("%ld particles with \"bad\" PID\n", badPID);
 #endif
       fflush(stdout);
     }
