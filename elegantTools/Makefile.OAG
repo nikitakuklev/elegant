@@ -136,7 +136,7 @@ PROD_HOST = $(PRODOAG)
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
 		-DIEEE_MATH -DzLib -D_ISOC99_SOURCE -I../../../physics
-#USR_LDFLAGS += -g
+USR_LDFLAGS_Linux += -fopenmp
 
 #Look for private version of GSL used here at APS
 GSL = $(words $(wildcard $(EPICS_EXTENSIONS)/src/SDDS/gsl))
