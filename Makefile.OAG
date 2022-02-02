@@ -134,6 +134,7 @@ USR_CPPFLAGS = 	$(USR_CFLAGS)
 USR_CFLAGS_Linux = -DMINIMIZE_MEMORY -D_GNU_SOURCE 
 #USR_CFLAGS_Linux = -I/lib/modules/`uname -r`/build/include -DMINIMIZE_MEMORY -D_GNU_SOURCE 
 USR_CPPFLAGS_Linux = $(USR_CFLAGS_Linux)
+USR_LDFLAGS_Linux = -fopenmp
 
 USR_CFLAGS_DEFAULT += -DUNIX -DMINIMIZE_MEMORY
 USR_CPPFLAGS_DEFAULT += -DUNIX -DMINIMIZE_MEMORY
@@ -663,7 +664,8 @@ ifeq ($(GPU),1)
    elegant_SYS_LIBS += cudart curand
    Pelegant_SYS_LIBS += cudart curand
   else 
-   CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda-11.2/lib64 /usr/local/cuda-11.1/lib64 /usr/local/cuda-11.0/lib64 /usr/local/cuda-10.2/lib64 /usr/local/cuda-10.1/lib64 /usr/local/cuda-10.0/lib64 /usr/local/cuda-9.2/lib64 /usr/local/cuda-9.1/lib64 /usr/local/cuda-9.0/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64 /usr/local/cuda/lib64 /usr/lib/x86_64-linux-gnu /Developer/NVIDIA/CUDA-11.1/lib /Developer/NVIDIA/CUDA-11.0/lib /Developer/NVIDIA/CUDA-10.2/lib /Developer/NVIDIA/CUDA-10.1/lib /Developer/NVIDIA/CUDA-10.0/lib /Developer/NVIDIA/CUDA-9.2/lib /Developer/NVIDIA/CUDA-9.1/lib /Developer/NVIDIA/CUDA-9.0/lib /Developer/NVIDIA/CUDA-8.0/lib /soft/cudatoolkit/6.5.14/lib64 ))
+   #CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda-11.2/lib64 /usr/local/cuda-11.1/lib64 /usr/local/cuda-11.0/lib64 /usr/local/cuda-10.2/lib64 /usr/local/cuda-10.1/lib64 /usr/local/cuda-10.0/lib64 /usr/local/cuda-9.2/lib64 /usr/local/cuda-9.1/lib64 /usr/local/cuda-9.0/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64 /usr/local/cuda/lib64 /usr/lib/x86_64-linux-gnu /Developer/NVIDIA/CUDA-11.1/lib /Developer/NVIDIA/CUDA-11.0/lib /Developer/NVIDIA/CUDA-10.2/lib /Developer/NVIDIA/CUDA-10.1/lib /Developer/NVIDIA/CUDA-10.0/lib /Developer/NVIDIA/CUDA-9.2/lib /Developer/NVIDIA/CUDA-9.1/lib /Developer/NVIDIA/CUDA-9.0/lib /Developer/NVIDIA/CUDA-8.0/lib /soft/cudatoolkit/6.5.14/lib64 ))
+   CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda-10.2/lib64 /usr/local/cuda-10.1/lib64 /usr/local/cuda-10.0/lib64 /usr/local/cuda-9.2/lib64 /usr/local/cuda-9.1/lib64 /usr/local/cuda-9.0/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64 /usr/local/cuda/lib64 /usr/lib/x86_64-linux-gnu /Developer/NVIDIA/CUDA-11.1/lib /Developer/NVIDIA/CUDA-11.0/lib /Developer/NVIDIA/CUDA-10.2/lib /Developer/NVIDIA/CUDA-10.1/lib /Developer/NVIDIA/CUDA-10.0/lib /Developer/NVIDIA/CUDA-9.2/lib /Developer/NVIDIA/CUDA-9.1/lib /Developer/NVIDIA/CUDA-9.0/lib /Developer/NVIDIA/CUDA-8.0/lib /soft/cudatoolkit/6.5.14/lib64 ))
    elegantto_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
    elegant_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
    Pelegant_LDFLAGS += -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
