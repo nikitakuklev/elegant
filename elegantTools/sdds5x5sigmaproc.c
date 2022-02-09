@@ -541,7 +541,7 @@ int main(
          "etaySigma", sqrt(etaSum2[1]/nErrorSets-sqr(etaSum[1]/nErrorSets)),
          "etaxpSigma", sqrt(etapSum2[0]/nErrorSets-sqr(etapSum[0]/nErrorSets)),
          "etaypSigma", sqrt(etapSum2[1]/nErrorSets-sqr(etapSum[1]/nErrorSets)),
-         "SdeltaSigma", sqrt(SijSum2[4][4]/nErrorSets-sqr(SijSum[4][4]/nErrorSets)),
+         "SdeltaSigma", sqrt(sqrt(SijSum2[4][4]/nErrorSets-sqr(SijSum[4][4]/nErrorSets))),
          NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
