@@ -614,7 +614,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   double *coord, dz_lost;
   double angle, e1, e2, Kg1, Kg2;
   double psi1, psi2, he1, he2;
-  double Qi[6], Qf[6];
+  double Qi[MAX_PROPERTIES_PER_PARTICLE], Qf[MAX_PROPERTIES_PER_PARTICLE];
   double dcoord_etilt[6];
   double dxi, dyi, dzi;
   double dxf, dyf, dzf;
@@ -1121,7 +1121,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       }
       part[i_top][4] = z_start + dz_lost;
       part[i_top][5] = Po*(1+part[i_top][5]);
-
+      if (globalLossCoordOffset>0)
+        memcpy(part[i_top]+globalLossCoordOffset, Qf+globalLossCoordOffset, sizeof(double)*GLOBAL_LOSS_PROPERTIES_PER_PARTICLE);
       i_top--;
       i_part--;
       continue;
@@ -1405,6 +1406,10 @@ long integrate_csbend_ordn
     long j;
     if ((apData && !checkMultAperture(X, Y, apData)) ||
         insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
+      /*
+      printf("Lost particle %ld on obstruction: segment %ld/%ld, Z=%le\n",
+             (long)Qf[6], i, n, Qf[globalLossCoordOffset+1]);
+      */
       return 0;
     }
     for (j=0; j<nSubsteps; j++) {
@@ -1488,6 +1493,10 @@ long integrate_csbend_ordn
   }
   if ((apData && !checkMultAperture(X, Y, apData)) ||
       insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
+    /*
+    printf("Lost particle %ld on obstruction: segment %ld/%ld, Z=%le\n",
+           (long)Qf[6], i, n, Qf[globalLossCoordOffset+1]);
+    */
     *dz_lost = n*s;
     return 0;
   }
