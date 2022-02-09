@@ -185,11 +185,11 @@ typedef struct {
 typedef struct {
   double *Z, *X;
   double Y;
-  long points;
+  long points, canGo;
 } OBSTRUCTION_DATASET;
 
 typedef struct {
-  short initialized;
+  short initialized, hasCanGoFlag;
   long periods, superperiodicity;
   double center[2]; /* Z, X */
   double YLimit[2]; /* low, high limits */

@@ -51,7 +51,7 @@ short mpiAbort = 0;
 long trajectoryTracking = 0;
 
 long particleID = 1;
-int globalLossCoordOffset = -1; /* X, Y, Z of loss */
+int globalLossCoordOffset = -1; /* X, Z, thetaX of loss */
 size_t sizeOfParticle = 0;
 /* This value may be larger than the initial value below if optional properties are stored */
 int totalPropertiesPerParticle = COORDINATES_PER_PARTICLE+BASIC_PROPERTIES_PER_PARTICLE;

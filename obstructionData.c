@@ -3,7 +3,7 @@
 //#include "math.h"
 //#include "stdio.h"
 
-OBSTRUCTION_DATASETS obstructionDataSets = {0, 0, 0, {0.0, 0.0}, {-10.0, 10.0}, 
+OBSTRUCTION_DATASETS obstructionDataSets = {0, 0, 0, 0, {0.0, 0.0}, {-10.0, 10.0}, 
                                             0.0, NULL, 0.0, 0.0, 0, 0, NULL, NULL};
 
 static long obstructionsInForce = 1;
@@ -17,6 +17,7 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   SDDS_DATASET SDDSin;
   char s[16384];
   long code, nY, iY, nTotal;
+  short hasCanGoFlag;
   double Y;
 
 #include "obstructionData.h"
@@ -50,12 +51,15 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   }
   if (!check_sdds_parameter(&SDDSin, "ZCenter", "m") ||
       !check_sdds_parameter(&SDDSin, "XCenter", "m") ||
-      !check_sdds_parameter(&SDDSin, "Superperiodicity", NULL) ) {
+      !check_sdds_parameter(&SDDSin, "Superperiodicity", NULL)) {
     printf("Necessary data quantities (ZCenter, XCenter, Superperiodicity) have wrong type or units, or are not present in %s\n",
             input);
     fflush(stdout);
     exitElegant(1);
   }
+  hasCanGoFlag = 0;
+  if (check_sdds_parameter(&SDDSin, "CanGo", NULL))
+    obstructionDataSets.hasCanGoFlag = hasCanGoFlag = 1;
   if ((obstructionDataSets.YSpacing=y_spacing)>0 && !check_sdds_parameter(&SDDSin, "Y", "m")) {
     printf("Parameter Y has wrong type or units, or is not present in %s. Required when y_spacing>0.\n",
             input);
@@ -68,15 +72,13 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   nY = 0;
   while ((code=SDDS_ReadPage(&SDDSin))>0) {
     if (code==1) {
-      int32_t superperiodicity=0;
       if (!SDDS_GetParameterAsDouble(&SDDSin, "ZCenter", &obstructionDataSets.center[0]) ||
 	        !SDDS_GetParameterAsDouble(&SDDSin, "XCenter", &obstructionDataSets.center[1]) ||
-	        !SDDS_GetParameterAsLong(&SDDSin, "Superperiodicity", &superperiodicity)) {
+	        !SDDS_GetParameterAsLong(&SDDSin, "Superperiodicity", &obstructionDataSets.superperiodicity)) {
 	            sprintf(s, "Problem getting data from page %ld of obstruction input file %s", code, input);
             	SDDS_SetError(s);
 	            SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
-      obstructionDataSets.superperiodicity = superperiodicity;
       printf("ZCenter = %le, XCenter = %le, Superperiodicity = %ld\n", 
 	        obstructionDataSets.center[0], obstructionDataSets.center[1], obstructionDataSets.superperiodicity);
     }
@@ -142,6 +144,14 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
       printf("Obstruction input file %s has fewer than 3 rows on page %ld", input, code);
       fflush(stdout);
       exitElegant(1);
+    }
+    obstructionDataSets.data[iY][obstructionDataSets.nDataSets[iY]].canGo = 0;
+    if (hasCanGoFlag && 
+        !SDDS_GetParameterAsLong(&SDDSin, "CanGo", 
+                                 &obstructionDataSets.data[iY][obstructionDataSets.nDataSets[iY]].canGo)) {
+      sprintf(s, "Problem getting CanGo parameter from page %ld of obstruction input file %s", code, input);
+      SDDS_SetError(s);
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
     if (!(obstructionDataSets.data[iY][obstructionDataSets.nDataSets[iY]].Z = SDDS_GetColumnInDoubles(&SDDSin, "Z")) ||
         !(obstructionDataSets.data[iY][obstructionDataSets.nDataSets[iY]].X = SDDS_GetColumnInDoubles(&SDDSin, "X"))) {
@@ -260,7 +270,8 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   static FILE *fpObs = NULL;
   static ELEMENT_LIST *lastEptr = NULL;
   */
-  long ic, iperiod, lost;
+  long ic, iperiod;
+  short lost, kept;
   double Z, X, Y, thetaX;
 
   /*
@@ -303,18 +314,23 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
 
   convertLocalCoordinatesToGlobal(&Z, &X, &Y, &thetaX, mode, part, eptr, dz, segment, nSegments);
   /*
-    printf("Checking obstruction for x=%le, y=%le, s=%le, segment=%ld/%ld: Z=%le, X=%le, Y=%le\n",
-         part[0], part[2], part[4], segment, nSegments, Z, X, Y);
+    printf("Checking obstruction for particle %ld, x=%le, y=%le, s=%le, segment=%ld/%ld: Z=%le, X=%le, Y=%le\n",
+           (long)part[6], part[0], part[2], part[4], segment, nSegments, Z, X, Y);
   */
 
   /* 
   fprintf(fpObs, "%le %le %ld\n", Z, X, (long)part[6]); 
   */
 
+  kept = 0;
   if (obstructionDataSets.YLimit[0]<obstructionDataSets.YLimit[1] && 
-      (Y<obstructionDataSets.YLimit[0] || Y>obstructionDataSets.YLimit[1]))
+      (Y<obstructionDataSets.YLimit[0] || Y>obstructionDataSets.YLimit[1])) {
+    /*
+    printf("Loss code 2 seen\n");
+    fflush(stdout);
+    */
     lost = 2;
-  else {
+  } else {
     long iY = 0;
     lost = 0;
     if (obstructionDataSets.YSpacing>0) {
@@ -331,7 +347,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
                         obstructionDataSets.iY0);
       }
     }
-    for (ic=0; ic<obstructionDataSets.nDataSets[iY] && !lost; ic++) {
+    for (ic=0; ic<obstructionDataSets.nDataSets[iY] && !lost && !kept; ic++) {
       for (iperiod=0; iperiod<obstructionDataSets.periods; iperiod++) {
 	if (pointIsInsideContour(Z, X, 
 				 obstructionDataSets.data[iY][ic].Z, 
@@ -339,14 +355,28 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
 				 obstructionDataSets.data[iY][ic].points,
 				 obstructionDataSets.center,
 				 (iperiod*PIx2)/obstructionDataSets.superperiodicity)) {
-	  lost = 1;
-	  break;
+          if (!obstructionDataSets.data[iY][ic].canGo) {
+            lost = 1;
+            if (!obstructionDataSets.hasCanGoFlag)
+              break;
+          } else {
+            kept = 1;
+            lost = 0;
+            break;
+          }
 	}
       }
+      if (kept || lost)
+        break;
     }
   }
   if (lost) {
     if (globalLossCoordOffset>0) {
+      /*
+      printf("Saving global loss coordinates (1): X=%le, Z=%le, theta = %le\n",
+             X, Z, thetaX);
+      fflush(stdout);
+      */
       part[globalLossCoordOffset+0] = X;
       part[globalLossCoordOffset+1] = Z;
       part[globalLossCoordOffset+2] = thetaX;
@@ -422,7 +452,8 @@ long insideObstruction_XYZ
   TRACKING_CONTEXT context;
   double C, S;
   double X1, Y1, Z1, thetaX1;
-  long ic, iperiod, lost;
+  long ic, iperiod;
+  short lost, kept;
 
   /*
   static FILE *fp = NULL;
@@ -486,8 +517,8 @@ long insideObstruction_XYZ
                         obstructionDataSets.iY0);
       }
     }
-    lost = 0;
-    for (iperiod=0; iperiod<obstructionDataSets.periods && !lost; iperiod++) {
+    lost = kept = 0;
+    for (iperiod=0; iperiod<obstructionDataSets.periods; iperiod++) {
       for (ic=0; ic<obstructionDataSets.nDataSets[iY]; ic++) {
 	if (pointIsInsideContour(Z1, X1, 
 				 obstructionDataSets.data[iY][ic].Z, 
@@ -495,10 +526,19 @@ long insideObstruction_XYZ
 				 obstructionDataSets.data[iY][ic].points,
 				 obstructionDataSets.center, 
 				 (iperiod*PIx2)/obstructionDataSets.superperiodicity)) {
-	  lost = 1;
-	  break;
+          if (!obstructionDataSets.data[iY][ic].canGo) {
+            lost = 1;
+            if (!obstructionDataSets.hasCanGoFlag)
+              break;
+          } else {
+            kept = 1;
+            lost = 0;
+            break;
+          }
 	}
       }
+      if (kept || lost)
+        break;
     }
   }
   if (lost) {

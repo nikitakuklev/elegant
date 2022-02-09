@@ -3945,6 +3945,13 @@ Also, if it is desirable for the output from \verb|Pelegant| to have exactly the
   \item \verb|XCenter|, \verb|ZCenter| --- floating point parameters giving the position of center of the ring in meters.
     The obstructions are rotated about this center if periodic.
   \end{itemize}
+  The file may optionally contain another parameter:
+  \begin{itemize}
+    \item \verb|CanGo| --- This integer parameter can be used to distinguish between ``no-go'' and ``can-go'' 
+      regions. By default, all contours enclose ``no-go'' regions, so that particles inside are assumed to be
+      lost. If this parameter is specified and the value is non-zero, the contour defines a region inside which
+      particles can propagate. This is typically used to override part of a no-go region.
+  \end{itemize}
 \item \verb|periods| --- Obstructions represented by the provided data are to be repeated in a 
   periodic fashion the number of times given. It is assumed that the system is a storage ring.
 \item \verb|disable| --- If nonzero, then the command is ignored.
