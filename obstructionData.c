@@ -271,7 +271,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   static ELEMENT_LIST *lastEptr = NULL;
   */
   long ic, iperiod;
-  short lost, kept;
+  short lost;
   double Z, X, Y, thetaX;
 
   /*
@@ -322,7 +322,6 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
   fprintf(fpObs, "%le %le %ld\n", Z, X, (long)part[6]); 
   */
 
-  kept = 0;
   if (obstructionDataSets.YLimit[0]<obstructionDataSets.YLimit[1] && 
       (Y<obstructionDataSets.YLimit[0] || Y>obstructionDataSets.YLimit[1])) {
     /*
@@ -347,7 +346,7 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
                         obstructionDataSets.iY0);
       }
     }
-    for (ic=0; ic<obstructionDataSets.nDataSets[iY] && !lost && !kept; ic++) {
+    for (ic=0; ic<obstructionDataSets.nDataSets[iY]; ic++) {
       for (iperiod=0; iperiod<obstructionDataSets.periods; iperiod++) {
 	if (pointIsInsideContour(Z, X, 
 				 obstructionDataSets.data[iY][ic].Z, 
@@ -359,15 +358,10 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
             lost = 1;
             if (!obstructionDataSets.hasCanGoFlag)
               break;
-          } else {
-            kept = 1;
-            lost = 0;
-            break;
-          }
+          } else
+            return 0;
 	}
       }
-      if (kept || lost)
-        break;
     }
   }
   if (lost) {
@@ -375,7 +369,6 @@ long insideObstruction(double *part, short mode, double dz, long segment, long n
       /*
       printf("Saving global loss coordinates (1): X=%le, Z=%le, theta = %le\n",
              X, Z, thetaX);
-      fflush(stdout);
       */
       part[globalLossCoordOffset+0] = X;
       part[globalLossCoordOffset+1] = Z;
@@ -453,7 +446,7 @@ long insideObstruction_XYZ
   double C, S;
   double X1, Y1, Z1, thetaX1;
   long ic, iperiod;
-  short lost, kept;
+  short lost;
 
   /*
   static FILE *fp = NULL;
@@ -502,7 +495,6 @@ long insideObstruction_XYZ
     lost = 1;
   else {
     long iY = 0;
-    lost = 0;
     if (obstructionDataSets.YSpacing>0) {
       /* round toward the midplane (Y=0) */
       if (Y<=obstructionDataSets.YMin)
@@ -517,7 +509,7 @@ long insideObstruction_XYZ
                         obstructionDataSets.iY0);
       }
     }
-    lost = kept = 0;
+    lost = 0;
     for (iperiod=0; iperiod<obstructionDataSets.periods; iperiod++) {
       for (ic=0; ic<obstructionDataSets.nDataSets[iY]; ic++) {
 	if (pointIsInsideContour(Z1, X1, 
@@ -530,15 +522,10 @@ long insideObstruction_XYZ
             lost = 1;
             if (!obstructionDataSets.hasCanGoFlag)
               break;
-          } else {
-            kept = 1;
-            lost = 0;
-            break;
-          }
+          } else
+            return 0;
 	}
       }
-      if (kept || lost)
-        break;
     }
   }
   if (lost) {
