@@ -185,12 +185,14 @@ typedef struct {
 typedef struct {
   double *Z, *X;
   double Y;
-  long points, canGo;
+  long points;
+  int32_t canGo;
 } OBSTRUCTION_DATASET;
 
 typedef struct {
   short initialized, hasCanGoFlag;
-  long periods, superperiodicity;
+  long periods;
+  int32_t superperiodicity;
   double center[2]; /* Z, X */
   double YLimit[2]; /* low, high limits */
   double YSpacing;  /* if multiple planes of data are used */
@@ -1132,7 +1134,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 15
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
-#define N_BMAPXYZ_PARAMS 22
+#define N_BMAPXYZ_PARAMS 25
 #define N_BRAT_PARAMS 31
 #define N_BGGEXP_PARAMS 35
 #define N_BRANCH_PARAMS 7
@@ -3048,7 +3050,7 @@ typedef struct {
 typedef struct {
   double length;
   double dxError, dyError, dzError, tilt;
-  double fieldLength, strength, fse, BFactor[3], accuracy;
+  double fieldLength, strength, fse, BFactor[3], BInside[3], accuracy;
   char *method, *filename;
   short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridExcess, singlePrecision;
   char *particleOutputFile;

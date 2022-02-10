@@ -2429,15 +2429,15 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
                          double x, double y, double z)
 {
   long ix, iy, iz, iq;
-  double fx, fy, fz;  
+  double fx, fy, fz;
   double Finterp1[2][2], Finterp2[2];
   double Freturn[3];
 
   ix = (x-bmapxyz->data->xmin)/bmapxyz->data->dx;
   iy = (y-bmapxyz->data->ymin)/bmapxyz->data->dy;
   iz = (z-bmapxyz->data->zmin)/bmapxyz->data->dz;
+  *F0 = *F1 = *F2 = 0;
   if (ix<0 || iy<0 || iz<0 || ix>=(bmapxyz->data->nx-1) || iy>=(bmapxyz->data->ny-1) || iz>=(bmapxyz->data->nz-1)) {
-    *F0 = *F1 = *F2 = 0;
     n_invalid_particles++;
     return 0;
   } else {
@@ -2547,6 +2547,12 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
     *F1 *= bmapxyz->BFactor[0];
     *F2 *= bmapxyz->BFactor[1];
     *F0 *= bmapxyz->BFactor[2];
+
+    if (fabs(z - bmapxyz->fieldLength/2)<bmapxyz->length/2) {
+      *F0 += bmapxyz->BInside[2]; /* z */
+      *F1 += bmapxyz->BInside[0]; /* x */
+      *F2 += bmapxyz->BInside[1]; /* y */
+    }
 
     /*
     if (!fpdeb) {

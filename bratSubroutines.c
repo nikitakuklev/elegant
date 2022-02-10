@@ -167,9 +167,9 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   Po = pCentral;
 
   if (!brat->initialized) {
-    double Bmin, Bmax;
-    long i, rows, idata;
-    SDDS_DATASET SDDS_table;
+    /* double Bmin, Bmax; */
+    /* long i, rows, idata; */
+    /* SDDS_DATASET SDDS_table; */
 
     brat->dataIndex = brat->dataIndexAdditional = -1;
     readBratFieldFile(brat, brat->filename, 0);
