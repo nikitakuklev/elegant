@@ -74,13 +74,13 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
     if (code==1) {
       if (!SDDS_GetParameterAsDouble(&SDDSin, "ZCenter", &obstructionDataSets.center[0]) ||
 	        !SDDS_GetParameterAsDouble(&SDDSin, "XCenter", &obstructionDataSets.center[1]) ||
-	        !SDDS_GetParameterAsLong(&SDDSin, "Superperiodicity", &obstructionDataSets.superperiodicity)) {
+                !SDDS_GetParameterAsLong(&SDDSin, "Superperiodicity", &obstructionDataSets.superperiodicity)) {
 	            sprintf(s, "Problem getting data from page %ld of obstruction input file %s", code, input);
             	SDDS_SetError(s);
 	            SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
       printf("ZCenter = %le, XCenter = %le, Superperiodicity = %ld\n", 
-	        obstructionDataSets.center[0], obstructionDataSets.center[1], obstructionDataSets.superperiodicity);
+             obstructionDataSets.center[0], obstructionDataSets.center[1], (long)obstructionDataSets.superperiodicity);
     }
     Y = 0;
     iY = 0;
