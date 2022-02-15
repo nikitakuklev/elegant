@@ -438,10 +438,10 @@ int main( int argc, char **argv)
                           "Piwinski's parameter B1", NULL, SDDS_DOUBLE, 0) || 
       0>SDDS_DefineColumn(&resultsPage, "B2", NULL, NULL, 
                           "Piwinski's parameter B2", NULL, SDDS_DOUBLE, 0) || 
-      0>SDDS_DefineColumn(&resultsPage, "FP", NULL, NULL, 
-                          "Local particle loss rate (1/s) for positive momentum particle", NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&resultsPage, "FN", NULL, NULL, 
-                          "Local particle loss rate (1/s) for negative momentum particle", NULL, SDDS_DOUBLE, 0))
+      0>SDDS_DefineColumn(&resultsPage, "FP", NULL, "1/s/m", 
+                          "Local particle loss rate for positive momentum particle", NULL, SDDS_DOUBLE, 0) ||
+      0>SDDS_DefineColumn(&resultsPage, "FN", NULL, "1/s/m",
+                          "Local particle loss rate for negative momentum particle", NULL, SDDS_DOUBLE, 0))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   if (!SDDS_WriteLayout(&resultsPage) )
@@ -815,13 +815,17 @@ void TouschekLifeCalc(long verbosity)
     /* Normally the first element for twiss file is _BEG_, which is not true for aperture file.
        But we need it for starting the calculation. */
     if(s[i]!=0 && s[i]==s2[j] && strcmp(eName1[i],eName2[j])!=0) {
-      printf("element1 \"%s\" and elem2 \"%s\" at s1 %21.15e s2 %21.15e don't match\n",eName1[i],eName2[j],s[i],s2[j]);
-      if (!ignoreMismatch)
-	bomb("Twiss and Aperture file are not for same beamline",NULL);
+      if (ignoreMismatch)
+        printf("warning: element1 \"%s\" and elem2 \"%s\" at s1 %21.15e s2 %21.15e don't match\n",eName1[i],eName2[j],s[i],s2[j]);
+      else {
+        printf("error: element1 \"%s\" and elem2 \"%s\" at s1 %21.15e s2 %21.15e don't match\n",eName1[i],eName2[j],s[i],s2[j]);
+	bomb("Twiss and Aperture file are not for same beamline", NULL);
+      }
     }
 
     if (verbosity>1) 
-      fprintf(stderr, "Interpolating for i=%ld, j=%ld\n", i, j);
+      fprintf(stderr, "Interpolating for s[i=%ld] = %e, s2[j=%ld to %ld] = %le, %le\n", i, s[i],
+              j-1, j, s2[j-1], s2[j]);
     pp = linear_interpolation(dpp, s2, elem2, s[i], j-1); 
     pm = linear_interpolation(dpm, s2, elem2, s[i], j-1);
 
@@ -921,6 +925,12 @@ void TouschekLifeCalc(long verbosity)
   if (verbosity>1) 
     fprintf(stderr, "Exited loop\n");
   
+  /* Normalize FN and FP so the units are 1/s/m */
+  for (i=0; i<elements; i++) {
+    FN[i] /= s[elements-1];
+    FP[i] /= s[elements-1];
+  }
+
   tLife = 0;  
   for (i = 1; i<elements; i++) {
     if (s[i]>s[i-1]) {
@@ -930,7 +940,6 @@ void TouschekLifeCalc(long verbosity)
   if (verbosity>1) 
     fprintf(stderr, "Exited second loop\n");
 
-  tLife /= s[elements-1];
   tLife = 1/tLife/3600;
   return;
 } 
