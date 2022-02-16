@@ -554,7 +554,7 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
             p_elem = targ[i_elem]->p_elem;
 
             rpn_clear();
-            /* push original value onto stack */
+            /* push present value onto stack */
             presentValue = HUGE_VAL;
             switch (data_type) {
             case IS_DOUBLE:
@@ -571,9 +571,10 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
               bombElegant("unknown/invalid variable quantity (assert_element_links)", NULL);
               exitElegant(1);
             }
+	    push_num(presentValue);
             if (verbosity>1)
-                printf("prior value is %.15g for %s#%ld.%s at z=%.15gm\n",
-                        links->baseline_value[i_link][i_elem], 
+                printf("baseline value is %.15g, present value is %le for %s#%ld.%s at z=%.15gm\n",
+   		        links->baseline_value[i_link][i_elem], presentValue,
                         links->target_name[i_link], targ[i_elem]->occurence, links->item[i_link], 
                         targ[i_elem]->end_pos);
             push_num(links->baseline_value[i_link][i_elem]);
