@@ -23,6 +23,7 @@ typedef struct {
     long n_exclude;
     long n_iterations;        /* number of times to repeat correction */
     double correction_fraction;  /* to prevent unstable correction */
+    double min_correction_fraction;  /* to prevent fruitless iterations */
     long use_perturbed_matrix;
     double sextupole_tweek;
     double tolerance;         /* how close to get to desired chromaticities */

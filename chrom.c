@@ -98,6 +98,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     chrom->chromy = dnuy_dp;
     chrom->n_iterations = n_iterations;
     chrom->correction_fraction = correction_fraction;
+    chrom->min_correction_fraction = min_correction_fraction;
     alter_defined_values = change_defined_values;
     chrom->strengthLimit = strength_limit;
     chrom->use_perturbed_matrix = use_perturbed_matrix;
@@ -374,8 +375,11 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     long nTotal, nLimit, nChanged;
     double K20;
     char warningText[1024];
+    double origCorrectionFraction;
 
     log_entry("do_chromaticity_correction");
+
+    origCorrectionFraction = chrom->correction_fraction;
 
 #ifdef DEBUG  
     dumpLatticeParameters("do_chromaticity_correction_start.sdds", run, beamline, 1);
@@ -441,21 +445,26 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     
     presentError = DBL_MAX;
     for (iter=0; iter<chrom->n_iterations; iter++) {
-      nTotal = nLimit = nChanged = 0;
+        nTotal = nLimit = nChanged = 0;
         K2_max = -(K2_min = DBL_MAX);
         dchromx = chrom->chromx - chromx0;
         dchromy = chrom->chromy - chromy0;
-	/* Do at least one iteration */
-        if (iter!=0 && chrom->tolerance>0 &&
-            chrom->tolerance>fabs(dchromx) &&
-            chrom->tolerance>fabs(dchromy) )
-          break;
+        if (iter!=0) {
+	  /* Do at least one iteration */
+	  if ((chrom->tolerance>0 &&
+	       chrom->tolerance>fabs(dchromx) &&
+	       chrom->tolerance>fabs(dchromy)) ||
+	      chrom->correction_fraction < chrom->min_correction_fraction)
+	    break;
+	}
 
         lastError = presentError;
         presentError = sqr(dchromx)+sqr(dchromy);
         if (iter && presentError>lastError) {
           chrom->correction_fraction /= 2;
           printf("Error increasing---reducing correction fraction to %le\n", chrom->correction_fraction);
+	  printf("(Chromaticities are now %le, %le vs %le, %le targets)\n",  chromx0, chromy0,
+		 chrom->chromx, chrom->chromy);
           fflush(stdout);
         }
 
@@ -603,7 +612,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         beamline->chromaticity[0] = chromx0;
         beamline->chromaticity[1] = chromy0;
         if (verbosityLevel>1) {
-          printf("resulting chromaticities:  %e  %e\n", chromx0, chromy0);
+          printf("resulting chromaticities:  %e (want %e), %e (want %e)\n", chromx0, chrom->chromx, chromy0, chrom->chromy);
           printf("min, max sextupole strength:  %e  %e  1/m^2\n", K2_min, K2_max);
           if (verbosityLevel>4) {
             printf("Twiss parameters, start: betax=%le, betay=%le, alphax=%le, alphay=%le, etax=%le, etaxp=%le\n",
@@ -625,7 +634,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     if (verbosityLevel>0)
       printf("Chromaticity correction completed after %ld iterations\n", iter);
     if (verbosityLevel==1) 
-      printf("final chromaticities  :  %e  %e\n", chromx0, chromy0);
+      printf("final chromaticities  :  x: %e  (target %e)   y: %e (target %e)\n", 
+	     chromx0, chrom->chromx, chromy0, chrom->chromy);
     if (verbosityLevel>0)
       fflush(stdout);
     
@@ -669,6 +679,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     dumpLatticeParameters("do_chromaticity_correction_end.sdds", run, beamline, 1);
     finishLatticeParametersFile();
 #endif
+    chrom->correction_fraction = origCorrectionFraction ;
     return 1;
   }
 
