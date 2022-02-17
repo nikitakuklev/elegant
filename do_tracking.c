@@ -1076,6 +1076,7 @@ long do_tracking(
         z += ((DRIFT*)eptr->p_elem)->length;
       else
         z += eptr->end_pos - eptr->beg_pos;
+      fflush(stdout);
       /* fill a structure that can be used to pass to other routines 
        * information on the tracking context 
        */
@@ -1180,22 +1181,24 @@ long do_tracking(
 	  if (choice==0) {
 	    if (!branch->beptr1)
 	      bombElegant("No element pointer defined for BRANCH (1)---seek expert help!", NULL);
+	    eptr = branch->beptr1->pred;
+	    z = branch->beptr1->beg_pos;
+	    last_z = z;
 	    if (branch->verbosity && !(flags&TEST_PARTICLES)) {
-	      printf("Branching to %s on pass %ld\n", branch->beptr1->name, i_pass);
+	      printf("Branching to %s on pass %ld (z->%le)\n", branch->beptr1->name, i_pass, last_z);
 	      fflush(stdout);
 	    }
-	    eptr = branch->beptr1->pred;
-	    z = branch->z;
 	  } else {
 	    if (!branch->beptr2)
 	      bombElegant("No element pointer defined for BRANCH (2)---seek expert help!", NULL);
+	    eptr = branch->beptr2->pred;
+	    z = branch->beptr2->beg_pos;
+	    last_z = z;
+	    branch->privateCounter--;
 	    if (branch->verbosity && !(flags&TEST_PARTICLES)) {
-	      printf("Branching to %s on pass %ld\n", branch->beptr2->name, i_pass);
+	      printf("Branching to %s on pass %ld (z->%le)\n", branch->beptr2->name, i_pass, z);
 	      fflush(stdout);
 	    }
-	    eptr = branch->beptr2->pred;
-	    z = branch->z;
-	    branch->privateCounter--;
 	  }
         }
         else if (entity_description[eptr->type].flags&MATRIX_TRACKING &&
