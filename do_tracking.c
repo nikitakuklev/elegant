@@ -1060,7 +1060,7 @@ long do_tracking(
 	  }
 	  partOnMaster = 0;
 	}
-      } 
+      }
 #endif
 #ifdef DEBUG_CRASH 
       printMessageAndTime(stdout, "do_tracking checkpoint 3.6: ");
@@ -1129,7 +1129,7 @@ long do_tracking(
                   );
           printMessageAndTime(stdout, buffer);
           fflush(stdout);
-	}
+	} /* print statistics */
 #ifdef DEBUG_CRASH 
 	printMessageAndTime(stdout, "do_tracking checkpoint 4.3: ");
         printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
@@ -1164,7 +1164,7 @@ long do_tracking(
                                         beamline->alpha);
             }
           }
-	}
+	} /* linear-only matrix tracking */
         else if (eptr->type==T_BRANCH) {
           BRANCH *branch;
 	  long choice = 0;
@@ -1200,7 +1200,7 @@ long do_tracking(
 	      fflush(stdout);
 	    }
 	  }
-        }
+        } /* BRANCH element */
         else if (entity_description[eptr->type].flags&MATRIX_TRACKING &&
 		 !(flags&IBS_ONLY_TRACKING)) {
 #ifdef DEBUG_CRASH 
@@ -1261,7 +1261,7 @@ long do_tracking(
             if ((!USE_MPI || !notSinglePart) || (USE_MPI && (myid!=0))) 
               track_particles(coord, eptr->matrix, coord, nToTrack);
           }
-        }
+        } /* matrix-based tracking */
         else { /* normal tracking ends up here */
           long type;
 #ifdef DEBUG_CRASH 
