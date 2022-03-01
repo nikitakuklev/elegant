@@ -2116,19 +2116,6 @@ double optimization_function(double *value, long *invalid)
     update_response(run, beamline, orbitCorrData);
   }
   
-#if DEBUG
-  if (doClosedOrbit) {
-    printf("Closed orbit: %g, %g, %g, %g, %g, %g\n",
-	    beamline->closed_orbit->centroid[0],
-	    beamline->closed_orbit->centroid[1],
-	    beamline->closed_orbit->centroid[2],
-	    beamline->closed_orbit->centroid[3],
-	    beamline->closed_orbit->centroid[4],
-	    beamline->closed_orbit->centroid[5]);
-  }
-  printf("Beamline flags: %lx\n", beamline->flags);
-#endif
-
   if (!*invalid && beamline->flags&BEAMLINE_TWISS_WANTED) {
     if (twiss_mem[0]==-1) {
       for (i=0; i<N_TWISS_QUANS; i++)
