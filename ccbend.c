@@ -29,7 +29,8 @@ static FILE *fpHam = NULL;
 #endif
 
 void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
-void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, double gK, long order);
+void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, double gK, 
+                         double *fringeIntKn, short angleSign, short isExit, short fringeModel, short order);
 int integrate_kick_KnL(double *coord, double dx, double dy, 
                       double Po, double rad_coef, double isr_coef,
                       double *KnL, long nTerms,
@@ -388,7 +389,9 @@ long track_through_ccbend(
       offsetBeamCoordinatesForMisalignment(particle, n_part, ccbend->dxOffset, 0, 0);
     if (etilt)
       rotateBeamCoordinatesForMisalignment(particle, n_part, etilt);
-    verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, KnL[1]/length, KnL[2]/length, gK[0], ccbend->edgeOrder);
+    verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, KnL[1]/length, KnL[2]/length, gK[0], 
+                        ccbend->edgeFlip?&(ccbend->fringeInt2[0]):&(ccbend->fringeInt1[0]), 
+                        angleSign, 0, ccbend->fringeModel, ccbend->edgeOrder); 
     /*
     printf("input after adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
            particle[0][0], particle[0][1], particle[0][2],
@@ -438,7 +441,9 @@ long track_through_ccbend(
            particle[0][0], particle[0][1], particle[0][2],
            particle[0][3], particle[0][4], particle[0][5]);
     */
-    verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, KnL[1]/length, KnL[2]/length, gK[1], ccbend->edgeOrder);
+    verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, KnL[1]/length, KnL[2]/length, gK[1], 
+                        ccbend->edgeFlip?&(ccbend->fringeInt1[0]):&(ccbend->fringeInt2[0]), 
+                        angleSign, 1, ccbend->fringeModel, ccbend->edgeOrder);
     if (etilt)
       rotateBeamCoordinatesForMisalignment(particle, n_part, -etilt);
     if (ccbend->optimized)
@@ -750,6 +755,8 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
   xFinal = x;
   xAve = xSum/nSum;
   xError = xMax + xMin;
+  // xError = xFinal; 
+
   /*
   printf("x init, min, max, fin = %le, %le, %le, %le\n", x0, xMin, xMax, x);
   printf("xp init, fin = %le, %le\n", xp0, xp);
@@ -817,11 +824,31 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
 }
 
 
+#define USE_NEW_SWITCH_CODE 0
+
 void switchRbendPlane(double **particle, long n_part, double alpha, double po)
 /* transforms the reference plane to one that is at an angle alpha relative to the
  * initial plane. use alpha=theta/2, where theta is the total bend angle.
  */
 {
+#if USE_NEW_SWITCH_CODE
+  long i;
+  double cos_alpha, tan_alpha, magnet_s;
+
+  tan_alpha = tan(alpha);
+  cos_alpha = cos(alpha);
+
+  for (i=0; i<n_part; i++) {
+    magnet_s = particle[i][0]*tan_alpha/( 1.0 - particle[i][1]*tan_alpha );
+    particle[i][0] = (particle[i][0] + particle[i][1]*magnet_s)/cos_alpha;
+    particle[i][2] =  particle[i][2] + particle[i][3]*magnet_s;
+
+    particle[i][4] += sqrt(1.0 + sqr(particle[i][1]) + sqr(particle[i][3]))*magnet_s;
+
+    particle[i][3] = particle[i][3]/(cos_alpha*(1.0 - particle[i][1]*tan_alpha));
+    particle[i][1] = (particle[i][1] + tan_alpha)/(1.0 - particle[i][1]*tan_alpha);
+  }
+#else
   long i;
   double s, *coord, sin_alpha, cos_alpha, tan_alpha;
   double d, qx0, qy0, qz0, qx, qy, qz;
@@ -845,28 +872,171 @@ void switchRbendPlane(double **particle, long n_part, double alpha, double po)
     qz = -qx0*sin_alpha + qz0*cos_alpha;
     coord[1] = qx/qz;
     coord[3] = qy/qz;
-  }
+    }
+#endif
 }
 
-void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, double gK, long order)
+void verticalRbendFringe
+(
+ double **particle, long n_part, 
+ double alpha, // edge angle relative to beam path
+ double rho0,  // bending radius (always positive)
+ double K1,    // interior gradient
+ double K2,    // interior sextupole
+ double gK,    // conventional soft-edge parameter
+ double *fringeIntKn, // fringe integrals: K0, I0, K2, I1, K4, K5, K6, K7
+ short angleSign,      // -1 or 1
+ short isExit, 
+ short fringeModel, 
+ short order
+ )
 {
-  long i;
-  double c, d, e;
-  if (order<1)
-    return;
-  c = d = e = 0;
-  if (gK!=0) 
-    alpha -= gK/fabs(rho0)/cos(alpha)*(1+sqr(sin(alpha)));
-  c = sin(alpha)/rho0;
-  if (order>1)
-    d = sin(alpha)*K1;
-  if (order>2)
-    e = sin(alpha)*K2/2;
-  for (i=0; i<n_part; i++) {
-    double x, y;
-    x = particle[i][0];
-    y = particle[i][2];
-    particle[i][3] -= y*(c + d*x + e*(x*x-y*y))/(1+particle[i][5]);
+
+  if (fringeModel==0) {
+    // old method
+    long i;
+    double c, d, e;
+    if (order<1)
+      return;
+    c = d = e = 0;
+    if (gK!=0) 
+      alpha -= gK/fabs(rho0)/cos(alpha)*(1+sqr(sin(alpha)));
+    c = sin(alpha)/rho0;
+    if (order>1)
+      d = sin(alpha)*K1;
+    if (order>2)
+      e = sin(alpha)*K2/2;
+    for (i=0; i<n_part; i++) {
+      double x, y;
+      x = particle[i][0];
+      y = particle[i][2];
+      particle[i][3] -= y*(c + d*x + e*(x*x-y*y))/(1+particle[i][5]);
+    }
+  } else {
+    double x1, px1, y1, py1, tau1, delta;
+    double x2, px2, y2, py2, tau2, tau;
+    
+    double intK0, intK2, intK4, intK5, intK6, intK7, intI0, intI1;
+    double invRhoPlus, invRhoMinus, K1plus, K1minus;
+    double tant, sect, sect3, sint, temp;
+    double focX0, focXd, focY0, focYd, invP;
+    
+    long i;
+    if (isExit)
+      alpha = -alpha;
+
+    // Per R. Lindberg, some of the fringe integrals change sign with the sign of the bending angle.
+    intK0 = fringeIntKn[0]*angleSign;
+    intK2 = fringeIntKn[2];
+    intK4 = fringeIntKn[4]*angleSign;
+    intK5 = fringeIntKn[5]*angleSign;
+    intK6 = fringeIntKn[6]*angleSign;
+    intK7 = fringeIntKn[7];
+    // shamelessly packed the In integrals in the slots unused by the Kn's
+    intI0 = fringeIntKn[1];
+    intI1 = fringeIntKn[3];
+
+    if (isExit) {
+      // exit fringe
+      K1minus = K1;
+      K1plus = 0;
+      invRhoMinus = 1/rho0;
+      invRhoPlus = 0;
+    } else {
+      // entrance fringe
+      K1plus = K1;
+      K1minus = 0;
+      invRhoPlus = 1/rho0;
+      invRhoMinus = 0;
+    }
+    
+    tant = tan(alpha);
+    sint = sin(alpha);
+    sect = 1.0/cos(alpha);
+    sect3 = sect*sect*sect;
+    focX0 = -tant*intK5 - 0.5*intI0*(2.0 - tant*tant);
+    focXd = sect3*intK7;
+    focY0 = -tant*(invRhoPlus - invRhoMinus) + tant*sect*sect*intK5 + 0.5*intI0*(2.0 + tant*tant);
+    focYd = sect3*((1.0+sint*sint)*intK2 - intK7);
+    for(i=0; i<n_part; i++) {
+      x1  = particle[i][0];
+      temp = sqrt( 1.0 + sqr(particle[i][1]) + sqr(particle[i][3]) );
+      px1 = (1.0 + particle[i][5])*particle[i][1]/temp;
+      y1  = particle[i][2];
+      py1 = (1.0 + particle[i][5])*particle[i][3]/temp;
+      tau1 = -particle[i][4] + sint*x1;
+      delta = particle[i][5];
+      px1 = px1 - (1.0 + delta)*sint;
+      invP = 1.0/(1.0 + delta);
+      
+      tau = tau1;
+      temp = 1.0 - 0.5*sect3*intK5*x1*invP;
+      x2  = x1/temp;
+      y2  = y1;
+      px2 = px1*temp*temp;
+      py2 = py1;
+      tau -= 0.5*sect3*intK5*x1*x1*px1*invP*invP;
+      
+      temp = sect*intK5*invP;
+      x1  = x2;
+      y1  = y2*exp(-temp*x2);
+      px1 = px2 + temp*y2*py2;
+      py1 = py2*exp(temp*x2);
+      tau += temp*x2*y2*py2*invP;
+
+      temp = 0.5*sect3*(intK5 - (invRhoPlus-invRhoMinus))*invP;
+      x2  = x1 - temp*y1*y1;
+      y2  = y1;
+      px2 = px1;
+      py2 = py1 + 2.0*temp*px1*y1;
+      tau += temp*y1*y1*px1*invP;
+
+      x1 = x2;
+      y1 = y2;
+      px1 = px2 + (focX0 + focXd*invP)*x2
+        - 0.25*tant*(K1plus - K1minus)*(x2*x2 + y2*y2) - 0.5*intK6*(x2*x2 - sect*sect*y2*y2)
+        + ( 0.5*(sect*intK5*focY0 + 0.5*sect3*(intK5 - (invRhoPlus-invRhoMinus))*focX0)*y2*y2
+            - 0.75*sect3*intK5*focX0*x2*x2 )*invP;
+      py1 = py2 + (focY0 + focYd*invP)*y2
+        + (sect*sect*intK6 - 0.5*tant*(K1plus - K1minus))*x2*y2
+        + ( sect*intK5*focY0 + 0.5*sect3*focX0*(intK5 - (invRhoPlus-invRhoMinus)) )*x2*y2*invP;
+
+      tau += 0.5*( (focXd*x2*x2 + focYd*y2*y2) + sect*intK5*focY0*x2*y2*y2
+                   + 0.5*sect3*( (intK5 - (invRhoPlus-invRhoMinus))*y2*y2 - intK5*x2*x2 )*focX0*x2 )*invP*invP;
+
+      x2  = x1 - sect3*intK0*invP;
+      y2  = y1;
+      px2 = px1;
+      py2 = py1;
+      tau2 = tau + sect3*intK0*px2*invP*invP;
+
+      /* x2 = x1;
+         y2 = y1;
+         px2 = px1;
+         py2 = py1;
+         tau2 = tau1;
+
+         x2 += 0.5*sect3*( intK5*(x1*x1 - y1*y1) + y1*y1*(invRhoPlus-invRhoMinus) )*invP;
+         y2 += -sect*intK5*x1*y1*invP;
+         px2 += -tant*intI1*0.0 + (focX0 + focXd*invP)*x1
+         - 0.25*tant*(K1plus - K1minus)*(x1*x1 + y1*y1) - 0.5*intK6*(x1*x1 - sect*sect*y1*y1)
+         + intK5*(sect*py1*y1 - sect3*px1*x1)*invP; // hereit
+         py2 += (focY0 + focYd*invP)*y1
+         + (sect*sect*intK6 - 0.5*tant*(K1plus - K1minus))*x1*y1
+         + ( intK5*(sect*py1*x1 + sect3*px1*y1) - sect3*(invRhoPlus - invRhoMinus)*px1*y1 )*invP;
+         tau2 += ( 0.5*(focXd*x1*x1 + focYd*y1*y1) + sect*intK5*py1*x1*y1
+         + sect3*(intK5*px1*(y1*y1-x1*x1) - px1*y1*y1*(invRhoPlus-invRhoMinus)) )*invP*invP;
+         x2 += -sect3*intK0*invP;
+         tau2 += sect3*intK0*px2*invP*invP; */
+
+      particle[i][0] = x2;
+      particle[i][2] = y2;
+      px2 = px2 + (1.0 + delta)*sint;
+      temp = sqrt( sqr(1+delta) - sqr(px2) - sqr(py2) );
+      particle[i][1] = px2/temp;
+      particle[i][3] = py2/temp;
+      particle[i][4] = -tau2 + sint*x2;
+    }
   }
 }
 
