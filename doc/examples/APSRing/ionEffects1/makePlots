@@ -1,0 +1,31 @@
+# Growth in centroid position on two bunches
+sddsplot -column=Pass,Cy $1.wp* -graph=line,vary -leg=file
+
+#Growth in beam size for two bunches
+sddsplot -column=Pass,Sy $1.wp* -graph=line,vary -leg=file
+
+#Ion density, averaged around the ring
+sddsprocess $1.ionDens -pipe=out -process=qIons,last,qLast | sddscollapse -pipe | sddsbreak -pipe=in $1.ionDens.proc -decreaseOf=s
+sddsprocess $1.ionDens.proc -process=qLast,sum,qTot -process=Pass,first,Pass
+sddsprocess $1.ionDens.proc -define=param,lambda_ion,"qTot 1.6e-19 / 1104 /"
+sddsplot $1.ionDens.proc -param=Pass,lambda_ion -ylab="ion density (ions/m)"
+
+#Ion density, bunch-by-bunch (may take a while)
+#sddsprocess $1.ionDens -pipe=out -define=col,cPass,Pass, -define=col,cs,s | sddscombine -pipe -merge -overWrite | sddsbreak -pipe -changeOf=cPass | sddssort -pipe -col=Bunch | sddsbreak -pipe -changeOf=Bunch | sddsprocess -pipe=in $1.ionDens.bunch -process=t,first,t0 -process=qIons,sum,qTot -define=param,lambda_ion,"qTot 1.6e-19 / 1104 /"
+#sddsplot -grap=sym $1.ionDens.bunch -param=t0,lambda_ion -ylab="ion density (ions/m)"
+
+
+#Instability amplitude (as a fraction of the vertical beam size)
+sddsprocess $1.ebeam $1.ebeam.proc -redefine=col,ampy,"Cy abs Sy /" -redefine=col,ampx,"Cx abs Sx /"
+sddsprocess $1.ebeam.proc -process=ampy,max,ampyMax -process=ampy,rms,ampyRms -process=ampx,max,ampxMax -process=ampx,rms,ampxRms \
+	    -process=Sy,average,SyAv -process=Sx,average,SxAv 
+sddsplot $1.ebeam.proc -param=Pass,ampyMax -ylab="vertical oscillation amplitude (\$gs)"
+
+#Average vertical beam size
+sddsplot $1.ebeam.proc -param=Pass,SyAv -ylab="average vertical beam size (m)"
+
+#Vertical beam spectrum
+sddscombine $1.ebeam -pipe=out -merge | sddsfft -pipe=in -col=t,Cx,Cy $1.ebeam.fft
+sddsplot $1.ebeam.fft -col=f,FFTCy
+
+

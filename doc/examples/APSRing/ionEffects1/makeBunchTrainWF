@@ -1,0 +1,116 @@
+#!/bin/sh  
+# \
+exec oagtclsh "$0" "$@"
+
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+
+
+APSStandardSetup
+
+set usage {usage: makeBunchTrainWF -rootname <string>  -bunchSlots \#(324) -nPerBunch \#(1000) -bunchWF <filename> -randomize \#(0) }
+set rootname ""
+set momentum 6.0
+set bunchSlots 324
+set nGaps 0
+set gapLength 2
+set nGuard 0
+set guardMult 1
+set nPerBunch 1000
+#set profile ""
+set args $argv
+set randomize 0
+
+if {[APSStrictParseArguments {rootname bunchSlots nPerBunch gapLength nGaps nGuard guardMult bunchWF randomize}] || ![string length $rootname]} {
+	return -code error "$usage"
+}
+
+if [file exists $rootname.bun] {
+   return -code error "in use: $rootname.bun"
+}
+
+
+#if {$nGaps>0 && [expr $bunchSlots%$nGaps!=0]} {
+#    puts stderr "bunchSlots must be a multiple of nGaps"
+#    exit 1
+#}
+
+exec elegant Basic.ele
+puts "Ran Basic.ele"
+
+
+for {set j 0} {$j<$bunchSlots} {incr j} {
+    set mult($j) ([exec sddsprocess $bunchWF -pipe=out -filter=col,Index,$j,$j | sdds2stream -pipe=in -col=WaveformNorm])
+}
+
+set jList ""
+set mList ""
+for {set j 0} {$j<$bunchSlots} {incr j} {
+    lappend jList $j
+    lappend mList $mult($j)
+}
+exec sddsmakedataset $rootname.pattern \
+    -column=Slot,type=short -data=[join $jList ,] \
+    -column=Multiplier,type=short -data=[join $mList ,]
+
+puts "made data set"
+
+
+set bunchFrequency [exec sddsprocess Basic.twi -pipe=out -process=s,max,sMax \
+                        "-define=param,T0,sMax c_mks / pCentral beta.p /,units=s" \
+                        "-define=param,fb,T0 rec $bunchSlots *,units=Hz" \
+                        | sdds2stream -pipe -parameter=fb]
+
+set bunList ""
+set bunchNum 0
+
+
+set bunRefPart [exec sdds2stream $rootname.bunRef -parameter=Particles]
+puts $bunRefPart
+set pSigma 0.0
+exec sddsprocess $rootname.bunRef "-redefine=param,IDSlotsPerBunch,$nPerBunch $guardMult *" -noWarning
+
+for {set slot 0} {$slot<$bunchSlots} {incr slot} {
+    puts "$slot"
+    set m $mult($slot)
+    #puts $m
+    set tOffset [expr $slot/$bunchFrequency]
+    set IDOffset [expr $guardMult*$bunchNum*$nPerBunch]    
+    set curPart [expr $m*$nPerBunch]
+    puts $curPart
+    if $m!=0 {
+	    if $randomize==1 {
+		    exec sddsprocess $rootname.bunRef $rootname.bunRef.tmp -redefine=col,sortNum,rnd "-redefine=param,Particles,$curPart $pSigma grnd * 1 + *" -noWarning
+		    exec sddsprocess $rootname.bunRef.tmp "-redefine=param,fracKept,Particles $bunRefPart /" -noWarning
+		    exec sddsprocess $rootname.bunRef.tmp $rootname.bun$bunchNum -filter=col,sortNum,0,fracKept -noWarning
+	    
+		    exec sddsprocess $rootname.bun$bunchNum -noWarning \
+			"-redefine=column,t,t $tOffset +,units=s" \
+			"-redefine=column,particleID,i_row $IDOffset + 1 +,type=long" 
+
+		    after 2000
+
+		} else {
+		    exec sddsprocess $rootname.bunRef $rootname.bunRef.tmp "-redefine=param,Particles,$curPart" -noWarning
+		    exec sddsprocess $rootname.bunRef.tmp $rootname.bun$bunchNum -filter=col,particleID,0,Particles -noWarning
+
+		    exec sddsprocess $rootname.bun$bunchNum -noWarning \
+			"-redefine=column,t,t $tOffset +,units=s" \
+			"-redefine=column,particleID,i_row $IDOffset + 1 +,type=long" 
+
+
+		}
+            lappend bunList $rootname.bun$bunchNum 
+	    set bunchNum [expr $bunchNum+1]
+    }
+}
+
+puts "made bunches"
+
+eval exec sddscombine $bunList $rootname.bun
+eval file delete $bunList $rootname.done $rootname.tsamples
+
+puts "end"
+
+exit
+
+

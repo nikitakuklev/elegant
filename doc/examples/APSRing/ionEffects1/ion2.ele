@@ -1,18 +1,30 @@
 &run_setup
 	lattice = aps.lte,
-	use_beamline = RING_ILM10_EVEN,
+	use_beamline = RING,
 	p_central_mev = 7e3,
 	default_order = 2,
 &end
 
 &insert_elements
-        name=ion*,
-        element_def = "IE1: ionEffects"
+	 type = QUAD,
+	 skip = 37,
+         element_def = "IE2: ionEffects"
+&end
+
+&twiss_output
+            filename = "%s.twi",
+            radiation_integrals = 1,
 &end
 
 &rpn_load
         filename = Basic.twi
         tag = ref        
+&end
+
+&chromaticity
+	sextupoles = "S*:S1,S*:S2,S*:S3,S*:S4",
+	dnux_dp = 3,
+	dnuy_dp = 3
 &end
 
 &run_control 
