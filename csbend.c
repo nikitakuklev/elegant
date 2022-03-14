@@ -861,10 +861,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   fse = csbend->fse + csbend->fseDipole + (csbend->fseCorrection?csbend->fseCorrectionValue:0);
   h = 1/rho0;
   n = -csbend->b[1]/h;
-  if (fse>-1)
-    rho_actual = 1/((1+fse)*h);
-  else
-    rho_actual = 1e16/h;
+  if (fabs(fse+1)<1e-12)
+    fse = -1+1e-12;
+  rho_actual = 1/((1+fse)*h);
+
   /*
   if (1) {
       TRACKING_CONTEXT tcontext;

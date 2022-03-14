@@ -1516,6 +1516,10 @@ VMATRIX *compute_matrix(
             csbend->trackingMatrix = 3;
           elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, csbend->trackingMatrix));
         } else {
+          long edgeOrder;
+          edgeOrder = csbend->edge_order;
+          if (csbend->edge_effects[csbend->e1Index]>2 || csbend->edge_effects[csbend->e2Index]>2)
+            edgeOrder = 2;
           elem->matrix = bend_matrix(csbend->length, csbend->angle, csbend->e[csbend->e1Index], csbend->e[csbend->e2Index], 
                                      csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], 
                                      (csbend->use_bn ? csbend->b1*csbend->angle/csbend->length : csbend->k1)
@@ -1530,7 +1534,7 @@ VMATRIX *compute_matrix(
                                      csbend->fseDipole, csbend->fseQuadrupole, 
                                      csbend->malignMethod==0?csbend->etilt*csbend->etiltSign:0.0,
                                      csbend->nonlinear?2:(run->default_order?run->default_order:1),
-                                     csbend->edge_order, csbend->edgeFlags, 0,
+                                     edgeOrder, csbend->edgeFlags, 0,
                                      csbend->xKick, csbend->yKick);
           if (csbend->dx || csbend->dy || csbend->dz || csbend->tilt || csbend->etilt || csbend->epitch || csbend->eyaw) {
             misalign_matrix(elem->matrix, csbend->dx, csbend->dy, csbend->dz, 

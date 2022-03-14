@@ -44,6 +44,9 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 
 \begin{itemize}
 \item A bug was fixed in \verb|CSBEND| that resulted in incorrect recording of global loss coordinates.
+\item An bug was fixed with \verb|CSBEND| in that the matrix-based computations were sensitive to the
+  \verb|EDGE_ORDER| parameter whereas the tracking was not for \verb|EDGE_EFFECTS1| or \verb|EDGE_EFFECTS2|
+  equal to 3 or 4. The code now uses a more consistent approach. This issue was pointed out by L. Nadolski (SOLEIL).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -54,6 +57,8 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
   offset between duplicated bunches. This doesn't make sense and can cause problems with multi-bunch wakes.
   A warning is now issued.
   Forum user \verb|Siwei_Wang| pointed out the issue.
+\item A bug was fixed for \verb|touschek_scatter| in that the scattering was not performed relative to the
+  closed orbit. This was reported by G. Penn (LBNL).
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -62,6 +67,8 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
   \verb|MAIN_FACTOR|, and \verb|ADDITIONAL_FACTOR| parameters.
 \item Added the ability to apply constant field components inside the hard edge boundary of the magnet
   to \verb|BMXYZ|.
+\item The \verb|FSE| parameter on \verb|CSBEND| can now be set to any value. Previously, any value smaller than
+  -1 was treated as -1.   
 \end{itemize}
 
 \subsection{New and Modified Commands}
