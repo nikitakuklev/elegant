@@ -67,7 +67,7 @@ exec sddssequence -pipe=out -define=k,type=short -sequence=begin=0,end=[expr $te
   | sddsxref $tmpRoot.P -pipe -leave=* -transfer=param,beta*,alpha*,psi*,nu \
   | sddsxref $tmpRoot.D -pipe -leave=* -transfer=param,beta*,alpha*,psi* \
   | sddsprocess -pipe \
-    "-define=parameter,dphi,psiD psiP - 0 > pop ? : nu + $ " \
+    "-define=parameter,dphi,psiD psiP - 0 < pop ? nu 2 * pi * + : 0 $ " \
     "-define=col,psik,2 pi * nu * k * dphi +" \
     "-define=col,Ak,betaP betaD / sqrt psik cos alphaD psik sin * - *" \
     "-define=col,Bk,betaP betaD * sqrt psik sin * chs" \
