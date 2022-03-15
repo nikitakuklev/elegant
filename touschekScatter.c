@@ -326,7 +326,7 @@ static void *part_dist_paraValue[PART_DIST_PARAMETERS];
 
 void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 {
-  long i, j, total_event, n_left, iElement=0;
+  long i, j, total_event, n_left, iElement=0, elementIndex;
   ELEMENT_LIST *eptr;
   TSCATTER *tsptr;
   double pTemp[6], p1[6], p2[6], dens1, dens2;
@@ -368,10 +368,11 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
   }
 
   iTotal = 0;  /* Suppress compiler warning */
-  
+
+  elementIndex = 0; /* index relative to start or recirculation point */
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
-      iElement++;
+      iElement++; /* index of TSCATTER elements */
       if (i_start>=0 && iElement < i_start) {
         if (verbosity) {
           printf("Skipping %s#%ld at s=%le (outside index range)\n",
@@ -379,6 +380,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 	  fflush(stdout);
 	}
         eptr = eptr->succ; 
+        elementIndex ++;
         continue;
       }
       if (i_end>=0 && iElement > i_end) {
@@ -424,6 +426,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 	  fflush(stdout);
 	}
 	eptr = eptr->succ;
+        elementIndex++;
 	continue;
       }
       if (verbosity) {
@@ -765,6 +768,14 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 	partOnMaster = 1;
 	parallelStatus = notParallel;
 #endif
+        if (beamline->closed_orbit) {
+          /* If a closed orbit was computed, scatter with respect to that. */
+          long ip, k;
+          for (ip=0; ip<iTotal; ip++) {
+            for (k=0; k<4; k++)
+              beam->particle[ip][k] += beamline->closed_orbit[elementIndex].centroid[k];
+          }
+        }
         n_left = do_tracking(beam, NULL, (long)iTotal, NULL, beamline, 
                              &beam->p0, NULL, NULL, NULL, NULL, run, control->i_step,
                              FIRST_BEAM_IS_FIDUCIAL+FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+(verbosity>2?0:SILENT_RUNNING+INHIBIT_FILE_OUTPUT), control->n_passes, 0, NULL,
@@ -899,6 +910,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       printf("Advancing to next element\n");
       fflush(stdout);
     }
+    elementIndex++;
     eptr = eptr->succ; 
   }
   if (verbosity>1)
