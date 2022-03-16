@@ -18,7 +18,9 @@
 
 static CCBEND ccbendCopy;
 static ELEMENT_LIST *eptrCopy = NULL;
-static double PoCopy, xMin, xFinal, xAve, xMax, xError, xpError, lastRho, lastX, lastXp;
+static double PoCopy, lastRho, lastX, lastXp;
+/* These variables are used for optimization of the FSE and x offset */
+double xMin, xFinal, xAve, xMax, xError, xpInitial, xInitial, xpError;
 #define OPTIMIZE_X  0x01UL
 #define OPTIMIZE_XP 0x02UL
 static unsigned long optimizationFlags = 0;
@@ -159,7 +161,8 @@ long track_through_ccbend(
         }
         ccbend->fseOffset = startValue[0];
         ccbend->dxOffset = startValue[1];
-        ccbend->xAdjust = xFinal;
+        /* This gets subtracted from the final x coordinates to ensure the magnet doesn't produce a trajectory error */
+        ccbend->xAdjust = xFinal; 
         ccbend->KnDelta = ccbendCopy.KnDelta;
         ccbend->referenceData[0] = ccbend->length;
         ccbend->referenceData[1] = ccbend->angle;
@@ -178,8 +181,8 @@ long track_through_ccbend(
 		 eptr?eptr->name:"?", eptr?eptr->occurence:-1, ccbend->fseOffset, ccbend->dxOffset, acc);
           printf("length = %18.12le, angle = %18.12le, K1 = %18.12le\nK2 = %18.12le, yaw = %18.12le, lengthCorrection = %21.12le\n",
                  ccbend->length, ccbend->angle, ccbend->K1, ccbend->K2, ccbend->yaw, ccbend->lengthCorrection);
-          printf("xMin = %le, xMax = %le, xAve = %le, xFinal = %le, xpError = %le\n", 
-                 xMin, xMax, xAve, xFinal, xpError);
+          printf("xMin = %le, xMax = %le, xAve = %le, xInitial = %le, xFinal = %le, xpError = %le\n", 
+                 xMin, xMax, xAve, xInitial, xFinal, xpError);
 	  fflush(stdout);
 	}
       }
@@ -381,7 +384,9 @@ long track_through_ccbend(
     */
     if (tilt)
       rotateBeamCoordinatesForMisalignment(particle, n_part, tilt);
-    xpError = particle[0][1]; /* save initial x' value of the possible reference particle */
+    /* save initial x, x' value of the possible reference particle for optimization of FSE and DX */
+    xInitial = particle[0][0];
+    xpInitial = particle[0][1];
     switchRbendPlane(particle, n_part, angle/2-yaw, Po);
     if (dx || dy || dz)
       offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
@@ -451,7 +456,21 @@ long track_through_ccbend(
     if (dx || dy || dz)
       offsetBeamCoordinatesForMisalignment(particle, i_top+1, -dx, -dy, -dz);
     switchRbendPlane(particle, i_top+1, angle/2+yaw, Po);
-    xpError = fabs(xpError+particle[0][1]);
+    if (ccbend->fringeModel) {
+      /* If fringes are (possibly) extended, we use the difference between the initial and final 
+       * x coordinates including the fringe effects as the figure of merit */
+      xFinal = particle[0][0]; /* This will also be used as the x adjustment to suppress offsets in tracking */
+      xError = xInitial-xFinal;
+    }
+    else {
+      /* For the original fringe model, we continue to try to center the beam in the magnet */
+      /* xFinal is set in the trajectory error function as before, for backward compatibility */
+      xError = xMax + xMin;
+    }
+    /* For x', want the initial and final angle errors to be equal and opposite, which ensures a symmetric 
+       trajectory. In practice, xpInitial=0, so the final angle is also zero.
+     */
+    xpError = xpInitial+particle[0][1];
     if (tilt)
       /* use n_part here so lost particles get rotated back */
       rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
@@ -752,10 +771,8 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
     if (iPart>=0)
       break;
   }
-  xFinal = x;
+  xFinal = x; /* may be needed for fringeModel==0, for backward compatibility */
   xAve = xSum/nSum;
-  xError = xMax + xMin;
-  // xError = xFinal; 
 
   /*
   printf("x init, min, max, fin = %le, %le, %le, %le\n", x0, xMin, xMax, x);
@@ -1071,8 +1088,8 @@ double ccbend_trajectory_error(double *value, long *invalid)
   if (optimizationFlags&OPTIMIZE_XP)
     result += fabs(xpError/ccbendCopy.angle);
   /*
-  printf("particle[0][0] = %le, particle[0][1] = %le, xError = %le, xpError = %le, result = %le\n", 
-         particle[0][0], particle[0][1], xError, xpError, result); fflush(stdout);
+  printf("part[0][0] = %le, part[0][1] = %le, xInitial=%le, xpInitial=%le, xFinal = %le, xError = %le, xpError = %le, result = %le\n", 
+         particle[0][0], particle[0][1], xInitial, xpInitial, xFinal, xError, xpError, result); fflush(stdout);
   */
   return result;
 }
