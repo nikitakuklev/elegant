@@ -20,7 +20,7 @@ static CCBEND ccbendCopy;
 static ELEMENT_LIST *eptrCopy = NULL;
 static double PoCopy, lastRho, lastX, lastXp;
 /* These variables are used for optimization of the FSE and x offset */
-double xMin, xFinal, xAve, xMax, xError, xpInitial, xInitial, xpError;
+static double xMin, xFinal, xAve, xMax, xError, xpInitial, xInitial, xpError;
 #define OPTIMIZE_X  0x01UL
 #define OPTIMIZE_XP 0x02UL
 static unsigned long optimizationFlags = 0;
@@ -80,6 +80,7 @@ long track_through_ccbend(
   MULT_APERTURE_DATA apertureData;
   double referenceKnL = 0;
   double gK[2];
+  double fringeInt1[N_CCBEND_FRINGE_INT], fringeInt2[N_CCBEND_FRINGE_INT];
 
   if (!particle)
     bombTracking("particle array is null (track_through_ccbend)");
@@ -91,6 +92,24 @@ long track_through_ccbend(
   if (iFinalSlice>0 && ccbend->optimized!=1)
     bombTracking("Programming error: partial integration mode invoked for unoptimized CCBEND.");
 
+  if (N_CCBEND_FRINGE_INT!=8)
+    bombTracking("Coding error detected: number of fringe integrals for CCBEND is different than expected.");
+
+  if (!ccbend->edgeFlip) {
+    memcpy(fringeInt1, ccbend->fringeInt1, N_CCBEND_FRINGE_INT*sizeof(fringeInt1[0]));
+    memcpy(fringeInt2, ccbend->fringeInt2, N_CCBEND_FRINGE_INT*sizeof(fringeInt2[0]));
+  } else {
+    memcpy(fringeInt1, ccbend->fringeInt2, N_CCBEND_FRINGE_INT*sizeof(fringeInt1[0]));
+    memcpy(fringeInt2, ccbend->fringeInt1, N_CCBEND_FRINGE_INT*sizeof(fringeInt2[0]));
+    // Per R. Lindberg, these integrals change sign from entrance to exit orientation
+    fringeInt1[0] *= -1;
+    fringeInt1[3] *= -1;
+    fringeInt1[5] *= -1;
+    fringeInt2[0] *= -1;
+    fringeInt2[3] *= -1;
+    fringeInt2[5] *= -1;
+  }
+
   if ((ccbend->optimizeFse || ccbend->optimizeDx) && ccbend->optimized!=-1 && ccbend->angle!=0) {
     if (ccbend->optimized==0 || 
         ccbend->length!=ccbend->referenceData[0] ||
@@ -101,6 +120,14 @@ long track_through_ccbend(
       double acc;
       double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
       short disable[2] = {0, 0};
+      PoCopy = lastRho = lastX = lastXp = 
+        xMin = xFinal = xAve = xMax = xError = xpInitial = xInitial = xpError = 0;
+      if (ccbend->verbose>5) {
+        long ifr;
+        printf("Fringe integrals used for %s:\n", eptr->name);
+        for (ifr=0; ifr<N_CCBEND_FRINGE_INT; ifr++)
+          printf("I[%ld] = %e, %e\n", ifr, fringeInt1[ifr], fringeInt2[ifr]);
+      }
       /*
       printf("Reoptimizing CCBEND due to changes: (optimized=%hd)\n", ccbend->optimized);
       printf("delta L: %le\n", ccbend->length-ccbend->referenceData[0]);
@@ -395,8 +422,7 @@ long track_through_ccbend(
     if (etilt)
       rotateBeamCoordinatesForMisalignment(particle, n_part, etilt);
     verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, KnL[1]/length, KnL[2]/length, gK[0], 
-                        ccbend->edgeFlip?&(ccbend->fringeInt2[0]):&(ccbend->fringeInt1[0]), 
-                        angleSign, 0, ccbend->fringeModel, ccbend->edgeOrder); 
+                        &(fringeInt1[0]), angleSign, 0, ccbend->fringeModel, ccbend->edgeOrder); 
     /*
     printf("input after adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
            particle[0][0], particle[0][1], particle[0][2],
@@ -447,8 +473,7 @@ long track_through_ccbend(
            particle[0][3], particle[0][4], particle[0][5]);
     */
     verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, KnL[1]/length, KnL[2]/length, gK[1], 
-                        ccbend->edgeFlip?&(ccbend->fringeInt1[0]):&(ccbend->fringeInt2[0]), 
-                        angleSign, 1, ccbend->fringeModel, ccbend->edgeOrder);
+                        &(fringeInt2[0]), angleSign, 1, ccbend->fringeModel, ccbend->edgeOrder);
     if (etilt)
       rotateBeamCoordinatesForMisalignment(particle, n_part, -etilt);
     if (ccbend->optimized)
@@ -941,7 +966,7 @@ void verticalRbendFringe
     long i;
     if (isExit)
       alpha = -alpha;
-
+    
     // Per R. Lindberg, some of the fringe integrals change sign with the sign of the bending angle.
     intK0 = fringeIntKn[0]*angleSign;
     intK2 = fringeIntKn[2];

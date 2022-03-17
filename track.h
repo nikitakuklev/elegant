@@ -2415,6 +2415,7 @@ typedef struct {
 
 /* names and storage structure for canonically-integrated rectangular bending magnet physical parameters */
 extern PARAMETER ccbend_param[N_CCBEND_PARAMS];
+#define N_CCBEND_FRINGE_INT 8
 
 typedef struct {
     double length, angle;
@@ -2422,7 +2423,7 @@ typedef struct {
     double tilt, yaw;
     short fringeModel;
     double hgap, fint1, fint2;
-    double fringeInt1[8], fringeInt2[8];
+    double fringeInt1[N_CCBEND_FRINGE_INT], fringeInt2[N_CCBEND_FRINGE_INT];
     double dx, dy, dz, xKick;
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
     double etilt;   /* error tilt angle */
