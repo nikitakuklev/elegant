@@ -94,6 +94,8 @@ long track_through_ccbend(
 
   if (N_CCBEND_FRINGE_INT!=8)
     bombTracking("Coding error detected: number of fringe integrals for CCBEND is different than expected.");
+  if (ccbend->fringeModel<0 || ccbend->fringeModel>1) 
+    bombTracking("FRINGEMODEL parameter of CCBEND must be 0 or 1.");
 
   if (!ccbend->edgeFlip) {
     memcpy(fringeInt1, ccbend->fringeInt1, N_CCBEND_FRINGE_INT*sizeof(fringeInt1[0]));
