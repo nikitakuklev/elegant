@@ -333,12 +333,16 @@ void track_IBS(double **part0, long np0, ELEMENT_LIST *eptr, double Po,
 #endif
 #if USE_MPI
 	elemCount = 0;
-	if (n_processors>2)
+	if (n_processors>3)
 	  elemCount = IBS->elements/(n_processors-1);
 	if (elemCount>5 && IBS->parallelIntegration) {
 	  elemOffset = (myid-1)*elemCount;
 	  if (myid==(n_processors-1))
 	    elemCount = IBS->elements - (n_processors-2)*elemCount;
+          if (elemOffset>0) {
+            elemOffset--;
+            elemCount ++;
+          }
 	  IBSRate (fabs(IBS->icharge[islice]/particleCharge), 
 		   elemCount, 1, 0, IBS->isRing,
 		   IBS->emitx0[islice], IBS->emity0[islice], IBS->sigmaDelta0[islice], bLength,
