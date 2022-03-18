@@ -326,16 +326,19 @@ void dump_final_properties
         abort();
       }
 #if SDDS_MPI_IO
-/* This is required to let all the processors get right n_properties */
-      MPI_Bcast (&n_properties, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+/* This is required to let all the processors get right n_properties and perturbed_quan_duplicates */
+      MPI_Bcast(&n_properties, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&perturbed_quan_duplicates, 1, MPI_LONG, 0, MPI_COMM_WORLD);
 #endif
     computed_properties = tmalloc(sizeof(*computed_properties)*n_properties);
     if ((n_computed=compute_final_properties
                        (computed_properties, sums, n_original, p_central, M, particle, step,
                         totalSteps, charge))!=
         (n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates))) {
-        printf("error: compute_final_properties computed %ld quantities--%ld expected. (dump_final_properties)",
+        printf("error: compute_final_properties computed %ld quantities--%ld expected. (dump_final_properties)\n",
             n_computed, n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates));
+	printf("n_varied_quan = %ld, n_perturbed_quan = %ld, perturbed_quan_duplicates = %ld\n",
+	       n_varied_quan, n_perturbed_quan+n_optim_quan, perturbed_quan_duplicates);
         fflush(stdout);
         abort();
         }
