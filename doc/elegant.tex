@@ -47,6 +47,7 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 \item An bug was fixed with \verb|CSBEND| in that the matrix-based computations were sensitive to the
   \verb|EDGE_ORDER| parameter whereas the tracking was not for \verb|EDGE_EFFECTS1| or \verb|EDGE_EFFECTS2|
   equal to 3 or 4. The code now uses a more consistent approach. This issue was pointed out by L. Nadolski (SOLEIL).
+\item A bug was fixed in \verb|IBSCATTER| that gave incorrect results when \verb|PARALLEL_INTEGRATION| was nonzero.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
