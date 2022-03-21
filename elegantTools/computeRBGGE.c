@@ -102,7 +102,7 @@ char *option[N_OPTIONS] = {
 #define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
              -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]\n\
               [-evaluate=<filename>]\n\
-              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>]]\n\
+              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>][,minDerivatives=<number>][,minMultipoles=<number>]]\n\
 -yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
 -yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
 -xminus      (x, y, z, Bx, By, Bz) map for negative-x plane.\n\
@@ -138,7 +138,7 @@ int main(int argc, char **argv)
   long i_arg;
   long multipoles, derivatives, fundamental=0;
   long maxMultipoles = 8, maxDerivatives = 7;
-  long minMultipoles, minDerivatives;
+  int32_t minMultipoles = -1, minDerivatives = -1;
   char *topFile = NULL, *bottomFile = NULL, *leftFile = NULL, *rightFile = NULL;
   char *normalOutputFile = NULL, *skewOutputFile = NULL;
   char *fieldMapFile = NULL;
@@ -271,6 +271,7 @@ int main(int argc, char **argv)
               autoTuneSignificance = 1e-12;
               autoTuneRadiusLimit = 0;
               autoTuneFlags = 0;
+	      minDerivatives = minMultipoles = -1;
               if (scanned[i_arg].n_items>0 &&
                   (!scanItemList(&autoTuneFlags, scanned[i_arg].list+2, &scanned[i_arg].n_items, 0,
                                  "verbose", -1, NULL, 0, AUTOTUNE_VERBOSE, 
@@ -280,6 +281,8 @@ int main(int argc, char **argv)
                                  "radiuslimit", SDDS_DOUBLE, &autoTuneRadiusLimit, 1, 0,
                                  "minimize", SDDS_STRING, &autoTuneModeString, 1, AUTOTUNE_MODE_SET, 
                                  "log", SDDS_STRING, &autoTuneLogFile, 1, AUTOTUNE_LOG,
+				 "minmultipoles", SDDS_LONG,  &minMultipoles, 1, 0,
+				 "minderivatives", SDDS_LONG,  &minDerivatives, 1, 0,
                                  NULL) ||
                    autoTuneSignificance<=0))
                 {
@@ -385,9 +388,11 @@ int main(int argc, char **argv)
 
     if (fieldMapFile) {
       /* read 3D map */
-      readFieldMap(fieldMapFile, &fieldMap);
-      minDerivatives = 1;
-      minMultipoles = 1;
+      readFieldMap(fieldMapFile, &fieldMap); 
+      if (minDerivatives<1)
+	minDerivatives = 1;
+      if (minMultipoles<1)
+	minMultipoles = 1;
     } else  {
       /* no auto-tuning */
       minDerivatives = maxDerivatives;
