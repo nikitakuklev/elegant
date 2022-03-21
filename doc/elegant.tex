@@ -126,6 +126,8 @@ Changes to these tools in this release include
   updated.
 \item \verb|TFBFirSetup|, which generates filter coefficients  for transverse  feedback, had several bugs 
   as pointed out by Siwei Wang on the forum. These were corrected.
+\item \verb|computeRBGGE|, which generates generalized gradient expansions in rectangular regions, now has auto-tuning
+  options to require a minimum number of multipoles or derivatives.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -6734,7 +6736,8 @@ computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<fil
    -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] 
    [-fundamental=<number>] [-evaluate=<filename>]
    [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}]
-               [,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>]]
+               [,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>]
+               [,minDerivatives=<number>],[,minMultipoles=<number>]]
 }\end{flushleft}
 
 \item {\bf switches:}
@@ -6769,6 +6772,8 @@ computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<fil
   is restricted to never be less than the previous optimal values; for example, if the best value
   so far was obtained with $m=4$ and $d=3$, the remainder of the scan would be restricted to $m\ge 4$ and $d\ge 3$;
   this can save considerable run time.
+  The \verb|minDerivatives| and \verb|minMultipoles| parameters allow requiring the auto-tuner to use a mimimum
+  number of derivatives and multipoles, respectively; by default, as few as 1 of each might be used.
 \end{itemize}
 
 \item {\bf authors:} R. Lindberg, R. Soliday, M. Borland (ANL/APS).
