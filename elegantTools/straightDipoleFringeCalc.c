@@ -36,7 +36,7 @@ void setStepFunction(double *heavside, double *maxD, int *zMaxInt, int *zEdgeInt
 FRINGE_INT3 computeDipoleFringeInt(double *ggeD, double *heavside, double *z, double *zEdge,
                                    int *zMaxInt, int edgeNum, double Bscaling, double dz);
 
-FRINGE_INT2 computeQuadrupoleFringeInt(double *ggeQ, double *heavside, double *z, double *zEdge,
+FRINGE_INT3 computeQuadrupoleFringeInt(double *ggeQ, double *heavside, double *z, double *zEdge,
                                        int *zMaxInt, int edgeNum, double Bscaling, double dz);
 
 FRINGE_INT3 computeSextupoleFringeInt(double *ggeS, double *stepFuncS, double *z, double *zEdge,
@@ -250,7 +250,7 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
   double *bendRad, *edgeAngle, *edgeX;
 
   FRINGE_INT3 dipFringeInt, sextFringeInt;
-  FRINGE_INT2 quadFringeInt;
+  FRINGE_INT3 quadFringeInt;
 
   double temp1, fringeInt, dz;
 
@@ -418,9 +418,9 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
   double *zEdge, *maxD, *maxQ, *maxS;
 
   FRINGE_INT3 dipFringeInt, sextFringeInt;
-  FRINGE_INT2 quadFringeInt;
+  FRINGE_INT3 quadFringeInt;
 
-  double fringeInt, dz = z[1] - z[0];
+  double arcLength, fringeInt, dz = z[1] - z[0];
 
   int *zEdgeInt, *zMaxInt;
   int ip, edgeNum, Nedges = 2;
@@ -503,7 +503,13 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
       quadFringeInt = computeQuadrupoleFringeInt(ggeQ, stepFuncQ, z, zEdge, zMaxInt, edgeNum, Bscaling, dz);
       sextFringeInt = computeSextupoleFringeInt(ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, Bscaling, dz);
 
-      if (!SDDS_StartPage(&SDDSout, 11) ||
+      // This needs to be looked at more...
+      if(edgeNum == 1)
+	arcLength = 0.5*bendAngle*(zEdge[1]-zEdge[0])/sin(0.5*bendAngle);
+      else
+	arcLength = bendAngle / (Bscaling * maxD[1]);
+
+      if (!SDDS_StartPage(&SDDSout, 12) ||
           !SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "FringeSegmentNum", edgeNum + 1, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 0,  "ElementName", "CCBEND", "ElementParameter", "intK0",  \
                               "ParameterValue", dipFringeInt.int2, NULL) ||
@@ -515,17 +521,21 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
                               "ParameterValue", sextFringeInt.int2, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 4,  "ElementName", "CCBEND", "ElementParameter", "intK6",  \
                               "ParameterValue", sextFringeInt.int1, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 5,  "ElementName", "CCBEND", "ElementParameter", "intKIK", \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 5,  "ElementName", "CCBEND", "ElementParameter", "intI0", \
                               "ParameterValue", quadFringeInt.int1, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 6,  "ElementName", "CCBEND", "ElementParameter", "intKII", \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 6,  "ElementName", "CCBEND", "ElementParameter", "intI1", \
                               "ParameterValue", quadFringeInt.int2, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 7,  "ElementName", "CCBEND", "ElementParameter", "L",      \
-                              "ParameterValue", bendAngle / (Bscaling * maxD[edgeNum + 1]), NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 8,  "ElementName", "CCBEND", "ElementParameter", "ANGLE",  \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 7,  "ElementName", "CCBEND", "ElementParameter", "intI2", \
+                              "ParameterValue", quadFringeInt.int3, NULL) ||
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 8,  "ElementName", "CCBEND", "ElementParameter", "L",      \
+                              "ParameterValue", arcLength, NULL) ||
+          /* !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 8,  "ElementName", "CCBEND", "ElementParameter", "L", \
+	     "ParameterValue", bendAngle / (Bscaling * maxD[edgeNum + 1]), NULL) || */
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 9,  "ElementName", "CCBEND", "ElementParameter", "ANGLE",  \
                               "ParameterValue", bendAngle, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 9,  "ElementName", "CCBEND", "ElementParameter", "K1",     \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 10,  "ElementName", "CCBEND", "ElementParameter", "K1",     \
                               "ParameterValue", Bscaling * maxQ[edgeNum + 1], NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 10, "ElementName", "CCBEND", "ElementParameter", "K2",     \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 11, "ElementName", "CCBEND", "ElementParameter", "K2",     \
                               "ParameterValue", Bscaling * (maxS[edgeNum + 1] - 0.25 * maxD[edgeNum + 1]), NULL) ||
           !SDDS_WritePage(&SDDSout))
         {
@@ -888,22 +898,27 @@ FRINGE_INT3 computeDipoleFringeInt(double *ggeD, double *heavside, double *z, do
 }
 
 /*** Calculates quadrupole fringe field contributions ***/
-FRINGE_INT2 computeQuadrupoleFringeInt(double *ggeQ, double *stepFuncQ, double *z, double *zEdge,
+FRINGE_INT3 computeQuadrupoleFringeInt(double *ggeQ, double *stepFuncQ, double *z, double *zEdge,
                                        int *zMaxInt, int edgeNum, double Bscaling, double dz)
 {
-  FRINGE_INT2 quadFringeInt;
+  FRINGE_INT3 quadFringeInt;
   double intQ0 = 0.0;
   double intQ1 = 0.0;
+  double intQ2 = 0.0;
 
   int ip;
 
   for (ip = zMaxInt[edgeNum]; ip < zMaxInt[edgeNum + 1]; ip++)
     {
-      intQ0 += 0.5 * ((z[ip] - zEdge[edgeNum]) * (ggeQ[ip] - stepFuncQ[ip]) + (z[ip + 1] - zEdge[edgeNum]) * (ggeQ[ip + 1] - stepFuncQ[ip + 1]));
-      intQ1 += 0.5 * ((ggeQ[ip] - stepFuncQ[ip]) + (ggeQ[ip + 1] - stepFuncQ[ip + 1]));
+      intQ0 += 0.5 * ((ggeQ[ip] - stepFuncQ[ip]) + (ggeQ[ip + 1] - stepFuncQ[ip + 1]));
+      intQ1 += 0.5 * ((z[ip] - zEdge[edgeNum]) * (ggeQ[ip] - stepFuncQ[ip]) + (z[ip + 1] - zEdge[edgeNum]) * (ggeQ[ip + 1] - stepFuncQ[ip + 1]));
+
+      intQ2 += 0.5*( (z[ip]-zEdge[edgeNum])*(z[ip]-zEdge[edgeNum])*(ggeQ[ip] - stepFuncQ[ip])
+		     + (z[ip+1]-zEdge[edgeNum])*(z[ip+1]-zEdge[edgeNum])*(ggeQ[ip+1] - stepFuncQ[ip+1]) );
     }
-  quadFringeInt.int1 = dz * Bscaling * intQ1;
-  quadFringeInt.int2 = dz * Bscaling * intQ0;
+  quadFringeInt.int1 = dz * Bscaling * intQ0;
+  quadFringeInt.int2 = dz * Bscaling * intQ1;
+  quadFringeInt.int3 = dz * Bscaling * intQ2;
 
   return (quadFringeInt);
 }
