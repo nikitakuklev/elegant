@@ -19,13 +19,14 @@ typedef struct FRINGE_INT3
 } FRINGE_INT3;
 
 void readInGGE(char *ggeFile, double **z, double **ggeD, double **ggeQ, double **ggeS, int *Nz);
-void readInTrajectoryInput(char *input, double **x, double **xp, double *pCentral, int *Nsegments, double **zMagnetRef);
+void readInTrajectoryInput(char *input, double **x, double **xp, double *dz, int64_t *rows,
+                           double *pCentral, int *Nsegments, double **zMagnetRef);
 
 void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, double *xp,
-                      double *x, int Nz, double Bscaling, double *zRef, int Nedges, char *output);
+                      double *x, int Nz, double invRigidity, double *zRef, int Nedges, char *output);
 
 void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS,
-                      int Nz, double Bscaling, double zRef, double bendAngle, char *output);
+                      int Nz, double invRigidity, double zRef, double bendAngle, char *output);
 
 //int refineNextMaximum(double *ggeD, int *zMaxInt, int edgeNum);
 
@@ -34,13 +35,13 @@ double integrateTrap(double *integrand, int startPt, int endPt, double dz);
 void setStepFunction(double *heavside, double *maxD, int *zMaxInt, int *zEdgeInt, int edgeNum, double checkInt, double dz);
 
 FRINGE_INT3 computeDipoleFringeInt(double *ggeD, double *heavside, double *z, double *zEdge,
-                                   int *zMaxInt, int edgeNum, double Bscaling, double dz);
+                                   int *zMaxInt, int edgeNum, double invRigidity, double dz);
 
 FRINGE_INT3 computeQuadrupoleFringeInt(double *ggeQ, double *heavside, double *z, double *zEdge,
-                                       int *zMaxInt, int edgeNum, double Bscaling, double dz);
+                                       int *zMaxInt, int edgeNum, double invRigidity, double dz);
 
 FRINGE_INT3 computeSextupoleFringeInt(double *ggeS, double *stepFuncS, double *z, double *zEdge,
-                                      int *zMaxInt, int edgeNum, double Bscaling, double dz);
+                                      int *zMaxInt, int edgeNum, double invRigidity, double dz);
 
 #define SET_GGE 0
 #define SET_CCBEND 1
@@ -71,14 +72,15 @@ char *option[N_OPTIONS] = {
  -bendAngle   Full bending angle in dipole\n\
  -zRefField   Z location in gge file where reference magnetic field values will be taken\n\
 -lgbend      LGBEND mode\n\
- -trajectory  SDDS file includes:\n\
+ -trajectory  SDDS file is from BGGEXP PARTICLE_OUTPUT_FILE feature, for a single\n\
+              reference particle.\n\
                Parameters:\n\
-                 pCentral          Reference momentum\n\
-                 NmagnetSegments   Number of flat steps of non-zero field\n\
-                 zref#             z location in gge file where reference\n\
+                 pCentral          Reference momentum beta*gamma \n\
+                 nMagnetSegments   Number of flat steps of non-zero field\n\
+                 zReference#       z location in file where reference\n\
                                    magnetic field values will be taken,\n\
-                                   1<= # <= NmagnetSegments\n\
-               Columns: z, x, xp where z is the same as that in the gge file\n\
+                                   1<= # <= nMagnetSegments\n\
+               Columns: z, x, px, and pz where z is the same as that in the gge file\n\
                        (usually obtained from elegant tracking)"
 
 int main(int argc, char **argv)
@@ -89,11 +91,11 @@ int main(int argc, char **argv)
   double *z=NULL, *ggeD=NULL, *ggeQ=NULL, *ggeS=NULL, *xp, *x;
   double *zMagnetRef;
 
-  double pCentral=DBL_MAX, Bscaling, bendAngle=DBL_MAX;
+  double pCentral=DBL_MAX, invRigidity, bendAngle=DBL_MAX;
 
   int Nsegments, Nedges, ip, Nz;
 
-  char *ggeFile=NULL, *output=NULL;
+  char *ggeFile=NULL, *output=NULL, *trajectoryFile = NULL;
   int mode=0;
 
   zMagnetRef = malloc(sizeof(double) * 10);
@@ -149,7 +151,9 @@ int main(int argc, char **argv)
         break;
         break;
       case SET_TRAJECTORY:
-
+        if (scanned[i_arg].n_items!=2)
+          bomb("invalid -trajectory syntax", USAGE);
+        trajectoryFile = scanned[i_arg].list[1];
         break;
       default:
         fprintf(stderr, "unknown option given\n%s\n", USAGE);
@@ -207,17 +211,33 @@ int main(int argc, char **argv)
     {
       Nsegments = 1;
       Nedges = Nsegments + 1;
+      zMagnetRef[0] -= z[0];
       for (ip = Nz - 1; ip >= 0; ip--)
         z[ip] -= z[0];
       /* add 0.01% of dz to eliminate rounding errors when converting to ints */
       //zMagnetRef[0] += 1.0e-4 * (z[1] - z[0]);
-      Bscaling = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
-      CCBENDfringeCalc(z, ggeD, ggeQ, ggeS, Nz, Bscaling, zMagnetRef[0], bendAngle, output);
+      invRigidity = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
+      CCBENDfringeCalc(z, ggeD, ggeQ, ggeS, Nz, invRigidity, zMagnetRef[0], bendAngle, output);
     }
 
   if (mode == 2)
     {
-      readInTrajectoryInput("refx-z-xp.traj", &x, &xp, &pCentral, &Nsegments, &zMagnetRef);
+      int64_t trajRows, i;
+      double dzTraj;
+      if (!trajectoryFile || !strlen(trajectoryFile))
+        bomb("trajectory file must be given in LGBEND mode", USAGE);
+
+      readInTrajectoryInput(trajectoryFile, &x, &xp, &dzTraj, &trajRows, &pCentral, &Nsegments, &zMagnetRef);
+      if (trajRows!=(Nz+1)) {
+        fprintf(stderr, "Error: %ld rows in file %s but %ld rows in file %s\n",
+                (long)trajRows, trajectoryFile, (long)Nz, ggeFile);
+        exit(1);
+      }
+      for (i=0; i<Nz-1; i++)
+        if (fabs(dzTraj-(z[i+1]-z[i]))>1e-6*dzTraj) {
+          fprintf(stderr, "dz values are mismatched between the GGE and trajectory files\n");
+          exit(1);
+        }
 
       Nedges = Nsegments + 1;
       printf("Nedges = %i\n", Nedges);
@@ -229,8 +249,8 @@ int main(int argc, char **argv)
       /* add 0.01% of dz to eliminate rounding errors when converting to ints */
       for (ip = 0; ip < Nedges - 1; ip++)
         zMagnetRef[ip] += 1.0e-4 * (z[1] - z[0]);
-      Bscaling = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
-      LGBENDfringeCalc(z, ggeD, ggeQ, ggeS, xp, x, Nz, Bscaling, zMagnetRef, Nedges, output);
+      invRigidity = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
+      LGBENDfringeCalc(z, ggeD, ggeQ, ggeS, xp, x, Nz, invRigidity, zMagnetRef, Nedges, output);
     }
 
   //fclose(outFP);
@@ -242,7 +262,7 @@ int main(int argc, char **argv)
 }
 
 void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, double *xp,
-                      double *x, int Nz, double Bscaling, double *zRef, int Nedges, char *output)
+                      double *x, int Nz, double invRigidity, double *zRef, int Nedges, char *output)
 {
   SDDS_DATASET SDDSout;
   double *stepFuncD, *stepFuncQ, *stepFuncS;
@@ -337,7 +357,7 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
       /* horizontal coordinate set by linear interpolation to edge */
       edgeX[edgeNum] = (1.0 - temp1) * x[(int)(zEdge[edgeNum] / dz)] + temp1 * x[(int)(zEdge[edgeNum] / dz) + 1];
 
-      bendRad[edgeNum] = Bscaling * maxD[edgeNum + 1];
+      bendRad[edgeNum] = invRigidity * maxD[edgeNum + 1];
       bendRad[edgeNum] = 1.0 / bendRad[edgeNum];
 
       /* find step function field that gives same integrated field */
@@ -356,9 +376,9 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
       for (ip = zEdgeInt[edgeNum] + 1; ip <= zMaxInt[edgeNum + 1]; ip++)
         stepFuncS[ip] = maxS[edgeNum + 1];
 
-      dipFringeInt = computeDipoleFringeInt(ggeD, stepFuncD, z, zEdge, zMaxInt, edgeNum, Bscaling, dz);
-      quadFringeInt = computeQuadrupoleFringeInt(ggeQ, stepFuncQ, z, zEdge, zMaxInt, edgeNum, Bscaling, dz);
-      sextFringeInt = computeSextupoleFringeInt(ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, Bscaling, dz);
+      dipFringeInt = computeDipoleFringeInt(ggeD, stepFuncD, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
+      quadFringeInt = computeQuadrupoleFringeInt(ggeQ, stepFuncQ, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
+      sextFringeInt = computeSextupoleFringeInt(ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
 
       if (!SDDS_StartPage(&SDDSout, 12) ||
           !SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "FringeSegmentNum", edgeNum + 1, NULL) ||
@@ -383,9 +403,9 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 9,  "ElementName", "LGBEND", "ElementParameter", "EDGE_X",     \
                               "ParameterValue", edgeX[edgeNum], NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 10, "ElementName", "LGBEND", "ElementParameter", "K1",     \
-                              "ParameterValue", Bscaling * maxQ[edgeNum + 1], NULL) ||
+                              "ParameterValue", invRigidity * maxQ[edgeNum + 1], NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 11, "ElementName", "LGBEND", "ElementParameter", "K2",     \
-                              "ParameterValue", Bscaling * (maxS[edgeNum + 1] - 0.25 * maxD[edgeNum + 1]), NULL) ||
+                              "ParameterValue", invRigidity * (maxS[edgeNum + 1] - 0.25 * maxD[edgeNum + 1]), NULL) ||
           !SDDS_WritePage(&SDDSout))
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -411,7 +431,7 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
   free(zMaxInt);
 }
 
-void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int Nz, double Bscaling, double zRef, double bendAngle, char *output)
+void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int Nz, double invRigidity, double zRef, double bendAngle, char *output)
 {
   SDDS_DATASET SDDSout;
   double *stepFuncD, *stepFuncQ, *stepFuncS;
@@ -499,15 +519,15 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
       for (ip = zEdgeInt[edgeNum] + 1; ip <= zMaxInt[edgeNum + 1]; ip++)
         stepFuncS[ip] = maxS[edgeNum + 1];
 
-      dipFringeInt = computeDipoleFringeInt(ggeD, stepFuncD, z, zEdge, zMaxInt, edgeNum, Bscaling, dz);
-      quadFringeInt = computeQuadrupoleFringeInt(ggeQ, stepFuncQ, z, zEdge, zMaxInt, edgeNum, Bscaling, dz);
-      sextFringeInt = computeSextupoleFringeInt(ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, Bscaling, dz);
+      dipFringeInt = computeDipoleFringeInt(ggeD, stepFuncD, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
+      quadFringeInt = computeQuadrupoleFringeInt(ggeQ, stepFuncQ, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
+      sextFringeInt = computeSextupoleFringeInt(ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
 
       // This needs to be looked at more...
       if(edgeNum == 1)
 	arcLength = 0.5*bendAngle*(zEdge[1]-zEdge[0])/sin(0.5*bendAngle);
       else
-	arcLength = bendAngle / (Bscaling * maxD[1]);
+	arcLength = bendAngle / (invRigidity * maxD[1]);
 
       if (!SDDS_StartPage(&SDDSout, 12) ||
           !SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "FringeSegmentNum", edgeNum + 1, NULL) ||
@@ -530,13 +550,13 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 8,  "ElementName", "CCBEND", "ElementParameter", "L",      \
                               "ParameterValue", arcLength, NULL) ||
           /* !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 8,  "ElementName", "CCBEND", "ElementParameter", "L", \
-	     "ParameterValue", bendAngle / (Bscaling * maxD[edgeNum + 1]), NULL) || */
+	     "ParameterValue", bendAngle / (invRigidity * maxD[edgeNum + 1]), NULL) || */
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 9,  "ElementName", "CCBEND", "ElementParameter", "ANGLE",  \
                               "ParameterValue", bendAngle, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 10,  "ElementName", "CCBEND", "ElementParameter", "K1",     \
-                              "ParameterValue", Bscaling * maxQ[edgeNum + 1], NULL) ||
+                              "ParameterValue", invRigidity * maxQ[edgeNum + 1], NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 11, "ElementName", "CCBEND", "ElementParameter", "K2",     \
-                              "ParameterValue", Bscaling * (maxS[edgeNum + 1] - 0.25 * maxD[edgeNum + 1]), NULL) ||
+                              "ParameterValue", invRigidity * (maxS[edgeNum + 1] - 0.25 * maxD[edgeNum + 1]), NULL) ||
           !SDDS_WritePage(&SDDSout))
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -701,12 +721,13 @@ void readInGGE(char *ggeFile, double **z, double **ggeD, double **ggeQ, double *
   return;
 }
 
-void readInTrajectoryInput(char *input, double **x, double **xp, double *pCentral, int *Nsegments, double **zMagnetRef)
+void readInTrajectoryInput(char *input, double **x, double **xp, double *dz, int64_t *rows,
+  double *pCentral, int *Nsegments, double **zMagnetRef)
 {
   SDDS_DATASET SDDSin;
-  int64_t rows;
+  int64_t i;
   int32_t segments;
-  double *xValues, *xpValues, value;
+  double *px, *pz, *z, dz0;
   char name[30];
   int ip;
 
@@ -720,19 +741,29 @@ void readInTrajectoryInput(char *input, double **x, double **xp, double *pCentra
       fprintf(stderr, "Unable to find floating-point parameter \"pCentral\" in file %s\n", input);
       exit(1);
     }
-  if (SDDS_CheckParameter(&SDDSin, "NmagnetSegments", NULL, SDDS_ANY_INTEGER_TYPE, stderr)!=SDDS_CHECK_OK)
+  if (SDDS_CheckParameter(&SDDSin, "nMagnetSegments", NULL, SDDS_ANY_INTEGER_TYPE, stderr)!=SDDS_CHECK_OK)
     {
-      fprintf(stderr, "Unable to find integer paramenter \"NmagnetSegments\" in file %s\n", input);
+      fprintf(stderr, "Unable to find integer paramenter \"nMagnetSegments\" in file %s\n", input);
       exit(1);
     }
-  if (SDDS_CheckColumn(&SDDSin, "x", NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
+  if (SDDS_CheckColumn(&SDDSin, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
     {
-      fprintf(stderr, "Unable to find floating-point column \"x\" in file %s\n", input);
+      fprintf(stderr, "Unable to find floating-point column \"x\" with units \"m\" in file %s\n", input);
       exit(1);
     }
-  if (SDDS_CheckColumn(&SDDSin, "xp", NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
+  if (SDDS_CheckColumn(&SDDSin, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
     {
-      fprintf(stderr, "Unable to find floating-point column \"xp\" in file %s\n", input);
+      fprintf(stderr, "Unable to find floating-point column \"x\" with units \"m\" in file %s\n", input);
+      exit(1);
+    }
+  if (SDDS_CheckColumn(&SDDSin, "px", NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
+    {
+      fprintf(stderr, "Unable to find floating-point column \"px\" in file %s\n", input);
+      exit(1);
+    }
+  if (SDDS_CheckColumn(&SDDSin, "pz", NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
+    {
+      fprintf(stderr, "Unable to find floating-point column \"pz\" in file %s\n", input);
       exit(1);
     }
   if (SDDS_ReadPage(&SDDSin) <= 0)
@@ -740,45 +771,63 @@ void readInTrajectoryInput(char *input, double **x, double **xp, double *pCentra
       fprintf(stderr, "Unable read the first page of %s\n", input);
       exit(1);
     }
-  if ((rows = SDDS_RowCount(&SDDSin))<=1)
+  if ((*rows = SDDS_RowCount(&SDDSin))<=1)
     {
       fprintf(stderr, "Too few rows in file %s\n", input);
       exit(1);
     }
-  if (!SDDS_GetParameterAsDouble(&SDDSin, "pCentral", &value))
+  if (!SDDS_GetParameterAsDouble(&SDDSin, "pCentral", pCentral))
     {
       fprintf(stderr, "Problem reading parameter pCentral from %s\n", input);
       exit(1);
     }
-  *pCentral = value;
-  if (!SDDS_GetParameterAsLong(&SDDSin, "NmagnetSegments", &segments))
+  if (!SDDS_GetParameterAsLong(&SDDSin, "nMagnetSegments", &segments))
     {
-      fprintf(stderr, "Problem reading parameter NmagnetSegments from %s\n", input);
+      fprintf(stderr, "Problem reading parameter nMagnetSegments from %s\n", input);
       exit(1);
     }
   *Nsegments = segments;
   for (ip = 1; ip <= *Nsegments; ip++)
     {
-      sprintf(name, "zref%d", ip);
-      if (!SDDS_GetParameterAsDouble(&SDDSin, name, &value))
+      sprintf(name, "zReference%d", ip);
+      if (!SDDS_GetParameterAsDouble(&SDDSin, name, &(*zMagnetRef)[ip - 1])) 
         {
           fprintf(stderr, "Problem reading parameter %s from %s\n", name, input);
           exit(1);
         }
-      (*zMagnetRef)[ip - 1] = value;
     }
-  if (!(xValues=SDDS_GetColumnInDoubles(&SDDSin, "x")))
+  if (!(*x=SDDS_GetColumnInDoubles(&SDDSin, "x")))
     {
       fprintf(stderr, "Problem reading column x from %s\n", input);
       exit(1);
     }
-  if (!(xpValues=SDDS_GetColumnInDoubles(&SDDSin, "xp")))
+  if (!(z=SDDS_GetColumnInDoubles(&SDDSin, "z")))
     {
-      fprintf(stderr, "Problem reading column xp from %s\n", input);
+      fprintf(stderr, "Problem reading column z from %s\n", input);
       exit(1);
     }
-  *x = xValues;
-  *xp = xpValues;
+  if ((*dz = (z[*rows-1] - z[0])/(*rows-1))<=0)
+    bomb("dz is non-positive in trajectory file", NULL);
+  for (i=0; i<(*rows-1); i++)
+    if (fabs((dz0 = z[i+1]-z[i])/(*dz)-1)>1e-6) 
+      bomb("fractional dz variation of more than 1e-6 seen in trajectory file", NULL);
+  if (!(px=SDDS_GetColumnInDoubles(&SDDSin, "px")))
+    {
+      fprintf(stderr, "Problem reading column px from %s\n", input);
+      exit(1);
+    }
+  if (!(pz=SDDS_GetColumnInDoubles(&SDDSin, "pz")))
+    {
+      fprintf(stderr, "Problem reading column pz from %s\n", input);
+      exit(1);
+    }
+  if (!(*xp = malloc(sizeof(**xp)*(*rows)))) {
+    fprintf(stderr, "Problem allocating memory for xp\n");
+  }
+  for (i=0; i<*rows; i++) 
+    (*xp)[i] = px[i]/pz[i];
+  free(px);
+  free(pz);
   if (!SDDS_Terminate(&SDDSin))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -873,7 +922,7 @@ void setStepFunction(double *heavside, double *maxD, int *zMaxInt, int *zEdgeInt
 
 /*** Calculates dipole fringe field contributions ***/
 FRINGE_INT3 computeDipoleFringeInt(double *ggeD, double *heavside, double *z, double *zEdge,
-                                   int *zMaxInt, int edgeNum, double Bscaling, double dz)
+                                   int *zMaxInt, int edgeNum, double invRigidity, double dz)
 {
   FRINGE_INT3 dipoleFringeInt;
   double intK0 = 0.0;
@@ -890,16 +939,16 @@ FRINGE_INT3 computeDipoleFringeInt(double *ggeD, double *heavside, double *z, do
       intK1 += 0.5 * ((ggeD[ip] - heavside[ip]) + (ggeD[ip + 1] - heavside[ip + 1]));
       intK2 += 0.5 * ((sumHeav - ggeD[ip]) * ggeD[ip] + (sumHeav - ggeD[ip + 1]) * ggeD[ip + 1] - 2.0 * prodHeav);
     }
-  dipoleFringeInt.int1 = dz * Bscaling * intK1;
-  dipoleFringeInt.int2 = dz * Bscaling * intK0;
-  dipoleFringeInt.int3 = dz * Bscaling * Bscaling * intK2;
+  dipoleFringeInt.int1 = dz * invRigidity * intK1;
+  dipoleFringeInt.int2 = dz * invRigidity * intK0;
+  dipoleFringeInt.int3 = dz * invRigidity * invRigidity * intK2;
 
   return (dipoleFringeInt);
 }
 
 /*** Calculates quadrupole fringe field contributions ***/
 FRINGE_INT3 computeQuadrupoleFringeInt(double *ggeQ, double *stepFuncQ, double *z, double *zEdge,
-                                       int *zMaxInt, int edgeNum, double Bscaling, double dz)
+                                       int *zMaxInt, int edgeNum, double invRigidity, double dz)
 {
   FRINGE_INT3 quadFringeInt;
   double intQ0 = 0.0;
@@ -916,16 +965,16 @@ FRINGE_INT3 computeQuadrupoleFringeInt(double *ggeQ, double *stepFuncQ, double *
       intQ2 += 0.5*( (z[ip]-zEdge[edgeNum])*(z[ip]-zEdge[edgeNum])*(ggeQ[ip] - stepFuncQ[ip])
 		     + (z[ip+1]-zEdge[edgeNum])*(z[ip+1]-zEdge[edgeNum])*(ggeQ[ip+1] - stepFuncQ[ip+1]) );
     }
-  quadFringeInt.int1 = dz * Bscaling * intQ0;
-  quadFringeInt.int2 = dz * Bscaling * intQ1;
-  quadFringeInt.int3 = dz * Bscaling * intQ2;
+  quadFringeInt.int1 = dz * invRigidity * intQ0;
+  quadFringeInt.int2 = dz * invRigidity * intQ1;
+  quadFringeInt.int3 = dz * invRigidity * intQ2;
 
   return (quadFringeInt);
 }
 
 /*** Calculates sextupole/curvature ringe field contributions ***/
 FRINGE_INT3 computeSextupoleFringeInt(double *ggeS, double *stepFuncS, double *z, double *zEdge,
-                                      int *zMaxInt, int edgeNum, double Bscaling, double dz)
+                                      int *zMaxInt, int edgeNum, double invRigidity, double dz)
 {
   FRINGE_INT3 sextFringeInt;
   double intK4 = 0.0;
@@ -940,9 +989,9 @@ FRINGE_INT3 computeSextupoleFringeInt(double *ggeS, double *stepFuncS, double *z
       intK5 += 0.5 * ((z[ip] - zEdge[edgeNum]) * (ggeS[ip] - stepFuncS[ip]) + (z[ip + 1] - zEdge[edgeNum]) * (ggeS[ip + 1] - stepFuncS[ip + 1]));
       intK6 += 0.5 * ((ggeS[ip] - stepFuncS[ip]) + (ggeS[ip + 1] - stepFuncS[ip + 1]));
     }
-  sextFringeInt.int1 = dz * Bscaling * intK6;
-  sextFringeInt.int2 = dz * Bscaling * intK5;
-  sextFringeInt.int3 = dz * Bscaling * intK4;
+  sextFringeInt.int1 = dz * invRigidity * intK6;
+  sextFringeInt.int2 = dz * invRigidity * intK5;
+  sextFringeInt.int3 = dz * invRigidity * intK4;
 
   return (sextFringeInt);
 }
