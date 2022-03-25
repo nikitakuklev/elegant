@@ -68,37 +68,43 @@ char *option[N_OPTIONS] = {
 
 #define USAGE "straightDipoleFringeCalc -gge=<filename> <outputfile>\n\
    -elementName=<string>\n\
-   { -ccbend \n\
-     -pCentral=<value> -bendAngle=<value> -zRefField=<value>\n\
-   | -lgbend \n\
-     -trajectory=<filename>\n\
-   }\n\
+   { -ccbend=pCentral=<value>,bendAngle=<radians>,zRefField=<meters>\n\
+      | -lgbend=trajectory=<filename>\n\
+    }\n\
 \n\
 -gge         Give generalized gradient expansion file, such as produced by computeRBGGE\n\
              or computeCBGGE.\n\
 <outputFile> Name of file to which to write fringe parameters in the format expected by\n\
              elegant's load_parameters command\n\
 -elementName Name of the element to which the data will be loaded in elegant.\n\
--ccbend      CCBEND mode. This requires three additioanl parameters.\n\
- -pCentral    Reference momentum\n\
- -bendAngle   Full bending angle in dipole\n\
- -zRefField   z location in gge file where reference magnetic field values will be taken\n\
--lgbend      LGBEND mode, which requires one additional parameter\n\
- -trajectory  SDDS file is from BGGEXP PARTICLE_OUTPUT_FILE feature, for a single\n\
-              reference particle.\n\
-               Parameters:\n\
-                 pCentral          Reference momentum beta*gamma \n\
-                 nMagnetSegments   Number of flat steps of non-zero field\n\
-                 zReference#       z location in file where reference\n\
-                                   magnetic field values will be taken,\n\
-                                   1<= # <= nMagnetSegments\n\
-               Columns: z, x, px, and pz where z is the same as that in the gge file\n\
-                       (usually obtained from elegant tracking)"
+-ccbend      CCBEND mode. This requires three additional parameters: pCentral, the\n\
+             reference momentum (beta*gamma); bendAngle (with sign), in radians;\n\
+             zRefField, the z location in gge file from which the reference magnetic field values\n\
+             will be taken (defaults to 0).\n\
+-lgbend      LGBEND mode, which requires one additional parameter: \n\
+             trajectory, name of an SDDS file from BGGEXP's PARTICLE_OUTPUT_FILE feature,\n\
+             from tracking a single reference particle. The file should have some additional\n\
+             parameters, which must be added by the user:\n\
+             nMagnetSegments   Number of flat steps of non-zero field\n\
+             zReference#       z location in file where reference\n\
+                               magnetic field values will be taken,\n\
+                               1<= # <= nMagnetSegments\n"
+
+#define PCENTRAL_GIVEN   0x001UL
+#define BENDANGLE_GIVEN  0x002UL
+#define ZREFFIELD_GIVEN  0x004UL
+#define TRAJECTORY_GIVEN 0x008UL
+
+#define ZREFMAX 1024
+
+#define CCBEND_MODE 1
+#define LGBEND_MODE 2
 
 int main(int argc, char **argv)
 {
   SCANNED_ARG *scanned;
   long i_arg;
+  unsigned long ccbendFlags, lgbendFlags;
 
   double *z=NULL, *ggeD=NULL, *ggeQ=NULL, *ggeS=NULL, *xp, *x;
   double *zMagnetRef;
@@ -110,8 +116,8 @@ int main(int argc, char **argv)
   char *ggeFile=NULL, *output=NULL, *trajectoryFile = NULL, *elementName = NULL;
   int mode=0;
 
-  zMagnetRef = malloc(sizeof(double) * 10);
-  for (ip = 0; ip < 10; ip++)
+  zMagnetRef = malloc(sizeof(double) * ZREFMAX);
+  for (ip = 0; ip < ZREFMAX; ip++)
     zMagnetRef[ip] = DBL_MAX;
 
   argc = scanargs(&scanned, argc, argv);
@@ -132,40 +138,31 @@ int main(int argc, char **argv)
         break;
       case SET_CCBEND:
         if (mode != 0)
-          {
-            fprintf(stderr, "too many modes given\n%s\n", USAGE);
-            return (1);
-          }
-        mode = 1;
+          bomb("too many modes given", USAGE);
+        mode = CCBEND_MODE;
+        scanned[i_arg].n_items --;
+        zMagnetRef[0] = 0;
+        if (!scanItemList(&ccbendFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
+                          "pcentral", SDDS_DOUBLE, &pCentral, 1, PCENTRAL_GIVEN,
+                          "bendangle", SDDS_DOUBLE, &bendAngle, 1, BENDANGLE_GIVEN,
+                          "zreffield", SDDS_DOUBLE, &(zMagnetRef[0]), 1, ZREFFIELD_GIVEN, 
+                          NULL))
+          bomb("invalid -ccbend syntax", USAGE);
+        if (!(ccbendFlags&PCENTRAL_GIVEN))
+          bomb("give pCentral value for -ccbend", USAGE);
+        if (!(ccbendFlags&BENDANGLE_GIVEN))
+          bomb("give bend angle value for -ccbend", USAGE);
         break;
       case SET_LGBEND:
         if (mode != 0)
-          {
-            fprintf(stderr, "too many modes given\n%s\n", USAGE);
-            return (1);
-          }
-        mode = 2;
-        break;
-      case SET_PCENTRAL:
-        if (scanned[i_arg].n_items!=2 ||
-            !sscanf(scanned[i_arg].list[1], "%lf", &pCentral))
-          bomb("invalid -pCentral syntax", USAGE);
-        break;
-      case SET_BENDANGLE:
-        if (scanned[i_arg].n_items!=2 ||
-            !sscanf(scanned[i_arg].list[1], "%lf", &bendAngle))
-          bomb("invalid -bendAngle syntax", USAGE);
-        break;
-      case SET_ZREFFIELD:
-        if (scanned[i_arg].n_items!=2 ||
-            !sscanf(scanned[i_arg].list[1], "%lf", &(zMagnetRef[0])))
-          bomb("invalid -zRefField syntax", USAGE);
-        break;
-        break;
-      case SET_TRAJECTORY:
-        if (scanned[i_arg].n_items!=2)
-          bomb("invalid -trajectory syntax", USAGE);
-        trajectoryFile = scanned[i_arg].list[1];
+          bomb("too many modes given", USAGE);
+        mode = LGBEND_MODE;
+        trajectoryFile = NULL;
+        if (!scanItemList(&lgbendFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
+                          "trajectory", SDDS_STRING, &trajectoryFile, TRAJECTORY_GIVEN,
+                          NULL) 
+            || !(lgbendFlags&TRAJECTORY_GIVEN) || !trajectoryFile || !strlen(trajectoryFile))
+          bomb("invalid -lgbend syntax", USAGE);
         break;
       case SET_ELEMENT_NAME:
         if (scanned[i_arg].n_items!=2)
@@ -190,88 +187,59 @@ int main(int argc, char **argv)
   if (elementName == NULL)
     bomb("Must give -elementName option", NULL);
   if (ggeFile == NULL)
-    {
-      fprintf(stderr, "Must include -gge option\n");
-      exit(1);      
-    }  
+    bomb("Must include -gge option", NULL);
   if (output == NULL)
-    {
-      fprintf(stderr, "No output file given\n");
-      exit(1);      
-    }  
+    bomb("No output file given", NULL);
   if (mode == 0)
-    {
-      fprintf(stderr, "Must include -ccbend or -lgbend option\n");
-      exit(1);      
-    }
-  if (mode == 1)
-    {
-      if (pCentral == DBL_MAX)
-        {
-          fprintf(stderr, "Missing -pCentral option\n");
-          exit(1);
-        }
-      if (bendAngle == DBL_MAX)
-        {
-          fprintf(stderr, "Missing -bendAngle option\n");
-          exit(1);
-        }
-       if (zMagnetRef[0] == DBL_MAX)
-        {
-          fprintf(stderr, "Missing -zRefField option\n");
-          exit(1);
-        }
-   }
+    bomb("Must give -ccbend or -lgbend option", NULL);
+
   /* get GGE input */
   readInGGE(ggeFile, &z, &ggeD, &ggeQ, &ggeS, &Nz);
   /****** Note that ggeD = -CnmS0[m=1]; ggeQ = -2*CnmS0[m=2]; ggeS = -6*CnmS0[m=3] + 0.25*CnmS2[m=1] ******/
 
-  if (mode == 1)
-    {
-      Nsegments = 1;
-      Nedges = Nsegments + 1;
-      zMagnetRef[0] -= z[0];
-      for (ip = Nz - 1; ip >= 0; ip--)
-        z[ip] -= z[0];
-      /* add 0.01% of dz to eliminate rounding errors when converting to ints */
-      //zMagnetRef[0] += 1.0e-4 * (z[1] - z[0]);
-      invRigidity = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
-      CCBENDfringeCalc(z, ggeD, ggeQ, ggeS, Nz, invRigidity, zMagnetRef[0], bendAngle, output, elementName);
+  if (mode==CCBEND_MODE) {
+    Nsegments = 1;
+    Nedges = Nsegments + 1;
+    zMagnetRef[0] -= z[0];
+    for (ip = Nz - 1; ip >= 0; ip--)
+      z[ip] -= z[0];
+    /* add 0.01% of dz to eliminate rounding errors when converting to ints */
+    //zMagnetRef[0] += 1.0e-4 * (z[1] - z[0]);
+    invRigidity = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
+    CCBENDfringeCalc(z, ggeD, ggeQ, ggeS, Nz, invRigidity, zMagnetRef[0], bendAngle, output, elementName);
+  } else if (mode==LGBEND_MODE) {
+    int64_t trajRows, i;
+    double dzTraj;
+    if (!trajectoryFile || !strlen(trajectoryFile))
+      bomb("trajectory file must be given in LGBEND mode", USAGE);
+    
+    readInTrajectoryInput(trajectoryFile, &x, &xp, &dzTraj, &trajRows, &pCentral, &Nsegments, &zMagnetRef);
+    if (trajRows!=(Nz+1)) {
+      fprintf(stderr, "Error: %ld rows in file %s but %ld rows in file %s\n",
+              (long)trajRows, trajectoryFile, (long)Nz, ggeFile);
+      exit(1);
     }
-
-  if (mode == 2)
-    {
-      int64_t trajRows, i;
-      double dzTraj;
-      if (!trajectoryFile || !strlen(trajectoryFile))
-        bomb("trajectory file must be given in LGBEND mode", USAGE);
-
-      readInTrajectoryInput(trajectoryFile, &x, &xp, &dzTraj, &trajRows, &pCentral, &Nsegments, &zMagnetRef);
-      if (trajRows!=(Nz+1)) {
-        fprintf(stderr, "Error: %ld rows in file %s but %ld rows in file %s\n",
-                (long)trajRows, trajectoryFile, (long)Nz, ggeFile);
+    for (i=0; i<Nz-1; i++)
+      if (fabs(dzTraj-(z[i+1]-z[i]))>1e-6*dzTraj) {
+        fprintf(stderr, "dz values are mismatched between the GGE and trajectory files\n");
         exit(1);
       }
-      for (i=0; i<Nz-1; i++)
-        if (fabs(dzTraj-(z[i+1]-z[i]))>1e-6*dzTraj) {
-          fprintf(stderr, "dz values are mismatched between the GGE and trajectory files\n");
-          exit(1);
-        }
-
-      Nedges = Nsegments + 1;
-      printf("Nedges = %i\n", Nedges);
-      /* Internally set z[0] = 0 to simplify calculations */
-      for (ip = 0; ip < Nedges - 1; ip++)
-        zMagnetRef[ip] -= z[0];
-      for (ip = Nz - 1; ip >= 0; ip--)
-        z[ip] -= z[0];
-      /* add 0.01% of dz to eliminate rounding errors when converting to ints */
-      for (ip = 0; ip < Nedges - 1; ip++)
-        zMagnetRef[ip] += 1.0e-4 * (z[1] - z[0]);
-      invRigidity = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
-      LGBENDfringeCalc(z, ggeD, ggeQ, ggeS, xp, x, Nz, invRigidity, zMagnetRef, Nedges, output);
-    }
-
+    
+    Nedges = Nsegments + 1;
+    printf("Nedges = %i\n", Nedges);
+    /* Internally set z[0] = 0 to simplify calculations */
+    for (ip = 0; ip < Nedges - 1; ip++)
+      zMagnetRef[ip] -= z[0];
+    for (ip = Nz - 1; ip >= 0; ip--)
+      z[ip] -= z[0];
+    /* add 0.01% of dz to eliminate rounding errors when converting to ints */
+    for (ip = 0; ip < Nedges - 1; ip++)
+      zMagnetRef[ip] += 1.0e-4 * (z[1] - z[0]);
+    invRigidity = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
+    LGBENDfringeCalc(z, ggeD, ggeQ, ggeS, xp, x, Nz, invRigidity, zMagnetRef, Nedges, output);
+  } else 
+    bomb("Something impossible happened.", NULL);
+  
   //fclose(outFP);
   free(z);
   free(ggeD);
