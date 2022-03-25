@@ -43,6 +43,9 @@ FRINGE_INT3 computeQuadrupoleFringeInt(double *ggeQ, double *heavside, double *z
 FRINGE_INT3 computeSextupoleFringeInt(double *ggeS, double *stepFuncS, double *z, double *zEdge,
                                       int *zMaxInt, int edgeNum, double invRigidity, double dz);
 
+FRINGE_INT3 computeDipSextFringeInt(double *ggeD, double *stepFuncD, double *ggeS, double *stepFuncS,
+                                    double *z, double *zEdge, int *zMaxInt, int edgeNum, double invRigidity, double dz);
+
 #define SET_GGE 0
 #define SET_CCBEND 1
 #define SET_LGBEND 2
@@ -438,7 +441,7 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
   double *zEdge, *maxD, *maxQ, *maxS;
 
   FRINGE_INT3 dipFringeInt, sextFringeInt;
-  FRINGE_INT3 quadFringeInt;
+  FRINGE_INT3 quadFringeInt, dipSextFringeInt;
 
   double arcLength, fringeInt, dz = z[1] - z[0];
 
@@ -523,6 +526,8 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
       quadFringeInt = computeQuadrupoleFringeInt(ggeQ, stepFuncQ, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
       sextFringeInt = computeSextupoleFringeInt(ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
 
+      dipSextFringeInt = computeDipSextFringeInt(ggeD, stepFuncD, ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
+
       // This needs to be looked at more...
       if(edgeNum == 1)
 	arcLength = 0.5*bendAngle*(zEdge[1]-zEdge[0])/sin(0.5*bendAngle);
@@ -541,12 +546,12 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
                               "ParameterValue", sextFringeInt.int2, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 4,  "ElementName", "CCBEND", "ElementParameter", "intK6",  \
                               "ParameterValue", sextFringeInt.int1, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 5,  "ElementName", "CCBEND", "ElementParameter", "intI0", \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 5,  "ElementName", "CCBEND", "ElementParameter", "intK7", \
+                              "ParameterValue", dipSextFringeInt.int1+dipSextFringeInt.int2, NULL) ||
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 6,  "ElementName", "CCBEND", "ElementParameter", "intI0", \
                               "ParameterValue", quadFringeInt.int1, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 6,  "ElementName", "CCBEND", "ElementParameter", "intI1", \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 7,  "ElementName", "CCBEND", "ElementParameter", "intI1", \
                               "ParameterValue", quadFringeInt.int2, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 7,  "ElementName", "CCBEND", "ElementParameter", "intI2", \
-                              "ParameterValue", quadFringeInt.int3, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 8,  "ElementName", "CCBEND", "ElementParameter", "L",      \
                               "ParameterValue", arcLength, NULL) ||
           /* !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 8,  "ElementName", "CCBEND", "ElementParameter", "L", \
@@ -994,4 +999,54 @@ FRINGE_INT3 computeSextupoleFringeInt(double *ggeS, double *stepFuncS, double *z
   sextFringeInt.int3 = dz * invRigidity * intK4;
 
   return (sextFringeInt);
+}
+
+FRINGE_INT3 computeDipSextFringeInt(double *ggeD, double *stepFuncD, double *ggeS, double *stepFuncS,
+                                    double *z, double *zEdge, int *zMaxInt, int edgeNum, double invRigidity, double dz)
+{
+  FRINGE_INT3 dipSextFringeInt;
+
+  double intI5 = 0.0;
+  double temp6a, temp6b, intI6 = 0.0;
+  double temp7, intI7 = 0.0;
+
+  char intFileName[20];
+  FILE *outFP;
+
+  int ip, id;
+
+  for(ip=zMaxInt[edgeNum]; ip<zMaxInt[edgeNum+1]; ip++) {
+    intI5 += 0.5*invRigidity*(z[ip]-zEdge[edgeNum])*(z[ip]-zEdge[edgeNum])*(ggeS[ip] - stepFuncS[ip])*ggeD[ip];
+
+    temp6a = 0.5*dz*invRigidity*(ggeD[ip] - stepFuncD[ip]);
+    temp6b = 0.5*dz*invRigidity*(ggeS[ip] - stepFuncS[ip]);
+
+    temp7 = 0.5*dz*invRigidity*(ggeS[ip] - stepFuncS[ip]);
+    for(id=zMaxInt[edgeNum]; id<ip-1; id++) {
+      intI6 += 0.5*(z[ip]-z[id])*( temp6a*(ggeS[id] - stepFuncS[id]) + temp6b*(ggeD[id] - stepFuncD[id]) );
+      intI6 += 0.5*(z[ip]-z[id+1])*( temp6a*(ggeS[id+1] - stepFuncS[id+1]) + temp6b*(ggeD[id+1] - stepFuncD[id+1]) );
+
+      intI7 += 0.5*temp7*(z[ip]-z[id])*ggeD[id];
+      intI7 += 0.5*temp7*(z[ip]-z[id+1])*ggeD[id+1];
+
+    }
+    intI5 += 0.5*invRigidity*(z[ip+1]-zEdge[edgeNum])*(z[ip+1]-zEdge[edgeNum])*(ggeS[ip+1] - stepFuncS[ip+1])*ggeD[ip+1];
+
+    temp6a = 0.5*dz*invRigidity*(ggeD[ip+1] - stepFuncD[ip+1]);
+    temp6b = 0.5*dz*invRigidity*(ggeS[ip+1] - stepFuncS[ip+1]);
+
+    temp7 = 0.5*dz*invRigidity*(ggeS[ip+1] - stepFuncS[ip+1]);
+    for(id=zMaxInt[edgeNum]; id<ip; id++) {
+      intI6 += 0.5*(z[ip+1]-z[id])*( temp6a*(ggeS[id] - stepFuncS[id]) + temp6b*(ggeD[id] - stepFuncD[id]) );
+      intI6 += 0.5*(z[ip+1]-z[id+1])*( temp6a*(ggeS[id+1] - stepFuncS[id+1]) + temp6b*(ggeD[id+1] - stepFuncD[id+1]) );
+
+      intI7 += 0.5*temp7*(z[ip+1]-z[id])*ggeD[id];
+      intI7 += 0.5*temp7*(z[ip+1]-z[id+1])*ggeD[id+1];
+    }
+  }
+  dipSextFringeInt.int1 = 0.5*dz*invRigidity*intI5;
+  dipSextFringeInt.int2 = 0.5*dz*invRigidity*intI6;
+  dipSextFringeInt.int3 = dz*invRigidity*intI7;
+
+  return(dipSextFringeInt);
 }
