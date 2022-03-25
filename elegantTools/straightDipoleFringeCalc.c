@@ -1060,9 +1060,6 @@ FRINGE_INT3 computeDipSextFringeInt(double *ggeD, double *stepFuncD, double *gge
   double temp6a, temp6b, intI6 = 0.0;
   double temp7, intI7 = 0.0;
 
-  char intFileName[20];
-  FILE *outFP;
-
   int ip, id;
 
   for(ip=zMaxInt[edgeNum]; ip<zMaxInt[edgeNum+1]; ip++) {
