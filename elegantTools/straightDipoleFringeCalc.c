@@ -26,7 +26,7 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
                       double *x, int Nz, double invRigidity, double *zRef, int Nedges, char *output);
 
 void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS,
-                      int Nz, double invRigidity, double zRef, double bendAngle, char *output);
+                      int Nz, double invRigidity, double zRef, double bendAngle, char *output, char *elementName);
 
 //int refineNextMaximum(double *ggeD, int *zMaxInt, int edgeNum);
 
@@ -53,7 +53,8 @@ FRINGE_INT3 computeDipSextFringeInt(double *ggeD, double *stepFuncD, double *gge
 #define SET_BENDANGLE 4
 #define SET_ZREFFIELD 5
 #define SET_TRAJECTORY 6
-#define N_OPTIONS 7
+#define SET_ELEMENT_NAME 7
+#define N_OPTIONS 8
 char *option[N_OPTIONS] = {
   "gge",
   "ccbend",
@@ -61,20 +62,28 @@ char *option[N_OPTIONS] = {
   "pCentral",
   "bendAngle",
   "zRefField",
-  "trajectory"
+  "trajectory",
+  "elementName",
 };
 
 #define USAGE "straightDipoleFringeCalc -gge=<filename> <outputfile>\n\
-   -ccbend \n\
+   -elementName=<string>\n\
+   { -ccbend \n\
      -pCentral=<value> -bendAngle=<value> -zRefField=<value>\n\
-   -lgbend \n\
+   | -lgbend \n\
      -trajectory=<filename>\n\
+   }\n\
 \n\
--ccbend      CCBEND mode\n\
+-gge         Give generalized gradient expansion file, such as produced by computeRBGGE\n\
+             or computeCBGGE.\n\
+<outputFile> Name of file to which to write fringe parameters in the format expected by\n\
+             elegant's load_parameters command\n\
+-elementName Name of the element to which the data will be loaded in elegant.\n\
+-ccbend      CCBEND mode. This requires three additioanl parameters.\n\
  -pCentral    Reference momentum\n\
  -bendAngle   Full bending angle in dipole\n\
- -zRefField   Z location in gge file where reference magnetic field values will be taken\n\
--lgbend      LGBEND mode\n\
+ -zRefField   z location in gge file where reference magnetic field values will be taken\n\
+-lgbend      LGBEND mode, which requires one additional parameter\n\
  -trajectory  SDDS file is from BGGEXP PARTICLE_OUTPUT_FILE feature, for a single\n\
               reference particle.\n\
                Parameters:\n\
@@ -98,7 +107,7 @@ int main(int argc, char **argv)
 
   int Nsegments, Nedges, ip, Nz;
 
-  char *ggeFile=NULL, *output=NULL, *trajectoryFile = NULL;
+  char *ggeFile=NULL, *output=NULL, *trajectoryFile = NULL, *elementName = NULL;
   int mode=0;
 
   zMagnetRef = malloc(sizeof(double) * 10);
@@ -158,6 +167,11 @@ int main(int argc, char **argv)
           bomb("invalid -trajectory syntax", USAGE);
         trajectoryFile = scanned[i_arg].list[1];
         break;
+      case SET_ELEMENT_NAME:
+        if (scanned[i_arg].n_items!=2)
+          bomb("invalid -elementName syntax", USAGE);
+        elementName = scanned[i_arg].list[1];
+        break;
       default:
         fprintf(stderr, "unknown option given\n%s\n", USAGE);
         return (1);
@@ -173,6 +187,8 @@ int main(int argc, char **argv)
         }
     }
   }
+  if (elementName == NULL)
+    bomb("Must give -elementName option", NULL);
   if (ggeFile == NULL)
     {
       fprintf(stderr, "Must include -gge option\n");
@@ -220,7 +236,7 @@ int main(int argc, char **argv)
       /* add 0.01% of dz to eliminate rounding errors when converting to ints */
       //zMagnetRef[0] += 1.0e-4 * (z[1] - z[0]);
       invRigidity = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
-      CCBENDfringeCalc(z, ggeD, ggeQ, ggeS, Nz, invRigidity, zMagnetRef[0], bendAngle, output);
+      CCBENDfringeCalc(z, ggeD, ggeQ, ggeS, Nz, invRigidity, zMagnetRef[0], bendAngle, output, elementName);
     }
 
   if (mode == 2)
@@ -434,7 +450,8 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
   free(zMaxInt);
 }
 
-void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int Nz, double invRigidity, double zRef, double bendAngle, char *output)
+void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int Nz, double invRigidity, 
+                      double zRef, double bendAngle, char *output, char *elementName)
 {
   SDDS_DATASET SDDSout;
   double *stepFuncD, *stepFuncQ, *stepFuncS;
@@ -446,7 +463,7 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
   double arcLength, fringeInt, dz = z[1] - z[0];
 
   int *zEdgeInt, *zMaxInt;
-  int ip, edgeNum, Nedges = 2;
+  int ip, edgeNum, Nedges = 2, iRow;
 
   /* allocate memory */
   stepFuncD = calloc(Nz, sizeof(double));
@@ -489,18 +506,20 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
-  if (!SDDS_DefineSimpleParameter(&SDDSout, "FringeSegmentNum", NULL, SDDS_LONG) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "ElementName", NULL, SDDS_STRING) ||
+  if (!SDDS_DefineSimpleColumn(&SDDSout, "ElementName", NULL, SDDS_STRING) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "ElementType", NULL, SDDS_STRING) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "ElementParameter", NULL, SDDS_STRING) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "ParameterValue", NULL, SDDS_DOUBLE) ||
-      !SDDS_WriteLayout(&SDDSout))
+      !SDDS_WriteLayout(&SDDSout) ||
+      !SDDS_StartPage(&SDDSout, 12*Nedges) ) 
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
 
-  for (edgeNum = 0; edgeNum < Nedges; edgeNum++)
+  for (edgeNum = iRow = 0; edgeNum < Nedges; edgeNum++)
     {
+      char nameBuffer[256];
       /* find hard edge according to integrated Bfield */
       fringeInt = integrateTrap(ggeD, zMaxInt[edgeNum], zMaxInt[edgeNum + 1], dz);
       zEdge[edgeNum] = (maxD[edgeNum + 1] * (z[zMaxInt[edgeNum + 1]] - z[zMaxInt[edgeNum]]) - fringeInt) / (maxD[edgeNum + 1] - maxD[edgeNum]);
@@ -534,41 +553,67 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
       else
 	arcLength = bendAngle / (invRigidity * maxD[1]);
 
-      if (!SDDS_StartPage(&SDDSout, 12) ||
-          !SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "FringeSegmentNum", edgeNum + 1, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 0,  "ElementName", "CCBEND", "ElementParameter", "intK0",  \
+      if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                             "ElementName", elementName, "ElementType", "CCBEND", 
+                             "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK0", edgeNum+1)?nameBuffer:"?",
                               "ParameterValue", dipFringeInt.int2, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 1,  "ElementName", "CCBEND", "ElementParameter", "intK2",  \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                             "ElementName", elementName, "ElementType", "CCBEND", 
+                             "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK2", edgeNum+1)?nameBuffer:"?",
                               "ParameterValue", dipFringeInt.int3, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 2,  "ElementName", "CCBEND", "ElementParameter", "intK4",  \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                             "ElementName", elementName, "ElementType", "CCBEND", 
+                             "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK4", edgeNum+1)?nameBuffer:"?",
                               "ParameterValue", sextFringeInt.int3, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 3,  "ElementName", "CCBEND", "ElementParameter", "intK5",  \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                             "ElementName", elementName, "ElementType", "CCBEND", 
+                             "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK5", edgeNum+1)?nameBuffer:"?",
                               "ParameterValue", sextFringeInt.int2, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 4,  "ElementName", "CCBEND", "ElementParameter", "intK6",  \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                             "ElementName", elementName, "ElementType", "CCBEND", 
+                             "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK6", edgeNum+1)?nameBuffer:"?",
                               "ParameterValue", sextFringeInt.int1, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 5,  "ElementName", "CCBEND", "ElementParameter", "intK7", \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                             "ElementName", elementName, "ElementType", "CCBEND", 
+                             "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK7", edgeNum+1)?nameBuffer:"?",
                               "ParameterValue", dipSextFringeInt.int1+dipSextFringeInt.int2, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 6,  "ElementName", "CCBEND", "ElementParameter", "intI0", \
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                             "ElementName", elementName, "ElementType", "CCBEND", 
+                             "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dI0", edgeNum+1)?nameBuffer:"?",
                               "ParameterValue", quadFringeInt.int1, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 7,  "ElementName", "CCBEND", "ElementParameter", "intI1", \
-                              "ParameterValue", quadFringeInt.int2, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 8,  "ElementName", "CCBEND", "ElementParameter", "L",      \
-                              "ParameterValue", arcLength, NULL) ||
-          /* !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 8,  "ElementName", "CCBEND", "ElementParameter", "L", \
-	     "ParameterValue", bendAngle / (invRigidity * maxD[edgeNum + 1]), NULL) || */
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 9,  "ElementName", "CCBEND", "ElementParameter", "ANGLE",  \
-                              "ParameterValue", bendAngle, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 10,  "ElementName", "CCBEND", "ElementParameter", "K1",     \
-                              "ParameterValue", invRigidity * maxQ[edgeNum + 1], NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 11, "ElementName", "CCBEND", "ElementParameter", "K2",     \
-                              "ParameterValue", invRigidity * (maxS[edgeNum + 1] - 0.25 * maxD[edgeNum + 1]), NULL) ||
-          !SDDS_WritePage(&SDDSout))
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                             "ElementName", elementName, "ElementType", "CCBEND", 
+                             "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dI1", edgeNum+1)?nameBuffer:"?",
+                             "ParameterValue", quadFringeInt.int2, NULL))
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exit(1);
         }
+      if (edgeNum==0) 
+        {
+          if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                                 "ElementName", elementName, "ElementType", "CCBEND", 
+                                 "ElementParameter", "L", 
+                                 "ParameterValue", arcLength, NULL) ||
+              !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                                 "ElementName", elementName, "ElementType", "CCBEND", 
+                                 "ElementParameter", "ANGLE",
+                                 "ParameterValue", bendAngle, NULL) ||
+              !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                                 "ElementName", elementName, "ElementType", "CCBEND", 
+                                 "ElementParameter", "K1", 
+                                 "ParameterValue", invRigidity * maxQ[edgeNum + 1], NULL) ||
+              !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                                 "ElementName", elementName, "ElementType", "CCBEND", 
+                                 "ElementParameter", "K2", 
+                                 "ParameterValue", invRigidity * (maxS[edgeNum + 1] - 0.25 * maxD[edgeNum + 1]), NULL))
+            {
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              exit(1);
+            }
+        }
     }
-  if (!SDDS_Terminate(&SDDSout))
+  if (!SDDS_WritePage(&SDDSout) || !SDDS_Terminate(&SDDSout))
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
