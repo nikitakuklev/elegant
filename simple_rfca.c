@@ -94,9 +94,11 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
 #endif
   */
 
-  if (mode&FID_MODE_LIGHT) 
+  if (mode&FID_MODE_LIGHT)  {
+    printf("Performing \"light\" mode fiducialization with s0=%21.15e, sOffset=%21.15e\n",
+	   s0, sOffset);
     tFid =  (s0+sOffset)/c_mks;
-  else if (mode&FID_MODE_FIRST) {
+  } else if (mode&FID_MODE_FIRST) {
 #if (!USE_MPI) 
     i = np;
     if (np) {

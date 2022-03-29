@@ -197,7 +197,7 @@ long do_tracking(
   long nMaximum=0;  /* maximum number of particles seen */
   /* long show_dE; */
   long maxampOpenCode=0, maxampExponent=0, maxampYExponent=0;
-  double dgamma, dP[3], z, z_recirc, last_z;
+  double dgamma, dP[3], z, z_recirc, last_z, z_travel;
   long i, j, i_traj=0, i_sums, i_pass, isConcat, i_elem;
   long i_sums_recirc, saveISR=0;
   long watch_pt_seen, feedbackDriverSeen;
@@ -374,7 +374,7 @@ long do_tracking(
 #endif
   
   eptr = beamline->elem;
-  z = z_recirc = last_z = beamline->elem->beg_pos;
+  z = z_travel = z_recirc = last_z = beamline->elem->beg_pos;
 
   i_sums = i_sums_recirc = 0;
   x_max = y_max = 0;
@@ -625,7 +625,7 @@ long do_tracking(
 
     if (run->wrap_around) {
       i_sums = i_sums_recirc;  /* ==0 for i_pass==0 */
-      z = z_recirc;            /* ditto, for forward-tracking at least */
+      z = z_travel = z_recirc;            /* ditto, for forward-tracking at least */
       last_z = z;
     }
     if (run->final_pass && sums_vs_z && n_z_points)
@@ -800,7 +800,7 @@ long do_tracking(
         eptr = eptr->succ;
         i_elem++;
       }
-      z = startElem->end_pos;
+      z = z_travel = startElem->end_pos;
       startElem = NULL; 
     }
 
@@ -1072,10 +1072,13 @@ long do_tracking(
       name = eptr->name;
 #endif
       last_z = z;
-      if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem)
+      if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem) {
         z += ((DRIFT*)eptr->p_elem)->length;
-      else
+	z_travel += ((DRIFT*)eptr->p_elem)->length;
+      } else {
         z += eptr->end_pos - eptr->beg_pos;
+        z_travel += eptr->end_pos - eptr->beg_pos;
+      }
       fflush(stdout);
       /* fill a structure that can be used to pass to other routines 
        * information on the tracking context 
@@ -1552,14 +1555,14 @@ long do_tracking(
 	      remove_correlations(coord, (REMCOR*)eptr->p_elem, nToTrack);
 	      break;
 	    case T_RFCA:
-	      nLeft = simple_rf_cavity(coord, nToTrack, (RFCA*)eptr->p_elem, accepted, P_central, z);
+	      nLeft = simple_rf_cavity(coord, nToTrack, (RFCA*)eptr->p_elem, accepted, P_central, z_travel);
 	      break;
 	    case T_RFCW:
-	      nLeft = track_through_rfcw(coord, nToTrack, (RFCW*)eptr->p_elem, accepted, P_central, z,
+	      nLeft = track_through_rfcw(coord, nToTrack, (RFCW*)eptr->p_elem, accepted, P_central, z_travel,
 					 run, i_pass, charge);
 	      break;
 	    case T_MODRF:
-	      modulated_rf_cavity(coord, nToTrack, (MODRF*)eptr->p_elem, *P_central, z);
+	      modulated_rf_cavity(coord, nToTrack, (MODRF*)eptr->p_elem, *P_central, z_travel);
 	      break;
 	    case T_WATCH:
 #ifdef  USE_MPE
@@ -2060,7 +2063,7 @@ long do_tracking(
 	      break;
 	    case T_RAMPRF:
 	      ramped_rf_cavity(coord, nToTrack, (RAMPRF*)eptr->p_elem, *P_central, beamline->revolution_length,
-			       z, i_pass);
+			       z_travel, i_pass);
 	      break;
 	    case T_RAMPP:
 	      ramp_momentum(coord, nToTrack, (RAMPP*)eptr->p_elem, P_central, i_pass);
@@ -2098,13 +2101,13 @@ long do_tracking(
 			      nOriginal, *P_central,
 			      beamline->revolution_length);
 	      track_through_rfmode(coord, nToTrack, (RFMODE*)eptr->p_elem, *P_central,
-				   eptr->name, z, i_pass, n_passes,
+				   eptr->name, z_travel, i_pass, n_passes,
 				   charge);
 	      break;
 	    case T_FRFMODE:
 	      frfmode = (FRFMODE*)eptr->p_elem;
 	      if (!frfmode->initialized)
-		set_up_frfmode(frfmode, eptr->name, z, n_passes, run, 
+		set_up_frfmode(frfmode, eptr->name, z_travel, n_passes, run, 
 			       nOriginal, *P_central,
 			       beamline->revolution_length);
 	      track_through_frfmode(coord, nToTrack, frfmode, *P_central,
@@ -2114,9 +2117,9 @@ long do_tracking(
 	    case T_TRFMODE:
 	      trfmode = (TRFMODE*)eptr->p_elem;
 	      if (!trfmode->initialized)
-		set_up_trfmode(trfmode, eptr->name, z, n_passes, run, nOriginal);
+		set_up_trfmode(trfmode, eptr->name, z_travel, n_passes, run, nOriginal);
 	      track_through_trfmode(coord, nToTrack, (TRFMODE*)eptr->p_elem, *P_central,
-				    eptr->name, z, i_pass, n_passes,
+				    eptr->name, z_travel, i_pass, n_passes,
 				    charge);
 	      break;
 	    case T_FTRFMODE:
