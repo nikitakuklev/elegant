@@ -158,7 +158,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
 #if (!USE_MPI)
       if (n_binned!=np) {
         char warningBuffer[1024];
-        snprintf(warningBuffer, 1024, "Only %ld of %ld particles where binned. Consider setting N_BINS=0 to invoke autoscaling.", 
+        snprintf(warningBuffer, 1024, "Only %ld of %ld particles were binned. Consider setting N_BINS=0 to invoke autoscaling.", 
                  n_binned, np);
         printWarningForTracking("Some particles not binned in TRWAKE.", warningBuffer);
       }
