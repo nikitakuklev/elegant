@@ -96,34 +96,22 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
           ("Problem with Y data (%le) from page %ld of obstruction input file %s: not close to multiple of declared spacing %le\n", 
            Y, code, input, obstructionDataSets.YSpacing);
       }
-      if (nY==0) {
+      for (iY=0; iY<nY; iY++)
+        if (Y==obstructionDataSets.YValue[iY]) 
+          break;
+      if (iY==nY) {
         obstructionDataSets.YValue = SDDS_Realloc(obstructionDataSets.YValue,
                                                   (nY+1)*sizeof(double));
         obstructionDataSets.nDataSets = SDDS_Realloc(obstructionDataSets.nDataSets,
                                                      (nY+1)*sizeof(long));
         obstructionDataSets.data = SDDS_Realloc(obstructionDataSets.data, (nY+1)*sizeof(*(obstructionDataSets.data)));
-        iY = 0;
-        nY = 1;
+        nY++;
         obstructionDataSets.YValue[iY] = Y;
         obstructionDataSets.nDataSets[iY] = 0;
         obstructionDataSets.data[iY] = NULL;
-      } else {
-        for (iY=0; iY<nY; iY++)
-          if (Y==obstructionDataSets.YValue[iY]) 
-            break;
-        if (iY==nY) {
-          obstructionDataSets.YValue = SDDS_Realloc(obstructionDataSets.YValue,
-                                                    (nY+1)*sizeof(double));
-          obstructionDataSets.nDataSets = SDDS_Realloc(obstructionDataSets.nDataSets,
-                                                       (nY+1)*sizeof(long));
-          obstructionDataSets.data = SDDS_Realloc(obstructionDataSets.data, (nY+1)*sizeof(*(obstructionDataSets.data)));
-          nY++;
-          obstructionDataSets.YValue[iY] = Y;
-          obstructionDataSets.nDataSets[iY] = 0;
-          obstructionDataSets.data[iY] = NULL;
-        }
       }
     } else {
+      /* No y spacing */
       if (nY==0) {
         obstructionDataSets.YValue = SDDS_Realloc(obstructionDataSets.YValue,
                                                   (nY+1)*sizeof(double));
@@ -171,11 +159,12 @@ void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run)
   printf("%ld datasets read from obstruction file %s\n", nTotal, input);
   obstructionDataSets.nY = nY;
   if (obstructionDataSets.YSpacing>0) {
-    printf("Found %ld y planes\n", nY);
     obstructionDataSets.iY0 = -1;
     find_min_max(&obstructionDataSets.YMin, &obstructionDataSets.YMax, obstructionDataSets.YValue, nY);
+    printf("Found %ld y planes with Y:[%le, %le]\n", nY, obstructionDataSets.YMin, obstructionDataSets.YMax);
     for (iY=0; iY<nY; iY++) {
-      printf("Plane %ld: Y = %le\n", iY, obstructionDataSets.YValue[iY]);
+      printf("Plane %ld: Y = %le, %ld contours\n", iY, obstructionDataSets.YValue[iY], 
+             obstructionDataSets.nDataSets[iY]);
       if (obstructionDataSets.YValue[iY]==0)
         obstructionDataSets.iY0 = iY;
     }
