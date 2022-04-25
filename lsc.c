@@ -455,7 +455,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
     char warningText[1024];
     snprintf(warningText, 1024, 
              "Only %ld of %ld particles were binned, which shouldn't happen.", n_binned, np);
-    printWarningForTracking("Some particles were not binned in LSCDRIFT.",
+    printWarningForTracking("Some particles were not binned in LSCKICK.",
                             warningText);
   }
 
@@ -491,7 +491,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
       rms_emittance(part, 0, 2, np, &S11, NULL, &S33, NULL, NULL);
 #endif
   if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
-    printf("Error: beam radius is zero in LSCDRIFT\n");
+    printf("Error: beam radius is zero in LSCKICK\n");
     exitElegant(1);
   }
   /* - compute kSC */
