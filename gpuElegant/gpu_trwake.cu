@@ -223,9 +223,10 @@ extern "C"
 #if (!USE_MPI)
             if (n_binned != np)
               {
-                printf("warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
-                printf("consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
-                fflush(stdout);
+                char warningBuffer[1024];
+                snprintf(warningBuffer, 1024, "Only %ld of %ld particles were binned. Consider setting N_BINS=0 to invoke autoscaling.", 
+                         n_binned, np);
+                printWarningForTracking("Some particles not binned in TRWAKE.", warningBuffer);
               }
 #else
             if (notSinglePart)
@@ -240,10 +241,10 @@ extern "C"
                       {
                         if (myid == 1)
                           {
-                            /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */
-                            printf("warning: Not all of %ld particles were binned (WAKE)\n", np);
-                            printf("consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
-                            fflush(stdout);
+                            dup2(fd, fileno(stdout));
+                            printWarningForTracking("Some particles not binned in TRWAKE.",
+                                                    "Consider setting N_BINS=0 to invoke autoscaling.");
+                            close(fd);
                           }
                       }
                   }
@@ -252,9 +253,10 @@ extern "C"
               {
                 if (n_binned != np)
                   {
-                    printf("warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
-                    printf("consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
-                    fflush(stdout);
+                    dup2(fd, fileno(stdout));
+                    printWarningForTracking("Some particles not binned in TRWAKE.",
+                                            "Consider setting N_BINS=0 to invoke autoscaling.");
+                    close(fd);
                   }
               }
 #endif

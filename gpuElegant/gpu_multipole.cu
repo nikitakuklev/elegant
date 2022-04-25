@@ -483,7 +483,6 @@ extern "C"
     KSEXT *ksext = NULL;
     KQUSE *kquse = NULL;
     KOCT *koct = NULL;
-    static long sextWarning = 0, quadWarning = 0, octWarning = 0, quseWarning = 0;
     double lEffective = -1, lEnd = 0;
     short doEndDrift = 0, malignMethod;
     unsigned long d_multipoleKicksDone;
@@ -550,11 +549,8 @@ extern "C"
         if (kquad->length < 1e-6 && (kquad->isr || kquad->synch_rad))
           {
             rad_coef = isr_coef = 0; /* avoid unphysical results */
-            if (!quadWarning)
-              {
-                printf("**** Warning: one or more quadrupoles with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
-                quadWarning = 1;
-              }
+            printWarningForTracking("Quadrupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.",
+                                    NULL);
           }
         if (!kquad->multipolesInitialized)
           {
@@ -630,11 +626,8 @@ extern "C"
         if (ksext->length < 1e-6 && (ksext->isr || ksext->synch_rad))
           {
             rad_coef = isr_coef = 0; /* avoid unphysical results */
-            if (!sextWarning)
-              {
-                printf("**** Warning: one or more sextupoles with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
-                sextWarning = 1;
-              }
+            printWarningForTracking("Sextupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.",
+                                    NULL);
           }
         if (!ksext->multipolesInitialized)
           {
@@ -697,11 +690,8 @@ extern "C"
         if (koct->length < 1e-6 && (koct->isr || koct->synch_rad))
           {
             rad_coef = isr_coef = 0; /* avoid unphysical results */
-            if (!octWarning)
-              {
-                printf("**** Warning: one or more octupoles with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
-                octWarning = 1;
-              }
+            printWarningForTracking("Octupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.", 
+                                    NULL);
           }
         if (!koct->multipolesInitialized)
           {
@@ -753,11 +743,7 @@ extern "C"
         if (kquse->length < 1e-6 && (kquse->isr || kquse->synch_rad))
           {
             rad_coef = isr_coef = 0; /* avoid unphysical results */
-            if (!quseWarning)
-              {
-                printf("**** Warning: one or more KQUSE's with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
-                quseWarning = 1;
-              }
+            printWarningForTracking("KQUSE with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.", NULL);
           }
         KnL[1] = kquse->k2 * kquse->length * (1 + kquse->fse2);
         order[1] = 2;

@@ -130,9 +130,11 @@ extern "C"
           {
             if (n_binned != np)
               {
-                printf("GPU: Warning: only %ld of %u particles were binned (LSCDRIFT)!  Note that tmin %g, tmax %g\n", n_binned, np, tmin, tmax);
-                printf("GPU: This shouldn't happen.\n");
-                fflush(stdout);
+                char warningText[1024];
+                snprintf(warningText, 1024, 
+                         "Only %ld of %ld particles were binned. This shouldn't happen.  Note that tmin %g, tmax %g", n_binned, np, tmin, tmax);
+                printWarningForTracking("Some particles were not binned in LSCDRIFT.",
+                                        warningText);
               }
           }
 #if USE_MPI
@@ -148,8 +150,7 @@ extern "C"
                 if (myid == 1)
                   {
                     /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant to avoid communications */
-                    printf("GPU: warning: Not all of %ld particles were binned (LSCDRIFT)\n", np);
-                    fflush(stdout);
+                    printWarningForTracking("Some particles were not binned in LSCDRIFT.", "This shouldn't happen.");
                   }
               }
           }
@@ -466,9 +467,11 @@ extern "C"
 #endif
     if (n_binned != np && !USE_MPI)
       { /* This will not be checked in Pelegant to avoid communications */
-        printf("GPU: Warning: only %ld of %u particles were binned (LSCKICK)!\n", n_binned, np);
-        printf("GPU: This shouldn't happen (LSCKICK).\n");
-        fflush(stdout);
+        char warningText[1024];
+        snprintf(warningText, 1024, 
+                 "Only %ld of %ld particles were binned, which shouldn't happen.", n_binned, np);
+        printWarningForTracking("Some particles were not binned in LSCKICK.",
+                                warningText);
       }
 
     /* Compute kSC and length to drift */

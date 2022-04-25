@@ -291,7 +291,7 @@ class gpu_track_through_csbend_kernel
 
     double rho, s, x, xp, y, yp, dp, dp0, delta_xp;
     double Fx, Fy, dp_prime;
-    double Qi[6], Qf[6];
+    double Qi[MAX_PROPERTIES_PER_PARTICLE], Qf[MAX_PROPERTIES_PER_PARTICLE];
 
     coord[4] += dzi * sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
     coord[0] = coord[0] + dxi + dzi * coord[1];
@@ -587,7 +587,6 @@ extern "C"
     double dxi, dyi, dzi;
     double dxf, dyf, dzf;
     double e1_kick_limit, e2_kick_limit;
-    static long largeRhoWarning = 0;
     MULT_APERTURE_DATA apertureData;
 
     struct GPUBASE *gpuBase = getGpuBase();
@@ -792,27 +791,8 @@ extern "C"
           {
             ELEMENT_LIST elem;
             KQUAD kquad;
-            static short largeRhoWarningK1 = 0;
-            if (!largeRhoWarningK1)
-              {
-#if USE_MPI
-                if (myid == 1)
-                  dup2(fd, fileno(stdout)); /* Let the first slave processor write the output */
-#endif
-                printf("Warning: One or more CSBENDs have radius > 1e6 but non-zero K1.  Treated as KQUAD.\n");
-                printf("*** All higher multipoles are ignored for these elements!\n");
-                largeRhoWarningK1 = 1;
-#if USE_MPI
-                if (myid == 1)
-                  {
-#  if defined(_WIN32)
-                    freopen("NUL", "w", stdout);
-#  else
-                    freopen("/dev/null", "w", stdout);
-#  endif
-                  }
-#endif
-              }
+            printWarningForTracking("CSBEND has radius > 1e6 but non-zero K1.",
+                                    "Treated as KQUAD; higher multipoles ignored.");
             memset(&elem, 0, sizeof(elem));
             memset(&kquad, 0, sizeof(kquad));
             elem.p_elem = (char *)&kquad;
@@ -832,26 +812,8 @@ extern "C"
           }
         else
           {
-            if (!largeRhoWarning)
-              {
-#if USE_MPI
-                if (myid == 1)
-                  dup2(fd, fileno(stdout)); /* Let the first slave processor write the output */
-#endif
-                printf("Warning: One or more CSBENDs have radius > 1e6.  Treated as EDRIFT.\n");
-                printf("*** All higher multipoles are ignored for these elements!\n");
-#if USE_MPI
-                if (myid == 1)
-                  {
-#  if defined(_WIN32)
-                    freopen("NUL", "w", stdout);
-#  else
-                    freopen("/dev/null", "w", stdout);
-#  endif
-                  }
-#endif
-                largeRhoWarning = 1;
-              }
+            printWarningForTracking("CSBEND has radius > 1e6 with zero K1.",
+                                    "Treated as EDRIFT; higher multipoles are ignored.");
             gpu_exactDrift(n_part, csbend->length);
             return n_part;
           }
@@ -860,10 +822,9 @@ extern "C"
     fse = csbend->fse + csbend->fseDipole + (csbend->fseCorrection ? csbend->fseCorrectionValue : 0);
     h = 1 / rho0;
     n = -csbend->b[1] / h;
-    if (fse > -1)
-      rho_actual = 1 / ((1 + fse) * h);
-    else
-      rho_actual = 1e16 / h;
+    if (fabs(fse+1)<1e-12)
+      fse = -1+1e-12;
+    rho_actual = 1/((1+fse)*h);
 
     e1_kick_limit = csbend->edge_kick_limit[csbend->e1Index];
     e2_kick_limit = csbend->edge_kick_limit[csbend->e2Index];
@@ -1964,7 +1925,7 @@ extern "C"
     double dxf, dyf, dzf;
     double macroParticleCharge, CSRConstant, gamma2, gamma3;
     long iBin, iBinBehind;
-    long csrInhibit = 0, largeRhoWarning = 0;
+    long csrInhibit = 0;
     double derbenevRatio = 0;
     long n_partMoreThanOne = 0;
     TRACKING_CONTEXT tContext;
@@ -2142,11 +2103,8 @@ extern "C"
 
     if (rho0 > 1e6)
       {
-        if (!largeRhoWarning)
-          {
-            printf("Warning: One or more CSRCSBENDs have radius > 1e6.  Treated as drift.\n");
-            largeRhoWarning = 1;
-          }
+        printWarningForTracking("CSRCSBEND has radius > 1e6 but non-zero K1.",
+                                "Treated as EDRIFT.");
         gpu_exactDrift(n_part, csbend->length);
         return n_part;
       }
@@ -2477,15 +2435,14 @@ extern "C"
                 derbenevRatio = (Sx / Sz) / pow(rho0 / Sz, 1. / 3.);
                 if (derbenevRatio > 0.1)
                   {
-                    if (code == DERBENEV_CRITERION_EVAL)
-                      fprintf(stderr, "Warning: Using 1-D CSR formalism but Derbenev criterion not satisfied (%le > 0.1).\n",
-                              derbenevRatio);
-                    else
-                      {
-                        csrInhibit = 1;
-                        fprintf(stderr, "Warning: Derbenev criterion not satisfied (%le > 0.1)---not applying CSR\n",
-                                derbenevRatio);
-                      }
+                    if (code==DERBENEV_CRITERION_EVAL) {
+                      printWarningForTracking("Using 1-D CSR formalism but Derbenev criterion not satisfied (ratio > 0.1).",
+                                              "CSR applied regardless per setting of DERBENEV_CRITERION_MODE.");
+                    } else {
+                      csrInhibit = 1;
+                      printWarningForTracking("Using 1-D CSR formalism but Derbenev criterion not satisfied (ratio > 0.1).",
+                                              "CSR not applied per setting of DERBENEV_CRITERION_MODE.");
+                    }
                   }
                 break;
               default:
@@ -2566,12 +2523,11 @@ extern "C"
                                                 csbend->lowFrequencyCutoff0, csbend->lowFrequencyCutoff1,
                                                 csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1,
                                                 csbend->clipNegativeBins);
-                        if (nz && negativeWarningsLeft)
+                        if (nz)
                           {
-                            printf("Warning: low pass filter resulted in negative values in %ld bins\n", nz);
-                            if (--negativeWarningsLeft == 0)
-                              printf("         Further warnings will be suppressed for this run.\n");
-                            fflush(stdout);
+                            char warningText[1024];
+                            snprintf(warningText, 1024, "Negative values in %ld bins.", nz);
+                            printWarningForTracking("Low pass filter resulted in negative values.", warningText);
                           }
                       }
                     if (csbend->SGHalfWidth > 0)
@@ -3284,7 +3240,6 @@ extern "C"
       static char *wavelengthMode[3] = {(char *)"sigmaz", (char *)"bunchlength", (char *)"peak-to-peak"};
       static char *bunchlengthMode[3] = {(char *)"rms", (char *)"68-percentile", (char *)"90-percentile"};
       unsigned long mode;
-      static long warned = 0, incrementWarningsLeft = 100;
       long nBins1;
       TRACKING_CONTEXT tContext;
 #if USE_MPI
@@ -3347,13 +3302,8 @@ extern "C"
             (csrDrift->useStupakov ? CSRDRIFT_STUPAKOV : 0);
           while (zStart + 1.e-12 < csrWake.zLast)
             {
-              if (incrementWarningsLeft)
-                {
-                  printf("*** Warning: incrementing zStart by revolution length for CSRDRIFT (%s #%ld).\n",
-                         tContext.elementName, tContext.elementOccurrence);
-                  printf("    If you are not simulating a ring, this could be a problem!\n");
-                  incrementWarningsLeft--;
-                }
+              printWarningForTracking("Incrementing zStart by revolution length for CSRDRIFT", 
+                                      "If you are not simulating a ring, this could be a problem!");
               zStart += revolutionLength;
             }
           if (bitsSet(mode) > 1)
@@ -3371,12 +3321,8 @@ extern "C"
           if (mode & CSRDRIFT_STUPAKOV)
             return gpu_track_through_driftCSR_Stupakov(np, csrDrift, Po, accepted, zStart, charge, rootname);
 
-          if (!warned)
-            {
-              printf("Warning: USE_STUPAKOV=1 is recommended for CSRDRIFT elements.\n");
-              printf("This is the most physical model available at this time in elegant.\n");
-              warned = 1;
-            }
+          printWarningForTracking("USE_STUPAKOV=1 is recommended for CSRDRIFT elements.",
+                                  "This is the most physical model available in elegant.");
 
           dct = csrWake.dctBin;
           if (csrDrift->dz > 0)
@@ -3559,9 +3505,10 @@ extern "C"
 #endif
                   if (!code)
                     {
-                      fprintf(stderr, "Warning: interpolation failure for Saldin eq. 54\n");
-                      fprintf(stderr, "zTravel = %le,  csrWake available up to %le\n",
-                              zTravel, csrWake.xSaldin[csrWake.nSaldin - 1]);
+                      char warningText[1024];
+                      snprintf(warningText, 1024, "zTravel = %le,  csrWake available up to %le\n",
+                               zTravel, csrWake.xSaldin[csrWake.nSaldin-1]);
+                      printWarningForTracking("Interpolation failure for Saldin eq. 54.", warningText);
                       factor = 0;
                     }
                 }
@@ -3826,12 +3773,12 @@ extern "C"
                                                 csrWake.lowFrequencyCutoff0, csrWake.lowFrequencyCutoff1,
                                                 csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1,
                                                 csrWake.clipNegativeBins);
-                        if (nz && negativeWarningsLeft)
+                        if (nz)
                           {
-                            printf("Warning: low pass filter resulted in negative values in %ld bins\n",
-                                   nz);
-                            if (--negativeWarningsLeft == 0)
-                              printf("         Further warnings will be suppressed for this run.\n");
+                            char warningText[1024];
+                            snprintf(warningText, 1024, "Negative values in %ld bins.", nz);
+                            printWarningForTracking("Low pass filter resulted in negative values.",
+                                                    warningText);
                             fflush(stdout);
                           }
                       }

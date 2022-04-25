@@ -57,9 +57,11 @@ extern "C"
     unsigned int particlePitch = getGpuBase()->gpu_array_pitch;
     getParticleFromGPU(coord, 0, 5, d_particles, particlePitch);
 
-    if (mode & FID_MODE_LIGHT)
+    if (mode & FID_MODE_LIGHT) {
+      printf("Performing \"light\" mode fiducialization with s0=%21.15e, sOffset=%21.15e\n",
+             s0, sOffset);
       tFid = (s0 + sOffset) / c_mks;
-    else if (mode & FID_MODE_FIRST)
+    } else if (mode & FID_MODE_FIRST)
       {
 #if (!USE_MPI)
         if (np)
@@ -532,7 +534,6 @@ extern "C"
     double P, phase, length, dtLight, volt, To;
     double coord[6], t, t0, omega, beta_i, tau, tAve = 0, dgammaAve = 0;
     long useSRSModel = 0;
-    static long been_warned = 0;
     double dgammaOverGammaAve = 0;
     long dgammaOverGammaNp = 0;
     long lockPhase = 0;
@@ -566,27 +567,10 @@ extern "C"
           }
       }
 
-    if (!been_warned)
-      {
-        if (rfca->freq < 1e3 && rfca->freq)
-          {
-            printf("\7\7\7warning: your RFCA frequency is less than 1kHz--this may be an error\n");
-            fflush(stdout);
-            been_warned = 1;
-          }
-        if (fabs(rfca->volt) < 100 && rfca->volt)
-          {
-            printf("\7\7\7warning: your RFCA voltage is less than 100V--this may be an error\n");
-            fflush(stdout);
-            been_warned = 1;
-          }
-        if (been_warned)
-          {
-            printf("units of parameters for RFCA are as follows:\n");
-            fflush(stdout);
-            print_dictionary_entry(stdout, T_RFCA, 0, 0);
-          }
-      }
+    if (rfca->freq<1e3 && rfca->freq)
+      printWarningForTracking("RFCA frequency is less than 1kHz.", "This may be an error. Consult manual for units.");
+    if (fabs(rfca->volt)<100 && rfca->volt)
+      printWarningForTracking("RFCA voltage is less than 100V.", "This may be an error. Consult manual for units.");
     if (isSlave)
       {
         if (!d_particles)
@@ -1132,13 +1116,11 @@ extern "C"
                               double *P_central, double zEnd, RUN *run, long i_pass, CHARGE *charge)
   {
 
-    static long warned = 0;
     if (rfcw->cellLength <= 0)
       bombElegant("invalid cell length for RFCW", NULL);
-    if (rfcw->length == 0 && !warned)
+    if (rfcw->length == 0)
       {
-        printf("** Warning: length of RFCW element is zero. Wakefields will scale to 0!\n");
-        warned = 1;
+        printWarningForTracking("RFCW element has zero length, so wakefields will scale to 0.", NULL);
       }
     /* set up the RFCA, TRWAKE, and WAKE structures */
     rfcw->rfca.length = rfcw->length;
