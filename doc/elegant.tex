@@ -2716,14 +2716,14 @@ $\epsilon_n = \epsilon\langle\beta\gamma\rangle$, where $\epsilon$ is the geomet
 If this variable is set to a non-zero value, \verb|elegant| instead uses a slower but more accurate method, namely, using the momentum coordinates.
 \cite{Floettmann-PRSTAB6-034202}. The results will show up in the \verb|sigma| and \verb|final| output files, if these are requested in the \verb|run_setup| command.
 \item \verb|mpi_io_force_file_sync|  --- If non-zero, \verb|Pelegant| will perform a file synchronization after writing each row of
-  an SDDS file. This can {\em significantly} impact performance, but can solve problems on some filesystems that result in corrupted files
+  an SDDS file. This can {\em significantly} degrade performance, but can solve problems on some filesystems that result in corrupted files
   or files in which zeros appear in place of the expected data.
 \item \verb|mpi_io_read_buffer_size|  --- If non-zero, \verb|Pelegant| will change the read buffer size to the given value. 
   May allow improving read performance, but should be used with care.
 \item \verb|mpi_io_write_buffer_size|  --- If non-zero, \verb|Pelegant| will change the write buffer size to the given value. 
   May allow improving write performance, but should be used with care.
 \item \verb|usleep_mpi_io_kludge|  --- If non-zero, \verb|Pelegant| will sleep for the given number of microseconds after
-  writing each row of an SDDS file. This can impact performance, but can solve problems on some filesystems that result in corrupted files
+  writing each row of an SDDS file. This can degrade performance, but can solve problems on some filesystems that result in corrupted files
   or files in which zeros appear in place of the expected data.
   It may give better performance than setting \verb|mpi_io_force_file_sync=1|.
   A value of 100 is suggested as a starting point, but this will be highly system-dependent.
@@ -2765,7 +2765,7 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
 	\item Any number of these commands may be given.
 	\item This command can provide improved {\em parallel} performance in cases where large numbers
           of non-transforming elements (e.g., \verb|MARK| or \verb|MONI| elements) exist in a beamline.
-          (These elements can impact performance because \verb|elegant| checks particles against aperture
+          (The presence of such elements can reduce performance because \verb|elegant| checks particles against aperture
           limits after {\em every} element.)
           Using the \verb|show_element_timing| flag in \verb|run_setup| can help determine if this
           will help.
