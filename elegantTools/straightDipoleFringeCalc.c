@@ -1,6 +1,9 @@
+
 #include "mdb.h"
 #include "SDDS.h"
 #include "scan.h"
+#include "fftpackC.h"
+//#include "gsl/gsl_sf_bessel.h"
 
 #define C_LIGHT_MKS 299792458.
 #define E_CHARGE_PC 1.602176487e-7
@@ -18,7 +21,28 @@ typedef struct FRINGE_INT3
   double int3;
 } FRINGE_INT3;
 
+typedef struct GGE_m_ell
+{
+  double *grad;
+} GGE_m_ell;
+
+typedef struct COMPLEX
+{
+  double re;
+  double im;
+} COMPLEX;
+
 void readInGGE(char *ggeFile, double **z, double **ggeD, double **ggeQ, double **ggeS, int *Nz);
+void readInAndMoveGGE(char *ggeFile, double **z, double **ggeD, double **ggeQ, double **ggeS, int *Nz, double xEntry);
+void computeBOnCylinder(double xCenter, double radius, double **Bnorm, int *m,
+                        GGE_m_ell **gges, int mMax, int l_2Max, int Nz, int Nangle);
+void computeRequiredGGEs(double *dipole, double *DdipoleD2, double *quadrupole, double *sextupole,
+			 double **Bnorm, double rho, double dz, int Nangle, int Nz);
+void FFT(COMPLEX *field, int32_t isign, int32_t npts);
+double Imp(double kR, long m);
+double BesIn(double x, long order);
+double BesselFuncIn(double x, double order);
+
 void readInTrajectoryInput(char *input, double **x, double **xp, double *dz, int64_t *rows,
                            double *pCentral, int *Nsegments, double **zMagnetRef);
 
@@ -33,6 +57,8 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS,
 double integrateTrap(double *integrand, int startPt, int endPt, double dz);
 
 void setStepFunction(double *heavside, double *maxD, int *zMaxInt, int *zEdgeInt, int edgeNum, double checkInt, double dz);
+
+double intPower(double x, int n);
 
 FRINGE_INT3 computeDipoleFringeInt(double *ggeD, double *heavside, double *z, double *zEdge,
                                    int *zMaxInt, int edgeNum, double invRigidity, double dz);
@@ -68,7 +94,7 @@ char *option[N_OPTIONS] = {
 
 #define USAGE "straightDipoleFringeCalc -gge=<filename> <outputfile>\n\
    -elementName=<string>\n\
-   { -ccbend=pCentral=<value>,bendAngle=<radians>,zRefField=<meters>\n\
+   { -ccbend=pCentral=<value>,bendAngle=<radians>,xEntry=<meters>,zRefField=<meters>\n\
       | -lgbend=trajectory=<filename>\n\
     }\n\
 \n\
@@ -77,10 +103,12 @@ char *option[N_OPTIONS] = {
 <outputFile> Name of file to which to write fringe parameters in the format expected by\n\
              elegant's load_parameters command\n\
 -elementName Name of the element to which the data will be loaded in elegant.\n\
--ccbend      CCBEND mode. This requires three additional parameters: pCentral, the\n\
+-ccbend      CCBEND mode. This requires four additional parameters: pCentral, the\n\
              reference momentum (beta*gamma); bendAngle (with sign), in radians;\n\
-             zRefField, the z location in gge file from which the reference magnetic field values\n\
-             will be taken (defaults to 0).\n\
+             xEntry, the x coordinate of the hard edge magnet entry (and exit), along which\n\
+             the fringe integrals will be calculated (defaults to 0); zRefField, the z location\n\
+             in gge file from which the reference magnetic field values will be taken\n\
+             (defaults to 0).\n\
 -lgbend      LGBEND mode, which requires one additional parameter: \n\
              trajectory, name of an SDDS file from BGGEXP's PARTICLE_OUTPUT_FILE feature,\n\
              from tracking a single reference particle. The file should have some additional\n\
@@ -94,6 +122,7 @@ char *option[N_OPTIONS] = {
 #define BENDANGLE_GIVEN  0x002UL
 #define ZREFFIELD_GIVEN  0x004UL
 #define TRAJECTORY_GIVEN 0x008UL
+#define XENTRY_GIVEN     0x010UL
 
 #define ZREFMAX 1024
 
@@ -109,12 +138,15 @@ int main(int argc, char **argv)
   double *z=NULL, *ggeD=NULL, *ggeQ=NULL, *ggeS=NULL, *xp, *x;
   double *zMagnetRef;
 
-  double pCentral=DBL_MAX, invRigidity, bendAngle=DBL_MAX;
+  double pCentral=DBL_MAX, invRigidity, bendAngle=DBL_MAX, xEntry = DBL_MAX;
+  // 4.501990914651359e-05 - 1.922200520833333e-05; // should default to zero and be read in below
 
   int Nsegments, Nedges, ip, Nz;
 
   char *ggeFile=NULL, *output=NULL, *trajectoryFile = NULL, *elementName = NULL;
   int mode=0;
+
+  SDDS_RegisterProgramName(argv[0]);
 
   zMagnetRef = malloc(sizeof(double) * ZREFMAX);
   for (ip = 0; ip < ZREFMAX; ip++)
@@ -146,6 +178,7 @@ int main(int argc, char **argv)
                           "pcentral", SDDS_DOUBLE, &pCentral, 1, PCENTRAL_GIVEN,
                           "bendangle", SDDS_DOUBLE, &bendAngle, 1, BENDANGLE_GIVEN,
                           "zreffield", SDDS_DOUBLE, &(zMagnetRef[0]), 1, ZREFFIELD_GIVEN, 
+                          "xentry", SDDS_DOUBLE, &(xEntry), 1, XENTRY_GIVEN,
                           NULL))
           bomb("invalid -ccbend syntax", USAGE);
         if (!(ccbendFlags&PCENTRAL_GIVEN))
@@ -193,11 +226,14 @@ int main(int argc, char **argv)
   if (mode == 0)
     bomb("Must give -ccbend or -lgbend option", NULL);
 
-  /* get GGE input */
-  readInGGE(ggeFile, &z, &ggeD, &ggeQ, &ggeS, &Nz);
-  /****** Note that ggeD = -CnmS0[m=1]; ggeQ = -2*CnmS0[m=2]; ggeS = -6*CnmS0[m=3] + 0.25*CnmS2[m=1] ******/
 
   if (mode==CCBEND_MODE) {
+    /* get GGE input */
+    if(fabs(xEntry)>0.0) // read in and compute GGEs about new x=0
+      readInAndMoveGGE(ggeFile, &z, &ggeD, &ggeQ, &ggeS, &Nz, xEntry);
+    else
+      readInGGE(ggeFile, &z, &ggeD, &ggeQ, &ggeS, &Nz);
+    /****** Note that ggeD = -CnmS0[m=1]; ggeQ = -2*CnmS0[m=2]; ggeS = -6*CnmS0[m=3] + 0.25*CnmS2[m=1] ******/
     Nsegments = 1;
     Nedges = Nsegments + 1;
     zMagnetRef[0] -= z[0];
@@ -210,6 +246,9 @@ int main(int argc, char **argv)
   } else if (mode==LGBEND_MODE) {
     int64_t trajRows, i;
     double dzTraj;
+    
+    readInGGE(ggeFile, &z, &ggeD, &ggeQ, &ggeS, &Nz);
+
     if (!trajectoryFile || !strlen(trajectoryFile))
       bomb("trajectory file must be given in LGBEND mode", USAGE);
     
@@ -370,29 +409,29 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
       if (!SDDS_StartPage(&SDDSout, 12) ||
           !SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "FringeSegmentNum", edgeNum + 1, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 0,  "ElementName", "LGBEND", "ElementParameter", "intK0",  \
-                              "ParameterValue", dipFringeInt.int2, NULL) ||
+                             "ParameterValue", dipFringeInt.int2, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 1,  "ElementName", "LGBEND", "ElementParameter", "intK2",  \
-                              "ParameterValue", dipFringeInt.int3, NULL) ||
+                             "ParameterValue", dipFringeInt.int3, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 2,  "ElementName", "LGBEND", "ElementParameter", "intK4",  \
-                              "ParameterValue", sextFringeInt.int3, NULL) ||
+                             "ParameterValue", sextFringeInt.int3, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 3,  "ElementName", "LGBEND", "ElementParameter", "intK5",  \
-                              "ParameterValue", sextFringeInt.int2, NULL) ||
+                             "ParameterValue", sextFringeInt.int2, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 4,  "ElementName", "LGBEND", "ElementParameter", "intK6",  \
-                              "ParameterValue", sextFringeInt.int1, NULL) ||
+                             "ParameterValue", sextFringeInt.int1, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 5,  "ElementName", "LGBEND", "ElementParameter", "intKIK", \
-                              "ParameterValue", quadFringeInt.int1, NULL) ||
+                             "ParameterValue", quadFringeInt.int1, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 6,  "ElementName", "LGBEND", "ElementParameter", "intKII", \
-                              "ParameterValue", quadFringeInt.int2, NULL) ||
+                             "ParameterValue", quadFringeInt.int2, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 7,  "ElementName", "LGBEND", "ElementParameter", "LONGIT_L",      \
-                              "ParameterValue", fabs(fringeInt / maxD[edgeNum + 1]), NULL) ||
+                             "ParameterValue", fabs(fringeInt / maxD[edgeNum + 1]), NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 8,  "ElementName", "LGBEND", "ElementParameter", "EDGE_ANGLE",  \
-                              "ParameterValue", edgeAngle[edgeNum], NULL) ||
+                             "ParameterValue", edgeAngle[edgeNum], NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 9,  "ElementName", "LGBEND", "ElementParameter", "EDGE_X",     \
-                              "ParameterValue", edgeX[edgeNum], NULL) ||
+                             "ParameterValue", edgeX[edgeNum], NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 10, "ElementName", "LGBEND", "ElementParameter", "K1",     \
-                              "ParameterValue", invRigidity * maxQ[edgeNum + 1], NULL) ||
+                             "ParameterValue", invRigidity * maxQ[edgeNum + 1], NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 11, "ElementName", "LGBEND", "ElementParameter", "K2",     \
-                              "ParameterValue", invRigidity * (maxS[edgeNum + 1] - 0.25 * maxD[edgeNum + 1]), NULL) ||
+                             "ParameterValue", invRigidity * (maxS[edgeNum + 1] - 0.25 * maxD[edgeNum + 1]), NULL) ||
           !SDDS_WritePage(&SDDSout))
         {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -552,31 +591,31 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
       if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
                              "ElementName", elementName, "ElementType", "CCBEND", 
                              "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK0", edgeNum+1)?nameBuffer:"?",
-                              "ParameterValue", dipFringeInt.int2, NULL) ||
+                             "ParameterValue", dipFringeInt.int2, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
                              "ElementName", elementName, "ElementType", "CCBEND", 
                              "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK2", edgeNum+1)?nameBuffer:"?",
-                              "ParameterValue", dipFringeInt.int3, NULL) ||
+                             "ParameterValue", dipFringeInt.int3, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
                              "ElementName", elementName, "ElementType", "CCBEND", 
                              "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK4", edgeNum+1)?nameBuffer:"?",
-                              "ParameterValue", sextFringeInt.int3, NULL) ||
+                             "ParameterValue", sextFringeInt.int3, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
                              "ElementName", elementName, "ElementType", "CCBEND", 
                              "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK5", edgeNum+1)?nameBuffer:"?",
-                              "ParameterValue", sextFringeInt.int2, NULL) ||
+                             "ParameterValue", sextFringeInt.int2, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
                              "ElementName", elementName, "ElementType", "CCBEND", 
                              "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK6", edgeNum+1)?nameBuffer:"?",
-                              "ParameterValue", sextFringeInt.int1, NULL) ||
+                             "ParameterValue", sextFringeInt.int1, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
                              "ElementName", elementName, "ElementType", "CCBEND", 
                              "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dK7", edgeNum+1)?nameBuffer:"?",
-                              "ParameterValue", dipSextFringeInt.int1+dipSextFringeInt.int2, NULL) ||
+                             "ParameterValue", dipSextFringeInt.int1+dipSextFringeInt.int2, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
                              "ElementName", elementName, "ElementType", "CCBEND", 
                              "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dI0", edgeNum+1)?nameBuffer:"?",
-                              "ParameterValue", quadFringeInt.int1, NULL) ||
+                             "ParameterValue", quadFringeInt.int1, NULL) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
                              "ElementName", elementName, "ElementType", "CCBEND", 
                              "ElementParameter", snprintf(nameBuffer, 256, "FRINGE%dI1", edgeNum+1)?nameBuffer:"?",
@@ -591,6 +630,9 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
+  printf("  zEdge1 = %23.15e, zEdge2 = %23.15e\n", zEdge[0], zEdge[1]);
+  printf("Difference zEdge2 - zEdge2 = %23.15e\n", zEdge[1]-zEdge[0]);
+  printf("                Arc Length = %23.15e\n", 0.5*bendAngle*(zEdge[1]-zEdge[0])/sin(0.5*bendAngle));
   free(stepFuncD);
   free(stepFuncQ);
   free(stepFuncS);
@@ -745,7 +787,7 @@ void readInGGE(char *ggeFile, double **z, double **ggeD, double **ggeQ, double *
 }
 
 void readInTrajectoryInput(char *input, double **x, double **xp, double *dz, int64_t *rows,
-  double *pCentral, int *Nsegments, double **zMagnetRef)
+                           double *pCentral, int *Nsegments, double **zMagnetRef)
 {
   SDDS_DATASET SDDSin;
   int64_t i;
@@ -859,8 +901,8 @@ void readInTrajectoryInput(char *input, double **x, double **xp, double *dz, int
 }
 
 /*
-int refineNextMaximum(double *ggeD, int *zMaxInt, int edgeNum)
-{
+  int refineNextMaximum(double *ggeD, int *zMaxInt, int edgeNum)
+  {
   double max;
   int search, searchRet, count = 0;
 
@@ -868,21 +910,21 @@ int refineNextMaximum(double *ggeD, int *zMaxInt, int edgeNum)
   max = ggeD[search];
   search++;
   do
-    {
-      if (fabs(ggeD[search]) > max)
-        {
-          max = fabs(ggeD[search]);
-          searchRet = search;
-          count = 0;
-        }
-      else
-        count++; // prevent local mimima due to noise 
-      search++;
-    }
+  {
+  if (fabs(ggeD[search]) > max)
+  {
+  max = fabs(ggeD[search]);
+  searchRet = search;
+  count = 0;
+  }
+  else
+  count++; // prevent local mimima due to noise 
+  search++;
+  }
   while (count < 10);
 
   return (searchRet);
-}
+  }
 */
 
 /*** integrates integrand using the trapezoidal rule from startPt to endPt ***/
@@ -1064,4 +1106,420 @@ FRINGE_INT3 computeDipSextFringeInt(double *ggeD, double *stepFuncD, double *gge
   dipSextFringeInt.int3 = dz*invRigidity*intI7;
 
   return(dipSextFringeInt);
+}
+
+
+void readInAndMoveGGE(char *ggeFile, double **z, double **ggeD, double **ggeQ, double **ggeS, int *Nz, double xEntry)
+{
+  SDDS_TABLE SDDS_inputGGE;
+
+  GGE_m_ell **gges, **deriv_gges;
+  double *zValues;
+
+  int *m;
+
+  char ggeName[10];
+  int readCode;
+  int il, l_2Max = 0;
+  int im, mMax = 0;
+  int iz, rows = 0, lastRows = 0;
+
+  if (!SDDS_InitializeInput(&SDDS_inputGGE, ggeFile)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+
+  l_2Max=0;
+  sprintf(ggeName, "CnmS%i", 2*l_2Max);
+  while (SDDS_GetColumnIndex(&SDDS_inputGGE, ggeName)>=0) {
+    l_2Max++;
+    sprintf(ggeName, "CnmS%i", 2*l_2Max);
+  }
+  l_2Max -= 1;
+
+  // find number of gradients
+  mMax=0;
+  while( (readCode=SDDS_ReadTable(&SDDS_inputGGE))>0 ) {
+    mMax++;
+    if ( (rows = SDDS_RowCount(&SDDS_inputGGE)) <=1 )
+      SDDS_Bomb("Too few points in z in GGE file");
+    if (readCode>1 && lastRows!=rows)
+      SDDS_Bomb("Inconsistent number of z points in GGE file");
+    lastRows = rows;
+  }
+
+  if (!SDDS_Terminate(&SDDS_inputGGE)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+
+  // allocate memory
+  gges = calloc(mMax, sizeof(GGE_m_ell *));
+  deriv_gges = calloc(mMax, sizeof(GGE_m_ell *));
+  for (im=0; im<mMax; im++) {
+    gges[im] = calloc(l_2Max+1, sizeof(GGE_m_ell));
+    deriv_gges[im] = calloc(l_2Max+1, sizeof(GGE_m_ell));
+    for (il=0; il<=l_2Max; il++) {
+      gges[im][il].grad = calloc(rows, sizeof(double));
+      deriv_gges[im][il].grad = calloc(rows, sizeof(double));
+    }
+  }
+  m = calloc(mMax, sizeof(int));
+
+  if (!SDDS_InitializeInput(&SDDS_inputGGE, ggeFile)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+
+  // Initialize gradients
+  im = 0;
+  zValues = NULL; // suppress compiler warning
+  while( (readCode=SDDS_ReadTable(&SDDS_inputGGE))>0 ) {
+    SDDS_GetParameter(&SDDS_inputGGE, "m", &m[im]);
+
+    if (!(zValues = SDDS_GetColumnInDoubles(&SDDS_inputGGE, "z"))) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+
+    for(il=0; il<=l_2Max; il++) {
+      sprintf(ggeName, "CnmS%i", 2*il);
+      if (!(gges[im][il].grad = SDDS_GetColumnInDoubles(&SDDS_inputGGE, ggeName))) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exit(1);
+      }
+    }
+    for(il=0; il<=l_2Max; il++) {
+      sprintf(ggeName, "dCnmS%i/dz", 2*il);
+      if (!(deriv_gges[im][il].grad = SDDS_GetColumnInDoubles(&SDDS_inputGGE, ggeName))) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exit(1);
+      }
+    }
+    im++;
+  }
+
+  // Use the generalized gradients to compute Bnormal on a cylinder centered
+  // at x=xEntry with radius=xEntry (could be generalized)
+  double radius = xEntry;
+  int iangle, Nangle = 256;
+  double **Bnorm;
+  double *dipole, *DdipoleD2, *quadrupole, *sextupole;
+  Bnorm = calloc(Nangle, sizeof(double *));
+  for (iangle=0; iangle<Nangle; iangle++)
+    Bnorm[iangle] = calloc(rows, sizeof(double));
+  computeBOnCylinder(xEntry, radius, Bnorm, m, gges, mMax, l_2Max, rows, Nangle);
+  dipole = calloc(rows, sizeof(double));
+  DdipoleD2 = calloc(rows, sizeof(double));
+  quadrupole = calloc(rows, sizeof(double));
+  sextupole = calloc(rows, sizeof(double));
+
+// Use Bnormal on new cylinder to compute GGEs needed for calculation along new axis
+  computeRequiredGGEs(dipole, DdipoleD2, quadrupole, sextupole, Bnorm, radius, zValues[1]-zValues[0], Nangle, rows);
+  for(iangle=0; iangle<Nangle; iangle++)
+    free(Bnorm[iangle]);
+  free(Bnorm);
+
+// Set gradients etc.
+  *Nz = rows;
+  *z = zValues;
+  *ggeD = dipole;
+  *ggeQ = quadrupole;
+  *ggeS = sextupole;
+  for(iz=0; iz<rows; iz++) {
+    (*ggeD)[iz] *= -1.0;
+    (*ggeQ)[iz] *= -2.0;
+    (*ggeS)[iz] *= -6.0;
+    (*ggeS)[iz] += 0.25*DdipoleD2[iz];
+  }
+
+  for(im=0; im<mMax; im++) {
+    free(gges[im]);
+    free(deriv_gges[im]);
+  }
+  free(gges);
+  free(deriv_gges);
+  free(m);
+
+  /*
+    These arrays are used to return the results to the caller
+  free(dipole);
+  free(DdipoleD2);
+  free(quadrupole); 
+  free(sextupole);
+  */
+
+  return;
+}
+void computeBOnCylinder(double xCenter, double radius, double **Bnorm, int *m,
+                        GGE_m_ell **gges, int mMax, int l_2Max, int Nz, int Nangle)
+{
+  double r, x, y, theta, phi;
+  double Br, Bphi, Bx, By;
+  double dAngle = 2.0*PI/(double)Nangle;
+
+  int iz, iangle, im, il;
+
+  for(iz=0; iz<Nz; iz++)
+    for(iangle=0; iangle<Nangle; iangle++) {
+      theta = dAngle*(double)iangle;
+      x = radius*cos(theta) + xCenter;
+      y = radius*sin(theta);
+      r = sqrt(x*x + y*y);
+      phi = atan2(y,x);
+
+      Br = Bphi = 0.0;
+      for (im=0; im<mMax; im++) {
+	double mfact, term, sin_mphi, cos_mphi;
+	mfact = (double)factorial(m[im]);
+	sin_mphi = sin(m[im]*phi);
+	cos_mphi = cos(m[im]*phi);
+
+	for (il=0; il<=l_2Max; il++) {
+	  term = gges[im][il].grad[iz]*intPower(-1.0, il)*mfact/(intPower(2.0, 2*il)
+			*factorial(il)*factorial(il+m[im]))*intPower(r, 2*il+m[im]-1);
+
+	  Br   += term*(2*il+m[im])*sin_mphi;
+	  Bphi += m[im]*term*cos_mphi;
+	}
+      }
+      Bx = (Br*cos(phi) - Bphi*sin(phi));
+      By = (Br*sin(phi) + Bphi*cos(phi));
+
+      Bnorm[iangle][iz] = Bx*cos(theta) + By*sin(theta);
+    }
+  return;
+}
+
+void computeRequiredGGEs(double *dipole, double *DdipoleD2, double *quadrupole, double *sextupole,
+			 double **Bnorm, double rho, double dz, int Nangle, int Nz)
+{
+  COMPLEX **BnormFFT;
+  COMPLEX *Btemp, *gge;
+
+  double *k;
+
+  double dk, factor;
+
+  int iz, ik, iangle, im, il;
+
+  BnormFFT = calloc(Nangle, sizeof(COMPLEX *));
+  for(iangle=0; iangle<Nangle; iangle++)
+    BnormFFT[iangle] = calloc(Nz, sizeof(COMPLEX));
+  Btemp = calloc(Nangle, sizeof(COMPLEX));
+/* Take FFT of Brho values vs phi for each z plane */
+  for(iz=0; iz<Nz; iz++) {
+    for(iangle=0; iangle<Nangle; iangle++) {
+      Btemp[iangle].re = Bnorm[iangle][iz];
+      Btemp[iangle].im = 0.0;
+    }
+    FFT(Btemp, -1, Nangle);
+    for(iangle=0; iangle<Nangle; iangle++) {
+      BnormFFT[iangle][iz].re = Btemp[iangle].re;
+      BnormFFT[iangle][iz].im = Btemp[iangle].im;
+    }
+  }
+  free(Btemp);
+
+/* Take FFT of Brho values vs z for lowest harmonics */
+  for(iangle=1; iangle<=3; iangle++)
+    FFT(BnormFFT[iangle], -1, Nz);
+
+  dk = 2.0*PI/(dz*(double)Nz);
+  k = calloc(Nz, sizeof(double));
+  for(ik=0; ik<Nz/2; ik++)
+    k[ik] = dk*ik;
+  k[0] = 1e-12*dk;
+  for(ik=Nz/2; ik<Nz; ik++)
+    k[ik] = -dk*(Nz - ik);
+
+  gge = calloc(Nz, sizeof(COMPLEX));
+
+  // Use the formulas to compute C_{10}, C_{12}, C_{20}, and C_{30} 
+  il=0;
+  im=1;
+  for(ik=0; ik<Nz; ik++) {
+    factor = ipow(-1, il/2)*ipow(k[ik], im+il-1)/Imp(k[ik]*rho, im)
+      /(ipow(2, im)*dfactorial(im))/(0.5*Nz*Nangle);
+    gge[ik].re = -BnormFFT[im][ik].im*factor;
+    gge[ik].im =  BnormFFT[im][ik].re*factor;
+  }
+  FFT(gge, 1, Nz);
+  for(ik=0; ik<Nz; ik++)
+    dipole[ik] = gge[ik].re;
+  il=2;
+  for(ik=0; ik<Nz; ik++) {
+    factor = ipow(-1, il/2)*ipow(k[ik], im+il-1)/Imp(k[ik]*rho, im)
+      /(ipow(2, im)*dfactorial(im))/(0.5*Nz*Nangle);
+    gge[ik].re = -BnormFFT[im][ik].im*factor;
+    gge[ik].im =  BnormFFT[im][ik].re*factor;
+  }
+  FFT(gge, 1, Nz);
+  for(ik=0; ik<Nz; ik++)
+    DdipoleD2[ik] = gge[ik].re;
+
+  im=2;
+  il=0;
+  for(ik=0; ik<Nz; ik++) {
+    factor = ipow(-1, il/2)*ipow(k[ik], im+il-1)/Imp(k[ik]*rho, im)
+      /(ipow(2, im)*dfactorial(im))/(0.5*Nz*Nangle);
+    gge[ik].re = -BnormFFT[im][ik].im*factor;
+    gge[ik].im =  BnormFFT[im][ik].re*factor;
+  }
+  FFT(gge, 1, Nz);
+  for(ik=0; ik<Nz; ik++)
+    quadrupole[ik] = gge[ik].re;
+
+  im=3;
+  for(ik=0; ik<Nz; ik++) {
+    factor = ipow(-1, il/2)*ipow(k[ik], im+il-1)/Imp(k[ik]*rho, im)
+      /(ipow(2, im)*dfactorial(im))/(0.5*Nz*Nangle);
+    gge[ik].re = -BnormFFT[im][ik].im*factor;
+    gge[ik].im =  BnormFFT[im][ik].re*factor;
+  }
+  FFT(gge, 1, Nz);
+  for(ik=0; ik<Nz; ik++)
+    sextupole[ik] = gge[ik].re;
+
+  for(iangle=0; iangle<Nangle; iangle++)
+    free(BnormFFT[iangle]);
+  free(BnormFFT);
+  free(gge);  free(k);
+
+  return;
+}
+
+/*******************************************/
+/* Calculates x^n assuming n is an integer */
+/*******************************************/
+double intPower(double x, int n)
+{
+  double out = 1.0;
+  int j;
+
+  for(j=0; j<abs(n); j++)
+    out = out*x;
+
+  if(n<0)
+    out = 1.0/out;
+
+  return(out);
+}
+
+void FFT(COMPLEX *field, int32_t isign, int32_t npts)
+{
+  double *real_imag;
+  int32_t i;
+
+  real_imag = tmalloc(sizeof(double) * (2 * npts + 2));
+  for (i = 0; i < npts; i++)
+    {
+      real_imag[2 * i] = field[i].re;
+      real_imag[2 * i + 1] = field[i].im;
+    }
+  if (isign == -1)
+    {
+      complexFFT(real_imag, npts, 0);
+      for (i = 0; i < npts; i++)
+        {
+          field[i].re = npts*real_imag[2 * i];
+          field[i].im = npts*real_imag[2 * i + 1];
+        }
+    }
+  else
+    {
+      complexFFT(real_imag, npts, INVERSE_FFT);
+      for (i = 0; i < npts; i++)
+        {
+          field[i].re = real_imag[2 * i];
+          field[i].im = real_imag[2 * i + 1];
+        }
+    }
+  free(real_imag);
+}
+
+double Imp(double kR, long m)
+{
+  double t1;
+ 
+// For some reason GSL didn't work for all, so I wrote my own code to compute I_n(x)
+//  t1 = (BesIn(fabs(kR), m-1) + BesIn(fabs(kR), m+1))/2;
+  t1 = (BesselFuncIn(fabs(kR), m-1) + BesselFuncIn(fabs(kR), m+1))/2;
+  if (kR<0)
+    return t1*ipow(-1, m+1);
+  return t1;
+}
+
+#ifdef DONT_USE_THIS
+double BesIn(double x, long order)
+{
+  double result;
+  if (order==0) {
+    result = dbesi0(x);
+  } else if (order==1) {
+    result = dbesi1(x);
+  } else {
+    if (order<0)
+      order = -order;
+    /* Need this code to compensate for issues with gsl_sf_bessel_Inu() domain */
+    if (x>0)
+      result = gsl_sf_bessel_In(order, x);
+    else {
+      if (((long)fabs(order))%2)
+        result = -gsl_sf_bessel_In(order, -x);
+      else
+        result = gsl_sf_bessel_In(order, -x);
+    }
+  }
+  return result;
+}
+#endif
+
+/* Computes I_order(x) assuming x>0, but order can be any real number */
+double BesselFuncIn(double x, double order)
+{
+  double jDub, f = 1.0;
+  double nu = order;
+
+  int j;
+
+  if(x < 8.0 + nu*nu/12.0) {
+    if( fabs(nu+(int)fabs(nu))<1.e-12)
+      nu = -nu;
+    j = (int)(x + 3.0);
+    if( (nu-5.0)*(nu+10.0+1.5*x) < 0.0 )
+      j = j + (int)(4.0 - 2.0*nu/3.0);
+    do {
+      f = 1.0 + f*x*x/(4.0*(double)j*((double)j+nu));
+      j--;
+    } while(j>0);
+    if(fabs(nu)<1.e-12) {
+      return(f);
+    }
+    f = f/nu;
+    do {
+      f = 2.0*f*nu/x;
+      nu += 1.0;
+    } while(nu<=3.0);
+    jDub = 2.0/(3.0*nu*nu) - 1.0;
+    jDub = 1.0 + 2.0*jDub/(7.0*nu*nu);
+    jDub = jDub/(30.0*nu*nu);
+    jDub = (jDub-1.0)/(12.0*nu);
+    jDub += nu*(1.0 - log(2.0*nu/x));
+    f = f*exp(jDub)*sqrt(nu/(2.0*PI));
+    return(f);
+  }
+  else {
+    j = (int)(5.0 + 640.0/(x*x) + 0.7*fabs(nu));
+    if(x>=100.0)
+      j = j - (int)( (0.5 - sqrt(247.0/(x*sqrt(x))))*fabs(nu) );
+    do {
+      jDub = ((double)j - 0.5)*((double)j - 0.5);
+      f = 1.0 + f*(jDub - nu*nu)/(2.0*x*(double)j);
+      j--;
+    }  while(j>0);
+    f = f*exp(x)/sqrt(2.0*PI*x);
+  }
+
+  return(f);
 }
