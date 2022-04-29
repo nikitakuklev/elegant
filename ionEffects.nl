@@ -31,12 +31,14 @@
    double multiple_ionization_energy_peak = 20;
    double multiple_ionization_energy_rms = 10;
    double ion_span[2] = {0, 0};
+   long ion_poisson_bins[2] = {0, 0};
    double ion_bin_divisor[2] = {10.0, 10.0};
    double ion_range_multiplier[2] = {2.0, 2.0};
    double ion_sigma_limit_multiplier[2] = {0, 0};
    long ion_histogram_max_bins = 1000;
    long ion_histogram_min_per_bin = 5;
    STRING ion_histogram_output = NULL;
+   STRING ion_2d_histogram_output = NULL;
    double ion_histogram_output_s_start = -1;
    double ion_histogram_output_s_end = -1;
    long ion_histogram_output_interval = 1000;

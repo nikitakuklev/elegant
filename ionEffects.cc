@@ -90,6 +90,7 @@ void roundGaussianBeamKick(double *coord, double *center, double *sigma, long fr
 		      double ionMass, double ionCharge);
 
 void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma, double *ionSigma);
+void make2dIonHistogram(IONEFFECTS *ionEffects);
 double findIonBinningRange(IONEFFECTS *ionEffects, long iPlane, long nSpecies);
 void startSummaryDataOutputPage(IONEFFECTS *ionEffects, long iPass, long nPasses, long nBunches);
 void computeIonEffectsElectronBunchParameters(double **part, double *time, long np, 
@@ -115,7 +116,7 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 void flushIonEffectsSummaryOutput(IONEFFECTS *ionEffects);
 
 #if USE_MPI
-void shareIonHistograms(IONEFFECTS *ionEffects);
+void shareIonHistograms(IONEFFECTS *ionEffects, short type);
 static long simplexComparisonStep = 0, targetReached = 0;
 void checkTargetIonFitting(double myResult, long invalid);
 #endif
@@ -124,6 +125,7 @@ void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset
 static SDDS_DATASET *SDDS_beamOutput = NULL;
 static SDDS_DATASET *SDDS_ionDensityOutput = NULL;
 static SDDS_DATASET *SDDS_ionHistogramOutput = NULL;
+static SDDS_DATASET *SDDS_ion2dHistogramOutput = NULL;
 static long ionHistogramOutputInterval, ionHistogramMinOutputBins, ionHistogramMaxBins, ionHistogramMinPerBin;
 static double ionHistogramOutput_sStart, ionHistogramOutput_sEnd;
 
@@ -179,6 +181,14 @@ void closeIonEffectsOutputFiles() {
   if (SDDS_ionDensityOutput) {
     SDDS_Terminate(SDDS_ionDensityOutput);
     SDDS_ionDensityOutput = NULL;
+  }
+  if (SDDS_ionHistogramOutput) {
+    SDDS_Terminate(SDDS_ionHistogramOutput);
+    SDDS_ionHistogramOutput = NULL;
+  }
+  if (SDDS_ion2dHistogramOutput) {
+    SDDS_Terminate(SDDS_ion2dHistogramOutput);
+    SDDS_ion2dHistogramOutput = NULL;
   }
 }
 
@@ -359,6 +369,46 @@ void setUpIonEffectsOutputFiles(long nPasses)
     }
 #endif
   }  
+
+  if (ion_2d_histogram_output) {
+    /* Setup the ion 2d histogram output file */
+#if USE_MPI 
+    if (myid==0) {
+#endif
+      if (!SDDS_ion2dHistogramOutput) {
+        SDDS_ion2dHistogramOutput = (SDDS_DATASET*)tmalloc(sizeof(*SDDS_ion2dHistogramOutput));
+        if (!SDDS_InitializeOutputElegant(SDDS_ion2dHistogramOutput, SDDS_BINARY, 1,
+				   "ion 2d histogram output", NULL, ion_2d_histogram_output)) {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          exitElegant(1);
+        }
+        if (!SDDS_DefineSimpleParameter(SDDS_ion2dHistogramOutput, "Pass", NULL, SDDS_LONG) ||
+            !SDDS_DefineSimpleParameter(SDDS_ion2dHistogramOutput, "Bunch", NULL, SDDS_LONG) ||
+            !SDDS_DefineSimpleParameter(SDDS_ion2dHistogramOutput, "t", "s", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ion2dHistogramOutput, "s", "m", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ion2dHistogramOutput, "qIons", "C", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ion2dHistogramOutput, "qIonsOutside", "C", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ion2dHistogramOutput, "fractionIonChargeOutside", NULL, SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ion2dHistogramOutput, "nxBins", NULL, SDDS_LONG) ||
+            !SDDS_DefineSimpleParameter(SDDS_ion2dHistogramOutput, "nyBins", NULL, SDDS_LONG) ||
+            !SDDS_DefineSimpleParameter(SDDS_ion2dHistogramOutput, "nMacroIons", NULL, SDDS_LONG) ||
+            !SDDS_DefineSimpleParameter(SDDS_ion2dHistogramOutput, "nCoreMacroIons", NULL, SDDS_LONG) ||
+	    !SDDS_DefineSimpleColumn(SDDS_ion2dHistogramOutput, "x", "m", SDDS_FLOAT) ||
+	    !SDDS_DefineSimpleColumn(SDDS_ion2dHistogramOutput, "y", "m", SDDS_FLOAT) ||
+	    !SDDS_DefineSimpleColumn(SDDS_ion2dHistogramOutput, "rho", "Coulomb/m$a2$n", SDDS_FLOAT)) {
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	  exitElegant(1);
+        }
+        if (!SDDS_SaveLayout(SDDS_ion2dHistogramOutput) || !SDDS_WriteLayout(SDDS_ion2dHistogramOutput)) {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          exitElegant(1);
+        }
+      }
+#if USE_MPI
+    }
+#endif
+  }  
+
 }
 
 void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
@@ -390,11 +440,19 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
 		    ion_histogram_output_s_end);
     if (ion_histogram_output_interval<=0)
       bombElegantVA((char*)"ion_histogram_s_interval (%ld) is <=0", ion_histogram_output_interval);
-    ionHistogramOutputInterval = ion_histogram_output_interval;
-    ionHistogramOutput_sStart = ion_histogram_output_s_start;
-    ionHistogramOutput_sEnd= ion_histogram_output_s_end;
-    ionHistogramMinOutputBins = ion_histogram_min_output_bins;
   }
+  if (ion_2d_histogram_output) {
+    ion_2d_histogram_output = compose_filename(ion_2d_histogram_output, run->rootname);
+    if (ion_histogram_output_s_start>ion_histogram_output_s_end)
+      bombElegantVA((char*)"ion_histogram_s_start (%le) is > ion_histogram_s_end (%le)", ion_histogram_output_s_start,
+		    ion_histogram_output_s_end);
+    if (ion_histogram_output_interval<=0)
+      bombElegantVA((char*)"ion_histogram_s_interval (%ld) is <=0", ion_histogram_output_interval);
+  }
+  ionHistogramOutputInterval = ion_histogram_output_interval;
+  ionHistogramOutput_sStart = ion_histogram_output_s_start;
+  ionHistogramOutput_sEnd= ion_histogram_output_s_end;
+  ionHistogramMinOutputBins = ion_histogram_min_output_bins;
   ionHistogramMaxBins = ion_histogram_max_bins;
   ionHistogramMinPerBin = ion_histogram_min_per_bin;
   if (!field_calculation_method || !strlen(field_calculation_method))
@@ -580,12 +638,25 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
       if (ionEffects->generationInterval<=0)
         ionEffects->generationInterval = generation_interval;
       for (iPlane=0; iPlane<2; iPlane++) {
+        if (ionEffects->n2dGridIon[iPlane]<=0)
+          ionEffects->n2dGridIon[iPlane] = ion_poisson_bins[iPlane];
         if (ionEffects->span[iPlane]<=0)
           ionEffects->span[iPlane] = ion_span[iPlane];
         if (ionEffects->binDivisor[iPlane]<=0)
           ionEffects->binDivisor[iPlane] = ion_bin_divisor[iPlane];
 	ionEffects->rangeMultiplier[iPlane] = ion_range_multiplier[iPlane];
 	ionEffects->sigmaLimitMultiplier[iPlane] = ion_sigma_limit_multiplier[iPlane];
+      }
+      ionEffects->ion2dDensity = NULL;
+      if ((ionEffects->n2dGridIon[0]>0 && ionEffects->n2dGridIon[1]<=0) 
+          || (ionEffects->n2dGridIon[0]<=0 && ionEffects->n2dGridIon[1]>0))
+        bombElegant("Poisson grid parameters must be defined for both planes, or neither.", NULL);
+      if (ionEffects->n2dGridIon[0]>0 && ionEffects->n2dGridIon[1]>0) {
+        if (ionEffects->n2dGridIon[0]<10 || ionEffects->n2dGridIon[1]<10)
+          bombElegant("Poisson grid size must be 10 or greater in x and y", NULL);
+        ionEffects->ion2dDensity = 
+          (double**)czarray_2d(sizeof(double), ionEffects->n2dGridIon[0], ionEffects->n2dGridIon[1]);
+        printWarningForTracking("Poisson solver for IONEFFECTS is not fully implemented", "At present no ion fields are included");
       }
     }
     eptr = eptr->succ;
@@ -978,7 +1049,59 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma
   printf("local histogram qTotal = %le\n", qTotal);
   fflush(stdout);
 #endif
-  shareIonHistograms(ionEffects);
+  shareIonHistograms(ionEffects, 1);
+#endif
+}
+
+void make2dIonHistogram(IONEFFECTS *ionEffects)
+{
+  long iSpecies, iBin[2], iPlane;
+  long iIon, ix, iy;
+  double qTotal = 0;
+  long nIons = 0;
+  double delta[2];
+
+  for (iSpecies=qTotal=0; iSpecies<ionProperties.nSpecies; iSpecies++)
+    nIons += ionEffects->nIons[iSpecies]; 
+
+#if USE_MPI
+  long nIonsTotal;
+  MPI_Allreduce(&nIons, &nIonsTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  nIons = nIonsTotal;
+#endif
+  
+  for (iPlane=0; iPlane<2; iPlane++) {
+    delta[iPlane] = 2*ionEffects->span[iPlane]/(ionEffects->n2dGridIon[iPlane]-1.0);
+    ionEffects->ionHistogramMissed[iPlane] = 0;
+  }
+
+  memset(ionEffects->ion2dDensity[0], 0, sizeof(double)*ionEffects->n2dGridIon[0]*ionEffects->n2dGridIon[1]);
+
+  /* histogram ion charge, if it's in range in both planes */
+  for (iSpecies=qTotal=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+    for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
+      for (iPlane=0; iPlane<2; iPlane++)
+	iBin[iPlane] = floor((ionEffects->coordinate[iSpecies][iIon][2*iPlane] + ionEffects->span[iPlane])/delta[iPlane]);
+      if (iBin[0]<0 || iBin[0]>(ionEffects->n2dGridIon[0]-1) || 
+          iBin[1]<0 || iBin[1]>(ionEffects->n2dGridIon[1]-1)) {
+	  ionEffects->ionHistogramMissed[0] += ionEffects->coordinate[iSpecies][iIon][4];
+      } else {
+        ionEffects->ion2dDensity[iBin[0]][iBin[1]] += ionEffects->coordinate[iSpecies][iIon][4];
+	qTotal += ionEffects->coordinate[iSpecies][iIon][4];
+      }
+    }
+  }
+  ionEffects->qTotal = qTotal;
+  for (ix=0; ix<ionEffects->n2dGridIon[0]; ix++)
+    for (iy=0; iy<ionEffects->n2dGridIon[1]; iy++)
+      ionEffects->ion2dDensity[ix][iy] /= delta[0]*delta[1];
+
+#if USE_MPI
+#if MPI_DEBUG
+  printf("local histogram qTotal = %le\n", qTotal);
+  fflush(stdout);
+#endif
+  shareIonHistograms(ionEffects, 2);
 #endif
 }
 
@@ -1104,16 +1227,17 @@ double findIonBinningRange(IONEFFECTS *ionEffects, long iPlane, long nSpecies)
 }
 
 #if USE_MPI
-void shareIonHistograms(IONEFFECTS *ionEffects)
+void shareIonHistograms(IONEFFECTS *ionEffects, short type)
 {
   double *buffer, partBuffer3[3], sumBuffer3[3];
   long iPlane;
+
   if (verbosity>100) {
-    printf("Sharing ion histograms\n"); 
+    printf("Sharing ion histogram(s)\n"); 
     fflush(stdout);
   }
   MPI_Barrier(MPI_COMM_WORLD);
-
+  
   partBuffer3[0] = ionEffects->qTotal;
   partBuffer3[1] = ionEffects->ionHistogramMissed[0];
   partBuffer3[2] = ionEffects->ionHistogramMissed[1];
@@ -1123,20 +1247,33 @@ void shareIonHistograms(IONEFFECTS *ionEffects)
   ionEffects->ionHistogramMissed[1] = sumBuffer3[2];
   if (verbosity>100) {
     printf("qTotal = %le, missed x/y: %le, %le\n",
-	   ionEffects->qTotal, ionEffects->ionHistogramMissed[0], ionEffects->ionHistogramMissed[1]);
+           ionEffects->qTotal, ionEffects->ionHistogramMissed[0], ionEffects->ionHistogramMissed[1]);
     fflush(stdout);
   }
 
-  if (ionEffects->ionBins[0]<=0)
-    return;
+  if (type==1) {
+    /* share two 1-d histograms */
+    if (ionEffects->ionBins[0]<=0)
+      return;
+    
+    for (iPlane=0; iPlane<2; iPlane++) {
+      buffer = (double*)calloc(sizeof(*buffer), ionEffects->ionBins[iPlane]);
+      MPI_Allreduce(ionEffects->ionHistogram[iPlane], buffer, ionEffects->ionBins[iPlane],
+                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      memcpy(ionEffects->ionHistogram[iPlane], buffer, sizeof(*buffer)*ionEffects->ionBins[iPlane]);
+      free(buffer);
+    }
+  } else if (type==2) {
+    /* share one 2-d histogram */
+    long nBinsTotal;
 
-  for (iPlane=0; iPlane<2; iPlane++) {
-    buffer = (double*)calloc(sizeof(*buffer), ionEffects->ionBins[iPlane]);
-    MPI_Allreduce(ionEffects->ionHistogram[iPlane], buffer, ionEffects->ionBins[iPlane],
-		  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    memcpy(ionEffects->ionHistogram[iPlane], buffer, sizeof(*buffer)*ionEffects->ionBins[iPlane]);
+    nBinsTotal = ionEffects->n2dGridIon[0]*ionEffects->n2dGridIon[1];
+    buffer = (double*)calloc(sizeof(*buffer), nBinsTotal);
+    MPI_Allreduce(ionEffects->ion2dDensity[0], buffer, nBinsTotal, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    memcpy(ionEffects->ion2dDensity[0], buffer, sizeof(*buffer)*nBinsTotal);
     free(buffer);
-  }
+  } else
+    bombElegant("shareIonHistograms called with invalid parameters. Please report this error.", NULL);
   if (verbosity>100) {
     printf("Done sharing histograms\n");
     fflush(stdout);
@@ -2822,276 +2959,290 @@ void applyIonKicksToElectronBunch
     fflush(stdout);
   }
 
-  ionEffects->ionChargeFromFit[0] = ionEffects->ionChargeFromFit[1] = -1;
+  if (ionEffects->ion2dDensity) {
+    /* Use Poisson solver for ion fields */
 
-  makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchSigma, ionSigma);
+    /* - Create 2d histogram of ion density */
+    make2dIonHistogram(ionEffects);
 
-  if ((ionEffects->ionFieldMethod = ionFieldMethod)==ION_FIELD_EGAUSSIAN || conserve_momentum) {
-    if (iPass>=freeze_electrons_until_pass) {
-      // The kicks from ions are the same for all electrons; 
-      // Using conservation of momentum, the total is equal and opposite to the kick from
-      // the electrons to the ions.
-      if (qBunch) {
-	// momentum change per electron = -(total momentum change of ions) / (number of electrons)
-	slopeChange[0] = -dpSum[0]/(qBunch/e_mks)/(me_mks*c_mks*Po);
-	slopeChange[1] = -dpSum[1]/(qBunch/e_mks)/(me_mks*c_mks*Po);
+    /* - Solve poisson equation */
+
+    /* - Compute field and apply kicks to electrons */
+
+  } else {
+    /* Use 1D fits for ion fields */
+
+    ionEffects->ionChargeFromFit[0] = ionEffects->ionChargeFromFit[1] = -1;
+
+    makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchSigma, ionSigma);
+
+    if ((ionEffects->ionFieldMethod = ionFieldMethod)==ION_FIELD_EGAUSSIAN || conserve_momentum) {
+      if (iPass>=freeze_electrons_until_pass) {
+        // The kicks from ions are the same for all electrons; 
+        // Using conservation of momentum, the total is equal and opposite to the kick from
+        // the electrons to the ions.
+        if (qBunch) {
+          // momentum change per electron = -(total momentum change of ions) / (number of electrons)
+          slopeChange[0] = -dpSum[0]/(qBunch/e_mks)/(me_mks*c_mks*Po);
+          slopeChange[1] = -dpSum[1]/(qBunch/e_mks)/(me_mks*c_mks*Po);
+        }
+        if (!conserve_momentum) {
+          for (ip=0; ip<np; ip++) {
+            part[ip][1] += slopeChange[0];
+            part[ip][3] += slopeChange[1];
+          }
+          return;
+        }
       }
-      if (!conserve_momentum) {
+    }
+
+    if ((ionEffects->ionFieldMethod = ionFieldMethod)!=ION_FIELD_GAUSSIAN) {
+      // multi-gaussian or multi-lorentzian kick
+    
+      /* We take a return value here for future improvement in which the fitting function is automatically selected. */
+
+      ionEffects->ionFieldMethod = 
+        multipleWhateverFit(bunchSigma, bunchCentroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
+
+      /* determine the charge implied by the fits */
+      for (int iPlane=0; iPlane<2; iPlane++) {
+        ionEffects->ionChargeFromFit[iPlane] = 0;
+        if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN) {
+          for (int i=0; i<nFunctions; i++) 
+            ionEffects->ionChargeFromFit[iPlane] += iPlane==0 ?
+              paramValueX[3*i+2]*sqrt(PIx2)*paramValueX[3*i+0]/ionEffects->ionDelta[iPlane] :
+              paramValueY[3*i+2]*sqrt(PIx2)*paramValueY[3*i+0]/ionEffects->ionDelta[iPlane] ;
+        } else {
+          for (int i=0; i<nFunctions; i++) 
+            ionEffects->ionChargeFromFit[iPlane] += iPlane==0 ?
+              paramValueX[3*i+2]*PI*paramValueX[3*i+0]/ionEffects->ionDelta[iPlane] :
+              paramValueY[3*i+2]*PI*paramValueY[3*i+0]/ionEffects->ionDelta[iPlane] ;
+        }
+      }
+
+      if (verbosity>40) {
+        long i, j;
+        double sum[2];
+        for (i=0; i<2; i++) {
+          sum[i] = 0;
+          for (j=0; j<ionEffects->ionBins[i]; j++)
+            sum[i] += ionEffects->ionHistogram[i][j];
+        }
+        printf("Charge check on histograms: x=%le, y=%le, q=%le\n", sum[0], sum[1], qIon);
+        printf("Residual of fits: x=%le, y=%le\n", ionEffects->xyFitResidual[0], ionEffects->xyFitResidual[1]);
+        printf("Charge from fits: x=%le, y=%le\n", ionEffects->ionChargeFromFit[0], ionEffects->ionChargeFromFit[1]);
+        fflush(stdout);
+      }
+
+      /* these factors needed because we fit charge histograms instead of charge densities */
+      normX = ionEffects->ionDelta[0];
+      normY = ionEffects->ionDelta[1];
+
+      if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_GAUSSIANFIT) {
+        /* paramValueX[0..8] = sigma1, centroid1, height1, sigma2, centroid2, height2, [sigma3, centroid3, height3] */
+        /* paramValueY[0..8] = sigma1, centroid1, height1, sigma2, centroid2, height2, [sigma3, centroid3, height3] */
+        for (int ix=0; ix<nFunctions; ix++) {
+          for (int iy=0; iy<nFunctions; iy++) {
+            tempCentroid[ix+iy*nFunctions][0] = paramValueX[1+ix*3];
+            tempCentroid[ix+iy*nFunctions][1] = paramValueY[1+iy*3];
+            tempSigma[ix+iy*nFunctions][0] = paramValueX[0+ix*3];
+            tempSigma[ix+iy*nFunctions][1] = paramValueY[0*iy*3];
+	  
+            /* We need 2*Pi*SigmaX*Sigmay here because in biGaussianFunction() the factor 1/(sqrt(2*pi)*sigma) is
+             * hidden in the height parameter. We need to remove it for use in the B-E formula.
+             * Dividing by qIon is needed because we are making a product of two functions, rho(x) and rho(y),
+             * each of which will integrate to qIon.
+             */
+
+            tempQ[ix+iy*nFunctions] = 
+              paramValueX[2+ix*3] / normX * paramValueY[2+iy*3] / normY * 
+              2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] / ionEffects->qTotal;
+
+            // tempQ[ix+iy*nFunctions] = 
+            //  paramValueX[2+ix*3] / normX * paramValueY[2+iy*3] / normY * 
+            //  2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] / qIon;
+
+            //tempQ[ix+iy*nFunctions] = 
+            //  paramValueX[2+ix*3] / normX / ionEffects->ionChargeFromFit[0] * 
+            //  paramValueY[2+iy*3] / normY /  ionEffects->ionChargeFromFit[1] * 
+            //  2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] * ionEffects->qTotal;
+
+
+            if (tempQ[ix+iy*nFunctions]<1e-6*ionEffects->qTotal)
+              // Ignore these contributions, as they are likely to have wild values for centroid and size that
+              // can lead to numerical problems
+              tempQ[ix+iy*nFunctions] = 0;
+          }
+        }
+      } else if (ionEffects->ionFieldMethod==ION_FIELD_BILORENTZIAN || ionEffects->ionFieldMethod==ION_FIELD_TRILORENTZIAN) {
+        /* paramValueX[0..8] = ax1, centroidx1, heightx1, ax2, centroidx2, heightx2, [ax3, centroidx3, heightx3] */
+        /* paramValueY[0..8] = ay1, centroidy1, heighty1, ay2, centroidy2, heighty2, [ay3, centroidy3, heighty3] */
+        for (int ix=0; ix<nFunctions; ix++) {
+          for (int iy=0; iy<nFunctions; iy++) {
+            tempCentroid[ix+iy*nFunctions][0] = paramValueX[1+ix*3];
+            tempCentroid[ix+iy*nFunctions][1] = paramValueY[1+iy*3];
+            tempSigma[ix+iy*nFunctions][0] = paramValueX[0+ix*3];
+            tempSigma[ix+iy*nFunctions][1] = paramValueY[0*iy*3];
+	  
+            /* Here we account for the bin sizes (normX and normY) and convert the height parameters to those
+             * used in a standard Lorentzian, PI*L(0)*a. We also divide out the total
+             * charge since otherwise the 2d integral will be qIon^2, instead of qIon. 
+             */
+            tempQ[ix+iy*nFunctions] = 
+              paramValueX[2+ix*3]*PI*paramValueX[0+ix*3]/normX *
+              paramValueY[2+iy*3]*PI*paramValueY[0+iy*3]/normY / ionEffects->qTotal;
+            if (tempQ[ix+iy*nFunctions]<1e-6*ionEffects->qTotal)
+              // Ignore these contributions, as they are likely to have wild values for centroid and size that
+              // can lead to numerical problems
+              tempQ[ix+iy*nFunctions] = 0;
+          }
+        }
+      } else
+        bombElegant("invalid field method used for ION_EFFECTS, seek professional help", NULL);
+    } else {
+      ionEffects->qTotal = qIon;
+      for (int iPlane=0; iPlane<2; iPlane++) {
+        double residual;
+        residual = 0;
+        for (int i=0; i<ionEffects->ionBins[iPlane]; i++)  {
+          double xy;
+          xy = (i+0.5)*ionEffects->ionDelta[iPlane] - ionEffects->ionRange[iPlane]/2 - ionCentroid[iPlane];
+          ionEffects->ionHistogramFit[iPlane][i] 
+            = qIon*ionEffects->ionDelta[iPlane]/sqrt(PIx2)/ionSigma[iPlane]*exp(-sqr(xy/ionSigma[iPlane])/2);
+          residual += sqr(ionEffects->ionHistogramFit[iPlane][i]-ionEffects->ionHistogram[iPlane][i]);
+        }
+        ionEffects->xyFitResidual[iPlane] = sqrt(residual)/(qIon*ionEffects->ionDelta[iPlane]/sqrt(PIx2)/ionSigma[iPlane]);
+        ionEffects->xyFitParameter2[iPlane][0] = ionSigma[iPlane];
+        ionEffects->xyFitParameter2[iPlane][1] = ionCentroid[iPlane];
+        ionEffects->xyFitParameter2[iPlane][2] = qIon*ionEffects->ionDelta[iPlane]/sqrt(PIx2)/ionSigma[iPlane];
+      }
+    }
+
+    for (int i=0; i<9; i++)
+      circuitBreaker[i] = 0;
+    dpSumBunch[0] = dpSumBunch[1] = 0;
+    if (isSlave || !notSinglePart) {
+      /*** Determine and apply kicks to beam from the total ion field */
+#if MPI_DEBUG
+      printf("Applying kicks to electron beam\n");
+#endif
+      if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && nIonsTotal>10 && iPass>=freeze_electrons_until_pass) {
+        switch (ionEffects->ionFieldMethod) {
+        case ION_FIELD_GAUSSIAN:
+          for (ip=0; ip<np; ip++) {
+            kick[0] = kick[1] = 0;
+	  
+            gaussianBeamKick(part[ip], ionCentroid, ionSigma, 0, kick, qIon, me_mks, 1);
+            part[ip][1] += kick[0] / c_mks / Po;
+            part[ip][3] += kick[1] / c_mks / Po; 
+            dpSumBunch[0] += kick[0]*me_mks;
+            dpSumBunch[1] += kick[1]*me_mks;
+          }
+          break;
+        case ION_FIELD_BIGAUSSIAN:
+        case ION_FIELD_TRIGAUSSIAN:
+        case ION_FIELD_GAUSSIANFIT:
+          double maxkick[2], tempart[4];
+          maxkick[0] = maxkick[1] = 0;
+          for (int i=0; i<nFunctions*nFunctions; i++)  {
+            tempart[0] = tempCentroid[i][0] + tempSigma[i][0];
+            tempart[2] = 0;
+            gaussianBeamKick(tempart, tempCentroid[i], tempSigma[i], 0, tempkick, tempQ[i], me_mks, 1);
+            maxkick[0] += 4 * abs(tempkick[0]);
+ 
+            tempart[2] = tempCentroid[i][1] + tempSigma[i][1];
+            tempart[0] = 0;
+            gaussianBeamKick(tempart, tempCentroid[i], tempSigma[i], 0, tempkick, tempQ[i], me_mks, 1);
+            maxkick[1] += 4 * abs(tempkick[1]);
+          }
+          for (ip=0; ip<np; ip++) {
+            kick[0] = kick[1] = 0;
+            for (int i=0; i<nFunctions*nFunctions; i++)  {
+              if (tempQ[i]) {
+                gaussianBeamKick(part[ip], tempCentroid[i], tempSigma[i], 0, tempkick, tempQ[i], me_mks, 1);
+                if (!isnan(tempkick[0]) && !isinf(tempkick[0]) && !isnan(tempkick[1]) && !isinf(tempkick[1]) && 
+                    (abs(tempkick[0]) < maxkick[0]) && (abs(tempkick[1]) < maxkick[1])) {
+                  kick[0] += tempkick[0];
+                  kick[1] += tempkick[1];
+                } else {
+                  //printf("kick %3.2e,%3.2e > maxkick %3.2e,%3.2e: turn %ld , bunch %ld , cx1=%3.2e, cy=%3.2e, cx2=%3.2e, 
+                  //cy2=%3.2e, sx1=%3.2e, sy1=%3.2e, sx2=%3.2e, sy2=%3.2e, x=%3.2e, y=%3.2e \n", 
+                  //tempkick[0], tempkick[1], maxkick[0], maxkick[1], iPass, iBunch, tempCentroid[0][0],  
+                  //tempCentroid[0][1],  tempCentroid[1][0], tempCentroid[1][1], tempSigma[0][0], 
+                  //tempSigma[0][1], tempSigma[1][0], tempSigma[1][1], part[ip][0], part[ip][2]);
+                  circuitBreaker[i] ++;
+                }
+              }
+            }
+            part[ip][1] += kick[0] / c_mks / Po;
+            part[ip][3] += kick[1] / c_mks / Po; 
+            dpSumBunch[0] += kick[0]*me_mks;
+            dpSumBunch[1] += kick[1]*me_mks;
+          }
+          break;
+        case ION_FIELD_BILORENTZIAN:
+        case ION_FIELD_TRILORENTZIAN:
+          for (ip=0; ip<np; ip++) {
+            kick[0] = kick[1] = 0;
+            for (int i=0; i<nFunctions*nFunctions; i++) {
+              if (tempQ[i]) {
+                evaluateVoltageFromLorentzian(tempkick, 
+                                              tempSigma[i][0], tempSigma[i][1], 
+                                              part[ip][0] - tempCentroid[i][0], part[ip][2] - tempCentroid[i][1]);
+                if (!isnan(tempkick[0]) && !isinf(tempkick[0]) && !isnan(tempkick[1]) && !isinf(tempkick[1])) {
+                  kick[0] += tempQ[i]*tempkick[0];
+                  kick[1] += tempQ[i]*tempkick[1];
+                } else
+                  circuitBreaker[i] ++;
+              }
+            }
+            part[ip][1] -= kick[0] / (Po*particleMassMV*1e6*particleRelSign);
+            part[ip][3] -= kick[1] / (Po*particleMassMV*1e6*particleRelSign);
+            dpSumBunch[0] += kick[0]*e_mks/c_mks;
+            dpSumBunch[1] += kick[1]*e_mks/c_mks;
+          }
+          break;
+        default:
+          bombElegant("invalid field method used for ION_EFFECTS, seek professional help", NULL);
+          break;
+        }
+      }
+    }
+
+    if (conserve_momentum && qBunch) {
+#if USE_MPI
+      // Share dpSumBunch across all cores
+      double dpSumBunchGlobal[2];
+      MPI_Allreduce(dpSumBunch, dpSumBunchGlobal, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      memcpy(&dpSumBunch[0], &dpSumBunchGlobal[0], sizeof(dpSumBunch[0])*2);
+#endif
+      if (isSlave || !notSinglePart) {
+        // Slope corrections to force momentum conservation
+        slopeChange[0] = -(dpSumBunch[0]+dpSum[0])/(qBunch/e_mks)/(me_mks*c_mks*Po);
+        slopeChange[1] = -(dpSumBunch[1]+dpSum[1])/(qBunch/e_mks)/(me_mks*c_mks*Po);
         for (ip=0; ip<np; ip++) {
           part[ip][1] += slopeChange[0];
           part[ip][3] += slopeChange[1];
         }
-        return;
       }
     }
-  }
-
-  if ((ionEffects->ionFieldMethod = ionFieldMethod)!=ION_FIELD_GAUSSIAN) {
-    // multi-gaussian or multi-lorentzian kick
-    
-    /* We take a return value here for future improvement in which the fitting function is automatically selected. */
-
-    ionEffects->ionFieldMethod = 
-      multipleWhateverFit(bunchSigma, bunchCentroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
-
-    /* determine the charge implied by the fits */
-    for (int iPlane=0; iPlane<2; iPlane++) {
-      ionEffects->ionChargeFromFit[iPlane] = 0;
-      if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN) {
-	for (int i=0; i<nFunctions; i++) 
-	  ionEffects->ionChargeFromFit[iPlane] += iPlane==0 ?
-	    paramValueX[3*i+2]*sqrt(PIx2)*paramValueX[3*i+0]/ionEffects->ionDelta[iPlane] :
-	    paramValueY[3*i+2]*sqrt(PIx2)*paramValueY[3*i+0]/ionEffects->ionDelta[iPlane] ;
-      } else {
-	for (int i=0; i<nFunctions; i++) 
-	  ionEffects->ionChargeFromFit[iPlane] += iPlane==0 ?
-	    paramValueX[3*i+2]*PI*paramValueX[3*i+0]/ionEffects->ionDelta[iPlane] :
-	    paramValueY[3*i+2]*PI*paramValueY[3*i+0]/ionEffects->ionDelta[iPlane] ;
-      }
-    }
-
-    if (verbosity>40) {
-      long i, j;
-      double sum[2];
-      for (i=0; i<2; i++) {
-	sum[i] = 0;
-	for (j=0; j<ionEffects->ionBins[i]; j++)
-	  sum[i] += ionEffects->ionHistogram[i][j];
-      }
-      printf("Charge check on histograms: x=%le, y=%le, q=%le\n", sum[0], sum[1], qIon);
-      printf("Residual of fits: x=%le, y=%le\n", ionEffects->xyFitResidual[0], ionEffects->xyFitResidual[1]);
-      printf("Charge from fits: x=%le, y=%le\n", ionEffects->ionChargeFromFit[0], ionEffects->ionChargeFromFit[1]);
-      fflush(stdout);
-    }
-
-    /* these factors needed because we fit charge histograms instead of charge densities */
-    normX = ionEffects->ionDelta[0];
-    normY = ionEffects->ionDelta[1];
-
-    if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_GAUSSIANFIT) {
-      /* paramValueX[0..8] = sigma1, centroid1, height1, sigma2, centroid2, height2, [sigma3, centroid3, height3] */
-      /* paramValueY[0..8] = sigma1, centroid1, height1, sigma2, centroid2, height2, [sigma3, centroid3, height3] */
-      for (int ix=0; ix<nFunctions; ix++) {
-	for (int iy=0; iy<nFunctions; iy++) {
-	  tempCentroid[ix+iy*nFunctions][0] = paramValueX[1+ix*3];
-	  tempCentroid[ix+iy*nFunctions][1] = paramValueY[1+iy*3];
-	  tempSigma[ix+iy*nFunctions][0] = paramValueX[0+ix*3];
-	  tempSigma[ix+iy*nFunctions][1] = paramValueY[0*iy*3];
-	  
-	  /* We need 2*Pi*SigmaX*Sigmay here because in biGaussianFunction() the factor 1/(sqrt(2*pi)*sigma) is
-	   * hidden in the height parameter. We need to remove it for use in the B-E formula.
-	   * Dividing by qIon is needed because we are making a product of two functions, rho(x) and rho(y),
-	   * each of which will integrate to qIon.
-	   */
-
-	  tempQ[ix+iy*nFunctions] = 
-	     paramValueX[2+ix*3] / normX * paramValueY[2+iy*3] / normY * 
-	     2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] / ionEffects->qTotal;
-
-	  // tempQ[ix+iy*nFunctions] = 
-	  //  paramValueX[2+ix*3] / normX * paramValueY[2+iy*3] / normY * 
-	  //  2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] / qIon;
-
-	  //tempQ[ix+iy*nFunctions] = 
-	  //  paramValueX[2+ix*3] / normX / ionEffects->ionChargeFromFit[0] * 
-	  //  paramValueY[2+iy*3] / normY /  ionEffects->ionChargeFromFit[1] * 
-	  //  2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] * ionEffects->qTotal;
-
-
-	  if (tempQ[ix+iy*nFunctions]<1e-6*ionEffects->qTotal)
-	    // Ignore these contributions, as they are likely to have wild values for centroid and size that
-	    // can lead to numerical problems
-	    tempQ[ix+iy*nFunctions] = 0;
-	}
-      }
-    } else if (ionEffects->ionFieldMethod==ION_FIELD_BILORENTZIAN || ionEffects->ionFieldMethod==ION_FIELD_TRILORENTZIAN) {
-      /* paramValueX[0..8] = ax1, centroidx1, heightx1, ax2, centroidx2, heightx2, [ax3, centroidx3, heightx3] */
-      /* paramValueY[0..8] = ay1, centroidy1, heighty1, ay2, centroidy2, heighty2, [ay3, centroidy3, heighty3] */
-      for (int ix=0; ix<nFunctions; ix++) {
-	for (int iy=0; iy<nFunctions; iy++) {
-	  tempCentroid[ix+iy*nFunctions][0] = paramValueX[1+ix*3];
-	  tempCentroid[ix+iy*nFunctions][1] = paramValueY[1+iy*3];
-	  tempSigma[ix+iy*nFunctions][0] = paramValueX[0+ix*3];
-	  tempSigma[ix+iy*nFunctions][1] = paramValueY[0*iy*3];
-	  
-	  /* Here we account for the bin sizes (normX and normY) and convert the height parameters to those
-	   * used in a standard Lorentzian, PI*L(0)*a. We also divide out the total
-	   * charge since otherwise the 2d integral will be qIon^2, instead of qIon. 
-	   */
-	  tempQ[ix+iy*nFunctions] = 
-	    paramValueX[2+ix*3]*PI*paramValueX[0+ix*3]/normX *
-	    paramValueY[2+iy*3]*PI*paramValueY[0+iy*3]/normY / ionEffects->qTotal;
-	  if (tempQ[ix+iy*nFunctions]<1e-6*ionEffects->qTotal)
-	    // Ignore these contributions, as they are likely to have wild values for centroid and size that
-	    // can lead to numerical problems
-	    tempQ[ix+iy*nFunctions] = 0;
-	}
-      }
-    } else
-      bombElegant("invalid field method used for ION_EFFECTS, seek professional help", NULL);
-  } else {
-    ionEffects->qTotal = qIon;
-    for (int iPlane=0; iPlane<2; iPlane++) {
-      double residual;
-      residual = 0;
-      for (int i=0; i<ionEffects->ionBins[iPlane]; i++)  {
-	double xy;
-	xy = (i+0.5)*ionEffects->ionDelta[iPlane] - ionEffects->ionRange[iPlane]/2 - ionCentroid[iPlane];
-	ionEffects->ionHistogramFit[iPlane][i] 
-	  = qIon*ionEffects->ionDelta[iPlane]/sqrt(PIx2)/ionSigma[iPlane]*exp(-sqr(xy/ionSigma[iPlane])/2);
-	residual += sqr(ionEffects->ionHistogramFit[iPlane][i]-ionEffects->ionHistogram[iPlane][i]);
-      }
-      ionEffects->xyFitResidual[iPlane] = sqrt(residual)/(qIon*ionEffects->ionDelta[iPlane]/sqrt(PIx2)/ionSigma[iPlane]);
-      ionEffects->xyFitParameter2[iPlane][0] = ionSigma[iPlane];
-      ionEffects->xyFitParameter2[iPlane][1] = ionCentroid[iPlane];
-      ionEffects->xyFitParameter2[iPlane][2] = qIon*ionEffects->ionDelta[iPlane]/sqrt(PIx2)/ionSigma[iPlane];
-    }
-  }
-
-  for (int i=0; i<9; i++)
-    circuitBreaker[i] = 0;
-  dpSumBunch[0] = dpSumBunch[1] = 0;
-  if (isSlave || !notSinglePart) {
-    /*** Determine and apply kicks to beam from the total ion field */
-#if MPI_DEBUG
-    printf("Applying kicks to electron beam\n");
-#endif
-    if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && nIonsTotal>10 && iPass>=freeze_electrons_until_pass) {
-      switch (ionEffects->ionFieldMethod) {
-      case ION_FIELD_GAUSSIAN:
-	for (ip=0; ip<np; ip++) {
-	  kick[0] = kick[1] = 0;
-	  
-	  gaussianBeamKick(part[ip], ionCentroid, ionSigma, 0, kick, qIon, me_mks, 1);
-	  part[ip][1] += kick[0] / c_mks / Po;
-	  part[ip][3] += kick[1] / c_mks / Po; 
-          dpSumBunch[0] += kick[0]*me_mks;
-          dpSumBunch[1] += kick[1]*me_mks;
-	}
-	break;
-      case ION_FIELD_BIGAUSSIAN:
-      case ION_FIELD_TRIGAUSSIAN:
-      case ION_FIELD_GAUSSIANFIT:
-	double maxkick[2], tempart[4];
- 	maxkick[0] = maxkick[1] = 0;
-	for (int i=0; i<nFunctions*nFunctions; i++)  {
- 	  tempart[0] = tempCentroid[i][0] + tempSigma[i][0];
- 	  tempart[2] = 0;
- 	  gaussianBeamKick(tempart, tempCentroid[i], tempSigma[i], 0, tempkick, tempQ[i], me_mks, 1);
- 	  maxkick[0] += 4 * abs(tempkick[0]);
- 
- 	  tempart[2] = tempCentroid[i][1] + tempSigma[i][1];
- 	  tempart[0] = 0;
- 	  gaussianBeamKick(tempart, tempCentroid[i], tempSigma[i], 0, tempkick, tempQ[i], me_mks, 1);
- 	  maxkick[1] += 4 * abs(tempkick[1]);
- 	}
-	for (ip=0; ip<np; ip++) {
-	  kick[0] = kick[1] = 0;
-	  for (int i=0; i<nFunctions*nFunctions; i++)  {
-	    if (tempQ[i]) {
-	      gaussianBeamKick(part[ip], tempCentroid[i], tempSigma[i], 0, tempkick, tempQ[i], me_mks, 1);
-	      if (!isnan(tempkick[0]) && !isinf(tempkick[0]) && !isnan(tempkick[1]) && !isinf(tempkick[1]) && 
-		  (abs(tempkick[0]) < maxkick[0]) && (abs(tempkick[1]) < maxkick[1])) {
-		kick[0] += tempkick[0];
-		kick[1] += tempkick[1];
-	      } else {
-		//printf("kick %3.2e,%3.2e > maxkick %3.2e,%3.2e: turn %ld , bunch %ld , cx1=%3.2e, cy=%3.2e, cx2=%3.2e, 
-		//cy2=%3.2e, sx1=%3.2e, sy1=%3.2e, sx2=%3.2e, sy2=%3.2e, x=%3.2e, y=%3.2e \n", 
-		//tempkick[0], tempkick[1], maxkick[0], maxkick[1], iPass, iBunch, tempCentroid[0][0],  
-		//tempCentroid[0][1],  tempCentroid[1][0], tempCentroid[1][1], tempSigma[0][0], 
-		//tempSigma[0][1], tempSigma[1][0], tempSigma[1][1], part[ip][0], part[ip][2]);
-		circuitBreaker[i] ++;
-	      }
-	    }
-	  }
-	  part[ip][1] += kick[0] / c_mks / Po;
-	  part[ip][3] += kick[1] / c_mks / Po; 
-          dpSumBunch[0] += kick[0]*me_mks;
-          dpSumBunch[1] += kick[1]*me_mks;
-	}
-	break;
-      case ION_FIELD_BILORENTZIAN:
-      case ION_FIELD_TRILORENTZIAN:
-	for (ip=0; ip<np; ip++) {
-	  kick[0] = kick[1] = 0;
-	  for (int i=0; i<nFunctions*nFunctions; i++) {
-	    if (tempQ[i]) {
-	      evaluateVoltageFromLorentzian(tempkick, 
-					    tempSigma[i][0], tempSigma[i][1], 
-					    part[ip][0] - tempCentroid[i][0], part[ip][2] - tempCentroid[i][1]);
-	      if (!isnan(tempkick[0]) && !isinf(tempkick[0]) && !isnan(tempkick[1]) && !isinf(tempkick[1])) {
-		kick[0] += tempQ[i]*tempkick[0];
-		kick[1] += tempQ[i]*tempkick[1];
-	      } else
-		circuitBreaker[i] ++;
-	    }
-	  }
-	  part[ip][1] -= kick[0] / (Po*particleMassMV*1e6*particleRelSign);
-	  part[ip][3] -= kick[1] / (Po*particleMassMV*1e6*particleRelSign);
-          dpSumBunch[0] += kick[0]*e_mks/c_mks;
-          dpSumBunch[1] += kick[1]*e_mks/c_mks;
-	}
-	break;
-      default:
-	bombElegant("invalid field method used for ION_EFFECTS, seek professional help", NULL);
-	break;
-      }
-    }
-  }
-
-  if (conserve_momentum && qBunch) {
-#if USE_MPI
-    // Share dpSumBunch across all cores
-    double dpSumBunchGlobal[2];
-    MPI_Allreduce(dpSumBunch, dpSumBunchGlobal, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    memcpy(&dpSumBunch[0], &dpSumBunchGlobal[0], sizeof(dpSumBunch[0])*2);
-#endif
-    if (isSlave || !notSinglePart) {
-      // Slope corrections to force momentum conservation
-      slopeChange[0] = -(dpSumBunch[0]+dpSum[0])/(qBunch/e_mks)/(me_mks*c_mks*Po);
-      slopeChange[1] = -(dpSumBunch[1]+dpSum[1])/(qBunch/e_mks)/(me_mks*c_mks*Po);
-      for (ip=0; ip<np; ip++) {
-        part[ip][1] += slopeChange[0];
-        part[ip][3] += slopeChange[1];
-      }
-    }
-  }
   
-  if (verbosity) {
+    if (verbosity) {
 #if USE_MPI
-    long circuitBreakerGlobal[9];
-    MPI_Allreduce(&circuitBreaker, &circuitBreakerGlobal, 9, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-    memcpy(circuitBreaker, circuitBreakerGlobal, sizeof(*circuitBreaker)*9);
+      long circuitBreakerGlobal[9];
+      MPI_Allreduce(&circuitBreaker, &circuitBreakerGlobal, 9, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      memcpy(circuitBreaker, circuitBreakerGlobal, sizeof(*circuitBreaker)*9);
 #endif
-    int count=0;
-    for (int i=0; i<nFunctions*nFunctions; i++) {
-      if (circuitBreaker[i])
-	count++;
-    }
-    if (count) {
-      printf("Warning: circuit breaker invoked for %d of %ld functions, bunch %ld, pass %ld\n",
-	     count, nFunctions*nFunctions, iBunch, iPass);
-      fflush(stdout);
+      int count=0;
+      for (int i=0; i<nFunctions*nFunctions; i++) {
+        if (circuitBreaker[i])
+          count++;
+      }
+      if (count) {
+        printf("Warning: circuit breaker invoked for %d of %ld functions, bunch %ld, pass %ld\n",
+               count, nFunctions*nFunctions, iBunch, iPass);
+        fflush(stdout);
+      }
     }
   }
 }
@@ -3106,7 +3257,8 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
     fflush(stdout);
   }
 
-  if (SDDS_ionHistogramOutput && ((iPass-ionEffects->startPass)*nBunches+iBunch)%ionHistogramOutputInterval == 0
+  if (SDDS_ionHistogramOutput && !ionEffects->ion2dDensity 
+      && ((iPass-ionEffects->startPass)*nBunches+iBunch)%ionHistogramOutputInterval == 0
       && (ionHistogramOutput_sStart<0 || ionEffects->sLocation>=ionHistogramOutput_sStart) 
       && (ionHistogramOutput_sEnd<0 || ionEffects->sLocation<=ionHistogramOutput_sEnd)) {
     /* output ion density histogram */
@@ -3190,6 +3342,56 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
     }
 #endif	
   }
+
+  if (SDDS_ion2dHistogramOutput && ionEffects->ion2dDensity
+      && ((iPass-ionEffects->startPass)*nBunches+iBunch)%ionHistogramOutputInterval == 0
+      && (ionHistogramOutput_sStart<0 || ionEffects->sLocation>=ionHistogramOutput_sStart) 
+      && (ionHistogramOutput_sEnd<0 || ionEffects->sLocation<=ionHistogramOutput_sEnd)) {
+    double dx, dy;
+    long ix, iy;
+    /* output 2d ion density histogram */
+#if USE_MPI
+    if (myid==0) {
+#endif
+      if (!SDDS_StartPage(SDDS_ion2dHistogramOutput, ionEffects->n2dGridIon[0]*ionEffects->n2dGridIon[1]) ||
+          !SDDS_SetParameters(SDDS_ion2dHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                              "Pass", iPass, "Bunch", iBunch, "t", tNow, "s", ionEffects->sLocation,
+                              "qIons", ionEffects->qTotal,
+                              "qIonsOutside", ionEffects->ionHistogramMissed[0],
+                              "fractionIonChargeOutside", 
+                              ionEffects->qTotal ? ionEffects->ionHistogramMissed[0]/ionEffects->qTotal : -1,
+                              "nxBins", ionEffects->n2dGridIon[0],
+                              "nyBins", ionEffects->n2dGridIon[1],
+                              "nMacroIons", ionEffects->nTotalIons,
+                              "nCoreMacroIons", ionEffects->nCoreIons,
+                              NULL)) {
+        SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb((char*)"Problem writing ion 2d histogram data");
+      }
+      dx = 2*ionEffects->span[0]/(ionEffects->n2dGridIon[0]-1.0);
+      dy = 2*ionEffects->span[1]/(ionEffects->n2dGridIon[1]-1.0);
+      for (ix=0; ix<ionEffects->n2dGridIon[0]; ix++) {
+        for (iy=0; iy<ionEffects->n2dGridIon[1]; iy++) {
+          if (!SDDS_SetRowValues(SDDS_ion2dHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                 ix+iy*ionEffects->n2dGridIon[0],
+                                 "x", (float)(ix*dx-ionEffects->span[0]),
+                                 "y", (float)(iy*dy-ionEffects->span[1]),
+                                 "rho", (float)ionEffects->ion2dDensity[ix][iy], 
+                                 NULL)) {
+            SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+            SDDS_Bomb((char*)"Problem writing ion 2d histogram data");
+          }
+        }
+      }
+      if (!SDDS_WritePage(SDDS_ion2dHistogramOutput)) {
+        SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb((char*)"Problem writing ion 2d histogram data");
+      }
+#if USE_MPI
+    }
+#endif	
+  }
+
 }
 
 void flushIonEffectsSummaryOutput(IONEFFECTS *ionEffects)

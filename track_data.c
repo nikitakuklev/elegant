@@ -3432,6 +3432,8 @@ PARAMETER ionEffects_param[N_IONEFFECTS_PARAMS] = {
     {"GENERATION_INTERVAL", "", IS_LONG, 0, (long)((char *)&ionEffects_example.generationInterval), NULL, 0.0, 0, "If positive, overrides the default value set in the ion_effects command, giving the number of macro ions generated per bunch passage."},
     {"X_SPAN", "", IS_DOUBLE, 0, (long)((char *)&ionEffects_example.span[0]), NULL, 0.0, 0, "If positive, gives the region over which ions are kept."},
     {"Y_SPAN", "", IS_DOUBLE, 0, (long)((char *)&ionEffects_example.span[1]), NULL, 0.0, 0, "If positive, gives the region over which ions are kept."},
+    {"NX_POISSON", "", IS_LONG, 0, (long)((char *)&ionEffects_example.n2dGridIon[0]), NULL, 0.0, 0, "If positive, the number of x bins for Poisson solver for ion fields."},
+    {"NY_POISSON", "", IS_LONG, 0, (long)((char *)&ionEffects_example.n2dGridIon[1]), NULL, 0.0, 0, "If positive, the number of y bins for Poisson solver for ion fields."},
     {"X_BIN_DIVISOR", "", IS_DOUBLE, 0, (long)((char *)&ionEffects_example.binDivisor[0]), NULL, 0.0, 0, "If positive, gives the ratio of electron beam sigma to bin size for ion field calculation."},
     {"Y_BIN_DIVISOR", "", IS_DOUBLE, 0, (long)((char *)&ionEffects_example.binDivisor[1]), NULL, 0.0, 0, "If positive, gives the ratio of electron beam sigma to bin size for ion field calculation."},
     {"X_RANGE_MULTIPLIER", "", IS_DOUBLE, 0, (long)((char *)&ionEffects_example.rangeMultiplier[0]), NULL, 0.0, 0, "If positive, gives the ratio of ion binning region size to ion 80% x range."},

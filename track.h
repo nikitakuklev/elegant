@@ -1139,7 +1139,7 @@ extern char *entity_text[N_TYPES];
 #define N_BGGEXP_PARAMS 35
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
-#define N_IONEFFECTS_PARAMS 14
+#define N_IONEFFECTS_PARAMS 16
 #define N_SPEEDBUMP_PARAMS 8
 #define N_CCBEND_PARAMS 68
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
@@ -3450,6 +3450,7 @@ typedef struct {
   long disable;
   long macroIons, generationInterval;
   double span[2];              /* Actually the x, y half-span, centered on the center of the chamber */
+  long n2dGridIon[2];          /* Grid size for 2d ion histogram (e.g., for Poisson solver for ion  fields) */
   double binDivisor[2];        /* x, y value. Used if bigaussian fitting wanted for field calculation */
   double rangeMultiplier[2];   /* x, y value. Used if bigaussian fitting wanted for field calculation */
   double sigmaLimitMultiplier[2]; /* x, y value. Used if bigaussian fitting wanted for field calculation */
@@ -3470,7 +3471,8 @@ typedef struct {
   long nMin, nMax;                 /* min and max over all processors */
   double ionDelta[2];              /* delta x or y for ion histogram bins */
   double ionRange[2];              /* range in x or y for ion histogram */
-  long ionBins[2];                 /* number of bins */
+  long ionBins[2];                 /* number of bins in each dimension for 1d histograms (may be changed by code) */
+  double **ion2dDensity;           /* for Poisson solver */
   double *xyIonHistogram[2];       /* values for ion histogram independent coordinates (x, y) */
   double *ionHistogram[2];         /* charge histogram */
   double *ionHistogramFit[2];      /* fit to same */
