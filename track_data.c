@@ -2949,7 +2949,7 @@ TFBDRIVER tfbDriver_example;
 PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS] = {
    {"ID", "", IS_STRING, 0, (long)((char*)&tfbDriver_example.ID), NULL, 0.0, 0, "System identifier"},
    {"STRENGTH", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.strength), NULL, 0.0, 0, "Strength factor"},
-   {"KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.kickLimit), NULL, 0.0, 0, "Limit on applied kick, nominally in radians."},
+   {"KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.kickLimit), NULL, 0.0, 0, "Limit on applied kick; in radians for transverse plane or fraction of momentum in longitudinal plane."},
    {"FREQUENCY", "Hz", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.frequency), NULL, 0.0, 0, "Resonant frequency of the unloaded kicker cavity."},
    {"DRIVE_FREQUENCY", "Hz", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.driveFrequency), NULL, 0.0, 0, "Drive frequency. If zero, defaults to resonant frequency of the loaded cavity."},
    {"CLOCK_FREQUENCY", "Hz", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.clockFrequency), NULL, 0.0, 0, "Clock frequency used for timing of the changes to generator current. Typically the rf or bunch frequency is used."},
