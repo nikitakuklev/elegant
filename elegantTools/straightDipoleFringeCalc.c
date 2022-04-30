@@ -524,6 +524,15 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
       exit(1);
     }
 
+// Should find a better way to do this...
+  fringeInt = integrateTrap(ggeD, zMaxInt[0], zMaxInt[1], dz);
+  zEdge[0] = (maxD[1] * (z[zMaxInt[1]] - z[zMaxInt[0]]) - fringeInt) / (maxD[1] - maxD[0]);
+  zEdge[0] += z[zMaxInt[0]];
+  fringeInt = integrateTrap(ggeD, zMaxInt[1], zMaxInt[2], dz);
+  zEdge[1] = (maxD[2] * (z[zMaxInt[2]] - z[zMaxInt[1]]) - fringeInt) / (maxD[2] - maxD[1]);
+  zEdge[1] += z[zMaxInt[1]];
+  arcLength = 0.5*bendAngle*(zEdge[1]-zEdge[0])/sin(0.5*bendAngle);
+
   for (edgeNum = iRow = 0; edgeNum < Nedges; edgeNum++)
     {
       char nameBuffer[256];
@@ -554,11 +563,11 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
 
       dipSextFringeInt = computeDipSextFringeInt(ggeD, stepFuncD, ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
 
-      // This needs to be looked at more...
+      // The arc length is calculated above...
       if(edgeNum == 1)
 	arcLength = 0.5*bendAngle*(zEdge[1]-zEdge[0])/sin(0.5*bendAngle);
-      else
-	arcLength = bendAngle / (invRigidity * maxD[1]);
+      //else
+	//arcLength = bendAngle / (invRigidity * maxD[1]);
 
       if (edgeNum==0) 
         {
