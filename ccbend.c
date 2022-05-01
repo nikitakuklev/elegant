@@ -1052,7 +1052,17 @@ void verticalRbendFringe
       y2  = y1;
       px2 = px1;
       py2 = py1;
-      tau2 = tau + sect3*intK0*px2*invP*invP;
+//      tau2 = tau + sect3*intK0*px2*invP*invP;
+      tau += sect3*intK0*px2*invP*invP;
+
+temp = sect*intI1*invP;
+tau2 = tau + temp*invP*(py2*y2 - px2*x2);
+temp = exp(temp);
+// temp = exp(sect*intI1);
+x2 = x2*temp;
+y2 = y2/temp;
+px2 = px2/temp;
+py2 = py2*temp;	
 
       /* x2 = x1;
          y2 = y1;
