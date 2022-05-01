@@ -590,7 +590,12 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
               !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
                                  "ElementName", elementName, "ElementType", "CCBEND", 
                                  "ElementParameter", "FRINGEMODEL", 
+                                 "ParameterValue", (double)1.0, NULL) ||
+              !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                                 "ElementName", elementName, "ElementType", "CCBEND", 
+                                 "ElementParameter", "COMPENSATE_KN",
                                  "ParameterValue", (double)1.0, NULL) )
+
             {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
               exit(1);
