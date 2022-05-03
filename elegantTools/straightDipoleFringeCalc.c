@@ -191,8 +191,10 @@ int main(int argc, char **argv)
           bomb("too many modes given", USAGE);
         mode = LGBEND_MODE;
         trajectoryFile = NULL;
+        scanned[i_arg].n_items --;
+        lgbendFlags = 0;
         if (!scanItemList(&lgbendFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
-                          "trajectory", SDDS_STRING, &trajectoryFile, TRAJECTORY_GIVEN,
+                          "trajectory", SDDS_STRING, &trajectoryFile, 1, TRAJECTORY_GIVEN,
                           NULL) 
             || !(lgbendFlags&TRAJECTORY_GIVEN) || !trajectoryFile || !strlen(trajectoryFile))
           bomb("invalid -lgbend syntax", USAGE);
