@@ -43,11 +43,11 @@ double Imp(double kR, long m);
 double BesIn(double x, long order);
 double BesselFuncIn(double x, double order);
 
-void readInTrajectoryInput(char *input, double **x, double **xp, double *dz, int64_t *rows,
+void readInTrajectoryInput(char *input, double **x, double **xp, double **By, double *dz, int64_t *rows,
                            double *pCentral, int *Nsegments, double **zMagnetRef);
 
 void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, double *xp,
-                      double *x, int Nz, double invRigidity, double *zRef, int Nedges, char *output, 
+                      double *x, double *By, int Nz, double invRigidity, double *zRef, int Nedges, char *output, 
                       double totalBendAngle, char *edgeOutputFile, double zOffset);
 
 void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS,
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
   long i_arg;
   unsigned long ccbendFlags, lgbendFlags;
 
-  double *z=NULL, *ggeD=NULL, *ggeQ=NULL, *ggeS=NULL, *xp, *x;
+  double *z=NULL, *ggeD=NULL, *ggeQ=NULL, *ggeS=NULL, *xp, *x, *By;
   double *zMagnetRef;
 
   double pCentral=DBL_MAX, invRigidity, bendAngle=DBL_MAX, xEntry = DBL_MAX;
@@ -260,7 +260,7 @@ int main(int argc, char **argv)
     if (!trajectoryFile || !strlen(trajectoryFile))
       bomb("trajectory file must be given in LGBEND mode", USAGE);
     
-    readInTrajectoryInput(trajectoryFile, &x, &xp, &dzTraj, &trajRows, &pCentral, &Nsegments, &zMagnetRef);
+    readInTrajectoryInput(trajectoryFile, &x, &xp, &By, &dzTraj, &trajRows, &pCentral, &Nsegments, &zMagnetRef);
     if (trajRows!=(Nz+1)) {
       fprintf(stderr, "Error: %ld rows in file %s but %ld rows in file %s\n",
               (long)trajRows, trajectoryFile, (long)Nz, ggeFile);
@@ -284,7 +284,7 @@ int main(int argc, char **argv)
     for (ip = 0; ip < Nedges - 1; ip++)
       zMagnetRef[ip] += 1.0e-4 * (z[1] - z[0]);
     invRigidity = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
-    LGBENDfringeCalc(z, ggeD, ggeQ, ggeS, xp, x, Nz, invRigidity, zMagnetRef, Nedges, output, bendAngle, edgeOutputFile,
+    LGBENDfringeCalc(z, ggeD, ggeQ, ggeS, xp, x, By, Nz, invRigidity, zMagnetRef, Nedges, output, bendAngle, edgeOutputFile,
                      zOffset);
   } else 
     bomb("Something impossible happened.", NULL);
@@ -298,7 +298,7 @@ int main(int argc, char **argv)
 }
 
 void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, double *xp,
-                      double *x, int Nz, double invRigidity, double *zRef, int Nedges, char *output,
+                      double *x, double *By, int Nz, double invRigidity, double *zRef, int Nedges, char *output,
                       double totalBendAngle, char *edgeOutputFile, double zOffset)
 {
   SDDS_DATASET SDDSout;
@@ -322,6 +322,7 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
     fpEdge = fopen(edgeOutputFile, "w");
     fprintf(fpEdge, "SDDS1\n&column name=z type=double units=m &end\n");
     fprintf(fpEdge, "&column name=x type=double units=m &end\n");
+    fprintf(fpEdge, "&column name=By type=double units=T &end\n");
     fprintf(fpEdge, "&data mode=ascii no_row_counts=1 &end\n");
   }
 
@@ -397,7 +398,7 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
   edgeX[edgeNum] = (1.0 - temp1) * x[(int)(zEdge[edgeNum] / dz)] + temp1 * x[(int)(zEdge[edgeNum] / dz) + 1];
   printf("zEdge[%d] = %le, edgeX[%d] = %le\n", edgeNum, zEdge[edgeNum], edgeNum, edgeX[edgeNum]);
   if (fpEdge) 
-    fprintf(fpEdge, "%le %le\n", zEdge[edgeNum]+zOffset, edgeX[edgeNum]);
+    fprintf(fpEdge, "%le %le %le\n", zEdge[edgeNum]+zOffset, edgeX[edgeNum], By[(int)(zEdge[edgeNum]/dz)]);
 
 /* initial coordinates (to be set by command line input) */
   /*
@@ -437,7 +438,6 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
 
   for (edgeNum = 1; edgeNum < Nedges; edgeNum++)
     {
-      char nameBuffer[256];
     /* find hard edge according to integrated Bfield */
       fringeInt = integrateTrap(ggeD, zMaxInt[edgeNum], zMaxInt[edgeNum + 1], dz);
       zEdge[edgeNum] = (maxD[edgeNum + 1] * (z[zMaxInt[edgeNum + 1]] - z[zMaxInt[edgeNum]]) - fringeInt) / (maxD[edgeNum + 1] - maxD[edgeNum]);
@@ -464,12 +464,12 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
 			*( (cos(edgeAngle[edgeNum]) - cos(edgeAngle[edgeNum-1]))
 			  /(sin(edgeAngle[edgeNum-1]) - sin(edgeAngle[edgeNum])) );
 
-      if (fpEdge) 
-        fprintf(fpEdge, "%le %le\n", zEdge[edgeNum]+zOffset, edgeX[edgeNum]);
-
     /* find step function field that gives same integrated field */
       zEdgeInt[edgeNum] = (int)(zEdge[edgeNum] / dz);
       setStepFunction(stepFuncD, maxD, zMaxInt, zEdgeInt, edgeNum, fringeInt, dz);
+
+      if (fpEdge) 
+        fprintf(fpEdge, "%le %le %le\n", zEdge[edgeNum]+zOffset, edgeX[edgeNum], By[zEdgeInt[edgeNum]]);
 
 //Debugging
 //printf("%23.15e %23.15e \n", zEdge[edgeNum], stepFuncD[zMaxInt[edgeNum]]);
@@ -955,7 +955,7 @@ void readInGGE(char *ggeFile, double **z, double **ggeD, double **ggeQ, double *
   return;
 }
 
-void readInTrajectoryInput(char *input, double **x, double **xp, double *dz, int64_t *rows,
+void readInTrajectoryInput(char *input, double **x, double **xp, double **By, double *dz, int64_t *rows,
                            double *pCentral, int *Nsegments, double **zMagnetRef)
 {
   SDDS_DATASET SDDSin;
@@ -988,6 +988,11 @@ void readInTrajectoryInput(char *input, double **x, double **xp, double *dz, int
   if (SDDS_CheckColumn(&SDDSin, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
     {
       fprintf(stderr, "Unable to find floating-point column \"x\" with units \"m\" in file %s\n", input);
+      exit(1);
+    }
+  if (SDDS_CheckColumn(&SDDSin, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
+    {
+      fprintf(stderr, "Unable to find floating-point column \"By\" with units \"T\" in file %s\n", input);
       exit(1);
     }
   if (SDDS_CheckColumn(&SDDSin, "px", NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
@@ -1033,6 +1038,11 @@ void readInTrajectoryInput(char *input, double **x, double **xp, double *dz, int
   if (!(*x=SDDS_GetColumnInDoubles(&SDDSin, "x")))
     {
       fprintf(stderr, "Problem reading column x from %s\n", input);
+      exit(1);
+    }
+  if (!(*By=SDDS_GetColumnInDoubles(&SDDSin, "By")))
+    {
+      fprintf(stderr, "Problem reading column By from %s\n", input);
       exit(1);
     }
   if (!(z=SDDS_GetColumnInDoubles(&SDDSin, "z")))
