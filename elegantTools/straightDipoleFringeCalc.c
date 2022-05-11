@@ -47,7 +47,8 @@ void readInTrajectoryInput(char *input, double **x, double **xp, double *dz, int
                            double *pCentral, int *Nsegments, double **zMagnetRef);
 
 void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, double *xp,
-                      double *x, int Nz, double invRigidity, double *zRef, int Nedges, char *output);
+                      double *x, int Nz, double invRigidity, double *zRef, int Nedges, char *output, 
+                      double totalBendAngle, char *edgeOutputFile, double zOffset);
 
 void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS,
                       int Nz, double invRigidity, double zRef, double bendAngle, char *output, char *elementName);
@@ -95,7 +96,7 @@ char *option[N_OPTIONS] = {
 #define USAGE "straightDipoleFringeCalc -gge=<filename> <outputfile>\n\
    -elementName=<string>\n\
    { -ccbend=pCentral=<value>,bendAngle=<radians>,xEntry=<meters>,zRefField=<meters>\n\
-      | -lgbend=trajectory=<filename>\n\
+      | -lgbend=trajectory=<filename>,bendAngle=<radians>[,edgeOutput=<filename>]\n\
     }\n\
 \n\
 -gge         Give generalized gradient expansion file, such as produced by computeRBGGE\n\
@@ -144,6 +145,7 @@ int main(int argc, char **argv)
   int Nsegments, Nedges, ip, Nz;
 
   char *ggeFile=NULL, *output=NULL, *trajectoryFile = NULL, *elementName = NULL;
+  char *edgeOutputFile = NULL;
   int mode=0;
 
   SDDS_RegisterProgramName(argv[0]);
@@ -191,12 +193,16 @@ int main(int argc, char **argv)
           bomb("too many modes given", USAGE);
         mode = LGBEND_MODE;
         trajectoryFile = NULL;
+        edgeOutputFile = NULL;
         scanned[i_arg].n_items --;
         lgbendFlags = 0;
         if (!scanItemList(&lgbendFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
                           "trajectory", SDDS_STRING, &trajectoryFile, 1, TRAJECTORY_GIVEN,
+                          "bendangle", SDDS_DOUBLE, &bendAngle, 1, BENDANGLE_GIVEN,
+                          "edgeoutput", SDDS_STRING, &edgeOutputFile, 1, 0,
                           NULL) 
-            || !(lgbendFlags&TRAJECTORY_GIVEN) || !trajectoryFile || !strlen(trajectoryFile))
+            || !(lgbendFlags&TRAJECTORY_GIVEN) || !trajectoryFile || !strlen(trajectoryFile)
+            || !(lgbendFlags&BENDANGLE_GIVEN))
           bomb("invalid -lgbend syntax", USAGE);
         break;
       case SET_ELEMENT_NAME:
@@ -247,7 +253,7 @@ int main(int argc, char **argv)
     CCBENDfringeCalc(z, ggeD, ggeQ, ggeS, Nz, invRigidity, zMagnetRef[0], bendAngle, output, elementName);
   } else if (mode==LGBEND_MODE) {
     int64_t trajRows, i;
-    double dzTraj;
+    double dzTraj, zOffset;
     
     readInGGE(ggeFile, &z, &ggeD, &ggeQ, &ggeS, &Nz);
 
@@ -269,15 +275,17 @@ int main(int argc, char **argv)
     Nedges = Nsegments + 1;
     printf("Nedges = %i\n", Nedges);
     /* Internally set z[0] = 0 to simplify calculations */
+    zOffset = z[0];
     for (ip = 0; ip < Nedges - 1; ip++)
-      zMagnetRef[ip] -= z[0];
+      zMagnetRef[ip] -= zOffset;
     for (ip = Nz - 1; ip >= 0; ip--)
-      z[ip] -= z[0];
+      z[ip] -= zOffset;
     /* add 0.01% of dz to eliminate rounding errors when converting to ints */
     for (ip = 0; ip < Nedges - 1; ip++)
       zMagnetRef[ip] += 1.0e-4 * (z[1] - z[0]);
     invRigidity = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
-    LGBENDfringeCalc(z, ggeD, ggeQ, ggeS, xp, x, Nz, invRigidity, zMagnetRef, Nedges, output);
+    LGBENDfringeCalc(z, ggeD, ggeQ, ggeS, xp, x, Nz, invRigidity, zMagnetRef, Nedges, output, bendAngle, edgeOutputFile,
+                     zOffset);
   } else 
     bomb("Something impossible happened.", NULL);
   
@@ -290,20 +298,32 @@ int main(int argc, char **argv)
 }
 
 void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, double *xp,
-                      double *x, int Nz, double invRigidity, double *zRef, int Nedges, char *output)
+                      double *x, int Nz, double invRigidity, double *zRef, int Nedges, char *output,
+                      double totalBendAngle, char *edgeOutputFile, double zOffset)
 {
   SDDS_DATASET SDDSout;
+  FILE *fpEdge = NULL;
   double *stepFuncD, *stepFuncQ, *stepFuncS;
   double *zEdge, *maxD, *maxQ, *maxS;
   double *bendRad, *edgeAngle, *edgeX;
 
   FRINGE_INT3 dipFringeInt, sextFringeInt;
-  FRINGE_INT3 quadFringeInt;
+  FRINGE_INT3 quadFringeInt, dipSextFringeInt;
 
-  double temp1, fringeInt, dz;
+  double temp1, fringeInt, dz, bendAngle;
+  double integratedDipole;
 
   int *zEdgeInt, *zMaxInt;
-  int edgeNum, ip;
+  int edgeNum, ip, iRow;
+  int NsegmentParams = 4;
+  int NfringeParams = 10;
+
+  if (edgeOutputFile) {
+    fpEdge = fopen(edgeOutputFile, "w");
+    fprintf(fpEdge, "SDDS1\n&column name=z type=double units=m &end\n");
+    fprintf(fpEdge, "&column name=x type=double units=m &end\n");
+    fprintf(fpEdge, "&data mode=ascii no_row_counts=1 &end\n");
+  }
 
   dz = z[1] - z[0];
   /* allocate memory */
@@ -354,43 +374,107 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
-  if (!SDDS_DefineSimpleParameter(&SDDSout, "FringeSegmentNum", NULL, SDDS_LONG) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "ElementName", NULL, SDDS_STRING) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "ElementParameter", NULL, SDDS_STRING) ||
+  if (!SDDS_DefineSimpleColumn(&SDDSout, "ParameterName", NULL, SDDS_STRING) ||
       !SDDS_DefineSimpleColumn(&SDDSout, "ParameterValue", NULL, SDDS_DOUBLE) ||
-      !SDDS_WriteLayout(&SDDSout))
+      !SDDS_WriteLayout(&SDDSout)) 
     {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
 
-  for (edgeNum = 0; edgeNum < Nedges; edgeNum++)
+  edgeNum = 0;
+
+/* compute the integrated bending field */
+  integratedDipole = integrateTrap(ggeD, 0, Nz-1, dz);
+/* find hard edge according to integrated Bfield */
+  fringeInt = integrateTrap(ggeD, zMaxInt[edgeNum], zMaxInt[edgeNum + 1], dz);
+  zEdge[edgeNum] = (maxD[edgeNum + 1] * (z[zMaxInt[edgeNum + 1]] - z[zMaxInt[edgeNum]]) - fringeInt) / (maxD[edgeNum + 1] - maxD[edgeNum]);
+  zEdge[edgeNum] += z[zMaxInt[edgeNum]];
+  temp1 = (zEdge[edgeNum] - z[(int)(zEdge[edgeNum] / dz)]) / dz;
+/* angle at first edge set by input x' from trajectory */
+  edgeAngle[edgeNum] = atan(xp[0]);
+/* horizontal coordinate set by linear interpolation to edge */
+  edgeX[edgeNum] = (1.0 - temp1) * x[(int)(zEdge[edgeNum] / dz)] + temp1 * x[(int)(zEdge[edgeNum] / dz) + 1];
+  printf("zEdge[%d] = %le, edgeX[%d] = %le\n", edgeNum, zEdge[edgeNum], edgeNum, edgeX[edgeNum]);
+  if (fpEdge) 
+    fprintf(fpEdge, "%le %le\n", zEdge[edgeNum]+zOffset, edgeX[edgeNum]);
+
+/* initial coordinates (to be set by command line input) */
+  /*
+  edgeAngle[edgeNum] = atan(xp[0]);
+  edgeX[edgeNum] = -3.003057073789646e-03;
+  printf("edgeX[%d] = %le\n", edgeNum, edgeX[edgeNum]);
+  */
+
+  bendRad[edgeNum] = invRigidity * maxD[edgeNum + 1];
+  bendRad[edgeNum] = 1.0 / bendRad[edgeNum];
+
+/* find step function field that gives same integrated field */
+  zEdgeInt[edgeNum] = (int)(zEdge[edgeNum] / dz);
+  setStepFunction(stepFuncD, maxD, zMaxInt, zEdgeInt, edgeNum, fringeInt, dz);
+
+  for (ip = zMaxInt[edgeNum]; ip < zEdgeInt[edgeNum]; ip++)
+    stepFuncQ[ip] = maxQ[edgeNum];
+  stepFuncQ[zEdgeInt[edgeNum]] = ((maxQ[edgeNum] - maxQ[edgeNum + 1]) * stepFuncD[zEdgeInt[edgeNum]] - maxQ[edgeNum] * maxD[edgeNum + 1] + maxQ[edgeNum + 1] * maxD[edgeNum]) / (maxD[edgeNum] - maxD[edgeNum + 1]);
+  for (ip = zEdgeInt[edgeNum] + 1; ip <= zMaxInt[edgeNum + 1]; ip++)
+    stepFuncQ[ip] = maxQ[edgeNum + 1];
+
+  for (ip = zMaxInt[edgeNum]; ip < zEdgeInt[edgeNum]; ip++)
+    stepFuncS[ip] = maxS[edgeNum];
+  stepFuncS[zEdgeInt[edgeNum]] = ((maxS[edgeNum] - maxS[edgeNum + 1]) * stepFuncD[zEdgeInt[edgeNum]] - maxS[edgeNum] * maxD[edgeNum + 1] + maxS[edgeNum + 1] * maxD[edgeNum]) / (maxD[edgeNum] - maxD[edgeNum + 1]);
+  for (ip = zEdgeInt[edgeNum] + 1; ip <= zMaxInt[edgeNum + 1]; ip++)
+    stepFuncS[ip] = maxS[edgeNum + 1];
+
+  dipFringeInt = computeDipoleFringeInt(ggeD, stepFuncD, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
+  quadFringeInt = computeQuadrupoleFringeInt(ggeQ, stepFuncQ, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
+  sextFringeInt = computeSextupoleFringeInt(ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
+  dipSextFringeInt = computeDipSextFringeInt(ggeD, stepFuncD, ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
+
+//Debugging
+//printf("%23.15e %23.15e \n", zEdge[edgeNum], stepFuncD[zMaxInt[edgeNum]]);
+//printf("%23.15e %23.15e \n", zEdge[edgeNum], stepFuncD[zMaxInt[edgeNum + 1]]);
+//printf("%23.15e \n", edgeAngle[edgeNum]);
+
+  for (edgeNum = 1; edgeNum < Nedges; edgeNum++)
     {
-      /* find hard edge according to integrated Bfield */
+      char nameBuffer[256];
+    /* find hard edge according to integrated Bfield */
       fringeInt = integrateTrap(ggeD, zMaxInt[edgeNum], zMaxInt[edgeNum + 1], dz);
       zEdge[edgeNum] = (maxD[edgeNum + 1] * (z[zMaxInt[edgeNum + 1]] - z[zMaxInt[edgeNum]]) - fringeInt) / (maxD[edgeNum + 1] - maxD[edgeNum]);
       zEdge[edgeNum] += z[zMaxInt[edgeNum]];
       temp1 = (zEdge[edgeNum] - z[(int)(zEdge[edgeNum] / dz)]) / dz;
-      /* angles at first and last edges set by input x' */
-      if (edgeNum == 0)
-        edgeAngle[edgeNum] = atan(xp[0]);
+    /* angles at last edge set by output x' from trajectory */
+      if (edgeNum == Nedges - 1)
+	edgeAngle[edgeNum] = atan(xp[Nz - 1]);
       else
-        {
-          if (edgeNum == Nedges - 1)
-            edgeAngle[edgeNum] = atan(xp[Nz - 1]);
-          else
-            edgeAngle[edgeNum] = atan((1.0 - temp1) * xp[(int)(zEdge[edgeNum] / dz)] + temp1 * xp[(int)(zEdge[edgeNum] / dz) + 1]);
-          /* interior angles set by linear interpolation to edge */
-        }
-      /* horizontal coordinate set by linear interpolation to edge */
+	edgeAngle[edgeNum] = atan((1.0 - temp1) * xp[(int)(zEdge[edgeNum] / dz)] + temp1 * xp[(int)(zEdge[edgeNum] / dz) + 1]);
+    /* interior angles set by linear interpolation to edge */
+    /* horizontal coordinate set by linear interpolation to edge */
       edgeX[edgeNum] = (1.0 - temp1) * x[(int)(zEdge[edgeNum] / dz)] + temp1 * x[(int)(zEdge[edgeNum] / dz) + 1];
 
       bendRad[edgeNum] = invRigidity * maxD[edgeNum + 1];
       bendRad[edgeNum] = 1.0 / bendRad[edgeNum];
 
-      /* find step function field that gives same integrated field */
+    /* Compute the fraction of the integrated bending field in this segment */
+      bendAngle = maxD[edgeNum]*(zEdge[edgeNum]-zEdge[edgeNum-1])/integratedDipole;
+      bendAngle = bendAngle*totalBendAngle;
+    /* Compute next edge (x,x') (will be done by elegant) */
+      edgeAngle[edgeNum] = edgeAngle[edgeNum-1] - bendAngle;
+      edgeX[edgeNum] = edgeX[edgeNum-1] + (zEdge[edgeNum]-zEdge[edgeNum-1])
+			*( (cos(edgeAngle[edgeNum]) - cos(edgeAngle[edgeNum-1]))
+			  /(sin(edgeAngle[edgeNum-1]) - sin(edgeAngle[edgeNum])) );
+
+      if (fpEdge) 
+        fprintf(fpEdge, "%le %le\n", zEdge[edgeNum]+zOffset, edgeX[edgeNum]);
+
+    /* find step function field that gives same integrated field */
       zEdgeInt[edgeNum] = (int)(zEdge[edgeNum] / dz);
       setStepFunction(stepFuncD, maxD, zMaxInt, zEdgeInt, edgeNum, fringeInt, dz);
+
+//Debugging
+//printf("%23.15e %23.15e \n", zEdge[edgeNum], stepFuncD[zMaxInt[edgeNum]]);
+//printf("%23.15e %23.15e \n", zEdge[edgeNum], stepFuncD[zMaxInt[edgeNum + 1]]);
+//printf("%23.15e \n", edgeAngle[edgeNum]);
 
       for (ip = zMaxInt[edgeNum]; ip < zEdgeInt[edgeNum]; ip++)
         stepFuncQ[ip] = maxQ[edgeNum];
@@ -404,41 +488,110 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
       for (ip = zEdgeInt[edgeNum] + 1; ip <= zMaxInt[edgeNum + 1]; ip++)
         stepFuncS[ip] = maxS[edgeNum + 1];
 
+      iRow=0;
+    /* Output longitudinal length, bend angle, and multipole content */
+      if (!SDDS_StartPage(&SDDSout, NsegmentParams+(edgeNum==1?2:1)*NfringeParams) ||
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "LONGIT_L", 
+			     "ParameterValue", zEdge[edgeNum]-zEdge[edgeNum-1], NULL) ||
+	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "ANGLE", 
+			     "ParameterValue", bendAngle, NULL) ||
+	  //"ParameterValue", edgeAngle[edgeNum-1]-edgeAngle[edgeNum], NULL) ||
+	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "K1", 
+			     "ParameterValue", invRigidity * maxQ[edgeNum], NULL) ||
+	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "K2", 
+			     "ParameterValue", invRigidity * (maxS[edgeNum] - 0.25 * maxD[edgeNum]), NULL) )
+	{
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	  exit(1);
+	}
+
+    /* Output the first edge x coordinate and fringe field terms if appropriate */
+      if (edgeNum == 1) {
+	if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			       "ParameterName", "ENTRY_X",
+			       "ParameterValue", edgeX[edgeNum-1], NULL) ||
+	    !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			       "ParameterName", "ENTRY_ANGLE",
+			       "ParameterValue", edgeAngle[edgeNum-1], NULL) ||
+	    !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			       "ParameterName", "FRINGE1K0",
+			       "ParameterValue", dipFringeInt.int2, NULL) ||
+	    !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			       "ParameterName", "FRINGE1K2",
+			       "ParameterValue", dipFringeInt.int3, NULL) ||
+	    !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			       "ParameterName", "FRINGE1K4",
+			       "ParameterValue", sextFringeInt.int3, NULL) ||
+	    !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			       "ParameterName", "FRINGE1K5",
+			       "ParameterValue", sextFringeInt.int2, NULL) ||
+	    !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			       "ParameterName", "FRINGE1K6",
+			       "ParameterValue", sextFringeInt.int1, NULL) ||
+	    !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			       "ParameterName", "FRINGE1K7",
+			       "ParameterValue", dipSextFringeInt.int1+dipSextFringeInt.int2, NULL) ||
+	    !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			       "ParameterName", "FRINGE1I0",
+			       "ParameterValue", quadFringeInt.int1, NULL) ||
+	    !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			       "ParameterName", "FRINGE1I1",
+			       "ParameterValue", quadFringeInt.int2, NULL))
+	  {
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	    exit(1);
+	  }
+      }
+
       dipFringeInt = computeDipoleFringeInt(ggeD, stepFuncD, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
       quadFringeInt = computeQuadrupoleFringeInt(ggeQ, stepFuncQ, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
       sextFringeInt = computeSextupoleFringeInt(ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
+      dipSextFringeInt = computeDipSextFringeInt(ggeD, stepFuncD, ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
 
-      if (!SDDS_StartPage(&SDDSout, 12) ||
-          !SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "FringeSegmentNum", edgeNum + 1, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 0,  "ElementName", "LGBEND", "ElementParameter", "intK0",  \
-                             "ParameterValue", dipFringeInt.int2, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 1,  "ElementName", "LGBEND", "ElementParameter", "intK2",  \
-                             "ParameterValue", dipFringeInt.int3, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 2,  "ElementName", "LGBEND", "ElementParameter", "intK4",  \
-                             "ParameterValue", sextFringeInt.int3, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 3,  "ElementName", "LGBEND", "ElementParameter", "intK5",  \
-                             "ParameterValue", sextFringeInt.int2, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 4,  "ElementName", "LGBEND", "ElementParameter", "intK6",  \
-                             "ParameterValue", sextFringeInt.int1, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 5,  "ElementName", "LGBEND", "ElementParameter", "intKIK", \
-                             "ParameterValue", quadFringeInt.int1, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 6,  "ElementName", "LGBEND", "ElementParameter", "intKII", \
-                             "ParameterValue", quadFringeInt.int2, NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 7,  "ElementName", "LGBEND", "ElementParameter", "LONGIT_L",      \
-                             "ParameterValue", fabs(fringeInt / maxD[edgeNum + 1]), NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 8,  "ElementName", "LGBEND", "ElementParameter", "EDGE_ANGLE",  \
-                             "ParameterValue", edgeAngle[edgeNum], NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 9,  "ElementName", "LGBEND", "ElementParameter", "EDGE_X",     \
-                             "ParameterValue", edgeX[edgeNum], NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 10, "ElementName", "LGBEND", "ElementParameter", "K1",     \
-                             "ParameterValue", invRigidity * maxQ[edgeNum + 1], NULL) ||
-          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 11, "ElementName", "LGBEND", "ElementParameter", "K2",     \
-                             "ParameterValue", invRigidity * (maxS[edgeNum + 1] - 0.25 * maxD[edgeNum + 1]), NULL) ||
-          !SDDS_WritePage(&SDDSout))
-        {
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-          exit(1);
-        }
+
+// The terms EXIT_X and EXIT_ANGLE will be calculated by elegant, and are temporarily here for checking
+      if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "EXIT_X",
+			     "ParameterValue", edgeX[edgeNum], NULL) ||
+	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "EXIT_ANGLE",
+			     "ParameterValue", edgeAngle[edgeNum], NULL) ||
+	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "FRINGE2K0",
+			     "ParameterValue", dipFringeInt.int2, NULL) ||
+	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "FRINGE2K2",
+			     "ParameterValue", dipFringeInt.int3, NULL) ||
+	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "FRINGE2K4",
+			     "ParameterValue", sextFringeInt.int3, NULL) ||
+	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "FRINGE2K5",
+			     "ParameterValue", sextFringeInt.int2, NULL) ||
+	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "FRINGE2K6",
+			     "ParameterValue", sextFringeInt.int1, NULL) ||
+          !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                             "ParameterName", "FRINGE2K7",
+                             "ParameterValue", dipSextFringeInt.int1+dipSextFringeInt.int2, NULL) ||
+	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "FRINGE2I0",
+			     "ParameterValue", quadFringeInt.int1, NULL) ||
+	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+			     "ParameterName", "FRINGE2I1",
+			     "ParameterValue", quadFringeInt.int2, NULL))
+	{
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	  exit(1);
+	}
+      if (!SDDS_WritePage(&SDDSout)) {
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	  exit(1);
+      }
     }
   if (!SDDS_Terminate(&SDDSout))
     {
