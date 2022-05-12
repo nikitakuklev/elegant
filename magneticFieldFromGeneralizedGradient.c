@@ -297,6 +297,12 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           0>SDDS_DefineParameter(bgg->SDDSpo, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
           !SDDS_DefineSimpleParameter(bgg->SDDSpo, "particleID", NULL, SDDS_ULONG64) ||
           !SDDS_DefineSimpleParameter(bgg->SDDSpo, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(bgg->SDDSpo, "XEntry", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(bgg->SDDSpo, "ZEntry", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(bgg->SDDSpo, "XVertex", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(bgg->SDDSpo, "ZVertex", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(bgg->SDDSpo, "XExit", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(bgg->SDDSpo, "ZExit", "m", SDDS_DOUBLE) ||
           (bgg->poIndex[0]=SDDS_DefineColumn(bgg->SDDSpo, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
           (bgg->poIndex[1]=SDDS_DefineColumn(bgg->SDDSpo, "px", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           (bgg->poIndex[2]=SDDS_DefineColumn(bgg->SDDSpo, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
@@ -410,7 +416,11 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       if (bgg->SDDSpo && np<1000) {
         if (!SDDS_StartPage(bgg->SDDSpo, (bggData[0]? bggData[0]->nz : bggData[1]->nz) +1) ||
             !SDDS_SetParameters(bgg->SDDSpo, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                "particleID", (uint64_t)(part[ip][6]), "pCentral", pCentral, NULL)) {
+                                "particleID", (uint64_t)(part[ip][6]), "pCentral", pCentral, 
+                                "XVertex", bgg->xVertex, "ZVertex", bgg->zVertex,
+                                "XEntry", bgg->xEntry, "ZEntry", bgg->zEntry,
+                                "XExit", bgg->xExit, "ZExit", bgg->zExit,
+                                NULL)) {
           SDDS_SetError("Problem setting up particle output page for BGGEXP");
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
