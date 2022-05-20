@@ -1011,7 +1011,7 @@ VMATRIX *compute_matrix(
     KSEXT *ksext; KOCT *koct; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept; KQUSE *kquse;
     MULT *mult;  FMULT *fmult;
     SAMPLE *sample; STRAY *stray; CSBEND *csbend; CCBEND *ccbend; RFCA *rfca; ENERGY *energy;
-    RFCW *rfcw; 
+    RFCW *rfcw; LGBEND *lgbend;
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
     CSRCSBEND *csrcsbend; BRAT *brat;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
@@ -1573,6 +1573,17 @@ VMATRIX *compute_matrix(
 #endif
         if (ccbend->nSlices<1)
             bombElegant("N_SLICES must be > 0 for CCBEND element", NULL);
+        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
+        break;
+      case T_LGBEND:
+        lgbend = (LGBEND*)elem->p_elem;
+#ifdef DEBUG_LGBEND
+	printf("Computing matrix for LGBEND %s#%ld\n", elem->name, elem->occurence);
+	printf("optimized = %hd\n", lgbend->optimized);
+	fflush(stdout);
+#endif
+        if (lgbend->nSlices<1)
+            bombElegant("N_SLICES must be > 0 for LGBEND element", NULL);
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
         break;
       case T_CSRCSBEND:

@@ -1013,7 +1013,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_BEAMBEAM 130
 #define T_CPICKUP 131
 #define T_CKICKER 132
-#define N_TYPES  133
+#define T_LGBEND 133
+#define N_TYPES  134
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1153,6 +1154,7 @@ extern char *entity_text[N_TYPES];
 #define N_BEAMBEAM_PARAMS 6
 #define N_CPICKUP_PARAMS 7
 #define N_CKICKER_PARAMS 14
+#define N_LGBEND_PARAMS 24
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3607,6 +3609,45 @@ typedef struct {
   long nBunches;
 } CKICKER;
 
+  /* names and storage structure for longitudinal-gradient dipoles */
+extern PARAMETER lgbend_param[N_LGBEND_PARAMS];
+
+#define N_LGBEND_FRINGE_INT 8
+
+typedef struct {
+  double length, K1, K2, zAccumulated;
+  double angle, entryX, entryAngle, exitX, exitAngle;
+  short has1, has2;
+  double fringeInt1K0, fringeInt1I0, fringeInt1K2, fringeInt1I1, fringeInt1K4, fringeInt1K5, fringeInt1K6,
+    fringeInt1K7;
+  double fringeInt2K0, fringeInt2I0, fringeInt2K2, fringeInt2I1, fringeInt2K4, fringeInt2K5, fringeInt2K6,
+    fringeInt2K7;
+  double fse, KnDelta;
+} LGBEND_SEGMENT;
+
+typedef struct {
+  double length;
+  double xVertex, zVertex;
+  double xEntry, zEntry;
+  double xExit, zExit;
+  char *configuration;
+  double tilt;
+  double dx, dy, dz;
+  double fse;
+  double etilt;   /* error tilt angle */
+  long nSlices;
+  short integration_order;
+  short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
+  short optimizeFse, compensateKn, verbose;
+  /* for internal use only: */
+  short initialized;
+  long nSegments;
+  double angle; /* total angle */
+  LGBEND_SEGMENT *segment;
+  short optimized, edgeFlip;
+} LGBEND;
+
+
   /* END OF ELEMENT STRUCTURE DEFINITIONS */
 
 /* macros for bending magnets */ 
@@ -3618,12 +3659,12 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
 #define BEND_EDGE_EFFECTS (BEND_EDGE1_EFFECTS+BEND_EDGE2_EFFECTS)
 #define BEND_EDGE_DETERMINED 16
 
-#define IS_BEND(type) ((type)==T_SBEN || (type)==T_RBEN || (type)==T_CSBEND || (type)==T_KSBEND || (type)==T_CSRCSBEND || (type)==T_CCBEND)
+#define IS_BEND(type) ((type)==T_SBEN || (type)==T_RBEN || (type)==T_CSBEND || (type)==T_KSBEND || (type)==T_CSRCSBEND || (type)==T_CCBEND || (type)==T_LGBEND)
 #define IS_RADIATOR(type) ((type)==T_SBEN || (type)==T_RBEN || (type)==T_CSBEND || (type)==T_CSRCSBEND || \
                            (type)==T_QUAD || (type)==T_KQUAD || (type)==T_SEXT || (type)==T_KSEXT || \
 			   (type)==T_WIGGLER || (type)==T_CWIGGLER || (type)==T_APPLE || \
                            (type)==T_HCOR || (type)==T_VCOR || (type)==T_HVCOR || (type)==T_BGGEXP || \
-                           (type)==T_CCBEND || (type)==T_KICKMAP)
+                           (type)==T_CCBEND || (type)==T_LGBEND || (type)==T_KICKMAP)
 
 /* flags for run_awe_beam and run_bunched_beam */
 #define TRACK_PREVIOUS_BUNCH 1
@@ -4625,6 +4666,10 @@ long track_through_ccbend(double **particle, long n_part, ELEMENT_LIST *eptr, CC
 void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double pCentral,
                                  double eta0, double etap0, double beta0, double alpha0,
                                  double *I1, double *I2, double *I3, double *I4, double *I5, ELEMENT_LIST *elem);
+
+long track_through_lgbend(double **particle, long n_part, ELEMENT_LIST *eptr, LGBEND *lgbend, double Po,
+                          double **accepted, double z_start, double *sigmaDelta2, char *rootname,
+                          MAXAMP *maxamp, APCONTOUR *apContour, APERTURE_DATA *apFileData, long iSlice, long iFinalSlice);
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,

@@ -1939,6 +1939,16 @@ long do_tracking(
 	      if (flags&TEST_PARTICLES)
 		((CCBEND*)eptr->p_elem)->isr = saveISR;	  
 	      break;
+	    case T_LGBEND:
+	      if (flags&TEST_PARTICLES) {
+		saveISR = ((LGBEND*)eptr->p_elem)->isr;
+		((LGBEND*)eptr->p_elem)->isr = 0;
+	      }
+	      nLeft = track_through_lgbend(coord, nToTrack, eptr, (LGBEND*)eptr->p_elem, *P_central, accepted, 
+                                           last_z, NULL, run->rootname, maxamp, apcontour, &(run->apertureData), -1, -1);
+	      if (flags&TEST_PARTICLES)
+		((LGBEND*)eptr->p_elem)->isr = saveISR;	  
+	      break;
 	    case T_CSRCSBEND:
               ((CSRCSBEND*)eptr->p_elem)->edgeFlags 
 		= determine_bend_flags(eptr, 

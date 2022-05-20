@@ -1278,6 +1278,9 @@ void copy_p_elem(char *target, char *source, long type)
     ((CCBEND*)target)->referenceData[4] = ((CCBEND*)source)->referenceData[4];
     ((CCBEND*)target)->edgeFlip = ((CCBEND*)source)->edgeFlip;
     break;
+  case T_LGBEND:
+    ((LGBEND*)target)->edgeFlip = ((LGBEND*)source)->edgeFlip;
+    break;
   case T_BRAT:
     ((BRAT*)target)->initialized = ((BRAT*)source)->initialized;
     ((BRAT*)target)->dataIndex = ((BRAT*)source)->dataIndex;
@@ -1390,6 +1393,9 @@ void setEdgeIndices(ELEMENT_LIST *e1)
   case T_CCBEND:
     ((CCBEND*)e1->p_elem)->edgeFlip = 0;
     break;
+  case T_LGBEND:
+    ((LGBEND*)e1->p_elem)->edgeFlip = 0;
+    break;
   default:
     break;
   }
@@ -1403,6 +1409,7 @@ void swapEdgeIndices(ELEMENT_LIST *e1)
   CSRCSBEND *csrbptr;
   NIBEND *nibptr;
   CCBEND *ccbptr;
+  LGBEND *lgbptr;
   TAPERAPC *taperapc;
   TAPERAPE *taperape;
   TAPERAPR *taperapr;
@@ -1432,6 +1439,10 @@ void swapEdgeIndices(ELEMENT_LIST *e1)
   case T_CCBEND:
     ccbptr = (CCBEND*)e1->p_elem;
     ccbptr->edgeFlip = !ccbptr->edgeFlip;
+    break;
+  case T_LGBEND:
+    lgbptr = (LGBEND*)e1->p_elem;
+    lgbptr->edgeFlip = !lgbptr->edgeFlip;
     break;
   case T_TAPERAPC:
     taperapc = (TAPERAPC*)e1->p_elem;

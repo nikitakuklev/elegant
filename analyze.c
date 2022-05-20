@@ -763,6 +763,15 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((CCBEND*)eptr->p_elem)->isr = ltmp1;
     ((CCBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
+  case T_LGBEND:
+    ltmp1 = ((LGBEND*)eptr->p_elem)->isr;
+    ltmp2 = ((LGBEND*)eptr->p_elem)->synch_rad;
+    ((LGBEND*)eptr->p_elem)->isr = ((LGBEND*)eptr->p_elem)->synch_rad = 0;
+    track_through_lgbend(coord, n_track, eptr, (LGBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
+                         NULL, NULL, NULL, NULL, NULL, -1, -1);
+    ((LGBEND*)eptr->p_elem)->isr = ltmp1;
+    ((LGBEND*)eptr->p_elem)->synch_rad = ltmp2;
+   break;
   case T_CWIGGLER:
     ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
     ltmp2 = ((CWIGGLER*)eptr->p_elem)->sr;
@@ -1186,6 +1195,19 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       ((CCBEND*)eptr->p_elem)->isr = ltmp1;
       ((CCBEND*)eptr->p_elem)->synch_rad = ltmp2;
       break;
+    case T_LGBEND:
+      ltmp1 = ((LGBEND*)eptr->p_elem)->isr;
+      ltmp2 = ((LGBEND*)eptr->p_elem)->synch_rad;
+      ((LGBEND*)eptr->p_elem)->isr = ((LGBEND*)eptr->p_elem)->synch_rad = 0;
+#ifdef DEBUG_LGBEND
+      printf("Computing tracking-based matrix for LGBEND %s#%ld\n", eptr->name, eptr->occurence);
+      fflush(stdout);
+#endif
+      n_left = track_through_lgbend(finalCoord+my_offset, my_nTrack, eptr, (LGBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
+                                    NULL, NULL, NULL, NULL, NULL, -1, -1);
+      ((LGBEND*)eptr->p_elem)->isr = ltmp1;
+      ((LGBEND*)eptr->p_elem)->synch_rad = ltmp2;
+      break;
     case T_CWIGGLER:
       ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
       ltmp2 = ((CWIGGLER*)eptr->p_elem)->sr;
@@ -1523,7 +1545,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 
 void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *Dr, long nSlices, long sliceEtilted, long order)
 {
-  CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend; WIGGLER *wig; CCBEND ccbend;
+  CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend; WIGGLER *wig; CCBEND ccbend; LGBEND lgbend;
   KQUAD kquad;  QUAD *quad; CWIGGLER cwig; BGGEXP bggexp; BOFFAXE boffaxe;
   KSEXT ksext; SEXT *sext;
   HCOR hcor; VCOR vcor; HVCOR hvcor;
@@ -1582,6 +1604,11 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     nSlices = fabs(((CCBEND*)eptr->p_elem)->angle/0.005)+1;
     if (((CCBEND*)eptr->p_elem)->nSlices > nSlices)
       nSlices = ((CCBEND*)eptr->p_elem)->nSlices;
+    break;
+  case T_LGBEND:
+    nSlices = fabs(((LGBEND*)eptr->p_elem)->angle/0.005)+1;
+    if (((LGBEND*)eptr->p_elem)->nSlices > nSlices)
+      nSlices = ((LGBEND*)eptr->p_elem)->nSlices;
     break;
   case T_CSBEND:
     nSlices = fabs(((CSBEND*)eptr->p_elem)->angle/0.005)+1;
@@ -1654,6 +1681,16 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         elem.type = T_CCBEND;
         elem.p_elem = (void*)&ccbend;
         ccbend.integration_order = 6;
+      }
+      break;
+    case T_LGBEND:
+      if (slice==0) {
+        memcpy(&lgbend, (LGBEND*)eptr->p_elem, sizeof(LGBEND));
+        lgbend.isr = 0;
+        lgbend.nSlices = nSlices;
+        elem.type = T_LGBEND;
+        elem.p_elem = (void*)&lgbend;
+        lgbend.integration_order = 6;
       }
       break;
     case T_SBEN:
@@ -2056,10 +2093,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double *startingCoord, double *D, long ignoreRadiation, double *z,
                                long iSlice)
 {
-  CSBEND *csbend;
-  CCBEND *ccbend;
-  KQUAD *kquad;
-  KSEXT *ksext;
+  CSBEND *csbend; CCBEND *ccbend; LGBEND *lgbend;
+  KQUAD *kquad; KSEXT *ksext;
   double **coord, pCentral;
   long n_track, i, j;
   double **R, *C, Cs0;
@@ -2099,6 +2134,11 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   case T_CCBEND:
     ccbend = (CCBEND*)elem->p_elem;
     track_through_ccbend(coord, n_track, elem, ccbend, run->p_central, NULL, elem->end_pos-ccbend->length, &sigmaDelta2, 
+                         run->rootname, NULL, NULL, NULL, iSlice, -1);
+    break;
+  case T_LGBEND:
+    lgbend = (LGBEND*)elem->p_elem;
+    track_through_lgbend(coord, n_track, elem, lgbend, run->p_central, NULL, elem->end_pos-lgbend->length, &sigmaDelta2, 
                          run->rootname, NULL, NULL, NULL, iSlice, -1);
     break;
   case T_SBEN:

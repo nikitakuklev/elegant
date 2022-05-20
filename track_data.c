@@ -80,7 +80,7 @@ char *entity_name[N_TYPES] = {
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
     "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY", "BOFFAXE",
     "APCONTOUR", "TAPERAPC", "TAPERAPE", "TAPERAPR", "SHRFDF", "GKICKMAP",
-    "BEAMBEAM", "CPICKUP", "CKICKER",
+    "BEAMBEAM", "CPICKUP", "CKICKER", "LGBEND",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -3713,6 +3713,35 @@ char *beamBeamDistributionOption[N_BEAM_BEAM_DISTRIBUTIONS] = {
   "gaussian", "uniform", "parabolic",
 };
 
+LGBEND lgbend_example;
+/* canonically-integrated longitudinal-gradient rectangular bending magnet physical parameters */
+PARAMETER lgbend_param[N_LGBEND_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&lgbend_example.length), NULL, 0.0, 0, "arc length (not chord length!)"},
+    {"XVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.xVertex), NULL, 0.0, 0, "x coordinate of vertex point"},
+    {"ZVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.zVertex), NULL, 0.0, 0, "z coordinate of vertex point"},
+    {"XENTRY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.xEntry), NULL, 0.0, 0, "x coordinate of nominal entry point"},
+    {"ZENTRY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.zEntry), NULL, 0.0, 0, "z coordinate of nominal entry point"},
+    {"XEXIT", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.xExit), NULL, 0.0, 0, "x coordinate of nominal exit point"},
+    {"ZEXIT", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.zExit), NULL, 0.0, 0, "z coordinate of nominal exit point"},
+    {"CONFIGURATION", NULL, IS_STRING, 0, (long)((char *)&lgbend_example.configuration), NULL, 0.0, 0, "configuration file from straightDipoleFringeCalc"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"N_SLICES", "", IS_LONG, 0, (long)((char *)&lgbend_example.nSlices), NULL, 0.0, DEFAULT_N_SLICES, "Number of slices (full integrator steps) per segment."},
+    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&lgbend_example.integration_order), NULL, 0.0, 4, "integration order (2, 4, or 6)"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&lgbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&lgbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
+    {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&lgbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
+    {"USE_RAD_DIST", "", IS_SHORT, 0, (long)((char *)&lgbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
+    {"ADD_OPENING_ANGLE", "", IS_SHORT, 0, (long)((char *)&lgbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are added if USE_RAD_DIST is nonzero."},
+    {"OPTIMIZE_FSE", "", IS_SHORT, 0, (long)((char *)&lgbend_example.optimizeFse), NULL, 0.0, 1, "Optimize strength (FSE) of first and last segments to obtain the ideal deflection angle and final trajectory."},
+    {"COMPENSATE_KN", "", IS_SHORT, 0, (long)((char *)&lgbend_example.compensateKn), NULL, 0.0, 0, "If nonzero, K1 and K2 strengths are adjusted to compensate for the changes in FSE needed to center the trajectory."},
+    {"VERBOSE", "", IS_SHORT, 0, (long)((char *)&lgbend_example.verbose), NULL, 0.0, 0, "If nonzero, print messages showing optimized FSE and x offset."},
+    };
+
 /* END OF ELEMENT DICTIONARY ARRAYS */
 
 /* array of parameter structures */
@@ -3870,6 +3899,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_BEAMBEAM_PARAMS, 0, sizeof(BEAMBEAM),    beambeam_param    },
     { N_CPICKUP_PARAMS, MPALGORITHM|NO_APERTURE,      sizeof(CPICKUP),  cpickup_param    },
     { N_CKICKER_PARAMS, MPALGORITHM|RUN_ZERO_PARTICLES,     sizeof(CKICKER),  ckicker_param    },
+    { N_LGBEND_PARAMS, MAT_LEN_NCAT, sizeof(LGBEND),    lgbend_param   }, 
 } ;
 
 void compute_offsets()
