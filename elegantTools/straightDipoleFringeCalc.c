@@ -130,6 +130,8 @@ char *option[N_OPTIONS] = {
 #define CCBEND_MODE 1
 #define LGBEND_MODE 2
 
+double zEntry, zExit;
+
 int main(int argc, char **argv)
 {
   SCANNED_ARG *scanned;
@@ -490,7 +492,7 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
 
       iRow=0;
     /* Output longitudinal length, bend angle, and multipole content */
-      if (!SDDS_StartPage(&SDDSout, NsegmentParams+(edgeNum==1?2:1)*NfringeParams) ||
+      if (!SDDS_StartPage(&SDDSout, NsegmentParams+(edgeNum==1?2:1)*NfringeParams+2) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
 			     "ParameterName", "LONGIT_L", 
 			     "ParameterValue", zEdge[edgeNum]-zEdge[edgeNum-1], NULL) ||
@@ -540,7 +542,10 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
 			       "ParameterValue", quadFringeInt.int1, NULL) ||
 	    !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
 			       "ParameterName", "FRINGE1I1",
-			       "ParameterValue", quadFringeInt.int2, NULL))
+			       "ParameterValue", quadFringeInt.int2, NULL) ||
+            !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                               "ParameterName", "PREDRIFT",
+                               "ParameterValue", zEdge[edgeNum-1]+zOffset-zEntry))
 	  {
 	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	    exit(1);
@@ -583,7 +588,11 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
 			     "ParameterValue", quadFringeInt.int1, NULL) ||
 	  !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
 			     "ParameterName", "FRINGE2I1",
-			     "ParameterValue", quadFringeInt.int2, NULL))
+			     "ParameterValue", quadFringeInt.int2, NULL) ||
+          (edgeNum==(Nedges-1) &&
+           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                              "ParameterName", "POSTDRIFT",
+                              "ParameterValue", zExit-(zEdge[edgeNum]+zOffset))))
 	{
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	  exit(1);
@@ -1035,6 +1044,12 @@ void readInTrajectoryInput(char *input, double **x, double **xp, double **By, do
           exit(1);
         }
     }
+  if (!SDDS_GetParameterAsDouble(&SDDSin, "ZEntry", &zEntry) ||
+      !SDDS_GetParameterAsDouble(&SDDSin, "ZExit", &zExit)) {
+    fprintf(stderr, "Problem reading parameters ZEntry and ZExit from %s\n", input);
+    exit(1);
+  }
+
   if (!(*x=SDDS_GetColumnInDoubles(&SDDSin, "x")))
     {
       fprintf(stderr, "Problem reading column x from %s\n", input);
