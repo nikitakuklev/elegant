@@ -178,9 +178,9 @@ long track_through_lgbend
 
   fse = lgbend->fse;
 
+  exactDrift(particle, n_part, lgbend->predrift);
+
   for (iSegment=0; iSegment<lgbend->nSegments; iSegment++) {
-    if (iSegment==0)
-      exactDrift(particle, n_part, lgbend->segment[iSegment].predrift);
     for (iTerm=0; iTerm<9; iTerm++)
       KnL[iTerm] = 0;
     angle = lgbend->segment[iSegment].angle;
@@ -337,7 +337,7 @@ long track_through_lgbend
         if (dx || dy || dz)
           offsetBeamCoordinatesForMisalignment(particle, i_top+1, -dx, -dy, -dz);
         switchLgbendPlane(particle, i_top+1, -exitPosition, -exitAngle, Po);
-        exactDrift(particle, i_top+1, lgbend->segment[iSegment].postdrift);
+        exactDrift(particle, i_top+1, lgbend->postdrift);
 #ifdef DEBUG
         if (lgbend->optimized!=-1)
           fprintf(fpDeb, "%ld %le %le %le %le %le %le switch-lgbend-plane\n",
@@ -642,8 +642,8 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
   offset[21] = (short)(&(segmentExample.fringeInt2K5) -  &(segmentExample.length));
   offset[22] = (short)(&(segmentExample.fringeInt2K6) -  &(segmentExample.length));
   offset[23] = (short)(&(segmentExample.fringeInt2K7) -  &(segmentExample.length));
-  offset[24] = (short)(&(segmentExample.predrift) - &(segmentExample.length));
-  offset[25] = (short)(&(segmentExample.postdrift) - &(segmentExample.length));
+  offset[24] = -1;
+  offset[25] = -1;
   for (i=0; i<NLGBEND; i++)
     offset[i] *= sizeof(double);
 
@@ -688,10 +688,15 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
                 readCode, iRow);
         exitElegant(1);
       }
-      *((double*)(((char*)&(lgbend->segment[lgbend->nSegments]))+offset[index])) = parameterValue[iRow];
       provided[index] = 1;
-      postdriftSeen += index==25 ? 1 : 0;
-      predriftSeen += index==24 ? 1 : 0;
+      if (index==24) {
+        predriftSeen += 1;
+        lgbend->predrift = parameterValue[iRow];
+      } else if (index==25) {
+        postdriftSeen += 1;
+        lgbend->postdrift = parameterValue[iRow];
+      } else
+        *((double*)(((char*)&(lgbend->segment[lgbend->nSegments]))+offset[index])) = parameterValue[iRow];
     }
     free(parameterValue);
     SDDS_FreeStringArray(parameterName, rows);
@@ -820,7 +825,6 @@ void flipLGBEND(LGBEND *lgbend)
     lgbend->segment[i].fringeInt2K5 *= -1;
     SWAP_SHORT(lgbend->segment[i].has1, lgbend->segment[i].has2);
     SWAP_DOUBLE(lgbend->segment[i].entryX, lgbend->segment[i].exitX);
-    SWAP_DOUBLE(lgbend->segment[i].predrift, lgbend->segment[i].postdrift);
     if (i==0) {
       lgbend->segment[i].entryAngle = -lgbend->segment[i].exitAngle;
       lgbend->segment[i].exitAngle = lgbend->segment[i].entryAngle - lgbend->segment[i].angle;
@@ -830,6 +834,7 @@ void flipLGBEND(LGBEND *lgbend)
     lgbend->segment[i].entryAngle = lgbend->segment[i-1].exitAngle;
     lgbend->segment[i].exitAngle = lgbend->segment[i].entryAngle - lgbend->segment[i].angle;
   }
+  SWAP_DOUBLE(lgbend->predrift, lgbend->postdrift);
 }
 
 void lgbendFringe
