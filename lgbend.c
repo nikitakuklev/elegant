@@ -179,6 +179,8 @@ long track_through_lgbend
   fse = lgbend->fse;
 
   for (iSegment=0; iSegment<lgbend->nSegments; iSegment++) {
+    if (iSegment==0)
+      exactDrift(particle, n_part, lgbend->segment[iSegment].predrift);
     for (iTerm=0; iTerm<9; iTerm++)
       KnL[iTerm] = 0;
     angle = lgbend->segment[iSegment].angle;
@@ -335,6 +337,7 @@ long track_through_lgbend
         if (dx || dy || dz)
           offsetBeamCoordinatesForMisalignment(particle, i_top+1, -dx, -dy, -dz);
         switchLgbendPlane(particle, i_top+1, -exitPosition, -exitAngle, Po);
+        exactDrift(particle, i_top+1, lgbend->segment[iSegment].postdrift);
 #ifdef DEBUG
         if (lgbend->optimized!=-1)
           fprintf(fpDeb, "%ld %le %le %le %le %le %le switch-lgbend-plane\n",
@@ -587,27 +590,32 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
 {
   SDDS_DATASET SDDSin;
   long readCode, i, index;
+  short postdriftSeen, predriftSeen;
   uint64_t iRow, rows;
   double *parameterValue;
   char **parameterName;
   /* These names need to have the same order as the items in LGBEND_SEGMENT */
-  static char *knownParameterName[8+2*N_LGBEND_FRINGE_INT] = {
+#define NLGBEND (8+2*N_LGBEND_FRINGE_INT+2)
+  static char *knownParameterName[NLGBEND] = {
     "LONGIT_L", "K1", "K2", "ANGLE", "ENTRY_X", "ENTRY_ANGLE", "EXIT_X", "EXIT_ANGLE", 
     "FRINGE1K0","FRINGE1I0", "FRINGE1K2","FRINGE1I1", "FRINGE1K4", "FRINGE1K5", "FRINGE1K6", "FRINGE1K7",
     "FRINGE2K0","FRINGE2I0", "FRINGE2K2","FRINGE2I1", "FRINGE2K4", "FRINGE2K5", "FRINGE2K6", "FRINGE2K7",
+    "PREDRIFT", "POSTDRIFT",
   };
-  short required[8+2*N_LGBEND_FRINGE_INT] = {
+  short required[NLGBEND] = {
     2, 0, 0, 1, 1, 1, 2, 2, 
     0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 
+    1, 0
   };
-  short disallowed[8+2*N_LGBEND_FRINGE_INT] = {
+  short disallowed[NLGBEND] = {
     0, 0, 0, 0, 0, 0, 0, 0, 
     1, 1, 1, 1, 1, 1, 1, 1, 
     0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0
   };
-  short provided[8+2*N_LGBEND_FRINGE_INT];
-  short offset[8+2*N_LGBEND_FRINGE_INT];
+  short provided[NLGBEND];
+  short offset[NLGBEND];
   LGBEND_SEGMENT segmentExample;
 
   offset[0] = 0;
@@ -634,7 +642,9 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
   offset[21] = (short)(&(segmentExample.fringeInt2K5) -  &(segmentExample.length));
   offset[22] = (short)(&(segmentExample.fringeInt2K6) -  &(segmentExample.length));
   offset[23] = (short)(&(segmentExample.fringeInt2K7) -  &(segmentExample.length));
-  for (i=0; i<24; i++)
+  offset[24] = (short)(&(segmentExample.predrift) - &(segmentExample.length));
+  offset[25] = (short)(&(segmentExample.postdrift) - &(segmentExample.length));
+  for (i=0; i<NLGBEND; i++)
     offset[i] *= sizeof(double);
 
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, lgbend->configuration)) {
@@ -649,21 +659,30 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
   }
 
   lgbend->angle = lgbend->length = 0;
+  postdriftSeen = 0;
   while ((readCode=SDDS_ReadPage(&SDDSin))>=1) {
+    if (postdriftSeen) {
+      fprintf(stderr, "Error: POSTDRIFT parameter seen for interior segment reading LGBEND configuration file %s\n", 
+              lgbend->configuration);
+      exitElegant(1);
+    }
     if (!(lgbend->segment = SDDS_Realloc(lgbend->segment, (lgbend->nSegments+1)*sizeof(*(lgbend->segment))))) {
       fprintf(stderr, "Error: memory allocation failure reading LGBEND configuration file %s\n", lgbend->configuration);
       exitElegant(1);
     }
     memset(&(lgbend->segment[lgbend->nSegments]), 0, sizeof(*(lgbend->segment)));
+    parameterName = NULL;
+    parameterValue = NULL;
     if ((rows = SDDS_RowCount(&SDDSin))<=0 ||
         !(parameterName=SDDS_GetColumn(&SDDSin, "ParameterName")) ||
         !(parameterValue=SDDS_GetColumn(&SDDSin, "ParameterValue"))) {
       fprintf(stderr, "Error: problem getting data from LGBEND configuration file %s\n", lgbend->configuration);
       exitElegant(1);
     }
-    memset(provided, 0, sizeof(provided[0])*(8+2*N_LGBEND_FRINGE_INT));
+    memset(provided, 0, sizeof(provided[0])*(NLGBEND));
+    postdriftSeen = predriftSeen = 0;
     for (iRow=0; iRow<rows; iRow++) {
-      if ((index=match_string(parameterName[iRow], knownParameterName, 8+2*N_LGBEND_FRINGE_INT, EXACT_MATCH))<0) {
+      if ((index=match_string(parameterName[iRow], knownParameterName, NLGBEND, EXACT_MATCH))<0) {
         fprintf(stdout, "Error: unrecognized parameter name \"%s\" in LGBEND configuration file %s (page %ld, row %ld)\n", 
                 parameterName[iRow], lgbend->configuration,
                 readCode, iRow);
@@ -671,10 +690,22 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
       }
       *((double*)(((char*)&(lgbend->segment[lgbend->nSegments]))+offset[index])) = parameterValue[iRow];
       provided[index] = 1;
+      postdriftSeen += index==25 ? 1 : 0;
+      predriftSeen += index==24 ? 1 : 0;
     }
     free(parameterValue);
     SDDS_FreeStringArray(parameterName, rows);
-    for (i=0; i<8+2*N_LGBEND_FRINGE_INT; i++)  {
+    if (predriftSeen && readCode!=1) {
+      fprintf(stderr, "Error: PREDRIFT parameter seen for interior segment %ld reading LGBEND configuration file %s\n", 
+              readCode, lgbend->configuration);
+      exitElegant(1);
+    }
+    if (!predriftSeen && readCode==1) {
+      fprintf(stderr, "Error: PREDRIFT parameter not seen for initial segment reading LGBEND configuration file %s\n", 
+              lgbend->configuration);
+      exitElegant(1);
+    }
+    for (i=0; i<NLGBEND; i++)  {
       if ((readCode==1 && required[i] && !provided[i]) ||
           (readCode>1 && required[i]==2 && !provided[i])) {
         fprintf(stdout, "Error: parameter %s is required but was not provided in page %ld of configuration file %s for LGBEND %s#%ld\n",
@@ -700,6 +731,11 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
   }
   SDDS_Terminate(&SDDSin);
   lgbend->initialized = 1;
+  if (!postdriftSeen) {
+    fprintf(stderr, "Error: POSTDRIFT parameter not seen for final segment reading LGBEND configuration file %s\n", 
+            lgbend->configuration);
+    exitElegant(1);
+  }
 
   if (lgbend->edgeFlip) {
     flipLGBEND(lgbend);
@@ -784,6 +820,7 @@ void flipLGBEND(LGBEND *lgbend)
     lgbend->segment[i].fringeInt2K5 *= -1;
     SWAP_SHORT(lgbend->segment[i].has1, lgbend->segment[i].has2);
     SWAP_DOUBLE(lgbend->segment[i].entryX, lgbend->segment[i].exitX);
+    SWAP_DOUBLE(lgbend->segment[i].predrift, lgbend->segment[i].postdrift);
     if (i==0) {
       lgbend->segment[i].entryAngle = -lgbend->segment[i].exitAngle;
       lgbend->segment[i].exitAngle = lgbend->segment[i].entryAngle - lgbend->segment[i].angle;
