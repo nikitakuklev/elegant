@@ -112,7 +112,7 @@ long track_through_lgbend
   if (!lgbend->initialized)
     readLGBendConfiguration(lgbend, eptr);
 
-  if (lgbend->optimizeFse && lgbend->optimized!=-1 && lgbend->angle!=0) {
+  if (lgbend->optimizeFse && !lgbend->optimized && lgbend->angle!=0) {
     double acc;
     double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
     short disable[2];
