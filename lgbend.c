@@ -28,7 +28,7 @@ static FILE *fpDeb = NULL;
 void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr);
 void flipLGBEND(LGBEND *lgbend);
 
-void switchLgbendPlane(double **particle, long n_part, double dx, double alpha, double po);
+void switchLgbendPlane(double **particle, long n_part, double dx, double alpha, double po, long exitPlane);
 void lgbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2,
                   LGBEND_SEGMENT *segment, short angleSign, short isExit);
 int integrate_kick_KnL(double *coord, double dx, double dy, 
@@ -178,7 +178,21 @@ long track_through_lgbend
 
   fse = lgbend->fse;
 
+#ifdef DEBUG
+    if (lgbend->optimized!=-1)
+      fprintf(fpDeb, "0 0.0 %21.15le %21.15le %21.15le %21.15le %21.15le start\n",
+              particle[0][4], 
+              particle[0][0], particle[0][1], 
+              particle[0][2], particle[0][3]);
+#endif
   exactDrift(particle, n_part, lgbend->predrift);
+#ifdef DEBUG
+    if (lgbend->optimized!=-1)
+      fprintf(fpDeb, "0 0.0 %21.15le %21.15le %21.15le %21.15le %21.15le drift\n",
+              particle[0][4], 
+              particle[0][0], particle[0][1], 
+              particle[0][2], particle[0][3]);
+#endif
 
   for (iSegment=0; iSegment<lgbend->nSegments; iSegment++) {
     for (iTerm=0; iTerm<9; iTerm++)
@@ -194,13 +208,11 @@ long track_through_lgbend
     KnL[1] = (1+fse+lgbend->segment[iSegment].fse)*lgbend->segment[iSegment].K1*length/(1-lgbend->segment[iSegment].KnDelta);
     KnL[2] = (1+fse+lgbend->segment[iSegment].fse)*lgbend->segment[iSegment].K2*length/(1-lgbend->segment[iSegment].KnDelta);
 #ifdef DEBUG
-    /*
     printf("segment %ld: angle=%le, length=%le, rho0=%le, entryX=%le, entryAngle=%le, exitX=%le, exitAngle=%le, K1L=%le, K2L=%le\n",
            iSegment, angle, length, rho0, entryPosition, entryAngle, exitPosition, exitAngle, KnL[1], KnL[2]);
     printf("             K1 = %le, K2 = %le, FSE = %le, FSE1 = %le, KnDelta = %le\n",
            lgbend->segment[iSegment].K1, lgbend->segment[iSegment].K2, fse, lgbend->segment[iSegment].fse,
            lgbend->segment[iSegment].KnDelta);
-    */
 #endif
     /*
     KnL[3] = (1+fse)*lgbend->K3*length/(1-lgbend->KnDelta);
@@ -243,7 +255,7 @@ long track_through_lgbend
 
 #ifdef DEBUG
     if (lgbend->optimized!=-1)
-      fprintf(fpDeb, "%ld %le %le %le %le %le %le segstart\n",
+      fprintf(fpDeb, "%ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le segstart\n",
               iSegment, (iSegment==0?0:lgbend->segment[iSegment-1].zAccumulated), particle[0][4], 
               particle[0][0], particle[0][1], 
               particle[0][2], particle[0][3]);
@@ -253,10 +265,10 @@ long track_through_lgbend
       if (tilt)
         rotateBeamCoordinatesForMisalignment(particle, n_part, tilt);
       if (iSegment==0) {
-        switchLgbendPlane(particle, n_part, entryPosition, entryAngle, Po);
+        switchLgbendPlane(particle, n_part, entryPosition, entryAngle, Po, 0);
 #ifdef DEBUG
         if (lgbend->optimized!=-1)
-          fprintf(fpDeb, "%ld %le %le %le %le %le %le switch-lgbend-plane\n",
+          fprintf(fpDeb, "%ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le switch-lgbend-plane\n",
                   iSegment, (iSegment==0?0:lgbend->segment[iSegment-1].zAccumulated), particle[0][4], 
                   particle[0][0], particle[0][1], 
                   particle[0][2], particle[0][3]);
@@ -271,7 +283,7 @@ long track_through_lgbend
                      lgbend->segment+iSegment, angleSign, 0);
 #ifdef DEBUG
         if (lgbend->optimized!=-1)
-          fprintf(fpDeb, "%ld %le %le %le %le %le %le fringe1\n",
+          fprintf(fpDeb, "%ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le fringe1\n",
                   iSegment, (iSegment==0?0:lgbend->segment[iSegment-1].zAccumulated), particle[0][4], 
                   particle[0][0], particle[0][1], 
                   particle[0][2], particle[0][3]);
@@ -305,7 +317,7 @@ long track_through_lgbend
     }
 #ifdef DEBUG
     if (lgbend->optimized!=-1)
-      fprintf(fpDeb, "%ld %le %le %le %le %le %le integrated\n",
+      fprintf(fpDeb, "%ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le integrated\n",
               iSegment, lgbend->segment[iSegment].zAccumulated, particle[0][4], 
               particle[0][0], particle[0][1], 
               particle[0][2], particle[0][3]);
@@ -325,7 +337,7 @@ long track_through_lgbend
                      lgbend->segment+iSegment, angleSign, 1);
 #ifdef DEBUG
         if (lgbend->optimized!=-1)
-          fprintf(fpDeb, "%ld %le %le %le %le %le %le fringe2\n",
+          fprintf(fpDeb, "%ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le fringe2\n",
                   iSegment, lgbend->segment[iSegment].zAccumulated, particle[0][4], 
                   particle[0][0], particle[0][1], 
                   particle[0][2], particle[0][3]);
@@ -336,11 +348,18 @@ long track_through_lgbend
           rotateBeamCoordinatesForMisalignment(particle, n_part, -etilt);
         if (dx || dy || dz)
           offsetBeamCoordinatesForMisalignment(particle, i_top+1, -dx, -dy, -dz);
-        switchLgbendPlane(particle, i_top+1, -exitPosition, -exitAngle, Po);
+        switchLgbendPlane(particle, i_top+1, -exitPosition, -exitAngle, Po, 1);
+#ifdef DEBUG
+        if (lgbend->optimized!=-1)
+          fprintf(fpDeb, "%ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le switch-lgbend-plane\n",
+                  iSegment, lgbend->segment[iSegment].zAccumulated, particle[0][4], 
+                  particle[0][0], particle[0][1], 
+                  particle[0][2], particle[0][3]);
+#endif
         exactDrift(particle, i_top+1, lgbend->postdrift);
 #ifdef DEBUG
         if (lgbend->optimized!=-1)
-          fprintf(fpDeb, "%ld %le %le %le %le %le %le switch-lgbend-plane\n",
+          fprintf(fpDeb, "%ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le drift\n",
                   iSegment, lgbend->segment[iSegment].zAccumulated, particle[0][4], 
                   particle[0][0], particle[0][1], 
                   particle[0][2], particle[0][3]);
@@ -527,7 +546,7 @@ void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double p
     fprintf(fpcr, "&data mode=ascii no_row_counts=1 &end\n");
   }
   s0 = elem->end_pos - lgbend->length;
-  fprintf(fpcr, "0 %le %le %le %le %le %s\n", s0, beta0, eta0, etap0, alpha0, elem->name);
+  fprintf(fpcr, "0 %21.15le %21.15le %21.15le %21.15le %21.15le %s\n", s0, beta0, eta0, etap0, alpha0, elem->name);
 #endif
   
   if (lgbend->tilt)
@@ -556,7 +575,7 @@ void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double p
     etap2 = Cp*eta0 + Sp*etap0 + M->R[1][5];
 #ifdef DEBUG
     s0 += ds;
-    fprintf(fpcr, "%ld %le %le %le %le %le %s\n", iSlice, s0, beta2, eta2, etap2, alpha2, elem->name);
+    fprintf(fpcr, "%ld %21.15le %21.15le %21.15le %21.15le %21.15le %s\n", iSlice, s0, beta2, eta2, etap2, alpha2, elem->name);
 #endif
 
     /* Compute contributions to radiation integrals in this slice.
@@ -994,7 +1013,7 @@ void lgbendFringe
   }
 }
 
-void switchLgbendPlane(double **particle, long n_part, double dx, double alpha, double po)
+void switchLgbendPlane(double **particle, long n_part, double dx, double alpha, double po, long exitPlane)
 /* transforms the reference plane to one that is at an angle alpha relative to the
  * initial plane. 
  */
@@ -1007,6 +1026,12 @@ void switchLgbendPlane(double **particle, long n_part, double dx, double alpha, 
   cos_alpha = cos(alpha);
   sin_alpha = sin(alpha);
 
+  if (exitPlane)
+    for (i=0; i<n_part; i++) {
+      coord = particle[i];
+      coord[0] += dx;
+    }
+  
   for (i=0; i<n_part; i++) {
     coord = particle[i];
     s = coord[0]*tan_alpha/(1-coord[1]*tan_alpha);
@@ -1022,8 +1047,14 @@ void switchLgbendPlane(double **particle, long n_part, double dx, double alpha, 
     qz = -qx0*sin_alpha + qz0*cos_alpha;
     coord[1] = qx/qz;
     coord[3] = qy/qz;
-    coord[0] += dx;
-  }
+    }
+
+  if (!exitPlane)
+    for (i=0; i<n_part; i++) {
+      coord = particle[i];
+      coord[0] += dx;
+    }
+  
 }
 
 double lgbend_trajectory_error(double *value, long *invalid)
