@@ -334,6 +334,7 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
           !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "py", "", SDDS_FLOAT) ||
           !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "Bx", "T", SDDS_FLOAT) ||
           !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "By", "T", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "PoleFactor", NULL, SDDS_FLOAT) ||
           !SDDS_WriteLayout(cwiggler->SDDSFieldOutput)) {
         printf("*** Error: problem setting up field output file for CWIGGLER\n");
         SDDS_PrintErrors(stdout,  SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

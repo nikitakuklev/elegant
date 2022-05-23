@@ -33,7 +33,7 @@
 
 void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxyz, double dl, double *sigmaDelta2);
 void GWigB(struct gwig *pWig, double *Xvec, double *B, double poleFactor);
-void GWigAddToFieldOutput(CWIGGLER *cwiggler, double Z, double *X, double *B);
+void GWigAddToFieldOutput(CWIGGLER *cwiggler, double Z, double *X, double *B, double poleFactor);
 
 #define FIELD_OUTPUT 0
 
@@ -98,7 +98,7 @@ void GWigPass_2nd(struct gwig *pWig, double *X, double *sigmaDelta2, long single
       if (pWig->sr || pWig->isr)
         GWigRadiationKicks(pWig, X, B, dl, sigmaDelta2);
       if (pWig->cwiggler->fieldOutputInitialized)
-        GWigAddToFieldOutput(pWig->cwiggler, pWig->Zw, X, B);
+        GWigAddToFieldOutput(pWig->cwiggler, pWig->Zw, X, B, pf);
 #if FIELD_OUTPUT
       fprintf(fpd, "%ld %e %e %e %e %e %e %e %e\n",
               index, pWig->Zw, X[0], X[2], X[1], X[3], X[4], B[0], B[1]);
@@ -159,7 +159,7 @@ void GWigPass_4th(struct gwig *pWig, double *X, double *sigmaDelta2, long single
       if (pWig->sr || pWig->isr)
         GWigRadiationKicks(pWig, X, B, dl, sigmaDelta2);
       if (pWig->cwiggler->fieldOutputInitialized)
-        GWigAddToFieldOutput(pWig->cwiggler, pWig->Zw, X, B);
+        GWigAddToFieldOutput(pWig->cwiggler, pWig->Zw, X, B, pf);
       X[1] += ax;
       X[3] += ay;
     }
@@ -494,7 +494,7 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B, double poleFactor)
   double cz;
   double B0;
 
-  poleFactor = 1;
+  /* poleFactor = 1; */
   
   x = Xvec[0];
   y = Xvec[2];
@@ -648,7 +648,7 @@ void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxy, double dl, do
   
 }
 
-void GWigAddToFieldOutput(CWIGGLER *cwiggler, double Z, double *X, double *B) 
+void GWigAddToFieldOutput(CWIGGLER *cwiggler, double Z, double *X, double *B, double pf) 
 {
   SDDS_DATASET *SDDSout;
 
@@ -666,6 +666,7 @@ void GWigAddToFieldOutput(CWIGGLER *cwiggler, double Z, double *X, double *B)
                         "x", (float)X[0], "y", (float)X[2], "z", (float)Z,
                         "px", (float)X[1], "py", (float)X[2], 
                         "Bx", (float)B[0], "By", (float)B[1], 
+                         "PoleFactor", (float)pf,
                          NULL)) {
       printf("*** Error: problem setting row values for CWIGGLER field output.\n");
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

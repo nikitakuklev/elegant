@@ -48,6 +48,11 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
   \verb|EDGE_ORDER| parameter whereas the tracking was not for \verb|EDGE_EFFECTS1| or \verb|EDGE_EFFECTS2|
   equal to 3 or 4. The code now uses a more consistent approach. This issue was pointed out by L. Nadolski (SOLEIL).
 \item A bug was fixed in \verb|IBSCATTER| that gave incorrect results when \verb|PARALLEL_INTEGRATION| was nonzero.
+\item A bug was fixed in the \verb|FTRFMODE| element that resulted in the \verb|N_CAVITIES| parameter being ignored.
+  This was pointed out by forum user \verb|Siwei_Wang|.
+\item A bug was fixed in the \verb|CWIGGLER| element that resulted in the \verb|FIELD_OUTPUT| file failing to reflect
+  the values of \verb|POLE_FACTOR1|, \verb|POLE_FACTOR2|, and \verb|POLE_FACTOR3|, even though these were included
+  in the beam dynamics. This was pointed out by forum user \verb|Skamarokha|.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
