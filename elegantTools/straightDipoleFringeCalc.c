@@ -141,7 +141,7 @@ int main(int argc, char **argv)
   double *z=NULL, *ggeD=NULL, *ggeQ=NULL, *ggeS=NULL, *xp, *x, *By;
   double *zMagnetRef;
 
-  double pCentral=DBL_MAX, invRigidity, bendAngle=DBL_MAX, xEntry = DBL_MAX;
+  double pCentral=DBL_MAX, invRigidity, bendAngle=DBL_MAX, xEntry = 0.0;
   // 4.501990914651359e-05 - 1.922200520833333e-05; // should default to zero and be read in below
 
   int Nsegments, Nedges, ip, Nz;
@@ -239,7 +239,7 @@ int main(int argc, char **argv)
 
   if (mode==CCBEND_MODE) {
     /* get GGE input */
-    if(fabs(xEntry)>0.0) // read in and compute GGEs about new x=0
+    if(fabs(xEntry)>1.0e-10) // read in and compute GGEs about new x=0
       readInAndMoveGGE(ggeFile, &z, &ggeD, &ggeQ, &ggeS, &Nz, xEntry);
     else
       readInGGE(ggeFile, &z, &ggeD, &ggeQ, &ggeS, &Nz);
