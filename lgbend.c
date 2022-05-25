@@ -29,7 +29,7 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr);
 void flipLGBEND(LGBEND *lgbend);
 
 void switchLgbendPlane(double **particle, long n_part, double dx, double alpha, double po, long exitPlane);
-void lgbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2,
+void lgbendFringe(double **particle, long n_part, double alpha, double invRhoPlus, double K1plus, double invRhoMinus, double K1minus,
                   LGBEND_SEGMENT *segment, short angleSign, short isExit);
 int integrate_kick_KnL(double *coord, double dx, double dy, 
                       double Po, double rad_coef, double isr_coef,
@@ -194,6 +194,7 @@ long track_through_lgbend
               particle[0][2], particle[0][3]);
 #endif
 
+  double invRhoPlus, invRhoMinus, K1plus, K1minus;
   for (iSegment=0; iSegment<lgbend->nSegments; iSegment++) {
     for (iTerm=0; iTerm<9; iTerm++)
       KnL[iTerm] = 0;
@@ -278,9 +279,19 @@ long track_through_lgbend
         if (etilt)
           rotateBeamCoordinatesForMisalignment(particle, n_part, etilt);
       }
+      if(iSegment==0) {
+	invRhoMinus = 0.0;
+	K1minus = 0.0;
+      }
+      else {
+	invRhoMinus = sin(lgbend->segment[iSegment-1].entryAngle)
+	  + sin(lgbend->segment[iSegment-1].angle - lgbend->segment[iSegment-1].entryAngle);
+	invRhoMinus = invRhoMinus/lgbend->segment[iSegment-1].length;
+	K1minus = (1+fse+lgbend->segment[iSegment-1].fse)*lgbend->segment[iSegment-1].K1/(1-lgbend->segment[iSegment-1].KnDelta);
+      }
       if (lgbend->segment[iSegment].has1) {
-        lgbendFringe(particle, n_part, entryAngle, rho0, KnL[1]/length, KnL[2]/length,
-                     lgbend->segment+iSegment, angleSign, 0);
+        lgbendFringe(particle, n_part, entryAngle, 1.0/rho0, KnL[1]/length, invRhoMinus, K1minus,
+		     lgbend->segment+iSegment, angleSign, 0);
 #ifdef DEBUG
         if (lgbend->optimized!=-1)
           fprintf(fpDeb, "%ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le fringe1\n",
@@ -332,8 +343,18 @@ long track_through_lgbend
           particle[0][0], particle[0][1], particle[0][2],
           particle[0][3], particle[0][4], particle[0][5]);
         */
+      if(iSegment==lgbend->nSegments-1) {
+	invRhoPlus = 0.0;
+	K1plus = 0.0;
+      }
+      else {
+	invRhoPlus = sin(lgbend->segment[iSegment+1].entryAngle)
+		+ sin(lgbend->segment[iSegment+1].angle-lgbend->segment[iSegment+1].entryAngle);
+	invRhoPlus = invRhoPlus/lgbend->segment[iSegment+1].length;
+	K1plus = (1+fse+lgbend->segment[iSegment+1].fse)*lgbend->segment[iSegment+1].K1/(1-lgbend->segment[iSegment+1].KnDelta);
+      }
       if (lgbend->segment[iSegment].has2)  {
-        lgbendFringe(particle, i_top+1, -exitAngle, rho0, KnL[1]/length, KnL[2]/length,
+        lgbendFringe(particle, i_top+1, -exitAngle, invRhoPlus, K1plus, 1.0/rho0, KnL[1]/length,
                      lgbend->segment+iSegment, angleSign, 1);
 #ifdef DEBUG
         if (lgbend->optimized!=-1)
@@ -860,9 +881,10 @@ void lgbendFringe
 (
  double **particle, long n_part, 
  double alpha, // edge angle relative to beam path
- double rho0,  // bending radius (always positive)
- double K1,    // interior gradient
- double K2,    // interior sextupole
+ double invRhoPlus,   // inverse bending radius after fringe (always positive)
+ double K1plus,   // interior gradient after fringe
+ double invRhoMinus,  // inverse bending radius before fringe (always positive)
+ double K1minus,  // interior gradient before fringe
  LGBEND_SEGMENT *segment,
  short angleSign,      // -1 or 1
  short isExit
@@ -872,7 +894,6 @@ void lgbendFringe
   double x2, px2, y2, py2, tau2, tau;
   
   double intK0, intK2, intK4, intK5, intK6, intK7, intI0, intI1;
-  double invRhoPlus, invRhoMinus, K1plus, K1minus;
   double tant, sect, sect3, sint, temp;
   double focX0, focXd, focY0, focYd, invP;
   
@@ -888,10 +909,6 @@ void lgbendFringe
     intK5 = segment->fringeInt2K5;
     intK6 = segment->fringeInt2K6;
     intK7 = segment->fringeInt2K7;
-    K1minus = K1;
-    K1plus = 0;
-    invRhoMinus = 1/rho0;
-    invRhoPlus = 0;
   } else {
     // entry fringe
     intK0 = segment->fringeInt1K0;
@@ -902,10 +919,6 @@ void lgbendFringe
     intK5 = segment->fringeInt1K5;
     intK6 = segment->fringeInt1K6;
     intK7 = segment->fringeInt1K7;
-    K1plus = K1;
-    K1minus = 0;
-    invRhoPlus = 1/rho0;
-    invRhoMinus = 0;
   }
 
   // Per R. Lindberg, some of the fringe integrals change sign with the sign of the bending angle.
