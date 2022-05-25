@@ -209,11 +209,13 @@ long track_through_lgbend
     KnL[1] = (1+fse+lgbend->segment[iSegment].fse)*lgbend->segment[iSegment].K1*length/(1-lgbend->segment[iSegment].KnDelta);
     KnL[2] = (1+fse+lgbend->segment[iSegment].fse)*lgbend->segment[iSegment].K2*length/(1-lgbend->segment[iSegment].KnDelta);
 #ifdef DEBUG
+    /*
     printf("segment %ld: angle=%le, length=%le, rho0=%le, entryX=%le, entryAngle=%le, exitX=%le, exitAngle=%le, K1L=%le, K2L=%le\n",
            iSegment, angle, length, rho0, entryPosition, entryAngle, exitPosition, exitAngle, KnL[1], KnL[2]);
     printf("             K1 = %le, K2 = %le, FSE = %le, FSE1 = %le, KnDelta = %le\n",
            lgbend->segment[iSegment].K1, lgbend->segment[iSegment].K2, fse, lgbend->segment[iSegment].fse,
            lgbend->segment[iSegment].KnDelta);
+    */
 #endif
     /*
     KnL[3] = (1+fse)*lgbend->K3*length/(1-lgbend->KnDelta);
