@@ -262,7 +262,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   double dX, dY, dZ, rho=0.0, angle, coord[3], sangle[3], length;
   long is_bend, is_misalignment, is_magnet, is_rotation, i, is_alpha, is_mirror;
   BEND *bend; KSBEND *ksbend; CSBEND *csbend; CCBEND *ccbend; MALIGN *malign; CSRCSBEND *csrbend;
-  ROTATE *rotate; ALPH *alpha; FTABLE *ftable; BRAT *brat;
+  ROTATE *rotate; ALPH *alpha; FTABLE *ftable; BRAT *brat; LGBEND *lgbend;
   char label[200];
   static MATRIX *temp33, *tempV, *R, *S, *T, *TInv;
   static long matricesAllocated = 0;
@@ -295,6 +295,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   is_bend = is_magnet = is_rotation = is_misalignment = is_alpha = is_mirror = 0;
   length = dX = dY = dZ = tilt = angle = 0;
   brat = NULL;
+  lgbend = NULL;
   if (elem) {
     switch (elem->type) {
     case T_RBEN: case T_SBEN:
@@ -394,6 +395,12 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     case T_BRAT:
       brat = ((BRAT*)elem->p_elem);
       angle = brat->angle;
+      break;
+    case T_LGBEND:
+      is_bend = 1;
+      lgbend = (LGBEND*)elem->p_elem;
+      angle = lgbend->angle;
+      tilt = lgbend->tilt;
       break;
     default:
       if (entity_description[elem->type].flags&HAS_LENGTH)
@@ -534,7 +541,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     phi0 = *phi;
     psi0 = *psi;
     m_identity(S);
-    if (is_bend || is_mirror) {
+    if ((is_bend || is_mirror) && !lgbend) {
       if (angle && !isnan(rho)) {
         if (!is_mirror) {
           R->a[0][0] = rho*(cos(angle)-1);
@@ -562,6 +569,18 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       t1 = atan2(brat->xVertex - brat->xEntry, brat->zVertex-brat->zEntry);
       dZ =  cos(t1)*(brat->zExit-brat->zEntry) + sin(t1)*(brat->xExit-brat->xEntry);
       dX = -sin(t1)*(brat->zExit-brat->zEntry) + cos(t1)*(brat->xExit-brat->xEntry);
+      R->a[0][0] = dX;
+      R->a[1][0] = 0;
+      R->a[2][0] = dZ;
+      S->a[0][0] = S->a[2][2] = cos(angle);
+      S->a[2][0] = -(S->a[0][2] = -sin(angle));
+    } else if (lgbend) {
+      double t1;
+      if ((angle>0 && (lgbend->xVertex-lgbend->xEntry)<0) || (angle<0 && (lgbend->xVertex-lgbend->xEntry)>0))
+	bombElegantVA("Error: ANGLE and XVERTEX-XENTRY are inconsistent in sign for LGBEND element %s\n", elem->name);
+      t1 = atan2(lgbend->xVertex - lgbend->xEntry, lgbend->zVertex-lgbend->zEntry);
+      dZ =  cos(t1)*(lgbend->zExit-lgbend->zEntry) + sin(t1)*(lgbend->xExit-lgbend->xEntry);
+      dX = -sin(t1)*(lgbend->zExit-lgbend->zEntry) + cos(t1)*(lgbend->xExit-lgbend->xEntry);
       R->a[0][0] = dX;
       R->a[1][0] = 0;
       R->a[2][0] = dZ;
@@ -991,7 +1010,7 @@ void convertLocalCoordinatesToGlobal
     return;
   }
 
-  if (IS_BEND(eptr->type)) {
+  if (IS_BEND(eptr->type) && eptr->type!=T_LGBEND) {
     double dtheta, angle, rho;
     length = 0;
     angle = 0;
@@ -1056,7 +1075,9 @@ void convertLocalCoordinatesToGlobal
     *thetaX = theta1 - atan(coord[1]);
     *thetaX = 888;
   } else {
-    /* Not a bending element */
+    /* Not a simple bending element */
+    if (eptr->type==T_LGBEND)
+      bombElegant("Can't compute global loss coordinates for LGBEND elements at present", NULL);
     if (entity_description[eptr->type].flags&HAS_LENGTH)
       length =  *((double*)(eptr->p_elem));
     else
