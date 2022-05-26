@@ -1445,7 +1445,8 @@ void swapEdgeIndices(ELEMENT_LIST *e1)
     break;
   case T_LGBEND:
     lgbptr = (LGBEND*)e1->p_elem;
-    lgbptr->edgeFlip = !lgbptr->edgeFlip;
+    lgbptr->edgeFlip = 1;
+    flipLGBEND(lgbptr);
     break;
   case T_TAPERAPC:
     taperapc = (TAPERAPC*)e1->p_elem;
@@ -1473,28 +1474,31 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
   double *parameterValue;
   char **parameterName;
   /* These names need to have the same order as the items in LGBEND_SEGMENT */
-#define NLGBEND (8+2*N_LGBEND_FRINGE_INT+2)
+#define NLGBEND (8+2*N_LGBEND_FRINGE_INT)
   static char *knownParameterName[NLGBEND] = {
     "LONGIT_L", "K1", "K2", "ANGLE", "ENTRY_X", "ENTRY_ANGLE", "EXIT_X", "EXIT_ANGLE", 
     "FRINGE1K0","FRINGE1I0", "FRINGE1K2","FRINGE1I1", "FRINGE1K4", "FRINGE1K5", "FRINGE1K6", "FRINGE1K7",
     "FRINGE2K0","FRINGE2I0", "FRINGE2K2","FRINGE2I1", "FRINGE2K4", "FRINGE2K5", "FRINGE2K6", "FRINGE2K7",
-    "PREDRIFT", "POSTDRIFT",
   };
   short required[NLGBEND] = {
     2, 0, 0, 1, 1, 1, 2, 2, 
     0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 
-    1, 0
   };
   short disallowed[NLGBEND] = {
     0, 0, 0, 0, 0, 0, 0, 0, 
     1, 1, 1, 1, 1, 1, 1, 1, 
     0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0
   };
   short provided[NLGBEND];
   short offset[NLGBEND];
   LGBEND_SEGMENT segmentExample;
+  LGBEND lgbendExample;
+
+  static char *globalParameterName[8] = {
+    "PREDRIFT", "POSTDRIFT", "ZEntry", "XEntry", "ZVertex", "XVertex", "ZExit", "XExit"
+  };
+  short offsetGlobal[8];
 
   offset[0] = 0;
   offset[1] = (short)(&(segmentExample.K1) - &(segmentExample.length));
@@ -1520,10 +1524,19 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
   offset[21] = (short)(&(segmentExample.fringeInt2K5) -  &(segmentExample.length));
   offset[22] = (short)(&(segmentExample.fringeInt2K6) -  &(segmentExample.length));
   offset[23] = (short)(&(segmentExample.fringeInt2K7) -  &(segmentExample.length));
-  offset[24] = -1;
-  offset[25] = -1;
   for (i=0; i<NLGBEND; i++)
     offset[i] *= sizeof(double);
+
+  offsetGlobal[0] = (short)(&(lgbendExample.predrift) - &(lgbendExample.length));
+  offsetGlobal[1] = (short)(&(lgbendExample.postdrift) - &(lgbendExample.length));
+  offsetGlobal[2] = (short)(&(lgbendExample.zEntry) - &(lgbendExample.length));
+  offsetGlobal[3] = (short)(&(lgbendExample.xEntry) - &(lgbendExample.length));
+  offsetGlobal[4] = (short)(&(lgbendExample.zVertex) - &(lgbendExample.length));
+  offsetGlobal[5] = (short)(&(lgbendExample.xVertex) - &(lgbendExample.length));
+  offsetGlobal[6] = (short)(&(lgbendExample.zExit) - &(lgbendExample.length));
+  offsetGlobal[7] = (short)(&(lgbendExample.xExit) - &(lgbendExample.length));
+  for (i=0; i<8; i++)
+    offsetGlobal[i] *= sizeof(double);
 
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, lgbend->configuration)) {
     fprintf(stderr, "Error: unable to find or read LGBEND configuration file %s\n", lgbend->configuration);
@@ -1561,33 +1574,20 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
     postdriftSeen = predriftSeen = 0;
     for (iRow=0; iRow<rows; iRow++) {
       if ((index=match_string(parameterName[iRow], knownParameterName, NLGBEND, EXACT_MATCH))<0) {
-        fprintf(stdout, "Error: unrecognized parameter name \"%s\" in LGBEND configuration file %s (page %ld, row %ld)\n", 
-                parameterName[iRow], lgbend->configuration,
-                readCode, iRow);
-        exitElegant(1);
-      }
-      provided[index] = 1;
-      if (index==24) {
-        predriftSeen += 1;
-        lgbend->predrift = parameterValue[iRow];
-      } else if (index==25) {
-        postdriftSeen += 1;
-        lgbend->postdrift = parameterValue[iRow];
-      } else
+        if ((index=match_string(parameterName[iRow], globalParameterName, 8, EXACT_MATCH))<0) {
+          fprintf(stdout, "Error: unrecognized parameter name \"%s\" in LGBEND configuration file %s (page %ld, row %ld)\n", 
+                  parameterName[iRow], lgbend->configuration,
+                  readCode, iRow);
+          exitElegant(1);
+        } else
+          *((double*)(((char*)lgbend)+offsetGlobal[index])) = parameterValue[iRow];
+      } else {
+        provided[index] = 1;
         *((double*)(((char*)&(lgbend->segment[lgbend->nSegments]))+offset[index])) = parameterValue[iRow];
+      }
     }
     free(parameterValue);
     SDDS_FreeStringArray(parameterName, rows);
-    if (predriftSeen && readCode!=1) {
-      fprintf(stderr, "Error: PREDRIFT parameter seen for interior segment %ld reading LGBEND configuration file %s\n", 
-              readCode, lgbend->configuration);
-      exitElegant(1);
-    }
-    if (!predriftSeen && readCode==1) {
-      fprintf(stderr, "Error: PREDRIFT parameter not seen for initial segment reading LGBEND configuration file %s\n", 
-              lgbend->configuration);
-      exitElegant(1);
-    }
     for (i=0; i<NLGBEND; i++)  {
       if ((readCode==1 && required[i] && !provided[i]) ||
           (readCode>1 && required[i]==2 && !provided[i])) {
@@ -1614,11 +1614,6 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
   }
   SDDS_Terminate(&SDDSin);
   lgbend->initialized = 1;
-  if (!postdriftSeen) {
-    fprintf(stderr, "Error: POSTDRIFT parameter not seen for final segment reading LGBEND configuration file %s\n", 
-            lgbend->configuration);
-    exitElegant(1);
-  }
 
   if (lgbend->edgeFlip) {
     flipLGBEND(lgbend);
@@ -1630,6 +1625,10 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
     printf("%ld segments found for LGBEND %s#%ld in file %s\n",
            lgbend->nSegments, eptr->name, eptr->occurence, lgbend->configuration);
     printf("total angle is %le, total length is %le\n", lgbend->angle, lgbend->length);
+    printf("predrift = %le, postdrift = %le\n", lgbend->predrift, lgbend->postdrift);
+    printf("nominal entry coordinates in magnet frame: Z=%le, X=%le\n", lgbend->zEntry, lgbend->xEntry);
+    printf("nominal exit coordinates in magnet frame: Z=%le, X=%le\n", lgbend->zExit, lgbend->xExit);
+    printf("vertex coordinates in magnet frame: Z=%le, X=%le\n", lgbend->zVertex, lgbend->xVertex);
     fflush(stdout);
     for (i=0; i<lgbend->nSegments; i++) {
       printf("Segment %ld\nLONGIT_L = %le\nK1 = %le\nK2 = %le\n", 
@@ -1734,7 +1733,7 @@ void copyLGBendConfiguration(LGBEND *target, LGBEND *source)
 void configureLGBendGeometry(LGBEND *lgbend)
 {
   long i;
-  double arcLength, rho, angle, entryAngle, exitAngle, length;
+  double arcLength, rho, angle, entryAngle, length;
   arcLength = lgbend->predrift + lgbend->postdrift;
   for (i=0; i<lgbend->nSegments; i++) {
     length = lgbend->segment[i].length;
