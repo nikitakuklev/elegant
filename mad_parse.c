@@ -1740,7 +1740,6 @@ void configureLGBendGeometry(LGBEND *lgbend)
     length = lgbend->segment[i].length;
     angle = lgbend->segment[i].angle;
     entryAngle = lgbend->segment[i].entryAngle;
-    exitAngle = lgbend->segment[i].exitAngle;
     rho = length/(sin(entryAngle) + sin(angle-entryAngle));
     arcLength += rho*angle;
   }
