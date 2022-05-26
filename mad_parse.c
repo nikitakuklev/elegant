@@ -1447,6 +1447,7 @@ void swapEdgeIndices(ELEMENT_LIST *e1)
     lgbptr = (LGBEND*)e1->p_elem;
     lgbptr->edgeFlip = 1;
     flipLGBEND(lgbptr);
+    lgbptr->edgeFlip = 0;
     break;
   case T_TAPERAPC:
     taperapc = (TAPERAPC*)e1->p_elem;
