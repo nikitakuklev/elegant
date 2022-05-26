@@ -496,7 +496,7 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
 
       iRow=0;
     /* Output longitudinal length, bend angle, and multipole content */
-      if (!SDDS_StartPage(&SDDSout, NsegmentParams+(edgeNum==1?2:1)*NfringeParams+2) ||
+      if (!SDDS_StartPage(&SDDSout, NsegmentParams+(edgeNum==1?2:1)*NfringeParams+2+(edgeNum==1?6:0)) ||
           !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
 			     "ParameterName", "LONGIT_L", 
 			     "ParameterValue", zEdge[edgeNum]-zEdge[edgeNum-1], NULL) ||
@@ -549,7 +549,20 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
 			       "ParameterValue", quadFringeInt.int2, NULL) ||
             !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
                                "ParameterName", "PREDRIFT",
-                               "ParameterValue", (zEdge[edgeNum-1]-zEntry)/cos(edgeAngle[edgeNum-1])))
+                               "ParameterValue", (zEdge[edgeNum-1]-zEntry)/cos(edgeAngle[edgeNum-1])) ||
+            !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                               "ParameterName", "XEntry", "ParameterValue", xEntry, NULL)  ||
+            !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                               "ParameterName", "ZEntry", "ParameterValue", zEntry+zOffset, NULL)  ||
+            !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                               "ParameterName", "XVertex", "ParameterValue", xVertex, NULL)  ||
+            !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                               "ParameterName", "ZVertex", "ParameterValue", zVertex+zOffset, NULL)  ||
+            !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                               "ParameterName", "XExit", "ParameterValue", xExit, NULL)  ||
+            !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iRow++,
+                               "ParameterName", "ZExit", "ParameterValue", zExit+zOffset, NULL) 
+            )
 	  {
 	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	    exit(1);
