@@ -4673,6 +4673,7 @@ long track_through_lgbend(double **particle, long n_part, ELEMENT_LIST *eptr, LG
                           MAXAMP *maxamp, APCONTOUR *apContour, APERTURE_DATA *apFileData, long iSlice, long iFinalSlice);
 void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr);
 void copyLGBendConfiguration(LGBEND *target, LGBEND *source);
+void configureLGBendGeometry(LGBEND *lgbend);
 void flipLGBEND(LGBEND *lgbend);
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);

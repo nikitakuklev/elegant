@@ -1624,6 +1624,7 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
     flipLGBEND(lgbend);
     lgbend->edgeFlip = 0;
   }
+  configureLGBendGeometry(lgbend);
 
   if (lgbend->verbose>10) {
     printf("%ld segments found for LGBEND %s#%ld in file %s\n",
@@ -1725,4 +1726,22 @@ void copyLGBendConfiguration(LGBEND *target, LGBEND *source)
   target->segment = calloc(target->nSegments, sizeof(*(target->segment)));
   for (i=0; i<source->nSegments; i++)
     memcpy(target->segment+i, source->segment+i, sizeof(*(target->segment)));
+  configureLGBendGeometry(target);
 }
+
+void configureLGBendGeometry(LGBEND *lgbend)
+{
+  long i;
+  double arcLength, rho, angle, entryAngle, exitAngle, length;
+  arcLength = lgbend->predrift + lgbend->postdrift;
+  for (i=0; i<lgbend->nSegments; i++) {
+    length = lgbend->segment[i].length;
+    angle = lgbend->segment[i].angle;
+    entryAngle = lgbend->segment[i].entryAngle;
+    exitAngle = lgbend->segment[i].exitAngle;
+    rho = length/(sin(entryAngle) + sin(angle-entryAngle));
+    arcLength += rho*angle;
+  }
+  lgbend->length = arcLength;
+}
+
