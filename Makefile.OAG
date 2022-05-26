@@ -8,9 +8,9 @@ OPT_CFLAGS_YES = -O2
 else
 OPT_CFLAGS_YES = -O3
 endif
-HOST_OPT = YES
-Ocustom = -O3
-#USR_LDFLAGS+= -g
+HOST_OPT = NO
+#Ocustom = -O3
+USR_LDFLAGS+= -g
 
 #RATIONAL = purify
 #RATIONAL = quantify

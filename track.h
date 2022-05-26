@@ -4671,6 +4671,9 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
 long track_through_lgbend(double **particle, long n_part, ELEMENT_LIST *eptr, LGBEND *lgbend, double Po,
                           double **accepted, double z_start, double *sigmaDelta2, char *rootname,
                           MAXAMP *maxamp, APCONTOUR *apContour, APERTURE_DATA *apFileData, long iSlice, long iFinalSlice);
+void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr);
+void copyLGBendConfiguration(LGBEND *target, LGBEND *source);
+void flipLGBEND(LGBEND *lgbend);
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
