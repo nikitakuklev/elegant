@@ -1724,6 +1724,8 @@ void copyLGBendConfiguration(LGBEND *target, LGBEND *source)
   target->postdrift = source->postdrift;
   target->optimized = source->optimized;
   target->segment = calloc(target->nSegments, sizeof(*(target->segment)));
+  target->angle = source->angle;
+  target->length = source->length;
   for (i=0; i<source->nSegments; i++)
     memcpy(target->segment+i, source->segment+i, sizeof(*(target->segment)));
   configureLGBendGeometry(target);
