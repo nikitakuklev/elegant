@@ -16,9 +16,12 @@
 #include "track.h"
 #include "multipole.h"
 
+/* Used to share data with trajectory optimization penalty function */
 static LGBEND lgbendCopy;
 static ELEMENT_LIST *eptrCopy = NULL;
-static double PoCopy, lastRho, lastX, lastXp;
+static double PoCopy;
+/* Used to share data with the radiation integral computation */
+static double lastRho, lastX, lastXp;
 
 #ifdef DEBUG
 static FILE *fpDeb = NULL;
@@ -358,6 +361,9 @@ long track_through_lgbend
     if (sigmaDelta2)
       *sigmaDelta2 /= i_top+1;
     
+    lastX = particle[i_top][0];
+    lastXp = particle[i_top][1];
+
     if ((iPart<0 || iPart==(lgbend->nSlices-1)) && iFinalSlice<=0) {
         /*
           printf("output before adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
@@ -427,8 +433,6 @@ long track_through_lgbend
         /* use n_part here so lost particles get rotated back */
         rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
     }
-    lastX = particle[i_top][0];
-    lastXp = particle[i_top][1];
 
     if (angleSign<0) {
       lastRho *= -1;
@@ -584,6 +588,8 @@ void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double p
     fprintf(fpcr, "SDDS1\n&column name=Segment type=short &end\n");
     fprintf(fpcr, "&column name=Slice type=short &end\n");
     fprintf(fpcr, "&column name=s type=double units=m &end\n");
+    fprintf(fpcr, "&column name=x type=double units=m &end\n");
+    fprintf(fpcr, "&column name=xp type=double &end\n");
     fprintf(fpcr, "&column name=betax type=double units=m &end\n");
     fprintf(fpcr, "&column name=etax type=double units=m &end\n");
     fprintf(fpcr, "&column name=etaxp type=double &end\n");
@@ -595,7 +601,9 @@ void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double p
 #if USE_MPI
   if (myid==0)
 #endif
-  fprintf(fpcr, "0 0 %21.15le %21.15le %21.15le %21.15le %21.15le %s\n", s0, beta0, eta0, etap0, alpha0, elem->name);
+  fprintf(fpcr, "0 0 %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le %s\n", 
+          s0, startingCoord?startingCoord[0]:0.0, startingCoord?startingCoord[1]:0.0,
+          beta0, eta0, etap0, alpha0, elem->name);
 #endif
   
   if (lgbend->tilt)
@@ -628,8 +636,8 @@ void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double p
 #if USE_MPI
       if (myid==0)
 #endif
-      fprintf(fpcr, "%ld %ld %21.15le %21.15le %21.15le %21.15le %21.15le %s\n", 
-              iSegment, iSlice, s0, beta2, eta2, etap2, alpha2, elem->name);
+      fprintf(fpcr, "%ld %ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le %s\n", 
+              iSegment, iSlice, s0, lastX, lastXp, beta2, eta2, etap2, alpha2, elem->name);
 #endif
       
       /* Compute contributions to radiation integrals in this slice.
