@@ -1556,7 +1556,9 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
               lgbend->configuration);
       exitElegant(1);
     }
-    if (!(lgbend->segment = SDDS_Realloc(lgbend->segment, (lgbend->nSegments+1)*sizeof(*(lgbend->segment))))) {
+    if (!(lgbend->segment = SDDS_Realloc(lgbend->segment, (lgbend->nSegments+1)*sizeof(*(lgbend->segment)))) ||
+        !(lgbend->fseOpt = SDDS_Realloc(lgbend->fseOpt, (lgbend->nSegments+1)*sizeof(*(lgbend->fseOpt)))) ||
+        !(lgbend->KnDelta = SDDS_Realloc(lgbend->KnDelta, (lgbend->nSegments+1)*sizeof(*(lgbend->KnDelta))))) {
       fprintf(stderr, "Error: memory allocation failure reading LGBEND configuration file %s\n", lgbend->configuration);
       exitElegant(1);
     }
@@ -1609,6 +1611,8 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
     lgbend->angle += lgbend->segment[lgbend->nSegments].angle;
     lgbend->length += lgbend->segment[lgbend->nSegments].length;
     lgbend->segment[lgbend->nSegments].zAccumulated = lgbend->length;
+    lgbend->fseOpt[lgbend->nSegments] = 0;
+    lgbend->KnDelta[lgbend->nSegments] = 0;
     lgbend->nSegments ++;
   }
   SDDS_Terminate(&SDDSin);
@@ -1719,11 +1723,16 @@ void copyLGBendConfiguration(LGBEND *target, LGBEND *source)
   target->predrift = source->predrift;
   target->postdrift = source->postdrift;
   target->optimized = source->optimized;
-  target->segment = calloc(target->nSegments, sizeof(*(target->segment)));
   target->angle = source->angle;
   target->length = source->length;
-  for (i=0; i<source->nSegments; i++)
+  target->segment = calloc(target->nSegments, sizeof(*(target->segment)));
+  target->fseOpt = calloc(target->nSegments, sizeof(*(target->fseOpt)));
+  target->KnDelta = calloc(target->nSegments, sizeof(*(target->KnDelta)));
+  for (i=0; i<source->nSegments; i++) {
     memcpy(target->segment+i, source->segment+i, sizeof(*(target->segment)));
+    target->fseOpt[i] = source->fseOpt[i];
+    target->KnDelta[i] = source->KnDelta[i];
+  }
   configureLGBendGeometry(target);
 }
 

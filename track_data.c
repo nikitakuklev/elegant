@@ -3738,7 +3738,7 @@ PARAMETER lgbend_param[N_LGBEND_PARAMS] = {
     {"USE_RAD_DIST", "", IS_SHORT, 0, (long)((char *)&lgbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
     {"ADD_OPENING_ANGLE", "", IS_SHORT, 0, (long)((char *)&lgbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are added if USE_RAD_DIST is nonzero."},
     {"OPTIMIZE_FSE", "", IS_SHORT, 0, (long)((char *)&lgbend_example.optimizeFse), NULL, 0.0, 1, "Optimize strength (FSE) of first and last segments to obtain the ideal deflection angle and final trajectory."},
-    {"COMPENSATE_KN", "", IS_SHORT, 0, (long)((char *)&lgbend_example.compensateKn), NULL, 0.0, 1, "If nonzero, K1 and K2 strengths are adjusted to compensate for the changes in FSE needed to center the trajectory."},
+    {"COMPENSATE_KN", "", IS_SHORT, 0, (long)((char *)&lgbend_example.compensateKn), NULL, 0.0, 0, "If nonzero, K1 and K2 strengths are adjusted to compensate for the changes in FSE needed to center the trajectory."},
     {"VERBOSE", "", IS_SHORT, 0, (long)((char *)&lgbend_example.verbose), NULL, 0.0, 0, "If nonzero, print messages showing optimized FSE and x offset."},
     };
 

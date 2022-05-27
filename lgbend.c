@@ -39,6 +39,9 @@ int integrate_kick_KnL(double *coord, double dx, double dy,
                        MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2, double *lastRho1);
 double lgbend_trajectory_error(double *value, long *invalid);
 
+void storeLGBendOptimizedFSEValues(LGBEND *lgbend);
+int retrieveLGBendOptimizedFSEValues(LGBEND *lgbend);
+
 long track_through_lgbend
 (
  double **particle,   /* initial/final phase-space coordinates */
@@ -119,36 +122,40 @@ long track_through_lgbend
     PoCopy = lastRho1 = lastX = lastXp = 0;
     if (iPart>=0)
       bombTracking("Programming error: oneStep mode is incompatible with optmization for LGBEND.");
-    startValue[0] = lgbend->segment[0].fse;
-    startValue[1] = lgbend->segment[lgbend->nSegments-1].fse;
-    lgbend->optimized = -1; /* flag to indicate calls to track_through_lgbend will be for FSE optimization */
-    memcpy(&lgbendCopy, lgbend, sizeof(lgbendCopy));
-    eptrCopy = eptr;
-    lgbendCopy.fse = lgbendCopy.dx = lgbendCopy.dy = lgbendCopy.dz = 
-      lgbendCopy.etilt = lgbendCopy.tilt = lgbendCopy.isr = lgbendCopy.synch_rad = lgbendCopy.isr1Particle = 0;
+    if (!retrieveLGBendOptimizedFSEValues(lgbend)) {
+      startValue[0] = lgbend->fseOpt[0];
+      startValue[1] = lgbend->fseOpt[lgbend->nSegments-1];
+      lgbend->optimized = -1; /* flag to indicate calls to track_through_lgbend will be for FSE optimization */
+      memcpy(&lgbendCopy, lgbend, sizeof(lgbendCopy));
+      eptrCopy = eptr;
+      lgbendCopy.fse = lgbendCopy.dx = lgbendCopy.dy = lgbendCopy.dz = 
+        lgbendCopy.etilt = lgbendCopy.tilt = lgbendCopy.isr = lgbendCopy.synch_rad = lgbendCopy.isr1Particle = 0;
+      
+      PoCopy = Po;
+      stepSize[0] = stepSize[1] = 1e-3;
+      lowerLimit[0] = lowerLimit[1] = -1;
+      upperLimit[0] = upperLimit[1] = 1;
+      disable[0] = disable[1] = 0;
+      if (simplexMin(&acc, startValue, stepSize, lowerLimit, upperLimit, disable, 2, 
+                     fabs(1e-15*lgbend->length), fabs(1e-16*lgbend->length),
+                     lgbend_trajectory_error, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
+        bombElegantVA("failed to find FSE and x offset to center trajectory for lgbend. accuracy acheived was %le.", acc);
+      }
+      lgbend->fseOpt[0] = startValue[0];
+      lgbend->fseOpt[lgbend->nSegments-1] = startValue[1];
+      if (lgbend->compensateKn) {
+        lgbend->KnDelta[0] = -lgbend->fseOpt[0];
+        lgbend->KnDelta[lgbend->nSegments-1] = -lgbend->fseOpt[lgbend->nSegments-1];
+      }
 
-    PoCopy = Po;
-    stepSize[0] = stepSize[1] = 1e-3;
-    lowerLimit[0] = lowerLimit[1] = -1;
-    upperLimit[0] = upperLimit[1] = 1;
-    disable[0] = disable[1] = 0;
-    if (simplexMin(&acc, startValue, stepSize, lowerLimit, upperLimit, disable, 2, 
-                   fabs(1e-15*lgbend->length), fabs(1e-16*lgbend->length),
-                   lgbend_trajectory_error, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
-      bombElegantVA("failed to find FSE and x offset to center trajectory for lgbend. accuracy acheived was %le.", acc);
-    }
-    lgbend->segment[0].fse = startValue[0];
-    lgbend->segment[lgbend->nSegments-1].fse = startValue[1];
-    if (lgbend->compensateKn) {
-      lgbend->segment[0].KnDelta = -startValue[0];
-      lgbend->segment[lgbend->nSegments-1].KnDelta = -startValue[1];
-    }
-    lgbend->optimized = 1;
-    if (lgbend->verbose) {
-      printf("LGBEND %s#%ld optimized: FSE[0]=%le, FSE[%ld]=%le, accuracy=%le\n",
-             eptr?eptr->name:"?", eptr?eptr->occurence:-1, 
-             lgbend->segment[0].fse, lgbend->nSegments-1, lgbend->segment[lgbend->nSegments-1].fse, acc);
-      fflush(stdout);
+      lgbend->optimized = 1;
+      if (lgbend->verbose) {
+        printf("LGBEND %s#%ld optimized: FSE[0]=%le, FSE[%ld]=%le, accuracy=%le\n",
+               eptr?eptr->name:"?", eptr?eptr->occurence:-1, 
+               lgbend->fseOpt[0], lgbend->nSegments-1, lgbend->fseOpt[lgbend->nSegments-1], acc);
+        fflush(stdout);
+      }
+      storeLGBendOptimizedFSEValues(lgbend);
     }
   }
 
@@ -217,26 +224,9 @@ long track_through_lgbend
     exitAngle = lgbend->segment[iSegment].exitAngle;
     exitPosition = lgbend->segment[iSegment].exitX;
     rho0 = length/(sin(entryAngle) + sin(angle-entryAngle));
-    KnL[0] = (1+fse+lgbend->segment[iSegment].fse)/rho0*length;
-    KnL[1] = (1+fse+lgbend->segment[iSegment].fse)*lgbend->segment[iSegment].K1*length/(1-lgbend->segment[iSegment].KnDelta);
-    KnL[2] = (1+fse+lgbend->segment[iSegment].fse)*lgbend->segment[iSegment].K2*length/(1-lgbend->segment[iSegment].KnDelta);
-#ifdef DEBUG
-    /*
-    printf("segment %ld: angle=%le, length=%le, rho0=%le, entryX=%le, entryAngle=%le, exitX=%le, exitAngle=%le, K1L=%le, K2L=%le\n",
-           iSegment, angle, length, rho0, entryPosition, entryAngle, exitPosition, exitAngle, KnL[1], KnL[2]);
-    printf("             K1 = %le, K2 = %le, FSE = %le, FSE1 = %le, KnDelta = %le\n",
-           lgbend->segment[iSegment].K1, lgbend->segment[iSegment].K2, fse, lgbend->segment[iSegment].fse,
-           lgbend->segment[iSegment].KnDelta);
-    */
-#endif
-    /*
-    KnL[3] = (1+fse)*lgbend->K3*length/(1-lgbend->KnDelta);
-    KnL[4] = (1+fse)*lgbend->K4*length/(1-lgbend->KnDelta);
-    KnL[5] = (1+fse)*lgbend->K5*length/(1-lgbend->KnDelta);
-    KnL[6] = (1+fse)*lgbend->K6*length/(1-lgbend->KnDelta);
-    KnL[7] = (1+fse)*lgbend->K7*length/(1-lgbend->KnDelta);
-    KnL[8] = (1+fse)*lgbend->K8*length/(1-lgbend->KnDelta);
-    */
+    KnL[0] = (1+fse+lgbend->fseOpt[iSegment])/rho0*length;
+    KnL[1] = (1+fse+lgbend->fseOpt[iSegment])*lgbend->segment[iSegment].K1*length/(1-lgbend->KnDelta[iSegment]);
+    KnL[2] = (1+fse+lgbend->fseOpt[iSegment])*lgbend->segment[iSegment].K2*length/(1-lgbend->KnDelta[iSegment]);
     if (angle<0) {
       angleSign = -1;
       for (iTerm=0; iTerm<9; iTerm+=2)
@@ -301,7 +291,7 @@ long track_through_lgbend
 	invRhoMinus = sin(lgbend->segment[iSegment-1].entryAngle)
 	  + sin(lgbend->segment[iSegment-1].angle - lgbend->segment[iSegment-1].entryAngle);
 	invRhoMinus = invRhoMinus/lgbend->segment[iSegment-1].length;
-	K1minus = (1+fse+lgbend->segment[iSegment-1].fse)*lgbend->segment[iSegment-1].K1/(1-lgbend->segment[iSegment-1].KnDelta);
+	K1minus = (1+fse+lgbend->fseOpt[iSegment-1])*lgbend->segment[iSegment-1].K1/(1-lgbend->KnDelta[iSegment-1]);
       }
       if (lgbend->segment[iSegment].has1) {
         lgbendFringe(particle, n_part, entryAngle, 1.0/rho0, KnL[1]/length, invRhoMinus, K1minus,
@@ -371,7 +361,7 @@ long track_through_lgbend
 	invRhoPlus = sin(lgbend->segment[iSegment+1].entryAngle)
 		+ sin(lgbend->segment[iSegment+1].angle-lgbend->segment[iSegment+1].entryAngle);
 	invRhoPlus = invRhoPlus/lgbend->segment[iSegment+1].length;
-	K1plus = (1+fse+lgbend->segment[iSegment+1].fse)*lgbend->segment[iSegment+1].K1/(1-lgbend->segment[iSegment+1].KnDelta);
+	K1plus = (1+fse+lgbend->fseOpt[iSegment+1])*lgbend->segment[iSegment+1].K1/(1-lgbend->KnDelta[iSegment+1]);
       }
       if (lgbend->segment[iSegment].has2)  {
         lgbendFringe(particle, i_top+1, -exitAngle, invRhoPlus, K1plus, 1.0/rho0, KnL[1]/length,
@@ -860,11 +850,11 @@ double lgbend_trajectory_error(double *value, long *invalid)
   double result;
 
   *invalid = 0;
-  if ((lgbendCopy.segment[0].fse=value[0])>=1 || value[0]<=-1) {
+  if ((lgbendCopy.fseOpt[0]=value[0])>=1 || value[0]<=-1) {
     *invalid = 1;
     return DBL_MAX;
   }
-  if ((lgbendCopy.segment[lgbendCopy.nSegments-1].fse=value[1])>=1 || value[1]<=-1) {
+  if ((lgbendCopy.fseOpt[lgbendCopy.nSegments-1]=value[1])>=1 || value[1]<=-1) {
     *invalid = 1;
     return DBL_MAX;
   }
@@ -872,8 +862,8 @@ double lgbend_trajectory_error(double *value, long *invalid)
     particle = (double**)czarray_2d(sizeof(**particle), 1, totalPropertiesPerParticle);
   memset(particle[0], 0, totalPropertiesPerParticle*sizeof(**particle));
   if (lgbendCopy.compensateKn) {
-    lgbendCopy.segment[0].KnDelta = -lgbendCopy.segment[0].fse;
-    lgbendCopy.segment[lgbendCopy.nSegments-1].KnDelta = -lgbendCopy.segment[lgbendCopy.nSegments-1].fse;
+    lgbendCopy.KnDelta[0] = -lgbendCopy.fseOpt[0];
+    lgbendCopy.KnDelta[lgbendCopy.nSegments-1] = -lgbendCopy.fseOpt[lgbendCopy.nSegments-1];
   }
   if (!track_through_lgbend(particle, 1, eptrCopy, &lgbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, NULL, -1, -1)) {
     *invalid = 1;
@@ -881,4 +871,75 @@ double lgbend_trajectory_error(double *value, long *invalid)
   }
   result = fabs(particle[0][0]) + fabs(particle[0][1]);
   return result;
+}
+
+static long nStoredLGBENDs = 0;
+LGBEND *storedLGBEND = NULL;
+
+int retrieveLGBendOptimizedFSEValues(LGBEND *lgbend)
+{
+  long i;
+  for (i=0; i<nStoredLGBENDs; i++) {
+    if (strcmp(lgbend->configuration, storedLGBEND[i].configuration)==0 &&
+        lgbend->nSegments==storedLGBEND[i].nSegments && 
+        lgbend->length==storedLGBEND[i].length &&
+        lgbend->xVertex==storedLGBEND[i].xVertex &&        
+        lgbend->zVertex==storedLGBEND[i].zVertex &&        
+        lgbend->xEntry==storedLGBEND[i].xEntry &&        
+        lgbend->zEntry==storedLGBEND[i].zEntry &&        
+        lgbend->xExit==storedLGBEND[i].xExit &&        
+        lgbend->zExit==storedLGBEND[i].zExit &&        
+        lgbend->tilt==storedLGBEND[i].tilt &&        
+        lgbend->dx==storedLGBEND[i].dx &&        
+        lgbend->dy==storedLGBEND[i].dy &&        
+        lgbend->dz==storedLGBEND[i].dz &&        
+        lgbend->fse==storedLGBEND[i].fse &&        
+        lgbend->etilt==storedLGBEND[i].etilt &&        
+        lgbend->nSlices==storedLGBEND[i].nSlices &&        
+        lgbend->integration_order==storedLGBEND[i].integration_order &&        
+        lgbend->compensateKn==storedLGBEND[i].compensateKn &&
+        lgbend->wasFlipped==storedLGBEND[i].wasFlipped) {
+      lgbend->optimized = 1;
+      lgbend->fseOpt[0] = storedLGBEND[i].fseOpt[0];
+      lgbend->fseOpt[lgbend->nSegments-1] = storedLGBEND[i].fseOpt[storedLGBEND[i].nSegments-1];
+      if (lgbend->compensateKn) {
+        lgbend->KnDelta[0] = -lgbend->fseOpt[0];
+        lgbend->KnDelta[lgbend->nSegments-1] = -lgbend->fseOpt[lgbend->nSegments-1];
+      }
+      return 1;
+    }
+  }
+  return 0;
+}
+
+void storeLGBendOptimizedFSEValues(LGBEND *lgbend)
+{
+  double dummy;
+  long i;
+  if (!retrieveLGBendOptimizedFSEValues(lgbend)) {
+    i = nStoredLGBENDs++;
+    storedLGBEND = SDDS_Realloc(storedLGBEND, sizeof(*storedLGBEND)*nStoredLGBENDs);
+    cp_str(&storedLGBEND[i].configuration, lgbend->configuration);
+    storedLGBEND[i].fseOpt = tmalloc(sizeof(storedLGBEND[i].fseOpt[0])*(lgbend->nSegments));
+    storedLGBEND[i].nSegments = lgbend->nSegments;
+    storedLGBEND[i].length = lgbend->length;
+    storedLGBEND[i].xVertex = lgbend->xVertex;
+    storedLGBEND[i].zVertex = lgbend->zVertex;
+    storedLGBEND[i].xEntry = lgbend->xEntry;
+    storedLGBEND[i].zEntry = lgbend->zEntry;
+    storedLGBEND[i].xExit = lgbend->xExit;
+    storedLGBEND[i].zExit = lgbend->zExit;
+    storedLGBEND[i].tilt = lgbend->tilt;
+    storedLGBEND[i].dx = lgbend->dx;
+    storedLGBEND[i].dy = lgbend->dy;
+    storedLGBEND[i].dz = lgbend->dz;
+    storedLGBEND[i].fse = lgbend->fse;
+    storedLGBEND[i].etilt = lgbend->etilt;
+    storedLGBEND[i].nSlices = lgbend->nSlices;
+    storedLGBEND[i].integration_order = lgbend->integration_order;
+    storedLGBEND[i].compensateKn = lgbend->compensateKn;
+    storedLGBEND[i].wasFlipped = lgbend->wasFlipped;
+    storedLGBEND[i].fseOpt[0] = lgbend->fseOpt[0];
+    storedLGBEND[i].fseOpt[storedLGBEND[i].nSegments-1] = lgbend->fseOpt[storedLGBEND[i].nSegments-1];
+  }
 }

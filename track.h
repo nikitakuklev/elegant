@@ -3624,7 +3624,6 @@ typedef struct {
     fringeInt1K7;
   double fringeInt2K0, fringeInt2I0, fringeInt2K2, fringeInt2I1, fringeInt2K4, fringeInt2K5, fringeInt2K6,
     fringeInt2K7;
-  double fse, KnDelta;
 } LGBEND_SEGMENT;
 
 typedef struct {
@@ -3647,6 +3646,7 @@ typedef struct {
   long nSegments;
   double angle; /* total angle */
   LGBEND_SEGMENT *segment;
+  double *fseOpt, *KnDelta;
   short optimized, wasFlipped;
   double predrift, postdrift;
 } LGBEND;
