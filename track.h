@@ -3628,7 +3628,8 @@ typedef struct {
 } LGBEND_SEGMENT;
 
 typedef struct {
-  double length; /* arc length ! */
+  double length; /* arc length. It's actually set when the configuration file is read. */
+  /* These are typically read in from the configuration file */
   double xVertex, zVertex;
   double xEntry, zEntry;
   double xExit, zExit;
@@ -3637,7 +3638,7 @@ typedef struct {
   double dx, dy, dz;
   double fse;
   double etilt;   /* error tilt angle */
-  long nSlices;
+  long nSlices;   /* slices per segment */
   short integration_order;
   short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
   short optimizeFse, compensateKn, verbose;
