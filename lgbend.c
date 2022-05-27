@@ -28,11 +28,11 @@ void switchLgbendPlane(double **particle, long n_part, double dx, double alpha, 
 void lgbendFringe(double **particle, long n_part, double alpha, double invRhoPlus, double K1plus, double invRhoMinus, double K1minus,
                   LGBEND_SEGMENT *segment, short angleSign, short isExit);
 int integrate_kick_KnL(double *coord, double dx, double dy, 
-                      double Po, double rad_coef, double isr_coef,
-                      double *KnL, long nTerms,
-                      long integration_order, long n_parts, long iPart, long iFinalSlice,
-                      double drift,
-                      MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edge1MultData, MULTIPOLE_DATA *edge2MultData, 
+                       double Po, double rad_coef, double isr_coef,
+                       double *KnL, long nTerms,
+                       long integration_order, long n_parts, long iPart, long iFinalSlice,
+                       double drift,
+                       MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edge1MultData, MULTIPOLE_DATA *edge2MultData, 
                        MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2, double *lastRho1);
 double lgbend_trajectory_error(double *value, long *invalid);
 
@@ -427,11 +427,15 @@ long track_through_lgbend
         /* use n_part here so lost particles get rotated back */
         rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
     }
+    lastX = particle[i_top][0];
+    lastXp = particle[i_top][1];
 
     if (angleSign<0) {
       lastRho *= -1;
+      /*
       lastX *= -1;
       lastXp *= -1;
+      */
     }
   }
 
