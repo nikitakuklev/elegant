@@ -139,7 +139,10 @@ long track_through_lgbend
     }
     lgbend->segment[0].fse = startValue[0];
     lgbend->segment[lgbend->nSegments-1].fse = startValue[1];
-
+    if (lgbend->compensateKn) {
+      lgbend->segment[0].KnDelta = -startValue[0];
+      lgbend->segment[lgbend->nSegments-1].KnDelta = -startValue[1];
+    }
     lgbend->optimized = 1;
     if (lgbend->verbose) {
       printf("LGBEND %s#%ld optimized: FSE[0]=%le, FSE[%ld]=%le, accuracy=%le\n",
