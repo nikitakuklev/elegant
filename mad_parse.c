@@ -1397,7 +1397,7 @@ void setEdgeIndices(ELEMENT_LIST *e1)
     ((CCBEND*)e1->p_elem)->edgeFlip = 0;
     break;
   case T_LGBEND:
-    ((LGBEND*)e1->p_elem)->edgeFlip = 0;
+    ((LGBEND*)e1->p_elem)->wasFlipped = 0;
     break;
   default:
     break;
@@ -1445,9 +1445,7 @@ void swapEdgeIndices(ELEMENT_LIST *e1)
     break;
   case T_LGBEND:
     lgbptr = (LGBEND*)e1->p_elem;
-    lgbptr->edgeFlip = 1;
     flipLGBEND(lgbptr);
-    lgbptr->edgeFlip = 0;
     break;
   case T_TAPERAPC:
     taperapc = (TAPERAPC*)e1->p_elem;
@@ -1617,10 +1615,6 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
   lgbend->initialized = 1;
 
   configureLGBendGeometry(lgbend);
-  if (lgbend->edgeFlip) {
-    flipLGBEND(lgbend);
-    lgbend->edgeFlip = 0;
-  }
 
   if (lgbend->verbose>10) {
     printf("%ld segments found for LGBEND %s#%ld in file %s\n",
@@ -1713,13 +1707,14 @@ void flipLGBEND(LGBEND *lgbend)
     lgbend->segment[i].exitAngle = lgbend->segment[i].entryAngle - lgbend->segment[i].angle;
   }
   SWAP_DOUBLE(lgbend->predrift, lgbend->postdrift);
+  lgbend->wasFlipped = !lgbend->wasFlipped;
   configureLGBendGeometry(lgbend); /* may be needed if flipLGBEND is called outside of lattice parsing */
 }
 
 void copyLGBendConfiguration(LGBEND *target, LGBEND *source)
 {
   long i;
-  target->edgeFlip = source->edgeFlip;
+  target->wasFlipped  = source->wasFlipped;
   target->nSegments = source->nSegments;
   target->predrift = source->predrift;
   target->postdrift = source->postdrift;

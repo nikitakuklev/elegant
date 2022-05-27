@@ -111,16 +111,6 @@ long track_through_lgbend
   if (N_LGBEND_FRINGE_INT!=8)
     bombTracking("Coding error detected: number of fringe integrals for LGBEND is different than expected.");
 
-  /*
-  if (!lgbend->initialized)
-    readLGBendConfiguration(lgbend, eptr);
-  */
-  if (lgbend->edgeFlip) {
-    /* probably should never happen */
-    flipLGBEND(lgbend);
-    lgbend->edgeFlip = 0;
-  }
-
   if (lgbend->optimizeFse && !lgbend->optimized && lgbend->angle!=0) {
     double acc;
     double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
@@ -263,7 +253,7 @@ long track_through_lgbend
     etilt = lgbend->etilt;
     dx = lgbend->dx;
     dy = lgbend->dy;
-    dz = lgbend->dz*(lgbend->edgeFlip?-1:1);
+    dz = lgbend->dz*(lgbend->wasFlipped?-1:1);
     
     if (tilt) {
       /* this is needed because the DX and DY offsets will be applied after the particles are

@@ -3646,7 +3646,7 @@ typedef struct {
   long nSegments;
   double angle; /* total angle */
   LGBEND_SEGMENT *segment;
-  short optimized, edgeFlip;
+  short optimized, wasFlipped;
   double predrift, postdrift;
 } LGBEND;
 
