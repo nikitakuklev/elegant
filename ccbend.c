@@ -18,7 +18,7 @@
 
 static CCBEND ccbendCopy;
 static ELEMENT_LIST *eptrCopy = NULL;
-static double PoCopy, lastRho, lastX, lastXp;
+static double PoCopy, lastX, lastXp, lastRho;
 /* These variables are used for optimization of the FSE and x offset */
 static double xMin, xFinal, xAve, xMax, xError, xpInitial, xInitial, xpError;
 #define OPTIMIZE_X  0x01UL
@@ -34,12 +34,12 @@ void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
 void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, double gK, 
                          double *fringeIntKn, short angleSign, short isExit, short fringeModel, short order);
 int integrate_kick_KnL(double *coord, double dx, double dy, 
-                      double Po, double rad_coef, double isr_coef,
-                      double *KnL, long nTerms,
-                      long integration_order, long n_parts, long iPart, long iFinalSlice,
-                      double drift,
-                      MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edge1MultData, MULTIPOLE_DATA *edge2MultData, 
-                      MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
+                       double Po, double rad_coef, double isr_coef,
+                       double *KnL, long nTerms,
+                       long integration_order, long n_parts, long iPart, long iFinalSlice,
+                       double drift,
+                       MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edge1MultData, MULTIPOLE_DATA *edge2MultData, 
+                       MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2, double *lastRho1);
 double ccbend_trajectory_error(double *value, long *invalid);
 
 long track_through_ccbend(
@@ -81,6 +81,7 @@ long track_through_ccbend(
   double referenceKnL = 0;
   double gK[2];
   double fringeInt1[N_CCBEND_FRINGE_INT], fringeInt2[N_CCBEND_FRINGE_INT];
+  double lastRho1;
 
   if (!particle)
     bombTracking("particle array is null (track_through_ccbend)");
@@ -91,6 +92,8 @@ long track_through_ccbend(
     bombTracking("Programming error: partial integration mode and one-step mode invoked together for CCBEND.");
   if (iFinalSlice>0 && ccbend->optimized!=1)
     bombTracking("Programming error: partial integration mode invoked for unoptimized CCBEND.");
+  if (iFinalSlice>=ccbend->nSlices)
+    iFinalSlice = 0;
 
   if (N_CCBEND_FRINGE_INT!=8)
     bombTracking("Coding error detected: number of fringe integrals for CCBEND is different than expected.");
@@ -122,7 +125,7 @@ long track_through_ccbend(
       double acc;
       double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
       short disable[2] = {0, 0};
-      PoCopy = lastRho = lastX = lastXp = 
+      PoCopy = lastRho1 = lastX = lastXp = 
         xMin = xFinal = xAve = xMax = xError = xpInitial = xInitial = xpError = 0;
       if (ccbend->verbose>5) {
         long ifr;
@@ -446,8 +449,8 @@ long track_through_ccbend(
   edgeMultActive[0] = edgeMultActive[1] = 0;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!integrate_kick_KnL(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL, nTerms,
-                             integ_order, nSlices, iPart, iFinalSlice, length, multData, edge1MultData, edge2MultData, 
-                             &apertureData, &dzLoss, sigmaDelta2)) {
+                            integ_order, nSlices, iPart, iFinalSlice, length, multData, edge1MultData, edge2MultData, 
+                            &apertureData, &dzLoss, sigmaDelta2, &lastRho1)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
@@ -462,6 +465,7 @@ long track_through_ccbend(
       printf("Edge multipoles active: %ld, %ld\n", edgeMultActive[0], edgeMultActive[1]);
     */
   }
+  lastRho = lastRho1; /* make available for radiation integral calculations */
   multipoleKicksDone += (i_top+1)*nSlices;
   if (multData)
     multipoleKicksDone += (i_top+1)*nSlices*multData->orders;
@@ -564,7 +568,8 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
                        MULTIPOLE_DATA *edge2MultData,  /* exit */
                        MULT_APERTURE_DATA *apData,  /* aperture */
                        double *dzLoss,      /* if particle is loss, offset from start of element where this occurs */
-                       double *sigmaDelta2  /* accumulate the energy spread increase for propagation of radiation matrix */
+                       double *sigmaDelta2,  /* accumulate the energy spread increase for propagation of radiation matrix */
+                       double *lastRho       /* needed for radiation integrals */
                        )
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
@@ -762,11 +767,11 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
       yp = qy/denom;
       /* these three quantities are needed for radiation integrals */
       if (nTerms==1)
-        lastRho = 1/(KnL[0]/drift);
+        *lastRho = 1/(KnL[0]/drift);
       else if (nTerms==2)
-        lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift));
+        *lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift));
       else if (nTerms>2)
-        lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift) + x*x*(KnL[2]/drift)/2);
+        *lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift) + x*x*(KnL[2]/drift)/2);
       else 
         bombElegant("nTerms apparently less than zero in CCBEND", NULL);
       lastX = x;

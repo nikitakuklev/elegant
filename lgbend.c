@@ -6,7 +6,6 @@
 * This file is distributed subject to a Software License Agreement found
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
-#define DEBUG 
 
 /* routine: lgbend()
  * purpose: tracking through canonical bend in cartesian coordinates
@@ -34,7 +33,7 @@ int integrate_kick_KnL(double *coord, double dx, double dy,
                       long integration_order, long n_parts, long iPart, long iFinalSlice,
                       double drift,
                       MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edge1MultData, MULTIPOLE_DATA *edge2MultData, 
-                      MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
+                       MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2, double *lastRho1);
 double lgbend_trajectory_error(double *value, long *invalid);
 
 long track_through_lgbend
@@ -51,13 +50,13 @@ long track_through_lgbend
  MAXAMP *maxamp,
  APCONTOUR *apContour,
  APERTURE_DATA *apFileData,
- /* If iPart non-negative, we do one step. The caller is responsible 
-  * for handling the coordinates appropriately outside this routine. 
-  * The element must have been previously optimized to determine FSE and X offsets.
+ /* If iPart non-negative, we do one step. The assumption is that the caller is doing step-by-step
+  * integration under outside control. The caller is responsible for handling the coordinates appropriately 
+  * outside this routine. The element must have been previously optimized to determine FSE and X offsets.
   */
  long iPart,
- /* If iFinalSlice is positive, we terminate integration inside the magnet. The caller is responsible 
-  * for handling the coordinates appropriately outside this routine. 
+ /* If iFinalSlice is positive, we terminate integration inside the magnet after the indicated number of
+  * slices. The caller is responsible for handling the coordinates appropriately outside this routine. 
   * The element must have been previously optimized to determine FSE and X offsets.
   */
  long iFinalSlice
@@ -73,6 +72,7 @@ long track_through_lgbend
   double rho0, length, angle, angleSign, extraTilt;
   double entryAngle, exitAngle, entryPosition, exitPosition;
   MULT_APERTURE_DATA apertureData;
+  double lastRho1;
 
 #ifdef DEBUG
   if (!fpDeb) {
@@ -98,6 +98,8 @@ long track_through_lgbend
 
   if (iPart>=0 && lgbend->optimized!=1)
     bombTracking("Programming error: one-step mode invoked for unoptimized LGBEND.");
+  if (iFinalSlice>=(lgbend->nSlices*lgbend->nSegments))
+    iFinalSlice = 0; /* integrate the full magnet */
   if (iFinalSlice>0 && iPart>=0)
     bombTracking("Programming error: partial integration mode and one-step mode invoked together for LGBEND.");
   if (iFinalSlice>0 && lgbend->optimized!=1)
@@ -111,6 +113,7 @@ long track_through_lgbend
     readLGBendConfiguration(lgbend, eptr);
   */
   if (lgbend->edgeFlip) {
+    /* probably should never happen */
     flipLGBEND(lgbend);
     lgbend->edgeFlip = 0;
   }
@@ -120,7 +123,7 @@ long track_through_lgbend
     double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
     short disable[2];
 
-    PoCopy = lastRho = lastX = lastXp = 0;
+    PoCopy = lastRho1 = lastX = lastXp = 0;
     if (iPart>=0)
       bombTracking("Programming error: oneStep mode is incompatible with optmization for LGBEND.");
     startValue[0] = lgbend->segment[0].fse;
@@ -188,7 +191,7 @@ long track_through_lgbend
               particle[0][0], particle[0][1], 
               particle[0][2], particle[0][3]);
 #endif
-  exactDrift(particle, n_part, lgbend->predrift);
+    exactDrift(particle, n_part, lgbend->predrift);
 #ifdef DEBUG
     if (lgbend->optimized!=-1)
       fprintf(fpDeb, "0 0.0 %21.15le %21.15le %21.15le %21.15le %21.15le drift\n",
@@ -198,7 +201,17 @@ long track_through_lgbend
 #endif
 
   double invRhoPlus, invRhoMinus, K1plus, K1minus;
-  for (iSegment=0; iSegment<lgbend->nSegments; iSegment++) {
+  long nSegments;
+  if (iFinalSlice>0) {
+    nSegments = (iFinalSlice-1)/nSlices + 1;
+    iFinalSlice -= nSlices*(nSegments-1);
+    if (nSegments<=0 || nSegments > lgbend->nSegments || iFinalSlice<=0) {
+      bombTracking("segment account issue for LGBEND partial integration");
+    }
+  } else
+    nSegments = lgbend->nSegments;
+    
+  for (iSegment=0; iSegment<nSegments; iSegment++) {
     for (iTerm=0; iTerm<9; iTerm++)
       KnL[iTerm] = 0;
     angle = lgbend->segment[iSegment].angle;
@@ -319,8 +332,10 @@ long track_through_lgbend
     i_top = n_part-1;
     for (i_part=0; i_part<=i_top; i_part++) {
       if (!integrate_kick_KnL(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL, nTerms,
-                              integ_order, nSlices, iPart, iFinalSlice, length, NULL, NULL, NULL,
-                              &apertureData, &dzLoss, sigmaDelta2)) {
+                              integ_order, nSlices, iPart, 
+                              iSegment==(nSegments-1) ? iFinalSlice : 0,
+                              length, NULL, NULL, NULL,
+                              &apertureData, &dzLoss, sigmaDelta2, &lastRho1)) {
         swapParticles(particle[i_part], particle[i_top]);
         if (accepted)
           swapParticles(accepted[i_part], accepted[i_top]);
@@ -331,6 +346,7 @@ long track_through_lgbend
         continue;
       }
     }
+    lastRho = lastRho1; /* make available for radiation integral calculation */
 #ifdef DEBUG
     if (lgbend->optimized!=-1)
       fprintf(fpDeb, "%ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le integrated\n",
@@ -425,7 +441,6 @@ long track_through_lgbend
 }
 
 
-#ifdef COMPILE_THIS
 VMATRIX *determinePartialLgbendLinearMatrix(LGBEND *lgbend, double *startingCoord, double pCentral, long iFinalSlice)
 /* This routine is used for getting the linear transport matrix from the start of the LGBEND to some interior slice.
  * We need this to compute radiation integrals.
@@ -542,11 +557,6 @@ VMATRIX *determinePartialLgbendLinearMatrix(LGBEND *lgbend, double *startingCoor
 #endif
   return M;
 }
-#endif
-
-#undef DEBUG
-
-#ifdef COMPILE_THIS
 
 void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double pCentral,
                                  double eta0, double etap0, double beta0, double alpha0,
@@ -558,12 +568,18 @@ void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double p
   double eta1, beta1, alpha1, etap1;
   double eta2, beta2, alpha2, etap2;
   double C, S, Cp, Sp, ds, H1, H2;
+  long iSegment;
 #ifdef DEBUG
   double s0;
   static FILE *fpcr = NULL;
+#if USE_MPI
+  if (myid==0)
+#endif
   if (fpcr==NULL) {
     fpcr = fopen("lgbend-RI.sdds", "w");
-    fprintf(fpcr, "SDDS1\n&column name=Slice type=short &end\n&column name=s type=double units=m &end\n");
+    fprintf(fpcr, "SDDS1\n&column name=Segment type=short &end\n");
+    fprintf(fpcr, "&column name=Slice type=short &end\n");
+    fprintf(fpcr, "&column name=s type=double units=m &end\n");
     fprintf(fpcr, "&column name=betax type=double units=m &end\n");
     fprintf(fpcr, "&column name=etax type=double units=m &end\n");
     fprintf(fpcr, "&column name=etaxp type=double &end\n");
@@ -572,7 +588,10 @@ void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double p
     fprintf(fpcr, "&data mode=ascii no_row_counts=1 &end\n");
   }
   s0 = elem->end_pos - lgbend->length;
-  fprintf(fpcr, "0 %21.15le %21.15le %21.15le %21.15le %21.15le %s\n", s0, beta0, eta0, etap0, alpha0, elem->name);
+#if USE_MPI
+  if (myid==0)
+#endif
+  fprintf(fpcr, "0 0 %21.15le %21.15le %21.15le %21.15le %21.15le %s\n", s0, beta0, eta0, etap0, alpha0, elem->name);
 #endif
   
   if (lgbend->tilt)
@@ -585,52 +604,56 @@ void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double p
   etap1 = etap0;
   alpha1 = alpha0;
   H1 = (eta1*eta1 + sqr(beta1*etap1 + alpha1*eta1))/beta1;
-  ds = lgbend->length/lgbend->nSlices; /* not really right... */
-  for (iSlice=1; iSlice<=lgbend->nSlices; iSlice++) {
-    /* Determine matrix from start of element to exit of slice iSlice */
-    M = determinePartialLgbendLinearMatrix(lgbend, startingCoord, pCentral, iSlice);
-    C = M->R[0][0];
-    Cp = M->R[1][0];
-    S = M->R[0][1];
-    Sp = M->R[1][1];
-
-    /* propagate lattice functions from start of element to exit of this slice */
-    beta2 = (sqr(C)*beta0 - 2*C*S*alpha0 + sqr(S)*gamma0);
-    alpha2 = -C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0;
-    eta2 = C*eta0 + S*etap0 + M->R[0][5];
-    etap2 = Cp*eta0 + Sp*etap0 + M->R[1][5];
+  for (iSegment=0; iSegment<lgbend->nSegments; iSegment++) {
+    ds = lgbend->segment[iSegment].arcLength/lgbend->nSlices;
+    for (iSlice=1; iSlice<=lgbend->nSlices; iSlice++) {
+      /* Determine matrix from start of element to exit of slice iSlice */
+      M = determinePartialLgbendLinearMatrix(lgbend, startingCoord, pCentral, iSegment*lgbend->nSlices+iSlice);
+      C = M->R[0][0];
+      Cp = M->R[1][0];
+      S = M->R[0][1];
+      Sp = M->R[1][1];
+      
+      /* propagate lattice functions from start of element to exit of this slice */
+      beta2 = (sqr(C)*beta0 - 2*C*S*alpha0 + sqr(S)*gamma0);
+      alpha2 = -C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0;
+      eta2 = C*eta0 + S*etap0 + M->R[0][5];
+      etap2 = Cp*eta0 + Sp*etap0 + M->R[1][5];
 #ifdef DEBUG
-    s0 += ds;
-    fprintf(fpcr, "%ld %21.15le %21.15le %21.15le %21.15le %21.15le %s\n", iSlice, s0, beta2, eta2, etap2, alpha2, elem->name);
+      s0 += ds;
+#if USE_MPI
+      if (myid==0)
 #endif
-
-    /* Compute contributions to radiation integrals in this slice.
-     * lastRho is saved by the routine track_through_lgbend(). Since determinePartialLgbendLinearMatrix()
-     * puts the reference particle first, it is appropriate to the central trajectory. 
-     */
-    *I1 += ds*(eta1+eta2)/2/lastRho;
-    *I2 += ds/sqr(lastRho);
-    *I3 += ds/ipow(fabs(lastRho), 3);
-    /* Compute effective K1 including the sextupole effect plus rotation.
-     * lastX and lastXp are saved by track_through_lgbend().
-     */
-    K1 = (lgbend->K1+(lastX-lgbend->dxOffset)*lgbend->K2)*cos(atan(lastXp));
-    *I4 += ds*(eta1+eta2)/2*(1/ipow(lastRho, 3) + 2*K1/lastRho); 
-    H2 = (eta2*eta2 + sqr(beta2*etap2 + alpha2*eta2))/beta2;
-    *I5 += ds/ipow(fabs(lastRho), 3)*(H1+H2)/2;
-
-    /* Save lattice functions as values at start of next slice */
-    beta1 = beta2;
-    alpha1 = alpha2;
-    eta1 = eta2;
-    etap1 = etap2;
-    H1 = H2;
-    free_matrices(M);
-    free(M);
+      fprintf(fpcr, "%ld %ld %21.15le %21.15le %21.15le %21.15le %21.15le %s\n", 
+              iSegment, iSlice, s0, beta2, eta2, etap2, alpha2, elem->name);
+#endif
+      
+      /* Compute contributions to radiation integrals in this slice.
+       * lastRho is saved by the routine track_through_lgbend(). Since determinePartialLgbendLinearMatrix()
+       * puts the reference particle first, it is appropriate to the central trajectory. 
+       */
+      *I1 += ds*(eta1+eta2)/2/lastRho;
+      *I2 += ds/sqr(lastRho);
+      *I3 += ds/ipow(fabs(lastRho), 3);
+      /* Compute effective K1 including the sextupole effect plus rotation.
+       * lastX and lastXp are saved by track_through_lgbend().
+       */
+      K1 = (lgbend->segment[iSegment].K1+(lastX-lgbend->dx)*lgbend->segment[iSegment].K2)*cos(atan(lastXp));
+      *I4 += ds*(eta1+eta2)/2*(1/ipow(lastRho, 3) + 2*K1/lastRho); 
+      H2 = (eta2*eta2 + sqr(beta2*etap2 + alpha2*eta2))/beta2;
+      *I5 += ds/ipow(fabs(lastRho), 3)*(H1+H2)/2;
+      
+      /* Save lattice functions as values at start of next slice */
+      beta1 = beta2;
+      alpha1 = alpha2;
+      eta1 = eta2;
+      etap1 = etap2;
+      H1 = H2;
+      free_matrices(M);
+      free(M);
+    }
   }
 }
-#endif
-
 
 
 void lgbendFringe

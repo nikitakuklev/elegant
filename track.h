@@ -3615,7 +3615,9 @@ extern PARAMETER lgbend_param[N_LGBEND_PARAMS];
 #define N_LGBEND_FRINGE_INT 8
 
 typedef struct {
-  double length, K1, K2, zAccumulated;
+  double length;    /* straight segment length */
+  double arcLength; /* arc length */
+  double K1, K2, zAccumulated;
   double angle, entryX, entryAngle, exitX, exitAngle;
   short has1, has2;
   double fringeInt1K0, fringeInt1I0, fringeInt1K2, fringeInt1I1, fringeInt1K4, fringeInt1K5, fringeInt1K6,
@@ -3626,7 +3628,7 @@ typedef struct {
 } LGBEND_SEGMENT;
 
 typedef struct {
-  double length;
+  double length; /* arc length ! */
   double xVertex, zVertex;
   double xEntry, zEntry;
   double xExit, zExit;
@@ -4675,6 +4677,10 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr);
 void copyLGBendConfiguration(LGBEND *target, LGBEND *source);
 void configureLGBendGeometry(LGBEND *lgbend);
 void flipLGBEND(LGBEND *lgbend);
+void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double pCentral,
+                                 double eta0, double etap0, double beta0, double alpha0,
+                                 double *I1, double *I2, double *I3, double *I4, double *I5, ELEMENT_LIST *elem);
+
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,

@@ -1616,11 +1616,11 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
   SDDS_Terminate(&SDDSin);
   lgbend->initialized = 1;
 
+  configureLGBendGeometry(lgbend);
   if (lgbend->edgeFlip) {
     flipLGBEND(lgbend);
     lgbend->edgeFlip = 0;
   }
-  configureLGBendGeometry(lgbend);
 
   if (lgbend->verbose>10) {
     printf("%ld segments found for LGBEND %s#%ld in file %s\n",
@@ -1713,6 +1713,7 @@ void flipLGBEND(LGBEND *lgbend)
     lgbend->segment[i].exitAngle = lgbend->segment[i].entryAngle - lgbend->segment[i].angle;
   }
   SWAP_DOUBLE(lgbend->predrift, lgbend->postdrift);
+  configureLGBendGeometry(lgbend); /* may be needed if flipLGBEND is called outside of lattice parsing */
 }
 
 void copyLGBendConfiguration(LGBEND *target, LGBEND *source)
@@ -1741,7 +1742,7 @@ void configureLGBendGeometry(LGBEND *lgbend)
     angle = lgbend->segment[i].angle;
     entryAngle = lgbend->segment[i].entryAngle;
     rho = length/(sin(entryAngle) + sin(angle-entryAngle));
-    arcLength += rho*angle;
+    arcLength += (lgbend->segment[i].arcLength=rho*angle);
   }
   lgbend->length = arcLength;
 }
