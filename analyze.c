@@ -7,6 +7,8 @@
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
 
+#define STORED_MATRIX_TYPE(type) ((type)==T_CCBEND || (type)==T_BRAT || (type)==T_BMAPXY || (type)==T_BMAPXYZ || (type)==T_CSBEND || (type)==T_FMULT || (type)==T_KQUAD || (type)==T_BGGEXP || (type)==T_LGBEND)
+
 /* file: analyze.c
  * purpose: Do tracking to find transfer matrix and tunes.
  *          See file analyze.nl for input parameters.
@@ -982,7 +984,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   }
 #endif
 #endif
-  if (shareTrackingBasedMatrices) {
+  if (shareTrackingBasedMatrices && STORED_MATRIX_TYPE(eptr->type)) {
     if (storedElement==NULL) {
       storedElement = tmalloc(sizeof(*storedElement)*trackingBasedMatricesStoreLimit);
       storedMatrix = tmalloc(sizeof(*storedMatrix)*trackingBasedMatricesStoreLimit);
@@ -992,6 +994,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       CCBEND *crbptr0, *crbptr1;
       BRAT *brat0, *brat1;
       BGGEXP *bgg0, *bgg1;
+      LGBEND *lgbptr0, *lgbptr1;
       short copied = 0;
       if (eptr->type==storedElement[i]->type && compareElements(storedElement[i], eptr)==0 &&
 	  storedMatrix[i] && storedMatrix[i]->order>0) {
@@ -1029,6 +1032,16 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
                  crbptr1->referenceData[4]);
 	  fflush(stdout);
 #endif
+	  break;
+	case T_LGBEND:
+	  lgbptr0 = (LGBEND*)storedElement[i]->p_elem;
+	  lgbptr1 = (LGBEND*)eptr->p_elem;
+	  lgbptr1->optimized = lgbptr0->optimized;
+          for (i=0; i<lgbptr0->nSegments; i++) {
+            lgbptr1->fseOpt[i] = lgbptr0->fseOpt[i];
+            lgbptr1->KnDelta[i] = lgbptr0->KnDelta[i];
+          }
+	  copied = 1;
 	  break;
 	case T_CSBEND:
 	  copied = 1;
@@ -1356,178 +1369,175 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 #endif
 
 #if USE_MPI
-    if (parallelTrackingBasedMatrices) {
-      /* Gather final particles back to master */
-      MPI_Barrier(MPI_COMM_WORLD);
+  if (parallelTrackingBasedMatrices) {
+    /* Gather final particles back to master */
+    MPI_Barrier(MPI_COMM_WORLD);
 #ifdef DEBUG
-      if (fpdeb) {
-	fprintf(fpdeb, "Passed barrier just before particle collection\n");
-	fflush(fpdeb);
-      }
-#endif
-      nToTrackCounts = tmalloc(sizeof(long)*n_processors);
-      MPI_Gather(&my_nTrack, 1, MPI_LONG, nToTrackCounts, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-      if (myid==0) {
-        MPI_Status status;
-        long nItems;
-        /* Copy data from each slave */
-        my_nTrack += my_offset; /* to account for the fiducial particle */
-        for (i=1; i<nWorking; i++) {
-#ifdef DEBUG
-	  if (fpdeb) {
-	    fprintf(fpdeb, "Trying to get %ld particles from core %ld\n", nToTrackCounts[i], i);
-	    fflush(fpdeb);
-	  }
-#endif
-          if (verbosity>2) {
-            printf("Pulling %ld particles from processor %ld\n", nToTrackCounts[i], i);
-            fflush(stdout);
-          }
-          nItems = nToTrackCounts[i]*totalPropertiesPerParticle;
-          MPI_Recv(&finalCoord[my_nTrack][0], nItems, MPI_DOUBLE, i, 100, MPI_COMM_WORLD, &status); 
-          my_nTrack += nToTrackCounts[i];
-        }
-      } else {
-        /* Send data to master */
-        if (my_nTrack) {
-#ifdef DEBUG
-	  if (fpdeb) {
-	    fprintf(fpdeb, "Trying to send %ld particles to master core\n", my_nTrack);
-	    fflush(fpdeb);
-	  }
-#endif
-          MPI_Send (&finalCoord[my_offset][0], my_nTrack*totalPropertiesPerParticle, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
-	}
-      }
-      free(nToTrackCounts);
-      nToTrackCounts = NULL;
+    if (fpdeb) {
+      fprintf(fpdeb, "Passed barrier just before particle collection\n");
+      fflush(fpdeb);
     }
-
-    if (!parallelTrackingBasedMatrices || myid==0) {
-      /* In this case, only master does analysis */
 #endif
-
-      /* Set errors as fraction of the absolute maximum coordinate */
-      for (i=0; i<6; i++) {
-        double min, max;
-        max = -(min = DBL_MAX);
-        maximumValue[i] = -DBL_MAX;
-        for (j=0; j<n_track; j++) {
-          if (max<finalCoord[j][i])
-            max = finalCoord[j][i];
-          if (min>finalCoord[j][i])
-            min = finalCoord[j][i];
-          if (maximumValue[i]<initialCoord[j][i])
-            maximumValue[i] = initialCoord[j][i];
-        }
-        max = fabs(max);
-        min = fabs(min);
-        max = max>min ? max : min;
-        for (j=0; j<n_track; j++)
-          coordError[j][i] = max*accuracy_factor;
-      }
-  
-      M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
-                                      maximumValue, nPoints1, n_track, maxFitOrder, 0);
-      
-      free_matrices_above_order(M, order);
-
-#if USE_MPI 
-    } 
-
-    if (parallelTrackingBasedMatrices) {
+    nToTrackCounts = tmalloc(sizeof(long)*n_processors);
+    MPI_Gather(&my_nTrack, 1, MPI_LONG, nToTrackCounts, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+    if (myid==0) {
+      MPI_Status status;
+      long nItems;
+      /* Copy data from each slave */
+      my_nTrack += my_offset; /* to account for the fiducial particle */
+      for (i=1; i<nWorking; i++) {
 #ifdef DEBUG
-      if (fpdeb) {
-	fprintf(fpdeb, "Preparing to share matrices with workers\n");
-	fflush(fpdeb);
-      }
+        if (fpdeb) {
+          fprintf(fpdeb, "Trying to get %ld particles from core %ld\n", nToTrackCounts[i], i);
+          fflush(fpdeb);
+        }
 #endif
-      if (myid!=0) {
-        /* distribute matrices to other processors */
-        M = tmalloc(sizeof(*M));
-        initialize_matrices(M, M->order=order);
+        if (verbosity>2) {
+          printf("Pulling %ld particles from processor %ld\n", nToTrackCounts[i], i);
+          fflush(stdout);
+        }
+        nItems = nToTrackCounts[i]*totalPropertiesPerParticle;
+        MPI_Recv(&finalCoord[my_nTrack][0], nItems, MPI_DOUBLE, i, 100, MPI_COMM_WORLD, &status); 
+        my_nTrack += nToTrackCounts[i];
       }
-      MPI_Bcast(M->C, 6, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    } else {
+      /* Send data to master */
+      if (my_nTrack) {
+#ifdef DEBUG
+        if (fpdeb) {
+          fprintf(fpdeb, "Trying to send %ld particles to master core\n", my_nTrack);
+          fflush(fpdeb);
+        }
+#endif
+        MPI_Send (&finalCoord[my_offset][0], my_nTrack*totalPropertiesPerParticle, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+      }
+    }
+    free(nToTrackCounts);
+    nToTrackCounts = NULL;
+  }
+  
+  if (!parallelTrackingBasedMatrices || myid==0) {
+    /* In this case, only master does analysis */
+#endif
+    
+    /* Set errors as fraction of the absolute maximum coordinate */
+    for (i=0; i<6; i++) {
+      double min, max;
+      max = -(min = DBL_MAX);
+      maximumValue[i] = -DBL_MAX;
+      for (j=0; j<n_track; j++) {
+        if (max<finalCoord[j][i])
+          max = finalCoord[j][i];
+        if (min>finalCoord[j][i])
+          min = finalCoord[j][i];
+        if (maximumValue[i]<initialCoord[j][i])
+          maximumValue[i] = initialCoord[j][i];
+      }
+      max = fabs(max);
+      min = fabs(min);
+      max = max>min ? max : min;
+      for (j=0; j<n_track; j++)
+        coordError[j][i] = max*accuracy_factor;
+    }
+    
+    M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
+                                    maximumValue, nPoints1, n_track, maxFitOrder, 0);
+    
+    free_matrices_above_order(M, order);
+    
+#if USE_MPI 
+  } 
+
+  if (parallelTrackingBasedMatrices) {
+#ifdef DEBUG
+    if (fpdeb) {
+      fprintf(fpdeb, "Preparing to share matrices with workers\n");
+      fflush(fpdeb);
+    }
+#endif
+    if (myid!=0) {
+      /* distribute matrices to other processors */
+      M = tmalloc(sizeof(*M));
+      initialize_matrices(M, M->order=order);
+    }
+    MPI_Bcast(M->C, 6, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    for (i=0; i<6; i++)
+      MPI_Bcast(M->R[i], 6, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    if (order>=2) {
       for (i=0; i<6; i++)
-        MPI_Bcast(M->R[i], 6, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      if (order>=2) {
+        for (j=0; j<6; j++)
+          MPI_Bcast(M->T[i][j], j+1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      if (order>=3)
         for (i=0; i<6; i++)
           for (j=0; j<6; j++)
-            MPI_Bcast(M->T[i][j], j+1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        if (order>=3)
-          for (i=0; i<6; i++)
-            for (j=0; j<6; j++)
-              for (k=0; k<=j; k++)
-                MPI_Bcast(M->Q[i][j][k], k+1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      }
+            for (k=0; k<=j; k++)
+              MPI_Bcast(M->Q[i][j][k], k+1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }
 #ifdef DEBUG
-      if (fpdeb) {
-	fprintf(fpdeb, "Done sharing matrices with workers\n");
-	fflush(fpdeb);
-      }
-#endif
+    if (fpdeb) {
+      fprintf(fpdeb, "Done sharing matrices with workers\n");
+      fflush(fpdeb);
     }
 #endif
-
-  if (shareTrackingBasedMatrices) {
-    if (eptr->type==T_CCBEND || eptr->type==T_BRAT || eptr->type==T_BMAPXY || eptr->type==T_BMAPXYZ || 
-        eptr->type==T_CSBEND || eptr->type==T_FMULT || eptr->type==T_KQUAD || eptr->type==T_BGGEXP) {
-      ELEMENT_LIST *eptrCopy;
-      VMATRIX *matrixCopy;
-      
-      if (nStoredMatrices<trackingBasedMatricesStoreLimit) {
-	iStoredMatrices++;
-	nStoredMatrices++;
-      } else {
-	iStoredMatrices++;
-	if (iStoredMatrices==nStoredMatrices)
-	  iStoredMatrices = 0;
-      }
-      
-#ifdef DEBUG_CCBEND
-      printf("Storing tracking-based matrix for %s#%ld\n", eptr->name, eptr->occurence);
-      if (eptr->type==T_CCBEND) {
-        CCBEND *ccb;
-        ccb = (CCBEND*)(eptr->p_elem);
-        printf("optimized = %hd, fseOffset=%le, dxOffset=%le, KnDelta=%le, lengthCorrection=%le\n",
-               ccb->optimized, ccb->fseOffset, ccb->dxOffset, ccb->KnDelta, ccb->lengthCorrection);
-        printf("refData = %le, %le, %le, %le, %le\n", 
-               ccb->referenceData[0], ccb->referenceData[1], ccb->referenceData[2], ccb->referenceData[3],
-               ccb->referenceData[4]);
-      }
-      fflush(stdout);
-#endif
-      
-      if (storedElement[iStoredMatrices]) {
-	fflush(stdout);
-	if (storedElement[iStoredMatrices]) {
-	  free_elements(storedElement[iStoredMatrices]);
-	}
-	storedElement[iStoredMatrices] = NULL;
-      }
-      if (storedMatrix[iStoredMatrices]) {
-	fflush(stdout);
-	if (storedMatrix[iStoredMatrices]) {
-	  free_matrices(storedMatrix[iStoredMatrices]);
-	  free(storedMatrix[iStoredMatrices]);
-	}
-	storedMatrix[iStoredMatrices] = NULL;
-      }
-      
-      eptrCopy = tmalloc(sizeof(*eptrCopy));
-      copy_element(eptrCopy, eptr, 0, 0, 0, NULL);
-      storedElement[iStoredMatrices] = eptrCopy;
-      storedElement[iStoredMatrices]->pred = 
-	storedElement[iStoredMatrices]->succ = NULL;
-      storedElement[iStoredMatrices]->occurence = eptr->occurence;
-      
-      matrixCopy = tmalloc(sizeof(*matrixCopy));
-      copy_matrices(matrixCopy, M);
-      storedMatrix[iStoredMatrices] = matrixCopy;
-      fflush(stdout);
-    }
   }
+#endif
 
+  if (shareTrackingBasedMatrices && STORED_MATRIX_TYPE(eptr->type)) {
+    ELEMENT_LIST *eptrCopy;
+    VMATRIX *matrixCopy;
+    
+    if (nStoredMatrices<trackingBasedMatricesStoreLimit) {
+      iStoredMatrices++;
+      nStoredMatrices++;
+    } else {
+      iStoredMatrices++;
+      if (iStoredMatrices==nStoredMatrices)
+        iStoredMatrices = 0;
+    }
+    
+#ifdef DEBUG_CCBEND
+    printf("Storing tracking-based matrix for %s#%ld\n", eptr->name, eptr->occurence);
+    if (eptr->type==T_CCBEND) {
+      CCBEND *ccb;
+      ccb = (CCBEND*)(eptr->p_elem);
+      printf("optimized = %hd, fseOffset=%le, dxOffset=%le, KnDelta=%le, lengthCorrection=%le\n",
+             ccb->optimized, ccb->fseOffset, ccb->dxOffset, ccb->KnDelta, ccb->lengthCorrection);
+      printf("refData = %le, %le, %le, %le, %le\n", 
+             ccb->referenceData[0], ccb->referenceData[1], ccb->referenceData[2], ccb->referenceData[3],
+             ccb->referenceData[4]);
+    }
+    fflush(stdout);
+#endif
+    
+    if (storedElement[iStoredMatrices]) {
+      fflush(stdout);
+      if (storedElement[iStoredMatrices]) {
+        free_elements(storedElement[iStoredMatrices]);
+      }
+      storedElement[iStoredMatrices] = NULL;
+    }
+    if (storedMatrix[iStoredMatrices]) {
+      fflush(stdout);
+      if (storedMatrix[iStoredMatrices]) {
+        free_matrices(storedMatrix[iStoredMatrices]);
+        free(storedMatrix[iStoredMatrices]);
+      }
+      storedMatrix[iStoredMatrices] = NULL;
+    }
+    
+    eptrCopy = tmalloc(sizeof(*eptrCopy));
+    copy_element(eptrCopy, eptr, 0, 0, 0, NULL);
+    storedElement[iStoredMatrices] = eptrCopy;
+    storedElement[iStoredMatrices]->pred = 
+      storedElement[iStoredMatrices]->succ = NULL;
+    storedElement[iStoredMatrices]->occurence = eptr->occurence;
+    
+    matrixCopy = tmalloc(sizeof(*matrixCopy));
+    copy_matrices(matrixCopy, M);
+    storedMatrix[iStoredMatrices] = matrixCopy;
+    fflush(stdout);
+  }
+  
   free_czarray_2d((void**)initialCoord, n_track, totalPropertiesPerParticle);
   free_czarray_2d((void**)finalCoord, n_track, totalPropertiesPerParticle);
   free_czarray_2d((void**)coordError, n_track, totalPropertiesPerParticle);
@@ -2526,6 +2536,14 @@ long compareElements(ELEMENT_LIST *e1, ELEMENT_LIST *e2)
     ccb1 = (CCBEND*)e1->p_elem;
     ccb2 = (CCBEND*)e2->p_elem;
     if (ccb1->edgeFlip!=ccb2->edgeFlip)
+      /* elements are reflections of each other */
+      return -1;
+  }
+  if (e1->type==T_LGBEND) {
+    LGBEND *lgb1, *lgb2;
+    lgb1 = (LGBEND*)e1->p_elem;
+    lgb2 = (LGBEND*)e2->p_elem;
+    if (lgb1->wasFlipped!=lgb2->wasFlipped)
       /* elements are reflections of each other */
       return -1;
   }
