@@ -1,0 +1,16 @@
+These are derived from:
+https://github.com/orblancog/elegant-mode for Emacs
+https://github.com/orblancog/elegant-vim for VIM
+
+I update the original copy with a script that results in a more 
+complete list of highlightable elements and commands.
+
+Installation instructions for Emacs:
+  M+X package-install-file RETURN elegant/editors/emacs/elegant.el RETURN
+
+Installation instructions for VIM:
+  Copy the contents of elegant/editors/vim/vimrc to ~/.vimrc
+  Copy elegant/editors/vim/after/plugin/elegant.vim to ~/.vim/after/plugin/elegant.vim
+  Copy elegant/editors/vim/autoload/elegantcomplete.vim to ~/.vim/autoload/elegantcomplete.vim
+  Copy elegant/editors/vim/ftdetect/elegant.vim to ~/.vim/ftdetect/elegant.vim
+  Copy elegant/editors/vim/syntax/elegant.vim to ~/.vim/syntax/elegant.vim
