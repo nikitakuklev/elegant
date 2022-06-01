@@ -1609,8 +1609,11 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr)
       lgbend->segment[lgbend->nSegments].entryAngle = lgbend->segment[lgbend->nSegments-1].exitAngle;
     }
     lgbend->angle += lgbend->segment[lgbend->nSegments].angle;
-    lgbend->length += lgbend->segment[lgbend->nSegments].length;
-    lgbend->segment[lgbend->nSegments].zAccumulated = lgbend->length;
+    /* lgbend->length += lgbend->segment[lgbend->nSegments].length; Set by configureLGBendGeometry */
+    if (lgbend->nSegments==0)
+      lgbend->segment[lgbend->nSegments].zAccumulated = lgbend->length;
+    else
+      lgbend->segment[lgbend->nSegments].zAccumulated = lgbend->segment[lgbend->nSegments-1].zAccumulated + lgbend->length;
     lgbend->fseOpt[lgbend->nSegments] = 0;
     lgbend->KnDelta[lgbend->nSegments] = 0;
     lgbend->nSegments ++;
