@@ -109,6 +109,31 @@ void print_elem(FILE *fp, ELEMENT_LIST *eptr)
                 break;
             }
         }
+    /*
+    if (eptr->type==T_LGBEND) {
+      LGBEND *lg;
+      long iseg;
+      lg = (LGBEND*)(eptr->p_elem);
+      fprintf(fp, "    initialized = %hd\n", lg->initialized);
+      fprintf(fp, "    nSegments = %ld\n", lg->nSegments);
+      fprintf(fp, "    angle = %le\n", lg->angle);
+      fprintf(fp, "    optimized = %hd\n", lg->optimized);
+      fprintf(fp, "    wasFlipped = %hd\n", lg->wasFlipped);
+      fprintf(fp, "    predrift = %le\n", lg->predrift);
+      fprintf(fp, "    postdrift = %le\n", lg->postdrift);
+      for (iseg=0; iseg<lg->nSegments; iseg++) {
+        fprintf(fp, "   segment %ld: length = %le, arcLength = %le, K1 = %le, K2 = %le, angle = %le, FSE=%le, KnDelta=%le\n",
+                iseg, 
+                lg->segment[iseg].length,
+                lg->segment[iseg].arcLength,
+                lg->segment[iseg].K1,
+                lg->segment[iseg].K2,
+                lg->segment[iseg].angle, 
+                lg->fseOpt[iseg], lg->KnDelta[iseg]);
+      }
+      fflush(fp);
+    }
+    */
     log_exit("print_elem");
     }
 

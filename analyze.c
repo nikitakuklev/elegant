@@ -1616,7 +1616,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       nSlices = ((CCBEND*)eptr->p_elem)->nSlices;
     break;
   case T_LGBEND:
-    nSlices = fabs(((LGBEND*)eptr->p_elem)->angle/0.005)+1;
+    nSlices = fabs(((LGBEND*)eptr->p_elem)->angle/((LGBEND*)eptr->p_elem)->nSegments/0.005)+1;
     if (((LGBEND*)eptr->p_elem)->nSlices > nSlices)
       nSlices = ((LGBEND*)eptr->p_elem)->nSlices;
     break;
@@ -1662,6 +1662,9 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   elem.occurence = 0;
   elem.type = eptr->type;
   length = 0;
+  if (eptr->type==T_LGBEND) 
+    nSlices *= ((LGBEND*)eptr->p_elem)->nSegments; /* nSlices is per segment for LGBEND */
+
   for (slice=0; slice<nSlices; slice++) {
     switch (eptr->type) {
     case T_CSBEND:
@@ -1696,11 +1699,12 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_LGBEND:
       if (slice==0) {
         memcpy(&lgbend, (LGBEND*)eptr->p_elem, sizeof(LGBEND));
+        copyLGBend(&lgbend, (LGBEND*)eptr->p_elem);
         lgbend.isr = 0;
-        lgbend.nSlices = nSlices;
-        elem.type = T_LGBEND;
-        elem.p_elem = (void*)&lgbend;
+        lgbend.nSlices = nSlices/lgbend.nSegments; /* nSlices is the total for all segments */
         lgbend.integration_order = 6;
+        memcpy(&elem, eptr, sizeof(elem));
+        elem.p_elem = (void*)&lgbend;
       }
       break;
     case T_SBEN:
@@ -2002,8 +2006,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     /* Step 1: determine effective R matrix for this element, as well as the diffusion matrix */
     determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2, ignoreRadiation, &z, slice); 
     /*
-    printf("z = %le ", z);
-    print_matrices(stdout, "matrix1:", Ml1);
+    if (elem.type==T_LGBEND || elem.type==T_CCBEND) {
+      print_matrices(stdout, "matrix1:", Ml1);
+      fflush(stdout);
+    }
     */
 
     /* Step 2: Propagate the diffusion matrix */

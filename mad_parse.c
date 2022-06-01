@@ -1282,7 +1282,7 @@ void copy_p_elem(char *target, char *source, long type)
     ((CCBEND*)target)->edgeFlip = ((CCBEND*)source)->edgeFlip;
     break;
   case T_LGBEND:
-    copyLGBendConfiguration(((LGBEND*)target), ((LGBEND*)source));
+    copyLGBend(((LGBEND*)target), ((LGBEND*)source));
     break;
   case T_BRAT:
     ((BRAT*)target)->initialized = ((BRAT*)source)->initialized;
@@ -1715,16 +1715,10 @@ void flipLGBEND(LGBEND *lgbend)
   configureLGBendGeometry(lgbend); /* may be needed if flipLGBEND is called outside of lattice parsing */
 }
 
-void copyLGBendConfiguration(LGBEND *target, LGBEND *source)
+void copyLGBend(LGBEND *target, LGBEND *source)
 {
   long i;
-  target->wasFlipped  = source->wasFlipped;
-  target->nSegments = source->nSegments;
-  target->predrift = source->predrift;
-  target->postdrift = source->postdrift;
-  target->optimized = source->optimized;
-  target->angle = source->angle;
-  target->length = source->length;
+  memcpy(target, source, sizeof(*target));
   target->segment = calloc(target->nSegments, sizeof(*(target->segment)));
   target->fseOpt = calloc(target->nSegments, sizeof(*(target->fseOpt)));
   target->KnDelta = calloc(target->nSegments, sizeof(*(target->KnDelta)));

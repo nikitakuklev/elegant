@@ -3668,8 +3668,8 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
                            (type)==T_QUAD || (type)==T_KQUAD || (type)==T_SEXT || (type)==T_KSEXT || \
 			   (type)==T_WIGGLER || (type)==T_CWIGGLER || (type)==T_APPLE || \
                            (type)==T_HCOR || (type)==T_VCOR || (type)==T_HVCOR || (type)==T_BGGEXP || \
-                           (type)==T_CCBEND || (type)==T_LGBEND || (type)==T_KICKMAP)
-
+                           (type)==T_CCBEND || (type)==T_KICKMAP || (type)==T_LGBEND )
+ 
 /* flags for run_awe_beam and run_bunched_beam */
 #define TRACK_PREVIOUS_BUNCH 1
 
@@ -4675,7 +4675,7 @@ long track_through_lgbend(double **particle, long n_part, ELEMENT_LIST *eptr, LG
                           double **accepted, double z_start, double *sigmaDelta2, char *rootname,
                           MAXAMP *maxamp, APCONTOUR *apContour, APERTURE_DATA *apFileData, long iSlice, long iFinalSlice);
 void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr);
-void copyLGBendConfiguration(LGBEND *target, LGBEND *source);
+void copyLGBend(LGBEND *target, LGBEND *source);
 void configureLGBendGeometry(LGBEND *lgbend);
 void flipLGBEND(LGBEND *lgbend);
 void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double pCentral,
