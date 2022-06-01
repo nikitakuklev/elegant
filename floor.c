@@ -986,9 +986,7 @@ void convertLocalCoordinatesToGlobal
  short mode, 
  double *coord, 
  ELEMENT_LIST *eptr,
- double zOrDz, /* mode==GLOBAL_LOCAL_MODE_DZ: distance to particle z-plane relative to start of element 
-                  mode==GLOBAL_LOCAL_MODE_Z: total value of z (central trajectory length) for the particle loss position
-                */
+ double dz, /* mode==GLOBAL_LOCAL_MODE_DZ: distance to particle z-plane relative to start of element */
  long segment, long nSegments /* mode==GLOBAL_LOCAL_MODE_SEG: distance to z plane is segment/nSegments*length */
 )
 {
@@ -1045,13 +1043,8 @@ void convertLocalCoordinatesToGlobal
       else
         bombElegant("programming error for local-to-global coordinates (1)---seek help from developers", NULL);
       break;
-    case GLOBAL_LOCAL_MODE_Z:
-      if (eptr->pred)
-        zOrDz = zOrDz - eptr->pred->end_pos;
-      dtheta = angle*zOrDz/length;
-      break;
     case GLOBAL_LOCAL_MODE_DZ:
-      dtheta = angle*zOrDz/length;
+      dtheta = angle*dz/length;
       break;
     default:
       bombElegant("programming error for local-to-global coordinates (2)---seek help from developers", NULL);
@@ -1073,7 +1066,7 @@ void convertLocalCoordinatesToGlobal
     *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
     *Y = coord[2];
     *thetaX = theta1 - atan(coord[1]);
-    *thetaX = 888;
+    /* *thetaX = 888; */
   } else {
     /* Not a simple bending element */
     if (eptr->type==T_LGBEND)
@@ -1101,13 +1094,9 @@ void convertLocalCoordinatesToGlobal
       else
         bombElegant("programming error for local-to-global coordinates (3)---seek help from developers", NULL);
       break;
-    case GLOBAL_LOCAL_MODE_Z:
-      /* someone provides the z value for us */
-      dZ = zOrDz - (eptr->pred?eptr->pred->end_pos:0);
-      break;
     case GLOBAL_LOCAL_MODE_DZ:
       /* someone provides the dz value for us */
-      dZ = zOrDz;
+      dZ = dz;
       break;
     default:
       bombElegant("programming error for local-to-global coordinates (4)---seek help from developers", NULL);

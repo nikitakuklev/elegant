@@ -4686,10 +4686,9 @@ void addLgbendRadiationIntegrals(LGBEND *lgbend, double *startingCoord, double p
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
                              double *XYZMin, double *XYZMax);
-#define GLOBAL_LOCAL_MODE_Z   1
-#define GLOBAL_LOCAL_MODE_DZ  2
-#define GLOBAL_LOCAL_MODE_SEG 3
-#define GLOBAL_LOCAL_MODE_END 4
+#define GLOBAL_LOCAL_MODE_DZ  1
+#define GLOBAL_LOCAL_MODE_SEG 2
+#define GLOBAL_LOCAL_MODE_END 3
 void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *thetaX, short mode,
                                      double *coord, ELEMENT_LIST *eptr, double dZ,
                                      long segment, long nSegments);
