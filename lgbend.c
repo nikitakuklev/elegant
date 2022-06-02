@@ -281,35 +281,37 @@ long track_through_lgbend
               particle[n_part-1][2], particle[n_part-1][3]);
 #endif
 
-    if (iPart<0 || (iPart==0 && iSegment==0)) {
+    if (iSegment==0 && iPart<=0) {
+      /* First full segment or first step of first segment, so do entrance transformations */
       if (tilt)
         rotateBeamCoordinatesForMisalignment(particle, n_part, tilt);
-      if (iSegment==0) {
-        switchLgbendPlane(particle, n_part, entryPosition, entryAngle, Po, 0);
+      switchLgbendPlane(particle, n_part, entryPosition, entryAngle, Po, 0);
 #ifdef DEBUG
-        if (lgbend->optimized!=-1 && iPart>=0)
-          fprintf(fpDeb, "%ld %ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le switch-lgbend-plane\n",
-                  iSegment, iPart0, (iSegment==0?0:lgbend->segment[iSegment-1].zAccumulated), particle[n_part-1][4], 
-                  particle[n_part-1][0], particle[n_part-1][1], 
-                  particle[n_part-1][2], particle[n_part-1][3]);
+      if (lgbend->optimized!=-1 && iPart>=0)
+        fprintf(fpDeb, "%ld %ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le switch-lgbend-plane\n",
+                iSegment, iPart0, (iSegment==0?0:lgbend->segment[iSegment-1].zAccumulated), particle[n_part-1][4], 
+                particle[n_part-1][0], particle[n_part-1][1], 
+                particle[n_part-1][2], particle[n_part-1][3]);
 #endif
-        if (dx || dy || dz)
-          offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
-        if (etilt)
-          rotateBeamCoordinatesForMisalignment(particle, n_part, etilt);
-      }
+      if (dx || dy || dz)
+        offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
+      if (etilt)
+        rotateBeamCoordinatesForMisalignment(particle, n_part, etilt);
+    }
+    if (iPart<=0) {
+      /* Start of a segment */
       if (iSegment==0) {
-	invRhoMinus = 0.0;
-	K1minus = 0.0;
+        invRhoMinus = 0.0;
+        K1minus = 0.0;
       } else {
-	invRhoMinus = sin(lgbend->segment[iSegment-1].entryAngle)
-	  + sin(lgbend->segment[iSegment-1].angle - lgbend->segment[iSegment-1].entryAngle);
-	invRhoMinus = invRhoMinus/lgbend->segment[iSegment-1].length;
-	K1minus = (1+fse+lgbend->fseOpt[iSegment-1])*lgbend->segment[iSegment-1].K1/(1-lgbend->KnDelta[iSegment-1]);
+        invRhoMinus = sin(lgbend->segment[iSegment-1].entryAngle)
+          + sin(lgbend->segment[iSegment-1].angle - lgbend->segment[iSegment-1].entryAngle);
+        invRhoMinus = invRhoMinus/lgbend->segment[iSegment-1].length;
+        K1minus = (1+fse+lgbend->fseOpt[iSegment-1])*lgbend->segment[iSegment-1].K1/(1-lgbend->KnDelta[iSegment-1]);
       }
       if (lgbend->segment[iSegment].has1) {
         lgbendFringe(particle, n_part, entryAngle, 1.0/rho0, KnL[1]/length, invRhoMinus, K1minus,
-		     lgbend->segment+iSegment, angleSign, 0);
+                     lgbend->segment+iSegment, angleSign, 0);
 #ifdef DEBUG
         if (lgbend->optimized!=-1 && iPart>=0)
           fprintf(fpDeb, "%ld %ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le fringe1\n",
@@ -326,7 +328,9 @@ long track_through_lgbend
         nTerms = iTerm+1;
         break;
       }
-    
+    if (nTerms==0)
+      nTerms = 1; /* might happen if FSE=-1 */
+
     if (sigmaDelta2)
       *sigmaDelta2 = 0;
     i_top = n_part-1;
@@ -365,17 +369,12 @@ long track_through_lgbend
     } else if (lgbend->optimized==-1) 
         bombElegant("Particle lost while optimizing LGBEND FSE", NULL);
 
-    if ((iPart<0 || iPart==(lgbend->nSlices-1)) && iFinalSlice<=0) {
-      /*
-        printf("output before adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
-        particle[n_part-1][0], particle[n_part-1][1], particle[n_part-1][2],
-        particle[n_part-1][3], particle[n_part-1][4], particle[n_part-1][5]);
-      */
+    if ((iPart<0 && iFinalSlice<=0) || (iPart==lgbend->nSlices-1)) {
+      /* end of a segment */
       if (iSegment==lgbend->nSegments-1) {
 	invRhoPlus = 0.0;
 	K1plus = 0.0;
-      }
-      else {
+      } else {
 	invRhoPlus = sin(lgbend->segment[iSegment+1].entryAngle)
           + sin(lgbend->segment[iSegment+1].angle-lgbend->segment[iSegment+1].entryAngle);
 	invRhoPlus = invRhoPlus/lgbend->segment[iSegment+1].length;
@@ -393,6 +392,7 @@ long track_through_lgbend
 #endif
       }
       if (iSegment==(lgbend->nSegments-1)) {
+        /* end of magnet */
         if (etilt)
           rotateBeamCoordinatesForMisalignment(particle, n_part, -etilt);
         if (dx || dy || dz)
