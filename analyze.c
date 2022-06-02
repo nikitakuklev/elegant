@@ -1952,6 +1952,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         cwig.dz = wig->dz;
         cwig.periods = wig->poles/2;
         cwig.stepsPerPeriod = nSlices0;
+        cwig.poleFactor[0] = cwig.poleFactor[1] = cwig.poleFactor[2] = 1;
         cwig.sr = 1;
         cwig.integrationOrder = 4;
         if (wig->K) {
