@@ -775,8 +775,14 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
         *lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift));
       else if (nTerms>2)
         *lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift) + x*x*(KnL[2]/drift)/2);
-      else 
-        bombElegant("nTerms apparently less than zero in CCBEND", NULL);
+      else {
+        TRACKING_CONTEXT context;
+        getTrackingContext(&context);
+        print_elem(stderr, context.element);
+        bombElegantVA("nTerms invalid in %s %s#%ld (value is %ld)", 
+                      entity_name[context.elementType], 
+                      context.elementName, context.elementOccurrence, nTerms);
+      }
       lastX = x;
       lastXp = xp;
     }
