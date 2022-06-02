@@ -30,7 +30,7 @@ static long iPart0;
 
 void switchLgbendPlane(double **particle, long n_part, double dx, double alpha, double po, long exitPlane);
 void lgbendFringe(double **particle, long n_part, double alpha, double invRhoPlus, double K1plus, double invRhoMinus, double K1minus,
-                  LGBEND_SEGMENT *segment, short angleSign, short isExit);
+                  LGBEND_SEGMENT *segment, short angleSign, short isExit, short edgeOrder);
 double lgbend_trajectory_error(double *value, long *invalid);
 
 void storeLGBendOptimizedFSEValues(LGBEND *lgbend);
@@ -311,7 +311,7 @@ long track_through_lgbend
       }
       if (lgbend->segment[iSegment].has1) {
         lgbendFringe(particle, n_part, entryAngle, 1.0/rho0, KnL[1]/length, invRhoMinus, K1minus,
-                     lgbend->segment+iSegment, angleSign, 0);
+                     lgbend->segment+iSegment, angleSign, 0, lgbend->edgeOrder);
 #ifdef DEBUG
         if (lgbend->optimized!=-1 && iPart>=0)
           fprintf(fpDeb, "%ld %ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le fringe1\n",
@@ -382,7 +382,7 @@ long track_through_lgbend
       }
       if (lgbend->segment[iSegment].has2)  {
         lgbendFringe(particle, i_top+1, -exitAngle, invRhoPlus, K1plus, 1.0/rho0, KnL[1]/length,
-                     lgbend->segment+iSegment, angleSign, 1);
+                     lgbend->segment+iSegment, angleSign, 1, lgbend->edgeOrder);
 #ifdef DEBUG
         if (lgbend->optimized!=-1 && iPart>=0)
           fprintf(fpDeb, "%ld %ld %21.15le %21.15le %21.15le %21.15le %21.15le %21.15le fringe2\n",
@@ -679,7 +679,8 @@ void lgbendFringe
  double K1minus,  // interior gradient before fringe
  LGBEND_SEGMENT *segment,
  short angleSign,      // -1 or 1
- short isExit
+ short isExit,
+ short edgeOrder
  )
 {
   double x1, px1, y1, py1, tau1, delta;
@@ -758,26 +759,27 @@ void lgbendFringe
 			 - x1*dispX*focX0*(expT*expT - 2.0*expT + 1.0)/(2.0*temp*temp)
 			 - dispX*dispX*focX0*(expT*expT - 4.0*expT + 2.0*temp + 3.0)/(4.0*temp*temp*temp) );
 
-    /** Symplectic update for second order terms **/
-    x1 = x2;
-    y1 = y2*exp(-sect*intK5*x2*invP);
-    px1 = px2 - (0.5*intK6 + 0.25*tant*(K1plus-K1minus))*x2*x2 + sect*intK5*invP*py2*y2;
-    py1 = py2*exp(sect*intK5*x2*invP);
-    tau1 = tau2 + sect*intK5*invP*invP*py2*x2*y2;
-
-    x2 = x1 - 0.5*sect3*(intK5 - (invRhoPlus-invRhoMinus))*invP*y1*y1;
-    y2 = y1;
-    px2 = px1 + ( 0.5*sect*sect*intK6 - 0.25*tant*(K1plus-K1minus) )*y1*y1;
-    py2 = py1 + sect3*( intK5 - (invRhoPlus - invRhoMinus) )*invP*px1*y1 + (sect*sect*intK6 - 0.5*tant*(K1plus-K1minus))*x1*y1;
-    tau2 = tau1 + 0.5*sect3*(intK5 - (invRhoPlus - invRhoMinus))*invP*invP*y1*y1
-      *( px1 + (0.25*sect*sect*intK6 - 0.125*tant*(K1plus - K1minus))*y1*y1 );
-
-    temp = -0.5*sect3*intK5*invP*x2;
-    tau2 += temp*invP*px2*x2;
-    temp = 1.0 + temp;
-    x2 = x2/temp;
-    px2 = px2*temp*temp;
-
+    if (edgeOrder>=2) {
+      /** Symplectic update for second order terms **/
+      x1 = x2;
+      y1 = y2*exp(-sect*intK5*x2*invP);
+      px1 = px2 - (0.5*intK6 + 0.25*tant*(K1plus-K1minus))*x2*x2 + sect*intK5*invP*py2*y2;
+      py1 = py2*exp(sect*intK5*x2*invP);
+      tau1 = tau2 + sect*intK5*invP*invP*py2*x2*y2;
+      
+      x2 = x1 - 0.5*sect3*(intK5 - (invRhoPlus-invRhoMinus))*invP*y1*y1;
+      y2 = y1;
+      px2 = px1 + ( 0.5*sect*sect*intK6 - 0.25*tant*(K1plus-K1minus) )*y1*y1;
+      py2 = py1 + sect3*( intK5 - (invRhoPlus - invRhoMinus) )*invP*px1*y1 + (sect*sect*intK6 - 0.5*tant*(K1plus-K1minus))*x1*y1;
+      tau2 = tau1 + 0.5*sect3*(intK5 - (invRhoPlus - invRhoMinus))*invP*invP*y1*y1
+        *( px1 + (0.25*sect*sect*intK6 - 0.125*tant*(K1plus - K1minus))*y1*y1 );
+      
+      temp = -0.5*sect3*intK5*invP*x2;
+      tau2 += temp*invP*px2*x2;
+      temp = 1.0 + temp;
+      x2 = x2/temp;
+      px2 = px2*temp*temp;
+    }
 
     particle[i][0] = x2;
     particle[i][2] = y2;

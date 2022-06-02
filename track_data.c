@@ -3732,6 +3732,7 @@ PARAMETER lgbend_param[N_LGBEND_PARAMS] = {
     {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_SLICES", "", IS_LONG, 0, (long)((char *)&lgbend_example.nSlices), NULL, 0.0, DEFAULT_N_SLICES, "Number of slices (full integrator steps) per segment."},
     {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&lgbend_example.integration_order), NULL, 0.0, 4, "integration order (2, 4, or 6)"},
+    {"EDGE_ORDER", "", IS_SHORT, 0, (long)((char *)&lgbend_example.edgeOrder), NULL, 0.0, 2, "Gives order of edge effects."},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&lgbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"ISR", "", IS_SHORT, 0, (long)((char *)&lgbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&lgbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
