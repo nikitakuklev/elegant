@@ -1020,7 +1020,7 @@ void verticalRbendFringe
     focXd = sect3*intK7;
     focY0 = -tant*(invRhoPlus - invRhoMinus) + tant*sect*sect*intK5 + 0.5*intI0*(2.0 + tant*tant);
     focYd = sect3*((1.0+sint*sint)*intK2 - intK7);
-    for(i=0; i<n_part; i++) {
+    for (i=0; i<n_part; i++) {
       x1  = particle[i][0];
       temp = sqrt( 1.0 + sqr(particle[i][1]) + sqr(particle[i][3]) );
       px1 = (1.0 + particle[i][5])*particle[i][1]/temp;
@@ -1059,25 +1059,27 @@ void verticalRbendFringe
       tau2 += ( sect*intK5*py1*x1*y1
       + sect3*(intK5*px1*(y1*y1-x1*x1) - px1*y1*y1*(invRhoPlus-invRhoMinus)) )*invP*invP; */
 
-      /** Symplectic update for second order terms **/
-      x1 = x2;
-      y1 = y2*exp(-sect*intK5*x2*invP);
-      px1 = px2 - (0.5*intK6 + 0.25*tant*(K1plus-K1minus))*x2*x2 + sect*intK5*invP*py2*y2;
-      py1 = py2*exp(sect*intK5*x2*invP);
-      tau1 = tau2 + sect*intK5*invP*invP*py2*x2*y2;
-
-      x2 = x1 - 0.5*sect3*(intK5 - (invRhoPlus-invRhoMinus))*invP*y1*y1;
-      y2 = y1;
-      px2 = px1 + ( 0.5*sect*sect*intK6 - 0.25*tant*(K1plus-K1minus) )*y1*y1;
-      py2 = py1 + sect3*( intK5 - (invRhoPlus - invRhoMinus) )*invP*px1*y1 + (sect*sect*intK6 - 0.5*tant*(K1plus-K1minus))*x1*y1;
-      tau2 = tau1 + 0.5*sect3*(intK5 - (invRhoPlus - invRhoMinus))*invP*invP*y1*y1
-	*( px1 + (0.25*sect*sect*intK6 - 0.125*tant*(K1plus - K1minus))*y1*y1 );
-
-      temp = -0.5*sect3*intK5*invP*x2;
-      tau2 += temp*invP*px2*x2;
-      temp = 1.0 + temp;
-      x2 = x2/temp;
-      px2 = px2*temp*temp;
+      if (order>=2) {
+        /** Symplectic update for second order terms **/
+        x1 = x2;
+        y1 = y2*exp(-sect*intK5*x2*invP);
+        px1 = px2 - (0.5*intK6 + 0.25*tant*(K1plus-K1minus))*x2*x2 + sect*intK5*invP*py2*y2;
+        py1 = py2*exp(sect*intK5*x2*invP);
+        tau1 = tau2 + sect*intK5*invP*invP*py2*x2*y2;
+        
+        x2 = x1 - 0.5*sect3*(intK5 - (invRhoPlus-invRhoMinus))*invP*y1*y1;
+        y2 = y1;
+        px2 = px1 + ( 0.5*sect*sect*intK6 - 0.25*tant*(K1plus-K1minus) )*y1*y1;
+        py2 = py1 + sect3*( intK5 - (invRhoPlus - invRhoMinus) )*invP*px1*y1 + (sect*sect*intK6 - 0.5*tant*(K1plus-K1minus))*x1*y1;
+        tau2 = tau1 + 0.5*sect3*(intK5 - (invRhoPlus - invRhoMinus))*invP*invP*y1*y1
+          *( px1 + (0.25*sect*sect*intK6 - 0.125*tant*(K1plus - K1minus))*y1*y1 );
+        
+        temp = -0.5*sect3*intK5*invP*x2;
+        tau2 += temp*invP*px2*x2;
+        temp = 1.0 + temp;
+        x2 = x2/temp;
+        px2 = px2*temp*temp;
+      }
 
       particle[i][0] = x2;
       particle[i][2] = y2;
