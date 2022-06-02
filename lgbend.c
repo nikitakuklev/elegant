@@ -31,13 +31,6 @@ static long iPart0;
 void switchLgbendPlane(double **particle, long n_part, double dx, double alpha, double po, long exitPlane);
 void lgbendFringe(double **particle, long n_part, double alpha, double invRhoPlus, double K1plus, double invRhoMinus, double K1minus,
                   LGBEND_SEGMENT *segment, short angleSign, short isExit);
-int integrate_kick_KnL(double *coord, double dx, double dy, 
-                       double Po, double rad_coef, double isr_coef,
-                       double *KnL, long nTerms,
-                       long integration_order, long n_parts, long iPart, long iFinalSlice,
-                       double drift,
-                       MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edge1MultData, MULTIPOLE_DATA *edge2MultData, 
-                       MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2, double *lastRho1);
 double lgbend_trajectory_error(double *value, long *invalid);
 
 void storeLGBendOptimizedFSEValues(LGBEND *lgbend);
@@ -72,6 +65,7 @@ long track_through_lgbend
   double KnL[9];
   long iTerm, nTerms, iSegment, iSegment0;
   double dx, dy, dz; /* offsets of the multipole center */
+  double dZOffset0, dZOffset; /* offset of start of first segment from entry plane, offset of interior point */
   long nSlices, integ_order;
   long i_part, i_top;
   double *coef;
@@ -199,6 +193,7 @@ long track_through_lgbend
 #endif
   if (iPart<0)
     exactDrift(particle, n_part, lgbend->predrift);
+  dZOffset0 = lgbend->predrift*cos(lgbend->segment[0].entryAngle);
 #ifdef DEBUG
   if (lgbend->optimized!=-1 && iPart>=0)
     fprintf(fpDeb, "0 %ld 0.0 %21.15le %21.15le %21.15le %21.15le %21.15le drift\n",
@@ -335,12 +330,14 @@ long track_through_lgbend
     if (sigmaDelta2)
       *sigmaDelta2 = 0;
     i_top = n_part-1;
+    dZOffset = dZOffset0 + (iSegment>0?lgbend->segment[iSegment-1].zAccumulated:0);
     for (i_part=0; i_part<=i_top; i_part++) {
       if (!integrate_kick_KnL(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL, nTerms,
                               integ_order, nSlices, iPart, 
                               iSegment==(nSegments-1) ? iFinalSlice : 0,
                               length, NULL, NULL, NULL,
-                              &apertureData, &dzLoss, sigmaDelta2, &lastRho1)) {
+                              &apertureData, &dzLoss, sigmaDelta2, &lastRho1, tilt, 
+                              dZOffset)) {
         swapParticles(particle[i_part], particle[i_top]);
         if (accepted)
           swapParticles(accepted[i_part], accepted[i_top]);
@@ -362,9 +359,11 @@ long track_through_lgbend
     multipoleKicksDone += (i_top+1)*nSlices;
     if (sigmaDelta2)
       *sigmaDelta2 /= i_top+1;
-    
-    lastX = particle[i_top][0];
-    lastXp = particle[i_top][1];
+    if (i_top>=0) {
+      lastX = particle[i_top][0];
+      lastXp = particle[i_top][1];
+    } else if (lgbend->optimized==-1) 
+        bombElegant("Particle lost while optimizing LGBEND FSE", NULL);
 
     if ((iPart<0 || iPart==(lgbend->nSlices-1)) && iFinalSlice<=0) {
       /*

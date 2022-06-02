@@ -4670,6 +4670,14 @@ long track_through_ccbend(double **particle, long n_part, ELEMENT_LIST *eptr, CC
 void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double pCentral,
                                  double eta0, double etap0, double beta0, double alpha0,
                                  double *I1, double *I2, double *I3, double *I4, double *I5, ELEMENT_LIST *elem);
+int integrate_kick_KnL(double *coord, double dx, double dy, 
+                       double Po, double rad_coef, double isr_coef,
+                       double *KnL, long nTerms,
+                       long integration_order, long n_parts, long iPart, long iFinalSlice,
+                       double drift,
+                       MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edge1MultData, MULTIPOLE_DATA *edge2MultData, 
+                       MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2, double *lastRho1, double refTilt,
+                       double ZOffset);
 
 long track_through_lgbend(double **particle, long n_part, ELEMENT_LIST *eptr, LGBEND *lgbend, double Po,
                           double **accepted, double z_start, double *sigmaDelta2, char *rootname,

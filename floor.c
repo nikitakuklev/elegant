@@ -992,8 +992,21 @@ void convertLocalCoordinatesToGlobal
 {
   double theta1;
   double dZ, dX, Z1, X1,  length;
+  static FILE *fpdeb = NULL;
   /* convert (s, x, y, z) coordinates to (Z, X, Y) */
   /* For now, we assume that the beamline is flat ! */
+
+  if (fpdeb==NULL) {
+    fpdeb = fopen("global.sdds", "w");
+    fprintf(fpdeb, "SDDS1\n&column name=Z type=float units=m &end\n");
+    fprintf(fpdeb, "&column name=X type=float units=m &end\n");
+    fprintf(fpdeb, "&column name=dZ type=float &end\n");
+    fprintf(fpdeb, "&column name=thetaX type=float units=m &end\n");
+    fprintf(fpdeb, "&column name=x type=float units=m &end\n");
+    fprintf(fpdeb, "&column name=xp type=float units=m &end\n");
+    fprintf(fpdeb, "&column name=ElementName type=string &end\n");
+    fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+  }
 
   if (mode==GLOBAL_LOCAL_MODE_END) {
     /* We are at the end of the element, so use the floor coordinates there as the reference point */
@@ -1008,105 +1021,32 @@ void convertLocalCoordinatesToGlobal
     return;
   }
 
-  if (IS_BEND(eptr->type) && eptr->type!=T_LGBEND) {
-    double dtheta, angle, rho;
-    length = 0;
-    angle = 0;
-    switch (eptr->type) {
-    case T_SBEN:
-      length = ((BEND*)eptr->p_elem)->length;
-      angle = ((BEND*)eptr->p_elem)->angle;
-      break;
-    case T_CSBEND:
-      length = ((CSBEND*)eptr->p_elem)->length;
-      angle = ((CSBEND*)eptr->p_elem)->angle;
-      break;
-    case T_CCBEND:
-      length = ((CCBEND*)eptr->p_elem)->length;
-      angle = ((CCBEND*)eptr->p_elem)->angle;
-      break;
-    default:
-      bombElegantVA("Error: at present, can't provide global loss coordinates for %s element\n",
-             entity_name[eptr->type]);
-      break;
-    }
-    if (length<=0) 
-      bombElegantVA("Error: length<=0 for %s element %s---can't compute global loss coordinates\n",
-                    entity_name[eptr->type], eptr->name);
-    rho = length/angle;
-    /* compute floor coordinate offsets in frame of the magnet (initial trajectory parallel to line X=Y=0 */
-    dtheta = 0;
-    switch (mode) {
-    case GLOBAL_LOCAL_MODE_SEG:
-      if (nSegments>0) 
-        dtheta = (angle*segment)/nSegments;
-      else
-        bombElegant("programming error for local-to-global coordinates (1)---seek help from developers", NULL);
-      break;
-    case GLOBAL_LOCAL_MODE_DZ:
-      dtheta = angle*dz/length;
-      break;
-    default:
-      bombElegant("programming error for local-to-global coordinates (2)---seek help from developers", NULL);
-      break;
-    }
-    dX = (rho+coord[0])*cos(dtheta) - rho;
-    dZ = (rho+coord[0])*sin(dtheta);
-
+  if (eptr->type==T_LGBEND) {
+    LGBEND *lgptr;
+    lgptr = (LGBEND*)(eptr->p_elem);
+    /* Compute coordinates relative to the entrance point in frame of magnet */
+    dX = coord[0] - lgptr->xEntry;
+    dZ = dz;
     if (eptr->pred) {
       Z1 = eptr->pred->floorCoord[2];
       X1 = eptr->pred->floorCoord[0];
       theta1 = -eptr->pred->floorAngle[0];
-    } else {
-      Z1 = Z0;
-      X1 = X0;
-      theta1 = theta0;
-    }
-    *Z = Z1 + dX*sin(theta1) + dZ*cos(theta1);
-    *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
-    *Y = coord[2];
-    *thetaX = theta1 - atan(coord[1]);
-    /* *thetaX = 888; */
-  } else {
-    /* Not a simple bending element */
-    if (eptr->type==T_LGBEND)
-      bombElegant("Can't compute global loss coordinates for LGBEND elements at present", NULL);
-    if (entity_description[eptr->type].flags&HAS_LENGTH)
-      length =  *((double*)(eptr->p_elem));
-    else
-      length = 0;
-    if (eptr->pred) {
-      Z1 = eptr->pred->floorCoord[2];
-      X1 = eptr->pred->floorCoord[0];
-      theta1 = -eptr->pred->floorAngle[0];
-      /* printf("Used eptr->pred: Z1 = %le, X1 = %le, theta1 = %le\n", Z1, X1, theta1); */
     } else {
       Z1 = Z0;
       X1 = X0;
       theta1 = theta0;  /* ?? -theta0 ?? */
-      /* printf("Used start: Z1 = %le, X1 = %le, theta1 = %le\n", Z1, X1, theta1); */
     }
-    dZ = 0;
-    switch (mode) {
-    case GLOBAL_LOCAL_MODE_SEG:
-      if (nSegments>0)
-        dZ = (length*segment)/nSegments;
-      else
-        bombElegant("programming error for local-to-global coordinates (3)---seek help from developers", NULL);
-      break;
-    case GLOBAL_LOCAL_MODE_DZ:
-      /* someone provides the dz value for us */
-      dZ = dz;
-      break;
-    default:
-      bombElegant("programming error for local-to-global coordinates (4)---seek help from developers", NULL);
-      break;
-    }
-    dX = coord[0];
+    theta1 += lgptr->segment[0].entryAngle;
+    /* Rotate and displace into global coordinate system  */
     *Z = Z1 + dX*sin(theta1) + dZ*cos(theta1);
     *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
     *Y = coord[2];
-    *thetaX = - theta1 + atan(coord[1]);
+    *thetaX = - theta1 - lgptr->segment[0].entryAngle + atan(coord[1]);
+    if (!lgptr->optimizeFse || lgptr->optimized==1) {
+      fprintf(fpdeb, "%le %le %le %le  %le %le %s\n",
+              *Z, *X, dZ, *thetaX, coord[0], coord[1], eptr->name);
+      fflush(fpdeb);
+    }
     if (eptr->end_pos>eptr->beg_pos && (dZ<-1e-6 || (dZ-(eptr->end_pos-eptr->beg_pos))>1e-6)) {
 #if USE_MPI
       dup2(fd, fileno(stdout));
@@ -1115,6 +1055,144 @@ void convertLocalCoordinatesToGlobal
              (long)coord[6], Z1, X1, dZ, dX, theta1, *Z, *X);
       printf("Beg pos: %21.15le, End pos: %21.15le\n", eptr->beg_pos, eptr->end_pos);
       exit(1);
+    }
+  } else if (eptr->type==T_CCBEND) {
+    CCBEND *ccptr;
+    ccptr = (CCBEND*)(eptr->p_elem);
+    dX = coord[0] - ccptr->dxOffset;
+    dZ = dz;
+    if (eptr->pred) {
+      Z1 = eptr->pred->floorCoord[2];
+      X1 = eptr->pred->floorCoord[0];
+      theta1 = -eptr->pred->floorAngle[0];
+    } else {
+      Z1 = Z0;
+      X1 = X0;
+      theta1 = theta0;  /* ?? -theta0 ?? */
+    }
+    theta1 += ccptr->angle/2;
+    /* Rotate and displace into global coordinate system  */
+    *Z = Z1 + dX*sin(theta1) + dZ*cos(theta1);
+    *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
+    *Y = coord[2];
+    *thetaX = - theta1 + atan(coord[1]); 
+    if ((!ccptr->optimizeFse && !ccptr->optimizeDx) || ccptr->optimized==1) {
+      fprintf(fpdeb, "%le %le %le %le  %le %le %s\n",
+              *Z, *X, dZ, *thetaX, coord[0], coord[1], eptr->name);
+      fflush(fpdeb);
+    }
+    if (eptr->end_pos>eptr->beg_pos && (dZ<-1e-6 || (dZ-(eptr->end_pos-eptr->beg_pos))>1e-6)) {
+#if USE_MPI
+      dup2(fd, fileno(stdout));
+#endif
+      printf("Problem Converting to global for particle %ld:\nZ1 = %21.15le, X1 = %21.15le, dZ = %21.15le, dX = %21.15le, theta1 = %21.15le\n -> Z = %21.15le, X = %21.15le\n",
+             (long)coord[6], Z1, X1, dZ, dX, theta1, *Z, *X);
+      printf("Beg pos: %21.15le, End pos: %21.15le\n", eptr->beg_pos, eptr->end_pos);
+      exit(1);
+    }
+  } else {
+    if (IS_BEND(eptr->type)) {
+      double dtheta, angle, rho;
+      length = 0;
+      angle = 0;
+      switch (eptr->type) {
+      case T_SBEN:
+        length = ((BEND*)eptr->p_elem)->length;
+        angle = ((BEND*)eptr->p_elem)->angle;
+        break;
+      case T_CSBEND:
+        length = ((CSBEND*)eptr->p_elem)->length;
+        angle = ((CSBEND*)eptr->p_elem)->angle;
+        break;
+      default:
+        bombElegantVA("Error: at present, can't provide global loss coordinates for %s element\n",
+                      entity_name[eptr->type]);
+        break;
+      }
+      if (length<=0) 
+        bombElegantVA("Error: length<=0 for %s element %s---can't compute global loss coordinates\n",
+                      entity_name[eptr->type], eptr->name);
+      rho = length/angle;
+      /* compute floor coordinate offsets in frame of the magnet (initial trajectory parallel to line X=Y=0 */
+      dtheta = 0;
+      switch (mode) {
+      case GLOBAL_LOCAL_MODE_SEG:
+        if (nSegments>0) 
+          dtheta = (angle*segment)/nSegments;
+        else
+          bombElegant("programming error for local-to-global coordinates (1)---seek help from developers", NULL);
+        break;
+      case GLOBAL_LOCAL_MODE_DZ:
+        dtheta = angle*dz/length;
+        break;
+      default:
+        bombElegant("programming error for local-to-global coordinates (2)---seek help from developers", NULL);
+        break;
+      }
+      dX = (rho+coord[0])*cos(dtheta) - rho;
+      dZ = (rho+coord[0])*sin(dtheta);
+      
+      if (eptr->pred) {
+        Z1 = eptr->pred->floorCoord[2];
+        X1 = eptr->pred->floorCoord[0];
+        theta1 = -eptr->pred->floorAngle[0];
+      } else {
+        Z1 = Z0;
+        X1 = X0;
+        theta1 = theta0;
+      }
+      *Z = Z1 + dX*sin(theta1) + dZ*cos(theta1);
+      *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
+      *Y = coord[2];
+      *thetaX = theta1 - atan(coord[1]);
+      /* *thetaX = 888; */
+    } else {
+      /* Not a simple bending element */
+      if (entity_description[eptr->type].flags&HAS_LENGTH)
+        length =  *((double*)(eptr->p_elem));
+      else
+        length = 0;
+      if (eptr->pred) {
+        Z1 = eptr->pred->floorCoord[2];
+        X1 = eptr->pred->floorCoord[0];
+        theta1 = -eptr->pred->floorAngle[0];
+        /* printf("Used eptr->pred: Z1 = %le, X1 = %le, theta1 = %le\n", Z1, X1, theta1); */
+      } else {
+        Z1 = Z0;
+        X1 = X0;
+        theta1 = theta0;  /* ?? -theta0 ?? */
+        /* printf("Used start: Z1 = %le, X1 = %le, theta1 = %le\n", Z1, X1, theta1); */
+      }
+      dZ = 0;
+      switch (mode) {
+      case GLOBAL_LOCAL_MODE_SEG:
+        if (nSegments>0)
+          dZ = (length*segment)/nSegments;
+        else
+          bombElegant("programming error for local-to-global coordinates (3)---seek help from developers", NULL);
+        break;
+      case GLOBAL_LOCAL_MODE_DZ:
+        /* someone provides the dz value for us */
+        dZ = dz;
+        break;
+      default:
+        bombElegant("programming error for local-to-global coordinates (4)---seek help from developers", NULL);
+        break;
+      }
+      dX = coord[0];
+      *Z = Z1 + dX*sin(theta1) + dZ*cos(theta1);
+      *X = X1 + dX*cos(theta1) - dZ*sin(theta1);
+      *Y = coord[2];
+      *thetaX = - theta1 + atan(coord[1]);
+      if (eptr->end_pos>eptr->beg_pos && (dZ<-1e-6 || (dZ-(eptr->end_pos-eptr->beg_pos))>1e-6)) {
+#if USE_MPI
+        dup2(fd, fileno(stdout));
+#endif
+        printf("Problem Converting to global for particle %ld:\nZ1 = %21.15le, X1 = %21.15le, dZ = %21.15le, dX = %21.15le, theta1 = %21.15le\n -> Z = %21.15le, X = %21.15le\n",
+               (long)coord[6], Z1, X1, dZ, dX, theta1, *Z, *X);
+        printf("Beg pos: %21.15le, End pos: %21.15le\n", eptr->beg_pos, eptr->end_pos);
+        exit(1);
+      }
     }
   }
 }

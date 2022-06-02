@@ -33,13 +33,6 @@ static FILE *fpHam = NULL;
 void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
 void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, double gK, 
                          double *fringeIntKn, short angleSign, short isExit, short fringeModel, short order);
-int integrate_kick_KnL(double *coord, double dx, double dy, 
-                       double Po, double rad_coef, double isr_coef,
-                       double *KnL, long nTerms,
-                       long integration_order, long n_parts, long iPart, long iFinalSlice,
-                       double drift,
-                       MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edge1MultData, MULTIPOLE_DATA *edge2MultData, 
-                       MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2, double *lastRho1);
 double ccbend_trajectory_error(double *value, long *invalid);
 
 long track_through_ccbend(
@@ -450,7 +443,7 @@ long track_through_ccbend(
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!integrate_kick_KnL(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL, nTerms,
                             integ_order, nSlices, iPart, iFinalSlice, length, multData, edge1MultData, edge2MultData, 
-                            &apertureData, &dzLoss, sigmaDelta2, &lastRho1)) {
+                            &apertureData, &dzLoss, sigmaDelta2, &lastRho1, tilt, 0.0)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
@@ -569,7 +562,9 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
                        MULT_APERTURE_DATA *apData,  /* aperture */
                        double *dzLoss,      /* if particle is loss, offset from start of element where this occurs */
                        double *sigmaDelta2,  /* accumulate the energy spread increase for propagation of radiation matrix */
-                       double *lastRho       /* needed for radiation integrals */
+                       double *lastRho,      /* needed for radiation integrals */
+                       double refTilt,
+                       double dZOffset       /* offset of start of present segment relative to Z coordinate of entry plane */
                        )
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
@@ -602,6 +597,11 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
     0.784513610477560, 0.235573213359357, -1.17767998417887, 1.3151863206839063,
     -1.17767998417887,  0.235573213359357, 0.784513610477560, 0
   } ;
+
+  if (dZOffset<0) {
+    printf("coding error: dZOffset<0 (%le)\n", dZOffset);
+    exit(1);
+  }
 
   double *driftFrac = NULL, *kickFrac = NULL;
   long nSubsteps = 0;
@@ -709,14 +709,17 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
         fputs("\n", fpHam);
     }
 #endif
-    if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
+    delta_qx = delta_qy = 0;
+    if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
+	insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex], 
+			      globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
+			      refTilt,  GLOBAL_LOCAL_MODE_DZ, dZOffset+i_kick*drift, i_kick, n_parts)) {
       coord[0] = x;
       coord[2] = y;
       free(xpow); free(ypow);
       free(KnL);
       return 0;
     }
-    delta_qx = delta_qy = 0;
     for (step=0; step<nSubsteps; step++) {
       if (drift) {
         dsh = drift*driftFrac[step];
@@ -811,14 +814,17 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
   printf("xp init, fin = %le, %le\n", xp0, xp);
   */
 
-  if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
+  if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
+      insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex], 
+                            globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
+                            refTilt,  GLOBAL_LOCAL_MODE_DZ, dZOffset+i_kick*drift, i_kick, n_parts)) {
     coord[0] = x;
     coord[2] = y;
     free(xpow); free(ypow);
     free(KnL);
     return 0;
   }
-  
+
   if ((iPart<0 || iPart==n_parts) && (iFinalSlice==n_parts) && edge2MultData && edge2MultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
