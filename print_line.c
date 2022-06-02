@@ -109,7 +109,7 @@ void print_elem(FILE *fp, ELEMENT_LIST *eptr)
                 break;
             }
         }
-    /*
+
     if (eptr->type==T_LGBEND) {
       LGBEND *lg;
       long iseg;
@@ -133,7 +133,7 @@ void print_elem(FILE *fp, ELEMENT_LIST *eptr)
       }
       fflush(fp);
     }
-    */
+
     log_exit("print_elem");
     }
 
