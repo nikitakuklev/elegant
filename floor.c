@@ -1032,7 +1032,7 @@ void convertLocalCoordinatesToGlobal
   } else {
     Z1 = Z0;
     X1 = X0;
-  theta1 = theta0;  /* ?? -theta0 ?? */
+    theta1 = -theta0;
   }
   
   if (eptr->type==T_LGBEND) {
