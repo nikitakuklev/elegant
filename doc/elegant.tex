@@ -1076,6 +1076,7 @@ Recommended value: ``\%s.kaf''.
 &bunched_beam
     STRING bunch = NULL;
     long n_particles_per_bunch = 1;
+    long multiply_np_by_cores = 0;
     double time_start = 0;
     STRING matched_to_cell = NULL;
     double emit_x  = 0;
@@ -1121,6 +1122,8 @@ Recommended value: ``\%s.kaf''.
 \item \verb|bunch| --- The (incomplete) name of an SDDS file to which the phase-space coordinates
 of the bunches are to be written.  Recommended value: ``\%s.bun''.  
 \item \verb|n_particles_per_bunch| --- Number of particles in each bunch.
+\item \verb|multiply_np_by_cores| --- If non-zero, the number of particles is multiplied by the number of
+  working cores.
 \item \verb|time_start| --- The central value of the time coordinate for the bunch.
 \item \verb|matched_to_cell| --- The name of a beamline from which the Twiss parameters of the bunch
 are to be computed.
