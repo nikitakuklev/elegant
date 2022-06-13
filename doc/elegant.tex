@@ -129,6 +129,8 @@ are listed in Section \ref{sect:tools}.
 
 Changes to these tools in this release include
 \begin{itemize}
+\item The program \verb|straightDipoleFringeCalc| was added. It performs fringe integral and other computations 
+  needed for setting up the fringe models in \verb|CCBEND| and \verb|LGBEND|.
 \item \verb|touschekLifetime| was modified so that the \verb|FN| and \verb|FP| columns are normalized to the
   circumference, so that integration vs \verb|s| will give the total loss rate. The units of the columns were
   updated.
@@ -6546,6 +6548,8 @@ up-to-date than these manual pages.
   as output by \verb|elegant|.  Note that \verb|elegant| will read \verb|spiffe| output directly. This script just allows converting the
   data for use with related programs, such as \verb|sddsanalyzebeam|.
   (Program by M. Borland.)
+\item {\tt straightDipoleFringeCalc} --- Computes fringe integrals needed by the \verb|CCBEND| fringe
+  model. Computes fringe integrals and other parameters needed by the \verb|LGBEND| segmented dipole model.
 \item {\tt TFBFirSetup} --- This script prepares data that can be used to configure turn-by-turn transverse feedback using
   \verb|TFBDRIVER| and \verb|TFBPICKUP| elements.
   (Program by M. Borland.)
