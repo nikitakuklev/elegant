@@ -893,7 +893,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     break;
   default:
     printf("*** Error: determineMatrix called for element that is not supported!\n");
-    printf("***        Seek professional help!\n");
+    printf("***        Please report to developers.\n");
     exitElegant(1);
     break;
   }
@@ -1333,7 +1333,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       break;
     default:
       printf("*** Error: determineMatrixHigherOrder called for element that is not supported!\n");
-      printf("***        Seek professional help!\n");
+      printf("***        Please report to developers.\n");
       exitElegant(1);
       break;
     }  
@@ -1670,6 +1670,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_CSBEND:
       if (slice==0) {
         memcpy(&csbend, (CSBEND*)eptr->p_elem, sizeof(CSBEND));
+        if (!csbend.isr)
+          ignoreRadiation = 1;
         csbend.isr = 0;
         csbend.nSlices = nSlices;
         csbend.refTrajectoryChangeSet = 0;
@@ -1689,6 +1691,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_CCBEND:
       if (slice==0) {
         memcpy(&ccbend, (CCBEND*)eptr->p_elem, sizeof(CCBEND));
+        if (!ccbend.isr)
+          ignoreRadiation = 1;
         ccbend.isr = 0;
         ccbend.nSlices = nSlices;
         elem.type = T_CCBEND;
@@ -1700,6 +1704,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       if (slice==0) {
         memcpy(&lgbend, (LGBEND*)eptr->p_elem, sizeof(LGBEND));
         copyLGBend(&lgbend, (LGBEND*)eptr->p_elem);
+        if (!lgbend.isr)
+          ignoreRadiation = 1;
         lgbend.isr = 0;
         lgbend.nSlices = nSlices/lgbend.nSegments; /* nSlices is the total for all segments */
         lgbend.integration_order = 6;
@@ -1787,6 +1793,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_KQUAD:
       if (slice==0) {
         memcpy(&kquad, (KQUAD*)eptr->p_elem, sizeof(KQUAD));
+        if (!kquad.isr)
+          ignoreRadiation = 1;
         kquad.isr = 0;
         kquad.nSlices = nSlices;
         kquad.n_kicks = 0;
@@ -1823,6 +1831,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_KSEXT:
       if (slice==0) {
         memcpy(&ksext, (KSEXT*)eptr->p_elem, sizeof(KSEXT));
+        if (!ksext.isr)
+          ignoreRadiation = 1;
         ksext.isr = 0;
         ksext.n_kicks = 0;
         ksext.nSlices = nSlices;
@@ -1974,6 +1984,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       if (slice==0) {
         nSlices = 1;
         memcpy(&bggexp, (BGGEXP*)eptr->p_elem, sizeof(BGGEXP));
+        if (!bggexp.isr)
+          ignoreRadiation = 1;
         bggexp.isr = 0;
         elem.type = T_BGGEXP;
         elem.p_elem = (void*)&bggexp;
@@ -1999,7 +2011,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       break;
     default:
       printf("*** Error: determineRadiationMatrix called for element (%s) that is not supported!\n", eptr->name);
-      printf("***        Seek professional help!\n");
+      printf("***        Please report to developers.\n");
       exit(1);
       break;
     }
@@ -2210,7 +2222,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     break;
   default:
     printf("*** Error: determineRadiationMatrix1 called for element (%s) that is not supported!\n", elem->name);
-    printf("***        Seek professional help!\n");
+    printf("***        Please report to developers.\n");
     exitElegant(1);
     break;
   }
