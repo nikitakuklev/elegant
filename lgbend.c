@@ -191,7 +191,7 @@ long track_through_lgbend
             particle[n_part-1][0], particle[n_part-1][1], 
             particle[n_part-1][2], particle[n_part-1][3]);
 #endif
-  if (iPart<0)
+  if (iPart<=0)
     exactDrift(particle, n_part, lgbend->predrift);
   dZOffset0 = lgbend->predrift*cos(lgbend->segment[0].entryAngle);
 #ifdef DEBUG
