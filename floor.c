@@ -399,6 +399,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     case T_LGBEND:
       is_bend = 1;
       lgbend = (LGBEND*)elem->p_elem;
+      length = lgbend->length;
       angle = lgbend->angle;
       tilt = lgbend->tilt;
       break;
