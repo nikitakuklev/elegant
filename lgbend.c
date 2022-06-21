@@ -224,6 +224,10 @@ long track_through_lgbend
     nSegments = lgbend->nSegments;
   }
 
+  if (sigmaDelta2)
+    *sigmaDelta2 = 0;
+  i_top = n_part-1;
+
   for (iSegment=iSegment0; iSegment<nSegments; iSegment++) {
     for (iTerm=0; iTerm<9; iTerm++)
       KnL[iTerm] = 0;
@@ -331,9 +335,6 @@ long track_through_lgbend
     if (nTerms==0)
       nTerms = 1; /* might happen if FSE=-1 */
 
-    if (sigmaDelta2)
-      *sigmaDelta2 = 0;
-    i_top = n_part-1;
     dZOffset = dZOffset0 + (iSegment>0?lgbend->segment[iSegment-1].zAccumulated:0);
     for (i_part=0; i_part<=i_top; i_part++) {
       if (!integrate_kick_KnL(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL, nTerms,
@@ -361,8 +362,6 @@ long track_through_lgbend
               particle[n_part-1][2], particle[n_part-1][3]);
 #endif
     multipoleKicksDone += (i_top+1)*nSlices;
-    if (sigmaDelta2)
-      *sigmaDelta2 /= i_top+1;
     if (i_top>=0) {
       lastX = particle[i_top][0];
       lastXp = particle[i_top][1];
@@ -443,6 +442,9 @@ long track_through_lgbend
       */
     }
   }
+
+  if (sigmaDelta2)
+    *sigmaDelta2 /= i_top+1;
 
   log_exit("track_through_lgbend");
 
