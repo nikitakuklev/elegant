@@ -65,6 +65,7 @@ long track_through_lgbend
   double KnL[9];
   long iTerm, nTerms, iSegment, iSegment0;
   double dx, dy, dz; /* offsets of the multipole center */
+  double eyaw, epitch;
   double dZOffset0, dZOffset; /* offset of start of first segment from entry plane, offset of interior point */
   long nSlices, integ_order;
   long i_part, i_top;
@@ -125,7 +126,8 @@ long track_through_lgbend
       memcpy(&lgbendCopy, lgbend, sizeof(lgbendCopy));
       eptrCopy = eptr;
       lgbendCopy.fse = lgbendCopy.dx = lgbendCopy.dy = lgbendCopy.dz = 
-        lgbendCopy.etilt = lgbendCopy.tilt = lgbendCopy.isr = lgbendCopy.synch_rad = lgbendCopy.isr1Particle = 0;
+        lgbendCopy.etilt = lgbendCopy.epitch = lgbendCopy.eyaw = lgbendCopy.tilt = 
+        lgbendCopy.isr = lgbendCopy.synch_rad = lgbendCopy.isr1Particle = 0;
       
       PoCopy = Po;
       stepSize[0] = stepSize[1] = 1e-3;
@@ -266,7 +268,9 @@ long track_through_lgbend
     dx = lgbend->dx;
     dy = lgbend->dy;
     dz = lgbend->dz*(lgbend->wasFlipped?-1:1);
-    
+    eyaw = lgbend->eyaw;
+    epitch = lgbend->epitch;
+
     if (tilt) {
       /* this is needed because the DX and DY offsets will be applied after the particles are
        * tilted into the magnet reference frame
@@ -297,10 +301,16 @@ long track_through_lgbend
                 particle[n_part-1][0], particle[n_part-1][1], 
                 particle[n_part-1][2], particle[n_part-1][3]);
 #endif
+      /*
       if (dx || dy || dz)
         offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
       if (etilt)
         rotateBeamCoordinatesForMisalignment(particle, n_part, etilt);
+      */
+      offsetParticlesForBodyCenteredMisalignmentExact(particle, n_part,
+                                                      dx, dy, dz,
+                                                      epitch, eyaw, etilt, 
+                                                      0.0, 0.0, lgbend->segment[lgbend->nSegments-1].zAccumulated, 1);
     }
     if (iPart<=0) {
       /* Start of a segment */
@@ -392,10 +402,16 @@ long track_through_lgbend
       }
       if (iSegment==(lgbend->nSegments-1)) {
         /* end of magnet */
+        /*
         if (etilt)
           rotateBeamCoordinatesForMisalignment(particle, n_part, -etilt);
         if (dx || dy || dz)
           offsetBeamCoordinatesForMisalignment(particle, i_top+1, -dx, -dy, -dz);
+        */
+        offsetParticlesForBodyCenteredMisalignmentExact(particle, i_top+1, 
+                                                        dx, dy, dz,
+                                                        epitch, eyaw, etilt, 
+                                                        0.0, 0.0, lgbend->segment[lgbend->nSegments-1].zAccumulated, 2);
         switchLgbendPlane(particle, i_top+1, -exitPosition, -exitAngle, Po, 1);
 #ifdef DEBUG
         if (lgbend->optimized!=-1 && iPart>=0)

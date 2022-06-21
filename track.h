@@ -1154,7 +1154,7 @@ extern char *entity_text[N_TYPES];
 #define N_BEAMBEAM_PARAMS 6
 #define N_CPICKUP_PARAMS 7
 #define N_CKICKER_PARAMS 14
-#define N_LGBEND_PARAMS 25
+#define N_LGBEND_PARAMS 27
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3634,9 +3634,8 @@ typedef struct {
   double xExit, zExit;
   char *configuration;
   double tilt;
-  double dx, dy, dz;
+  double dx, dy, dz, eyaw, epitch, etilt;
   double fse;
-  double etilt;   /* error tilt angle */
   long nSlices;   /* slices per segment */
   short integration_order, edgeOrder;
   short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
