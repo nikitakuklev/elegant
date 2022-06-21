@@ -3728,7 +3728,7 @@ be output, and not the parameters as a function of s.
 \item \verb|n_slices| --- The number of slices into which to cut individual dipoles, quadrupoles, and sextuoples for computations.
   10 has been found to work for all rings tested, but users are advised to ensure it is sufficient for their cases.
 \item \verb|tracking_based_diffusion_matrix_particles| --- For most elements, the diffusion matrix determined by 
-  \verb|moments_output| is computing used matrix concatenation. For some elements, this doesn't work well because of
+  \verb|moments_output| is computed used matrix concatenation. For some elements, this doesn't work well because of
   possible internal coordinate transformations. For these elements, the diffusion matrix is determined approximately
   by tracking an ensemble of \verb|tracking_based_diffusion_matrix_particles| particles. Setting this parameter to \verb|0|
   will disable this feature.
