@@ -124,7 +124,8 @@ void readGasPressureData(char *filename, PRESSURE_DATA *pressureData, double fac
       dsMax = ds;
   }
   if (fabs(1-dsMin/dsMax)>1e-3)
-      bombElegantVA("s data is not uniformly spaced to within desired 0.1% in pressure data file %s", filename);
+    bombElegantVA("s data is not uniformly spaced to within desired 0.1% in pressure data file %s (dsMin=%le, dsMax=%le)", filename,
+		  dsMin, dsMax);
 
   printf("Finished reading pressure data file %s\n", filename);
   fflush(stdout);
