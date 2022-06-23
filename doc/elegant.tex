@@ -92,6 +92,8 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 \item Added the \verb|change_end| command, which allows changing the end of the beamline.
 \item Added the \verb|include_commands| command, which allows including commands from another file.
 \item The apertures defined by the \verb|obstruction_data| command are now reflected inside \verb|CCBEND| elements.
+\item The \verb|correct_tunes| and \verb|chromaticity| commands now allow saving the response and correction
+  matrices to SDDS files.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -1648,6 +1650,8 @@ the tracking is appropriate to simulation of dynamics from a touschek scattering
     long update_orbit = 0;
     long verbosity = 1;
     double dK2_weight = 1;
+    STRING response_matrix_output = NULL;
+    STRING correction_matrix_output = NULL;
 &end
 \end{verbatim}
 
@@ -1697,6 +1701,8 @@ to obtain correction.  In general, it is not necessary and only slows the simula
   help converge to a fully-corrected result.
 \item \verb|verbosity| --- Increasing positive values result in increasing amounts of information printed during
   execution.
+\item \verb|response_matrix_output|, \verb|correction_matrix_output| --- The (incomplete) names of SDDS files
+  to which the response and correction matrices will be written.
 \end{itemize}
 
 %\begin{latexonly}
@@ -2024,6 +2030,8 @@ matrix.
     long change_defined_values = 0;
     long use_perturbed_matrix = 0;
     double dK1_weight = 1;
+    STRING response_matrix_output = NULL;
+    STRING correction_matrix_output = NULL;
 &end
 \end{verbatim}
 
@@ -2068,6 +2076,8 @@ lattice, for example, but not for correcting tunes of a perturbed lattice.
 \item \verb|use_perturbed_matrix| --- If nonzero, requests use of the perturbed correction matrix in
 performing correction.  For difficult lattices with large errors, this may be necessary
 to obtain correction.  In general, it is not necessary and only slows the simulation.
+\item \verb|response_matrix_output|, \verb|correction_matrix_output| --- The (incomplete) names of SDDS files
+  to which the response and correction matrices will be written.
 \end{itemize}
 
 %\begin{latexonly}
