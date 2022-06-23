@@ -105,10 +105,13 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     tune->exclude = NULL;
     tune->n_exclude = 0;
     if (exclude) {
+      char *excludec;
+      cp_str(&excludec, exclude);
       tune->exclude = tmalloc(sizeof(*tune->exclude)*(tune->n_exclude=1));
-      while ((tune->exclude[tune->n_exclude-1] = get_token(exclude))) 
+      while ((tune->exclude[tune->n_exclude-1] = get_token(excludec))) 
         tune->exclude = trealloc(tune->exclude, sizeof(*tune->exclude)*(tune->n_exclude+=1));
       tune->n_exclude --;
+      free(excludec);
     }
 
     if (!beamline->twiss0 || !beamline->matrix) {
@@ -181,6 +184,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
       response_matrix_output = compose_filename(response_matrix_output, run->rootname);
       fp_response = fopen_e(response_matrix_output, "w", 0);
       fprintf(fp_response, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+      fprintf(fp_response, "&parameter name=Excluded, type=string, fixed_value=\"%s\" &end\n",
+              exclude && strlen(exclude) ? exclude : "");
       fprintf(fp_response, "&column name=FamilyName, type=string  &end\n");
       fprintf(fp_response, "&column name=dnux/dK1L, type=double, units=m,  &end\n");
       fprintf(fp_response, "&column name=dnuy/dK1L, type=double, units=m,  &end\n");
@@ -191,6 +196,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
       correction_matrix_output = compose_filename(correction_matrix_output, run->rootname);
       fp_correction = fopen_e(correction_matrix_output, "w", 0);
       fprintf(fp_correction, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+      fprintf(fp_correction, "&parameter name=Excluded, type=string, fixed_value=\"%s\" &end\n",
+              exclude && strlen(exclude) ? exclude : "");
       fprintf(fp_correction, "&column name=FamilyName, type=string  &end\n");
       fprintf(fp_correction, "&column name=dK1L/dnux, type=double, units=1/m,  &end\n");
       fprintf(fp_correction, "&column name=dK1L/dnuy, type=double, units=1/m,  &end\n");

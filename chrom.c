@@ -105,10 +105,13 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     chrom->exclude = NULL;
     chrom->n_exclude = 0;
     if (exclude) {
+      char *excludec;
+      cp_str(&excludec, exclude);
       chrom->exclude = tmalloc(sizeof(*chrom->exclude)*(chrom->n_exclude=1));
-      while ((chrom->exclude[chrom->n_exclude-1] = get_token(exclude))) 
+      while ((chrom->exclude[chrom->n_exclude-1] = get_token(excludec))) 
         chrom->exclude = trealloc(chrom->exclude, sizeof(*chrom->exclude)*(chrom->n_exclude+=1));
       chrom->n_exclude --;
+      free(excludec);
     }
     chrom->chromx = dnux_dp;
     chrom->chromy = dnuy_dp;
@@ -146,6 +149,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
       response_matrix_output = compose_filename(response_matrix_output, run->rootname);
       fp_response = fopen_e(response_matrix_output, "w", 0);
       fprintf(fp_response, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+      fprintf(fp_response, "&parameter name=Excluded, type=string, fixed_value=\"%s\" &end\n",
+              exclude && strlen(exclude) ? exclude : "");
       fprintf(fp_response, "&column name=FamilyName, type=string  &end\n");
       fprintf(fp_response, "&column name=dxix/dK2L, type=double, units=m,  &end\n");
       fprintf(fp_response, "&column name=dxiy/dK2L, type=double, units=m,  &end\n");
@@ -156,6 +161,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
       correction_matrix_output = compose_filename(correction_matrix_output, run->rootname);
       fp_correction = fopen_e(correction_matrix_output, "w", 0);
       fprintf(fp_correction, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+      fprintf(fp_correction, "&parameter name=Excluded, type=string, fixed_value=\"%s\" &end\n",
+              exclude && strlen(exclude) ? exclude : "");
       fprintf(fp_correction, "&column name=FamilyName, type=string  &end\n");
       fprintf(fp_correction, "&column name=dK2L/dxix, type=double, units=1/m,  &end\n");
       fprintf(fp_correction, "&column name=dK2L/dxiy, type=double, units=1/m,  &end\n");
