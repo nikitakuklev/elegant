@@ -14,6 +14,7 @@ typedef struct {
     double tunex, tuney;    /* desired tunes */
     char **name;            /* names of quadrupole families */
     double *lowerLimit, *upperLimit;
+    double *length;         /* used for normalizing the output matrices */
     long n_families;        /* number of families */
     char **exclude;
     long n_exclude;
@@ -28,7 +29,7 @@ typedef struct {
     long verbosity;
     long update_orbit;
     MATRIX *T;              /* Nfx2 matrix to give quadrupole strength changes to change 
-                               chromaticities by given amount */
+                               tunes by given amount */
     MATRIX *dK1;           /* Nfx1 matrix of quadrupole strength changes */
     MATRIX *dtune;         /* 2x1 matrix of desired tune changes */
     } TUNE_CORRECTION;
@@ -36,6 +37,7 @@ typedef struct {
 
 /* prototypes for tune.c */
 void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, TUNE_CORRECTION *tune);
-long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, double *clorb, 
+long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, VARY *control, LINE_LIST *beamline, double *clorb, 
                         long run_closed_orbit, long step, long last_iteration);
-void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION *tune, long printout);
+void computeTuneCorrectionMatrix(RUN *run, VARY *control, LINE_LIST *beamline, TUNE_CORRECTION *tune, long printout);
+

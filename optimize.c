@@ -2095,7 +2095,7 @@ double optimization_function(double *value, long *invalid)
     printWarning("optimize: failed to perform orbit correction while optimizing.", NULL);
   }
   if (!*invalid && doTuneCorr &&
-      !do_tune_correction(tuneCorrData, run, beamline, startingOrbitCoord, doClosedOrbit,
+      !do_tune_correction(tuneCorrData, run, NULL, beamline, startingOrbitCoord, doClosedOrbit,
                                   0, 0)) {
     *invalid = 1;
     printWarning("optimize: failed to do tune correction while optimizing.", NULL);

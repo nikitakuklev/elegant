@@ -25,6 +25,7 @@
     long update_orbit = 0;
     long verbosity = 1;
     double dK2_weight = 1;
+    STRING matrix_output = NULL;
 #end
 
 

@@ -24,6 +24,8 @@
     double dK1_weight = 1;
     long update_orbit = 0;
     long verbosity = 1;
+    STRING response_matrix_output = NULL;
+    STRING correction_matrix_output = NULL;
 #end
 
 

@@ -1182,7 +1182,7 @@ int main(argc, argv)
 		    } else
 		      bombElegant("Closed orbit not found", NULL);
 		  }
-		  if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
+		  if (!do_tune_correction(&tune_corr_data, &run_conditions, &run_control, beamline, starting_coord, do_closed_orbit,
 					  run_control.i_step, i==correction_iterations-1)) { 
 		    if (soft_failure) {
 		      printWarning("Tune correction failed.", "Continuing to next step.");
@@ -1623,7 +1623,7 @@ int main(argc, argv)
 		    } else
 		      bombElegant("Closed orbit not found", NULL);
 		  }
-		  if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
+		  if (!do_tune_correction(&tune_corr_data, &run_conditions, &run_control, beamline, starting_coord, do_closed_orbit,
 					  run_control.i_step, i==correction_iterations-1)) {
 		    if (soft_failure) {
 		      printWarning("Tune correction failed.", "Continuing to next step.");

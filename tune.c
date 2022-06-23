@@ -18,6 +18,8 @@
 
 static FILE *fp_sl = NULL;
 static long alter_defined_values;
+static FILE *fp_response = NULL;
+static FILE *fp_correction = NULL;
 
 double *scanNumberList(char *list, long *nFound);
 
@@ -38,7 +40,15 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     if (fp_sl) {
         fclose(fp_sl);
         fp_sl = NULL;
-        }
+    }
+    if (fp_response) {
+      fclose(fp_response);
+      fp_response = NULL;
+    }
+    if (fp_correction) {
+      fclose(fp_correction);
+      fp_correction = NULL;
+    }
 
     /* process namelist input */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -74,6 +84,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
         bombElegantVA("number of items in upper_limits list (%ld) not the same as number of quadrupole names (%ld)",
                     nul, tune->n_families);
     }
+
+    tune->length = calloc(tune->n_families, sizeof(*tune->length));
 
     tune->tunex = tune_x;
     tune->tuney = tune_y;
@@ -154,32 +166,55 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     if (!writePermitted)
        strength_log = NULL;
 #endif
-        if (strength_log) {
-        strength_log = compose_filename(strength_log, run->rootname);
-        fp_sl = fopen_e(strength_log, "w", 0);
-        fprintf(fp_sl, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
-        fprintf(fp_sl, "&column name=ElementName, type=string  &end\n");
-        fprintf(fp_sl, "&column name=ElementParameter, type=string  &end\n");
-        fprintf(fp_sl, "&column name=ElementOccurence, type=long  &end\n");
-        fprintf(fp_sl, "&column name=ParameterValue, type=double, units=\"1/m$a2$n\" &end\n");
-        fprintf(fp_sl, "&data mode=ascii, no_row_counts=1 &end\n");
-        fflush(fp_sl);
-        }
+    if (strength_log) {
+      strength_log = compose_filename(strength_log, run->rootname);
+      fp_sl = fopen_e(strength_log, "w", 0);
+      fprintf(fp_sl, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+      fprintf(fp_sl, "&column name=ElementName, type=string  &end\n");
+      fprintf(fp_sl, "&column name=ElementParameter, type=string  &end\n");
+      fprintf(fp_sl, "&column name=ElementOccurence, type=long  &end\n");
+      fprintf(fp_sl, "&column name=ParameterValue, type=double, units=\"1/m$a2$n\" &end\n");
+      fprintf(fp_sl, "&data mode=ascii, no_row_counts=1 &end\n");
+      fflush(fp_sl);
+    }
+    if (response_matrix_output) {
+      response_matrix_output = compose_filename(response_matrix_output, run->rootname);
+      fp_response = fopen_e(response_matrix_output, "w", 0);
+      fprintf(fp_response, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+      fprintf(fp_response, "&column name=FamilyName, type=string  &end\n");
+      fprintf(fp_response, "&column name=dnux/dK1L, type=double, units=m,  &end\n");
+      fprintf(fp_response, "&column name=dnuy/dK1L, type=double, units=m,  &end\n");
+      fprintf(fp_response, "&data mode=ascii, no_row_counts=1 &end\n");
+      fflush(fp_response);
+    }
+    if (correction_matrix_output) {
+      correction_matrix_output = compose_filename(correction_matrix_output, run->rootname);
+      fp_correction = fopen_e(correction_matrix_output, "w", 0);
+      fprintf(fp_correction, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+      fprintf(fp_correction, "&column name=FamilyName, type=string  &end\n");
+      fprintf(fp_correction, "&column name=dK1L/dnux, type=double, units=1/m,  &end\n");
+      fprintf(fp_correction, "&column name=dK1L/dnuy, type=double, units=1/m,  &end\n");
+      fprintf(fp_correction, "&data mode=ascii, no_row_counts=1 &end\n");
+      fflush(fp_correction);
+    }
 
     if (!tune->use_perturbed_matrix)
-      computeTuneCorrectionMatrix(run, beamline, tune, 1);
+      computeTuneCorrectionMatrix(run, NULL, beamline, tune, 1);
 }
 
-void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION *tune, long printout)
+void computeTuneCorrectionMatrix(RUN *run, VARY *control, LINE_LIST *beamline, TUNE_CORRECTION *tune, long printout)
 {
     MATRIX *C, *Ct, *CtC, *inv_CtC;
     VMATRIX *M;
     long i, count;
     double betax_L_sum, betay_L_sum;
     ELEMENT_LIST *context;
-    
+    long step;
+
     if (!(M=beamline->matrix) || !M->C || !M->R)
         bombElegant("something wrong with transfer map for beamline (setup_tune_correction)", NULL);
+
+    step = control ? control->i_step : 0;
 
     /* Solve dnu = C*dK1 for dK1 */
     m_alloc(&C, 2+tune->n_families, tune->n_families);
@@ -217,9 +252,18 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
 		fflush(stdout);
 		exitElegant(1);
 	      }
+              if (entity_description[context->type].flags&HAS_LENGTH)
+                tune->length[i] = ((QUAD*)context->p_elem)->length;
+              else
+                tune->length[i] = 1;
 	    }
-            betax_L_sum += context->twiss->betax*((QUAD*)context->p_elem)->length;
-            betay_L_sum += context->twiss->betay*((QUAD*)context->p_elem)->length;
+            if (context->pred && context->pred->twiss) {
+              betax_L_sum += (context->pred->twiss->betax + context->twiss->betax)/2*tune->length[i];
+              betay_L_sum += (context->pred->twiss->betay + context->twiss->betay)/2*tune->length[i];
+            } else {
+              betax_L_sum += context->twiss->betax*tune->length[i];
+              betay_L_sum += context->twiss->betay*tune->length[i];
+            }
             count++;
             }
         if (count==0) {
@@ -248,7 +292,15 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
         printf("%10s:    %22.15e     %22.15e\n", tune->name[i], C->a[0][i], C->a[1][i]);
       fflush(stdout);
     }
-    
+    if (fp_response) {
+      fprintf(fp_response, "%ld\n", step);
+      for (i=0; i<tune->n_families; i++)
+        fprintf(fp_response, "%s %22.15e %22.15e\n", 
+                tune->name[i], C->a[0][i]/tune->length[i], C->a[1][i]/tune->length[i]);
+      fprintf(fp_response, "\n");
+      fflush(fp_response);
+    }
+
     for (i=0; i<tune->n_families; i++)
       C->a[i+2][i] = tune->n_families>2?tune->dK1_weight:0;
     
@@ -264,7 +316,15 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
       printf("\n");
       fflush(stdout);
     }
-    
+    if (fp_correction) {
+      fprintf(fp_correction, "%ld\n", step);
+      for (i=0; i<tune->n_families; i++)
+        fprintf(fp_correction, "%s %22.15e %22.15e\n", 
+                tune->name[i], tune->T->a[i][0]*tune->length[i], tune->T->a[i][1]*tune->length[i]);
+      fprintf(fp_correction, "\n");
+      fflush(fp_correction);
+    }
+
     m_free(&C);
     m_free(&Ct);
     m_free(&CtC);
@@ -274,7 +334,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
     }
 
 
-long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, 
+long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, VARY *control, LINE_LIST *beamline, 
                         double *clorb, long do_closed_orbit, long step, long last_iteration)
 {
   VMATRIX *M;
@@ -359,7 +419,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     }
 
     if (tune->use_perturbed_matrix)
-      computeTuneCorrectionMatrix(run, beamline, tune, 0);
+      computeTuneCorrectionMatrix(run, control, beamline, tune, 0);
     m_zero(tune->dtune);
     tune->dtune->a[0][0] = dtunex;
     tune->dtune->a[1][0] = dtuney;
