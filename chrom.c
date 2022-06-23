@@ -30,6 +30,8 @@ double computeChromaticAlphaValue(double dR11, double dR12, double dR22, double 
 				 double phi1, double chrom, short periodic);
 
 static FILE *fp_sl = NULL;
+static FILE *fp_response = NULL;
+static FILE *fp_correction = NULL;
 static long alter_defined_values;
 static long verbosityLevel = 2;
 
@@ -42,6 +44,19 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     unsigned long unstable;
     
     log_entry("setup_chromaticity_correction");
+
+    if (fp_sl) {
+        fclose(fp_sl);
+        fp_sl = NULL;
+    }
+    if (fp_response) {
+      fclose(fp_response);
+      fp_response = NULL;
+    }
+    if (fp_correction) {
+      fclose(fp_correction);
+      fp_correction = NULL;
+    }
 
     cp_str(&sextupoles, "sf sd");
 
@@ -85,6 +100,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
                     nul, chrom->n_families);
     }
 
+    chrom->length = calloc(chrom->n_families, sizeof(*chrom->length));
 
     chrom->exclude = NULL;
     chrom->n_exclude = 0;
@@ -108,6 +124,44 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     chrom->exit_on_failure = exit_on_failure;
     if ((chrom->dK2_weight = dK2_weight)<0)
       chrom->dK2_weight = 0;
+
+#if USE_MPI
+    if (!writePermitted)
+       strength_log = response_matrix_output = correction_matrix_output = NULL;
+#endif
+
+    if (strength_log) {
+        strength_log = compose_filename(strength_log, run->rootname);
+        fp_sl = fopen_e(strength_log, "w", 0);
+        fprintf(fp_sl, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+        fprintf(fp_sl, "&column name=ElementName, type=string  &end\n");
+        fprintf(fp_sl, "&column name=ElementParameter, type=string  &end\n");
+        fprintf(fp_sl, "&column name=ElementOccurence, type=long  &end\n");
+        fprintf(fp_sl, "&column name=ParameterValue, type=double, units=\"1/m$a2$n\" &end\n");
+        fprintf(fp_sl, "&data mode=ascii, no_row_counts=1 &end\n");
+        fflush(fp_sl);
+        }
+
+    if (response_matrix_output) {
+      response_matrix_output = compose_filename(response_matrix_output, run->rootname);
+      fp_response = fopen_e(response_matrix_output, "w", 0);
+      fprintf(fp_response, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+      fprintf(fp_response, "&column name=FamilyName, type=string  &end\n");
+      fprintf(fp_response, "&column name=dxix/dK2L, type=double, units=m,  &end\n");
+      fprintf(fp_response, "&column name=dxiy/dK2L, type=double, units=m,  &end\n");
+      fprintf(fp_response, "&data mode=ascii, no_row_counts=1 &end\n");
+      fflush(fp_response);
+    }
+    if (correction_matrix_output) {
+      correction_matrix_output = compose_filename(correction_matrix_output, run->rootname);
+      fp_correction = fopen_e(correction_matrix_output, "w", 0);
+      fprintf(fp_correction, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
+      fprintf(fp_correction, "&column name=FamilyName, type=string  &end\n");
+      fprintf(fp_correction, "&column name=dK2L/dxix, type=double, units=1/m,  &end\n");
+      fprintf(fp_correction, "&column name=dK2L/dxiy, type=double, units=1/m,  &end\n");
+      fprintf(fp_correction, "&data mode=ascii, no_row_counts=1 &end\n");
+      fflush(fp_correction);
+    }
 
     if (!use_perturbed_matrix) {
       if (!beamline->twiss0 || !beamline->matrix) {
@@ -160,30 +214,14 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
       if (!(M=beamline->matrix) || !M->C || !M->R || !M->T)
         bombElegant("something wrong with transfer map for beamline (setup_chromaticity_correction)", NULL);
 
-      computeChromCorrectionMatrix(run, beamline, chrom);
+      computeChromCorrectionMatrix(run, beamline, chrom, -1);
     }
     
-#if USE_MPI
-    if (!writePermitted)
-       strength_log = NULL;
-#endif
-    if (strength_log) {
-        strength_log = compose_filename(strength_log, run->rootname);
-        fp_sl = fopen_e(strength_log, "w", 0);
-        fprintf(fp_sl, "SDDS1\n&parameter name=Step, type=long, description=\"Simulation step\" &end\n");
-        fprintf(fp_sl, "&column name=ElementName, type=string  &end\n");
-        fprintf(fp_sl, "&column name=ElementParameter, type=string  &end\n");
-        fprintf(fp_sl, "&column name=ElementOccurence, type=long  &end\n");
-        fprintf(fp_sl, "&column name=ParameterValue, type=double, units=\"1/m$a2$n\" &end\n");
-        fprintf(fp_sl, "&data mode=ascii, no_row_counts=1 &end\n");
-        fflush(fp_sl);
-        }
-
     log_exit("setup_chromaticity_correction");
     
 }
 
-void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom)
+void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom, long step)
 {    
     VMATRIX *M;
     double chromx, chromy;
@@ -244,6 +282,12 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
 	      K2 = SDDS_Realloc(K2, sizeof(*K2)*(max_count+=10));
 	    K2[count] = *K2ptr;
             *K2ptr += chrom->sextupole_tweek;
+            if (count==0) {
+              if (entity_description[context->type].flags&HAS_LENGTH)
+                chrom->length[i] = ((SEXT*)context->p_elem)->length;
+              else 
+                chrom->length[i] = 1;
+            }
             if (context->matrix) {
                 free_matrices(context->matrix);
                 free(context->matrix);
@@ -329,7 +373,15 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         printf("%10s:    %14.7e     %14.7e\n", chrom->name[i], C->a[0][i], C->a[1][i]);
       fflush(stdout);
     }
-    
+
+    if (fp_response) {
+      fprintf(fp_response, "%ld\n", step);
+      for (i=0; i<chrom->n_families; i++) 
+        fprintf(fp_response, "%s %22.15e %22.15e\n",
+                chrom->name[i], C->a[0][i]/chrom->length[i], C->a[1][i]/chrom->length[i]);
+      fflush(fp_response);
+    }
+
     for (i=0; i<chrom->n_families; i++)
       C->a[i+2][i] = chrom->n_families>2?chrom->dK2_weight:0;
     
@@ -347,7 +399,14 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
       printf("\n");
       fflush(stdout);
     }
-    
+    if (fp_correction) {
+      fprintf(fp_correction, "%ld\n", step);
+      for (i=0; i<chrom->n_families; i++) 
+        fprintf(fp_correction, "%s %22.15e %22.15e\n",
+                chrom->name[i], chrom->T->a[i][0]*chrom->length[i], chrom->T->a[i][1]*chrom->length[i]);
+      fflush(fp_correction);
+    }
+
     m_free(&C);
     m_free(&Ct);
     m_free(&CtC);
@@ -469,7 +528,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         }
 
         if (chrom->use_perturbed_matrix)
-          computeChromCorrectionMatrix(run, beamline, chrom);
+          computeChromCorrectionMatrix(run, beamline, chrom, step);
         m_zero(chrom->dchrom);
         chrom->dchrom->a[0][0] = dchromx;
         chrom->dchrom->a[1][0] = dchromy;

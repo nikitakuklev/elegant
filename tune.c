@@ -164,7 +164,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     
 #if USE_MPI
     if (!writePermitted)
-       strength_log = NULL;
+      strength_log = response_matrix_output = correction_matrix_output = NULL; 
 #endif
     if (strength_log) {
       strength_log = compose_filename(strength_log, run->rootname);
