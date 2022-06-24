@@ -3716,13 +3716,6 @@ char *beamBeamDistributionOption[N_BEAM_BEAM_DISTRIBUTIONS] = {
 LGBEND lgbend_example;
 /* canonically-integrated longitudinal-gradient rectangular bending magnet physical parameters */
 PARAMETER lgbend_param[N_LGBEND_PARAMS] = {
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&lgbend_example.length), NULL, 0.0, 0, "arc length (not chord length!)"},
-    {"XVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.xVertex), NULL, 0.0, 0, "x coordinate of vertex point"},
-    {"ZVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.zVertex), NULL, 0.0, 0, "z coordinate of vertex point"},
-    {"XENTRY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.xEntry), NULL, 0.0, 0, "x coordinate of nominal entry point"},
-    {"ZENTRY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.zEntry), NULL, 0.0, 0, "z coordinate of nominal entry point"},
-    {"XEXIT", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.xExit), NULL, 0.0, 0, "x coordinate of nominal exit point"},
-    {"ZEXIT", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.zExit), NULL, 0.0, 0, "z coordinate of nominal exit point"},
     {"CONFIGURATION", NULL, IS_STRING, 0, (long)((char *)&lgbend_example.configuration), NULL, 0.0, 0, "configuration file from straightDipoleFringeCalc"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.dx), NULL, 0.0, 0, "misalignment"},

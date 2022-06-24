@@ -1154,7 +1154,7 @@ extern char *entity_text[N_TYPES];
 #define N_BEAMBEAM_PARAMS 6
 #define N_CPICKUP_PARAMS 7
 #define N_CKICKER_PARAMS 14
-#define N_LGBEND_PARAMS 27
+#define N_LGBEND_PARAMS 21
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3628,10 +3628,6 @@ typedef struct {
 
 typedef struct {
   double length; /* arc length. It's actually set when the configuration file is read. */
-  /* These are typically read in from the configuration file */
-  double xVertex, zVertex;
-  double xEntry, zEntry;
-  double xExit, zExit;
   char *configuration;
   double tilt;
   double dx, dy, dz, eyaw, epitch, etilt;
@@ -3641,6 +3637,7 @@ typedef struct {
   short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
   short optimizeFse, compensateKn, verbose;
   /* for internal use only: */
+  double xVertex, zVertex, xEntry, zEntry, xExit, zExit; /* from configuration file */
   short initialized;
   long nSegments;
   double angle; /* total angle */
