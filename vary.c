@@ -189,6 +189,10 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
         fflush(stdout);
         exitElegant(1);
         }
+    if (entity_description[context->type].parameter[_control->varied_param[n_elements_to_vary]].flags&PARAM_IS_LOCKED)
+      bombElegantVA("Error: parameter %s of %s cannot be changed via vary_element\n",
+                    entity_description[context->type].parameter[_control->varied_param[n_elements_to_vary]].name,
+                    entity_name[context->type]);
     cp_str(&_control->item[n_elements_to_vary], item);
     cp_str(&_control->varied_quan_unit[n_elements_to_vary], 
         entity_description[_control->varied_type[n_elements_to_vary]].parameter[_control->varied_param[n_elements_to_vary]].unit);

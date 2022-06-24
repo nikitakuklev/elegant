@@ -239,6 +239,10 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
             exitElegant(1);
           continue;
         }
+        if (entity_description[eptr->type].parameter[iParam].flags&PARAM_IS_LOCKED)
+          bombElegantVA("Error: parameter %s of %s cannot be changed via alter_elements\n",
+                        entity_description[eptr->type].parameter[iParam].name,
+                        entity_name[eptr->type]);
         nMatches++;
         p_elem = eptr->p_elem;
         p_elem0 = eptr->p_elem0;

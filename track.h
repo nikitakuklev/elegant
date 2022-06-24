@@ -1163,6 +1163,7 @@ extern char *entity_text[N_TYPES];
 #define PARAM_XY_WAVEFORM      0x0004UL
 #define PARAM_IS_ALIAS         0x0008UL
 #define PARAM_IS_DEPRECATED    0x0010UL
+#define PARAM_IS_LOCKED        0x0020UL
 
 typedef struct {
     char *name;            /* parameter name */

@@ -319,6 +319,11 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
         fflush(stdout);
         exitElegant(1);
       }
+      if (entity_description[context->type].parameter[variables->varied_param[n_variables]].flags&PARAM_IS_LOCKED)
+        bombElegantVA("Error: parameter %s of %s cannot be changed via optimization_variable\n",
+                      entity_description[context->type].parameter[variables->varied_param[n_variables]].name,
+                      entity_name[context->type]);
+
       cp_str(&variables->item[n_variables], item);
       cp_str(&variables->varied_quan_unit[n_variables], 
              entity_description[context->type].parameter[variables->varied_param[n_variables]].unit);
@@ -542,6 +547,11 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
         fflush(stdout);
         exitElegant(1);
         }
+    if (entity_description[context->type].parameter[covariables->varied_param[n_covariables]].flags&PARAM_IS_LOCKED)
+        bombElegantVA("Error: parameter %s of %s cannot be changed via optimization_covariable\n",
+                      entity_description[context->type].parameter[covariables->varied_param[n_covariables]].name,
+                      entity_name[context->type]);
+      
     cp_str(&covariables->item[n_covariables], item);
     cp_str(&covariables->varied_quan_unit[n_covariables], 
         entity_description[context->type].parameter[covariables->varied_param[n_covariables]].unit);

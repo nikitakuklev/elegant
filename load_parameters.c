@@ -535,6 +535,13 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           bombElegantVA("Attempt to load parameter that element lacks: %s", warningText);
         continue;
       }
+      if (entity_description[eptr->type].parameter[param].flags&PARAM_IS_LOCKED) {
+        printWarningWithContext(entity_name[eptr->type], 
+                                 entity_description[eptr->type].parameter[param].name,
+                                 "load_parameters: ignoring load_parameter attempt for locked parameter",
+                                 NULL);
+        continue;
+      }
       mode_flags = 0;
       if (mode) 
         while ((ptr=get_token_t(mode[j], " \t,+"))) {
