@@ -3716,6 +3716,7 @@ char *beamBeamDistributionOption[N_BEAM_BEAM_DISTRIBUTIONS] = {
 LGBEND lgbend_example;
 /* canonically-integrated longitudinal-gradient rectangular bending magnet physical parameters */
 PARAMETER lgbend_param[N_LGBEND_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&lgbend_example.length), NULL, 0.0, 0, "arc length (ignored)"},
     {"CONFIGURATION", NULL, IS_STRING, 0, (long)((char *)&lgbend_example.configuration), NULL, 0.0, 0, "configuration file from straightDipoleFringeCalc"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lgbend_example.dx), NULL, 0.0, 0, "misalignment"},
