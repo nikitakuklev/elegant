@@ -1,8 +1,7 @@
 This element provides a symplectic straight-pole, bending magnet with the exact
-Hamiltonian in Cartesian coordinates.  
+Hamiltonian in Cartesian coordinates \cite{Borland-LS356}.
 The quadrupole, sextupole, and other multipole terms are defined in Cartesian coordinates.
-The magnet at present is restricted to having rectangular ends with symmetric entry and
-exit.
+The magnet at present is restricted to having rectangular ends.
 This is quite different from \verb|CSBEND|, where the edge angles are user-defined and
 where the field expansion is in curvilinear coordinates.
 Strictly speaking, \verb|CSBEND| is only valid when the dipole is built with curved,
@@ -36,11 +35,20 @@ Note also that the optimization is performed with all error-defining parameters
 
 {\bf Edge angles and edge effects} 
 
-The edge angle treatment in \verb|CCBEND| is relatively simple, consisting of a 
+The user may specify edge multipoles using the \verb|EDGE_MULTIPOLE| parameter. In addition, 
+the \verb|CCBEND| element supports two fringe models, selected via the \verb|FRINGEMODEL| parameter, 
+which may have a value of 0 (default) or 1.
+\begin{itemize}
+\item[0] --- The default edge angle treatment in \verb|CCBEND| is relatively simple, consisting of a 
 vertical focusing effect with momentum dependence to all orders.
 Also included are edge pseudo-sextupoles (due to the body $K_1$ term) and
 pseudo-octupoles (due to the body $K_2$ term).
-The user may also specify edge multipoles using the \verb|EDGE_MULTIPOLE| parameter.
+\item[1] --- This model is based on theoretical work and code by R. Lindberg, and includes soft-fringe
+  effects via a series of fringe integrals. The integrals can be computed with the companion program
+  \verb|straightDipoleFringeCalc| from a generalized gradient expansion (GGE). The  GGE can be
+  created using either \verb|computeCBGGE| (for cylindrical-boundary data) or \verb|computeRBGGE|
+  for (rectangular-boundary data). There is an example in the {\tt elegant} examples collection.
+\end{itemize}
 
 {\bf Multipole errors}
 
