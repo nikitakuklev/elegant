@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Make the generalized gradient expansion for Q5
+
+fundamental=0
+multipoles=6
+rLimit=0.010
+
+magnet=Q5
+file=Q5-cylinderFields.sdds
+
+sddsprocess $file -pipe=out -define=col,zc,z,units=m \
+    | sddscombine -pipe=in  -merge ${file}c 
+
+root=Q5
+computeCBGGE -input=${file}c,z=zc,phi=phi,Brho=Br,rho=R \
+    -normal=$root.gge -derivatives=10 -multipoles=$multipoles -fundamental=$fundamental \
+    -autotune=minimize=rms,verbose,logfile=$root.ggeLog,incr
+\rm ${file}c
+
+sddsplot -column=MaximumError -graph=sym,fill $root.ggeLog -title=@OptimumLabel -mode=linlog
+
+sddsplot -column=z,CnmS0 $root.gge -split=page -sep=page -title=@m,edit=i/m:/

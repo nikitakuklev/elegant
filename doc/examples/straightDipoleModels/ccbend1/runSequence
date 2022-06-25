@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Make the generalized gradient expansion, centered on the quadrupole axis in this case
+makeGGE
+
+# Use GGE to adjust the horizontal offset to get the desired bending angle, then compute the transport matrix
+mpiexec -np 18 Pelegant ggeOptMatrix.ele
+
+# Compute the fringe integrals etc.
+angle=-1.157494675584733e-03
+dx=`sddsprocess ggeOptMatrix.param -pipe=out -match=col,ElementParameter=DX | sdds2stream -pipe -column=ParameterValue`
+straightDipoleFringeCalc -gge=Q5.gge Q5fringe.param -elementName=Q5 \
+    -ccbend=pCentral=`rpnl 6e3 mev /`,bendAngle=$angle,xEntry=$dx
+
+# Load fringe integrals etc. and compute the matrix using CCBEND
+elegant ccbend.ele
+
+# Compare R matrices
+sddsconvert ggeOptMatrix.mat -pipe=out -retain=col,R?? \
+    | sddstranspose -pipe=in -oldColumnNames=Element ggeOptMatrix.matR
+sddsconvert ccbend.mat -pipe=out -retain=col,R?? \
+    | sddstranspose -pipe -oldColumnNames=Element \
+    | sddsconvert -pipe -rename=col,Column=MatrixElement \
+    | sddsxref ggeOptMatrix.matR -pipe -take=Column -rename=col,Column=ReferenceValue \
+    | sddsprocess -pipe=in Rdifference.sdds -define=col,delta,"MatrixElement ReferenceValue - abs 1e-16 +"
+\rm ggeOptMatrix.matR
+
+sddsplot -graph=sym,scale=2 -layout=1,2 -join=x  \
+    -column=Element,ReferenceValue Rdifference.sdds -end \
+    -column=Element,delta Rdifference.sdds -mode=linlog 
+
+# Compare T matrices
+sddsconvert ggeOptMatrix.mat -pipe=out -retain=col,T??? \
+    | sddstranspose -pipe=in -oldColumnNames=Element ggeOptMatrix.matT
+sddsconvert ccbend.mat -pipe=out -retain=col,T??? \
+    | sddstranspose -pipe -oldColumnNames=Element \
+    | sddsconvert -pipe -rename=col,Column=MatrixElement \
+    | sddsxref ggeOptMatrix.matT -pipe -take=Column -rename=col,Column=ReferenceValue \
+    | sddsprocess -pipe=in Tdifference.sdds -define=col,delta,"MatrixElement ReferenceValue - abs 1e-16 +"
+\rm ggeOptMatrix.matT
+
+sddsplot -graph=sym,scale=2 -layout=1,2 -join=x  \
+    -column=Element,ReferenceValue Tdifference.sdds -end \
+    -column=Element,delta Tdifference.sdds -mode=linlog 
+
