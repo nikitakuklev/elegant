@@ -4,7 +4,9 @@
 makeGGE
 
 # Use GGE to adjust the horizontal offset to get the desired bending angle, then compute the transport matrix
-mpiexec -np 18 Pelegant ggeOptMatrix.ele
+np=`nproc`
+np=$((np-2))
+mpiexec -np $np Pelegant ggeOptMatrix.ele
 
 # Compute the fringe integrals etc.
 angle=-1.157494675584733e-03

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-\rm Q5fringe.param Q5.gge Q5.ggeLog Q5.param 
-\rm ccbend.mat ccbend.matR ccbend.mpr
-\rm ggeOptMatrix.fin ggeOptMatrix.mat ggeOptMatrix.mpr ggeOptMatrix.param
-\rm Q5fringe.param Q5.gge Q5.ggeLog Q5.traj
-\rm Rdifference.sdds Tdifference.sdds
+\rm ccbend.mat ccbend.mpr ggeOptMatrix.fin ggeOptMatrix.mat ggeOptMatrix.mpr ggeOptMatrix.param
+\rm Q5fringe.param Q5.gge Q5.ggeLog Rdifference.sdds Tdifference.sdds
+
