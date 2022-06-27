@@ -1,0 +1,5 @@
+#!/bin/bash
+
+\rm AM1.config AM1.edge
+\rm ggeMatrix.mat ggeMatrix.mpr ggeOpt.fin ggeOpt.param ggeTraj.traj
+\rm lgbendMatrix.mat lgbendMatrix.mpr R-matComp.sdds T-matComp.sdds

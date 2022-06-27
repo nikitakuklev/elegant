@@ -1,0 +1,29 @@
+#!/bin/bash
+
+nw=$((`nproc`-2))
+
+# Optimize strength and DZ of the GGE fields to improve trajectory error
+mpiexec -np $nw Pelegant ggeOpt.ele
+
+# Create GGE trajectory file
+elegant ggeTraj.ele 
+
+# Add some necessary information to the GGE trajectory file
+sddsprocess ggeTraj.traj -define=param,nMagnetSegments,5,type=long \
+            -define=param,zReference1,-1,units=m -define=param,zReference2,-0.82,units=m \
+            -define=param,zReference3,-0.53,units=m -define=param,zReference4,-0.08,units=m \
+            -define=param,zReference5,0.54,units=m
+
+# Compute segment properties, including fringe integrals.
+straightDipoleFringeCalc -gge=AM1.gge AM1.config -elementName=AM1 \
+                         -lgbend=traj=ggeTraj.traj,edgeOutput=AM1.edge,bendAngle=2.857159034923357e-02 
+
+# Compute the transport matrix from segment properties using LGBEND element
+mpiexec -np $nw Pelegant lgbendMatrix.ele
+
+# Compute the transport matrix from GGE model
+mpiexec -np $nw Pelegant ggeMatrix.ele 
+
+# Compare transport matrices
+compareMatrices 
+

@@ -1,0 +1,25 @@
+&global_settings
+	tracking_matrix_step_factor = 10
+	tracking_matrix_points = 7
+&end
+
+&run_setup
+	lattice = gge.lte
+	p_central_mev = 6e3
+&end
+
+&load_parameters
+	filename = ggeOpt.param,
+	change_defined_values = 1
+&end
+
+&matrix_output
+	printout = %s.mpr
+	printout_order = 2
+	printout_format = "%13.6e "
+	print_element_data = 0
+	SDDS_output = %s.mat
+	SDDS_output_order = 2
+	full_matrix_only = 1
+&end
+
