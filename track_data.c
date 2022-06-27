@@ -221,6 +221,7 @@ char *entity_text[N_TYPES] = {
     "An element to provide kicks from another beam",
     "Optical stochastic cooling pickup element---records particle position",
     "Optical stochastic cooling kicker element---applies a kick in particle momentum",
+    "A multi-segment straight longitudinal dipole magnet"
     } ;
 
 QUAD quad_example;
