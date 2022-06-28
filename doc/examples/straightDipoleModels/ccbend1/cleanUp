@@ -1,5 +1,0 @@
-#!/bin/bash
-
-\rm ccbend.mat ccbend.mpr ggeOptMatrix.fin ggeOptMatrix.mat ggeOptMatrix.mpr ggeOptMatrix.param
-\rm Q5fringe.param Q5.gge Q5.ggeLog Rdifference.sdds Tdifference.sdds
-

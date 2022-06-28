@@ -1,3 +1,0 @@
-AM1: lgbend,configuration="AM1.config",verbose=11,n_slices=20,integration_order=6,optimize_fse=1,compensateKn=1
-BL: line=(AM1)
-
