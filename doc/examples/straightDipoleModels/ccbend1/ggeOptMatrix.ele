@@ -1,0 +1,53 @@
+&global_settings
+	tracking_matrix_step_factor = 10
+	tracking_matrix_points = 7
+&end
+
+&run_setup
+	lattice = gge.lte
+	p_central_mev = 6e3
+	final = %s.fin
+	parameters = %s.param
+&end
+
+&run_control &end
+
+&optimization_setup
+	equation = "Cx abs Cxp abs +"
+	n_restarts = 3
+	n_evaluations = 500
+	n_passes = 3
+	log_file = /dev/tty
+	verbose = 0
+	target = 1e-9
+&end
+
+&optimization_variable
+	name = Q5, item = DX, lower_limit = -10e-3, upper_limit = 10e-3, step_size = 1e-4
+&end
+
+&bunched_beam
+&end
+
+&optimize &end
+
+&run_setup
+	lattice = gge.lte
+	p_central_mev = 6e3
+&end
+
+&load_parameters
+	filename = %s.param,
+	change_defined_values = 1
+&end
+
+&matrix_output
+	printout = %s.mpr
+	printout_order = 2
+	printout_format = "%13.6e "
+	print_element_data = 0
+	SDDS_output = %s.mat
+	SDDS_output_order = 2
+	full_matrix_only = 1
+&end
+
