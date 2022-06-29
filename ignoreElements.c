@@ -19,22 +19,19 @@ typedef struct {
 static IGNORE_ELEMENT_SPEC *ignoreElementsSpec = NULL;
 static long ignoreElementsSpecs = 0;
 
-long countIgnoreElementsSpecs(long completely0)
-{
+long countIgnoreElementsSpecs(long completely0) {
   long count = 0;
   long i;
-  for (i=0; i<ignoreElementsSpecs; i++) {
-    if (ignoreElementsSpec[i].completely==completely0) 
+  for (i = 0; i < ignoreElementsSpecs; i++) {
+    if (ignoreElementsSpec[i].completely == completely0)
       count++;
   }
   return count;
 }
 
-void addIgnoreElementsSpec(char *name, char *type, char *exclude, long completely0)
-{
-  if (!(ignoreElementsSpec 
-	= SDDS_Realloc(ignoreElementsSpec,
-		       sizeof(*ignoreElementsSpec)*(ignoreElementsSpecs+1))))
+void addIgnoreElementsSpec(char *name, char *type, char *exclude, long completely0) {
+  if (!(ignoreElementsSpec = SDDS_Realloc(ignoreElementsSpec,
+                                          sizeof(*ignoreElementsSpec) * (ignoreElementsSpecs + 1))))
     bombElegant("memory allocation failure", NULL);
   ignoreElementsSpec[ignoreElementsSpecs].name = NULL;
   ignoreElementsSpec[ignoreElementsSpecs].type = NULL;
@@ -47,12 +44,11 @@ void addIgnoreElementsSpec(char *name, char *type, char *exclude, long completel
       (exclude &&
        !SDDS_CopyString(&ignoreElementsSpec[ignoreElementsSpecs].exclude, exclude)))
     bombElegant("memory allocation failure", NULL);
-  
+
   ignoreElementsSpecs++;
 }
 
-void clearIgnoreElementsSpecs() 
-{
+void clearIgnoreElementsSpecs() {
   while (ignoreElementsSpecs--) {
     if (ignoreElementsSpec[ignoreElementsSpecs].name)
       free(ignoreElementsSpec[ignoreElementsSpecs].name);
@@ -65,17 +61,16 @@ void clearIgnoreElementsSpecs()
   ignoreElementsSpec = NULL;
 }
 
-long ignoreElement(char *name, long type, long completelyOnly) 
-{
+long ignoreElement(char *name, long type, long completelyOnly) {
   long i;
-  for (i=0; i<ignoreElementsSpecs; i++) {
+  for (i = 0; i < ignoreElementsSpecs; i++) {
     if (ignoreElementsSpec[i].exclude && wild_match(name, ignoreElementsSpec[i].exclude))
       continue;
     if (ignoreElementsSpec[i].name && !wild_match(name, ignoreElementsSpec[i].name))
       continue;
     if (ignoreElementsSpec[i].type && !wild_match(entity_name[type], ignoreElementsSpec[i].type))
       continue;
-    if (ignoreElementsSpec[i].completely!=completelyOnly)
+    if (ignoreElementsSpec[i].completely != completelyOnly)
       continue;
     return 1;
   }
@@ -84,16 +79,16 @@ long ignoreElement(char *name, long type, long completelyOnly)
 
 #include "ignoreElements.h"
 
-void setupIgnoreElements(NAMELIST_TEXT *nltext, RUN *run, 
-			 LINE_LIST *beamline)
-{
+void setupIgnoreElements(NAMELIST_TEXT *nltext, RUN *run,
+                         LINE_LIST *beamline) {
   long i;
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  if (processNamelist(&ignore_elements, nltext)==NAMELIST_ERROR)
+  if (processNamelist(&ignore_elements, nltext) == NAMELIST_ERROR)
     bombElegant(NULL, NULL);
-  if (echoNamelists) print_namelist(stdout, &ignore_elements);
+  if (echoNamelists)
+    print_namelist(stdout, &ignore_elements);
 
   if (clear_all) {
     clearIgnoreElementsSpecs();
@@ -112,10 +107,10 @@ void setupIgnoreElements(NAMELIST_TEXT *nltext, RUN *run,
     str_toupper(type);
     if (has_wildcards(type) && strchr(type, '-'))
       type = expand_ranges(type);
-    for (i=0; i<N_TYPES; i++)
+    for (i = 0; i < N_TYPES; i++)
       if (wild_match(entity_name[i], type))
-	break;
-    if (i==N_TYPES) {
+        break;
+    if (i == N_TYPES) {
       fprintf(stderr, "type pattern %s does not match any known type", type);
       exitElegant(1);
     }
@@ -125,7 +120,6 @@ void setupIgnoreElements(NAMELIST_TEXT *nltext, RUN *run,
     if (has_wildcards(exclude) && strchr(exclude, '-'))
       exclude = expand_ranges(exclude);
   }
-  
+
   addIgnoreElementsSpec(name, type, exclude, completely);
 }
-

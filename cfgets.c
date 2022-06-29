@@ -21,28 +21,27 @@
 #include "track.h"
 #include <ctype.h>
 #if defined(_WIN32)
-#include <stdlib.h>
+#  include <stdlib.h>
 #else
-#if defined(UNIX) && defined(GNU_C)
+#  if defined(UNIX) && defined(GNU_C)
 long toupper(char c);
 long tolower(char c);
-#endif
+#  endif
 #endif
 
 void delete_spaces(char *s);
 void str_to_upper_quotes(char *s);
 char *cfgets1(char *s, long n, FILE *fpin, long strip, long start);
 
-void strip_stray_comment(char *s) 
-{
+void strip_stray_comment(char *s) {
   char *ptr;
   short inQuote = 0;
   ptr = s;
   while (*ptr) {
-    if (*ptr=='"') {
+    if (*ptr == '"') {
       inQuote = !inQuote;
     } else {
-      if (!inQuote && *ptr=='!') {
+      if (!inQuote && *ptr == '!') {
         *ptr = 0;
         return;
       }
@@ -51,25 +50,23 @@ void strip_stray_comment(char *s)
   }
 }
 
-char *cfgets(char *s, long n, FILE *fpin)
-{
+char *cfgets(char *s, long n, FILE *fpin) {
   s[0] = 0;
   if (!cfgets1(s, n, fpin, 1, 1))
     return NULL;
-  if (s[0]!='%') {
+  if (s[0] != '%') {
     str_to_upper_quotes(s);
   }
   return s;
 }
 
-char *cfgets1(char *s, long n, FILE *fpin, long strip, long start)
-{
+char *cfgets1(char *s, long n, FILE *fpin, long strip, long start) {
   register long l;
 
   while (fgets(s, n, fpin)) {
-    if (start && s[0]=='%')
+    if (start && s[0] == '%')
       strip = 0;
-    if (s[0]=='!')
+    if (s[0] == '!')
       continue;
     start = 0;
     chop_nl(s);
@@ -77,58 +74,50 @@ char *cfgets1(char *s, long n, FILE *fpin, long strip, long start)
       delete_spaces(s);
     strip_stray_comment(s);
     l = strlen(s);
-    while (l!=0 && s[l]<27)
+    while (l != 0 && s[l] < 27)
       l--;
-    if (s[l]=='&') {
+    if (s[l] == '&') {
       s[l] = 0;
-      cfgets1(s+l, n-l, fpin, strip, 0);
-      return(s);
-    }
-    else {
-      return(s);
+      cfgets1(s + l, n - l, fpin, strip, 0);
+      return (s);
+    } else {
+      return (s);
     }
   }
   return NULL;
 }
 
+void delete_spaces(char *s) {
+  char *ptr, *ptr0;
+  ptr0 = s;
+  while (*s) {
+    if (*s == '"' && (ptr0 == s || *(s - 1) != '\\')) {
+      s++;
+      while (*s && (*s != '"' || *(s - 1) == '\\'))
+        s++;
+      if (*s == '"' && *(s - 1) != '\\')
+        s++;
+    } else if (*s == ' ' || *s == '\011') {
+      ptr = s++;
+      while (*s == ' ' || *s == '\011')
+        s++;
+      strcpy_ss(ptr, s);
+      s = ptr;
+    } else
+      s++;
+  }
+}
 
-
-void delete_spaces(char *s)
-{
-    char *ptr, *ptr0;
-    ptr0 = s;
-    while (*s) {
-        if (*s=='"' && (ptr0==s || *(s-1)!='\\')) {
-            s++;
-            while (*s && (*s!='"' || *(s-1)=='\\'))
-                s++;
-            if (*s=='"' && *(s-1)!='\\')
-                s++;
-            }
-        else if (*s==' ' || *s=='\011') {
-            ptr = s++;
-            while (*s==' ' || *s=='\011')
-                s++;
-            strcpy_ss(ptr, s);
-            s = ptr;
-            }
-        else
-            s++;
-        }
-    }
-
-void str_to_upper_quotes(char *s)
-{
+void str_to_upper_quotes(char *s) {
   char *ptr0;
   ptr0 = s;
   if (!s)
     return;
   while (*s) {
-    if (*s=='"' && (ptr0==s || *(s-1)!='\\')) {
-      while (*++s && (*s!='"' || *(s-1)=='\\'))
+    if (*s == '"' && (ptr0 == s || *(s - 1) != '\\')) {
+      while (*++s && (*s != '"' || *(s - 1) == '\\'))
         ;
-    }
-    else 
+    } else
       *s = toupper(*s);
     s++;
   }

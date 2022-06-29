@@ -14,64 +14,61 @@
 #include "mdb.h"
 #include "track.h"
 
-ELEMENT_LIST *find_element(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LIST *elem)
-{
-    ELEMENT_LIST *eptr;
+ELEMENT_LIST *find_element(char *elem_name, ELEMENT_LIST **context, ELEMENT_LIST *elem) {
+  ELEMENT_LIST *eptr;
 
-    log_entry("find_element");
-    if (!elem_name)
-        bombElegant("elem_name is NULL (find_element)", NULL);
-    if (!elem)
-        bombElegant("elem is NULL (find_element)", NULL);
+  log_entry("find_element");
+  if (!elem_name)
+    bombElegant("elem_name is NULL (find_element)", NULL);
+  if (!elem)
+    bombElegant("elem is NULL (find_element)", NULL);
 
-    if (!context || *context==NULL)
-        eptr = elem;
-    else
-        eptr = (*context)->succ;
-    while (eptr && strcmp(eptr->name, elem_name)!=0)
-        eptr = eptr->succ;
+  if (!context || *context == NULL)
+    eptr = elem;
+  else
+    eptr = (*context)->succ;
+  while (eptr && strcmp(eptr->name, elem_name) != 0)
+    eptr = eptr->succ;
 
-    log_exit("find_element");
-    if (context)
-      return *context=eptr;
-    else
-      return eptr;
-    }
-
-ELEMENT_LIST *find_element_hash(char *elem_name, long occurence, ELEMENT_LIST **context,  ELEMENT_LIST *elem)
-{
-    ELEMENT_LIST *eptr;
-    static char occurence_s[8], name_occurence[1024];
-
-    log_entry("find_element");
-    if (!elem_name)
-        bombElegant("elem_name is NULL (find_element)", NULL);
-    if (!elem)
-        bombElegant("elem is NULL (find_element)", NULL);
-
-    if (!context || *context==NULL)
-        eptr = elem;
-    else
-        eptr = (*context)->succ;
-
-    sprintf(occurence_s, "#%ld", occurence);
-    strcpy(name_occurence, elem_name);
-    strcat(name_occurence, occurence_s);
-    /* use hash table */
-    if(hfind(load_hash, name_occurence, strlen(name_occurence)))
-      eptr = (ELEMENT_LIST*) hstuff(load_hash);
-    else 
-      eptr = NULL;
-  
-    log_exit("find_element");
-    if (context)
-      return *context=eptr;
-    else
-      return eptr;
+  log_exit("find_element");
+  if (context)
+    return *context = eptr;
+  else
+    return eptr;
 }
 
-ELEMENT_LIST *find_element_index(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LIST *elem, long *index)
-{
+ELEMENT_LIST *find_element_hash(char *elem_name, long occurence, ELEMENT_LIST **context, ELEMENT_LIST *elem) {
+  ELEMENT_LIST *eptr;
+  static char occurence_s[8], name_occurence[1024];
+
+  log_entry("find_element");
+  if (!elem_name)
+    bombElegant("elem_name is NULL (find_element)", NULL);
+  if (!elem)
+    bombElegant("elem is NULL (find_element)", NULL);
+
+  if (!context || *context == NULL)
+    eptr = elem;
+  else
+    eptr = (*context)->succ;
+
+  sprintf(occurence_s, "#%ld", occurence);
+  strcpy(name_occurence, elem_name);
+  strcat(name_occurence, occurence_s);
+  /* use hash table */
+  if (hfind(load_hash, name_occurence, strlen(name_occurence)))
+    eptr = (ELEMENT_LIST *)hstuff(load_hash);
+  else
+    eptr = NULL;
+
+  log_exit("find_element");
+  if (context)
+    return *context = eptr;
+  else
+    return eptr;
+}
+
+ELEMENT_LIST *find_element_index(char *elem_name, ELEMENT_LIST **context, ELEMENT_LIST *elem, long *index) {
   ELEMENT_LIST *eptr;
 
   if (!elem_name)
@@ -79,68 +76,63 @@ ELEMENT_LIST *find_element_index(char *elem_name,  ELEMENT_LIST **context,  ELEM
   if (!elem)
     bombElegant("elem is NULL (find_element)", NULL);
 
-  if (!context || *context==NULL) {
+  if (!context || *context == NULL) {
     *index = 0;
     eptr = elem;
-  }
-  else {
+  } else {
     *index += 1;
     eptr = (*context)->succ;
   }
-  while (eptr && strcmp(eptr->name, elem_name)!=0) {
+  while (eptr && strcmp(eptr->name, elem_name) != 0) {
     *index += 1;
     eptr = eptr->succ;
   }
   if (!eptr)
     *index = -1;
   if (context)
-    return *context=eptr;
+    return *context = eptr;
   else
     return eptr;
 }
 
+ELEMENT_LIST *wfind_element(char *elem_name, ELEMENT_LIST **context, ELEMENT_LIST *elem) {
+  ELEMENT_LIST *eptr;
 
-ELEMENT_LIST *wfind_element(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LIST *elem)
-{
-    ELEMENT_LIST *eptr;
+  log_entry("wfind_element");
+  if (!elem_name)
+    bombElegant("elem_name is NULL (wfind_element)", NULL);
+  if (!elem)
+    bombElegant("elem is NULL (wfind_element)", NULL);
 
-    log_entry("wfind_element");
-    if (!elem_name)
-        bombElegant("elem_name is NULL (wfind_element)", NULL);
-    if (!elem)
-        bombElegant("elem is NULL (wfind_element)", NULL);
+  if (!context || *context == NULL)
+    eptr = elem;
+  else
+    eptr = (*context)->succ;
+  while (eptr && !wild_match(eptr->name, elem_name))
+    eptr = eptr->succ;
 
-    if (!context || *context==NULL)
-        eptr = elem;
-    else
-        eptr = (*context)->succ;
-    while (eptr && !wild_match(eptr->name, elem_name))
-        eptr = eptr->succ;
+  log_exit("wfind_element");
+  if (context)
+    return *context = eptr;
+  else
+    return eptr;
+}
 
-    log_exit("wfind_element");
-    if (context)
-      return *context=eptr;
-    else
-      return eptr;
+long confirm_parameter(char *item_name, long type) {
+  long i;
+  PARAMETER *param;
+
+  log_entry("confirm_parameter");
+
+  if (!item_name)
+    bombElegant("item_name is NULL (confirm_parameter)", NULL);
+
+  param = entity_description[type].parameter;
+  for (i = 0; i < entity_description[type].n_params; i++)
+    if (strcmp(item_name, param[i].name) == 0) {
+      log_exit("confirm_parameter");
+      return (i);
     }
-
-long confirm_parameter(char *item_name, long type)
-{
-    long i;
-    PARAMETER *param;
-
-    log_entry("confirm_parameter");
-
-    if (!item_name)
-        bombElegant("item_name is NULL (confirm_parameter)", NULL);
-    
-    param = entity_description[type].parameter;
-    for (i=0; i<entity_description[type].n_params; i++) 
-        if (strcmp(item_name, param[i].name)==0) {
-            log_exit("confirm_parameter");
-            return(i);
-            }
-    log_exit("confirm_parameter");
-    return(-1);
-    }
-
+  log_exit("confirm_parameter");
+  return (-1);
+}

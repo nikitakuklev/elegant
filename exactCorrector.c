@@ -17,17 +17,15 @@
 #include "track.h"
 
 void computeTotalSteeringMultipoleErrors(MULTIPOLE_DATA *steeringMult, double sysFactor,
-					 MULTIPOLE_DATA *randomMult, double ranFactor,
-					 MULTIPOLE_DATA *totalMult,
-					 char *name);
+                                         MULTIPOLE_DATA *randomMult, double ranFactor,
+                                         MULTIPOLE_DATA *totalMult,
+                                         char *name);
 
 int applySteeringMultipoleKicks(
-                                double *coord,
-                                double xkick,
-                                double ykick,
-                                MULTIPOLE_DATA *multData
-                                )
-{
+  double *coord,
+  double xkick,
+  double ykick,
+  MULTIPOLE_DATA *multData) {
   long imult, maxOrder;
   double denom, qx, qy, delta;
   double *xpow, *ypow;
@@ -35,41 +33,40 @@ int applySteeringMultipoleKicks(
   if (!xkick && !ykick)
     return 1;
 
-  denom = sqrt(1+sqr(coord[1])+sqr(coord[3]));
+  denom = sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
   delta = coord[5];
-  qx = (1+delta)*coord[1]/denom;
-  qy = (1+delta)*coord[3]/denom;
+  qx = (1 + delta) * coord[1] / denom;
+  qy = (1 + delta) * coord[3] / denom;
 
   maxOrder = findMaximumOrder(-1, -1, multData, NULL, NULL);
-  xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
-  ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
+  xpow = tmalloc(sizeof(*xpow) * (maxOrder + 1));
+  ypow = tmalloc(sizeof(*ypow) * (maxOrder + 1));
   fillPowerArray(coord[0], xpow, maxOrder);
   fillPowerArray(coord[2], ypow, maxOrder);
 
-  for (imult=0; imult<multData->orders; imult++) {
+  for (imult = 0; imult < multData->orders; imult++) {
     if (xkick)
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow,
-                                      multData->order[imult], 
-                                      multData->KnL[imult]*xkick, 0);
+                                      multData->order[imult],
+                                      multData->KnL[imult] * xkick, 0);
     if (ykick)
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow,
-                                      multData->order[imult], 
-                                      multData->JnL[imult]*ykick, 1);
+                                      multData->order[imult],
+                                      multData->JnL[imult] * ykick, 1);
   }
-  if ((denom=sqr(1+delta)-sqr(qx)-sqr(qy))<=0)
+  if ((denom = sqr(1 + delta) - sqr(qx) - sqr(qy)) <= 0)
     return 0;
   denom = sqrt(denom);
-  coord[1] = qx/denom;
-  coord[3] = qy/denom;
-  
+  coord[1] = qx / denom;
+  coord[3] = qy / denom;
+
   free(xpow);
   free(ypow);
 
   return 1;
 }
 
-long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr, double Po, double **accepted, double z_start, double *sigmaDelta2)
-{
+long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST *eptr, double Po, double **accepted, double z_start, double *sigmaDelta2) {
   long i_part, i_top;
   double xkick, ykick, kick, tilt, length, *coord, rho0, theta0, rho, theta, alpha, arg;
   double dx = 0, dy = 0, dz = 0;
@@ -82,16 +79,16 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
   short lost;
 
   pePtr = eptr->p_elem;
-  
+
   xkick = ykick = kick = tilt = length = 0;
   isr = sr = 0;
   multData = NULL;
 
   switch (eptr->type) {
   case T_EHCOR:
-    ehcor = (EHCOR*) pePtr;
+    ehcor = (EHCOR *)pePtr;
     length = ehcor->length;
-    xkick = ehcor->kick*ehcor->calibration;
+    xkick = ehcor->kick * ehcor->calibration;
     tilt = ehcor->tilt;
     isr = ehcor->isr;
     sr = ehcor->synchRad;
@@ -104,25 +101,25 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
     multData = &(ehcor->steeringMultipoleData);
     if (ehcor->randomMultipoles) {
       if (!ehcor->randomMultipoleData.initialized) {
-	if (!ehcor->steeringMultipoles) 
-	  bombElegantVA("Error: must give STEERING_MULTIPOLES with RANDOM_MULTIPOLES for EHKICK %s\n", 
-			eptr->name);
-	readErrorMultipoleData(&(ehcor->randomMultipoleData), ehcor->randomMultipoles, 2);
+        if (!ehcor->steeringMultipoles)
+          bombElegantVA("Error: must give STEERING_MULTIPOLES with RANDOM_MULTIPOLES for EHKICK %s\n",
+                        eptr->name);
+        readErrorMultipoleData(&(ehcor->randomMultipoleData), ehcor->randomMultipoles, 2);
       }
       if (!ehcor->multipolesRandomized) {
-	/* generate instance of random multipoles, sum to make total */
-	computeTotalSteeringMultipoleErrors(&(ehcor->steeringMultipoleData), ehcor->steeringMultipoleFactor,
-					    &(ehcor->randomMultipoleData), ehcor->randomMultipoleFactor,
-					    &(ehcor->totalMultipoleData), eptr->name);
-	ehcor->multipolesRandomized = 1;
+        /* generate instance of random multipoles, sum to make total */
+        computeTotalSteeringMultipoleErrors(&(ehcor->steeringMultipoleData), ehcor->steeringMultipoleFactor,
+                                            &(ehcor->randomMultipoleData), ehcor->randomMultipoleFactor,
+                                            &(ehcor->totalMultipoleData), eptr->name);
+        ehcor->multipolesRandomized = 1;
       }
       multData = &(ehcor->totalMultipoleData);
     }
     break;
   case T_EVCOR:
-    evcor = (EVCOR*) pePtr;
+    evcor = (EVCOR *)pePtr;
     length = evcor->length;
-    ykick = evcor->kick*evcor->calibration;
+    ykick = evcor->kick * evcor->calibration;
     tilt = evcor->tilt;
     isr = evcor->isr;
     sr = evcor->synchRad;
@@ -135,26 +132,26 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
     multData = &(evcor->steeringMultipoleData);
     if (evcor->randomMultipoles) {
       if (!evcor->randomMultipoleData.initialized) {
-	if (!evcor->steeringMultipoles) 
-	  bombElegantVA("Error: must give STEERING_MULTIPOLES with RANDOM_MULTIPOLES for EVKICK %s\n", 
-			eptr->name);
-	readErrorMultipoleData(&(evcor->randomMultipoleData), evcor->randomMultipoles, 2);
+        if (!evcor->steeringMultipoles)
+          bombElegantVA("Error: must give STEERING_MULTIPOLES with RANDOM_MULTIPOLES for EVKICK %s\n",
+                        eptr->name);
+        readErrorMultipoleData(&(evcor->randomMultipoleData), evcor->randomMultipoles, 2);
       }
       if (!evcor->multipolesRandomized) {
-	/* generate instance of random multipoles, sum to make total */
-	computeTotalSteeringMultipoleErrors(&(evcor->steeringMultipoleData), evcor->steeringMultipoleFactor,
-					    &(evcor->randomMultipoleData), evcor->randomMultipoleFactor,
-					    &(evcor->totalMultipoleData), eptr->name);
-	evcor->multipolesRandomized = 1;
+        /* generate instance of random multipoles, sum to make total */
+        computeTotalSteeringMultipoleErrors(&(evcor->steeringMultipoleData), evcor->steeringMultipoleFactor,
+                                            &(evcor->randomMultipoleData), evcor->randomMultipoleFactor,
+                                            &(evcor->totalMultipoleData), eptr->name);
+        evcor->multipolesRandomized = 1;
       }
       multData = &(evcor->totalMultipoleData);
     }
     break;
   case T_EHVCOR:
-    ehvcor = (EHVCOR*) pePtr;
+    ehvcor = (EHVCOR *)pePtr;
     length = ehvcor->length;
-    xkick = ehvcor->xkick*ehvcor->xcalibration;
-    ykick = ehvcor->ykick*ehvcor->ycalibration;
+    xkick = ehvcor->xkick * ehvcor->xcalibration;
+    ykick = ehvcor->ykick * ehvcor->ycalibration;
     tilt = ehvcor->tilt;
     isr = ehvcor->isr;
     sr = ehvcor->synchRad;
@@ -167,17 +164,17 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
     multData = &(ehvcor->steeringMultipoleData);
     if (ehvcor->randomMultipoles) {
       if (!ehvcor->randomMultipoleData.initialized) {
-	if (!ehvcor->steeringMultipoles) 
-	  bombElegantVA("Error: must give STEERING_MULTIPOLES with RANDOM_MULTIPOLES for EKICK %s\n", 
-			eptr->name);
-	readErrorMultipoleData(&(ehvcor->randomMultipoleData), ehvcor->randomMultipoles, 2);
+        if (!ehvcor->steeringMultipoles)
+          bombElegantVA("Error: must give STEERING_MULTIPOLES with RANDOM_MULTIPOLES for EKICK %s\n",
+                        eptr->name);
+        readErrorMultipoleData(&(ehvcor->randomMultipoleData), ehvcor->randomMultipoles, 2);
       }
       if (!ehvcor->multipolesRandomized) {
-	/* generate instance of random multipoles, sum to make total */
-	computeTotalSteeringMultipoleErrors(&(ehvcor->steeringMultipoleData), ehvcor->steeringMultipoleFactor,
-					    &(ehvcor->randomMultipoleData), ehvcor->randomMultipoleFactor,
-					    &(ehvcor->totalMultipoleData), eptr->name);
-	ehvcor->multipolesRandomized = 1;
+        /* generate instance of random multipoles, sum to make total */
+        computeTotalSteeringMultipoleErrors(&(ehvcor->steeringMultipoleData), ehvcor->steeringMultipoleFactor,
+                                            &(ehvcor->randomMultipoleData), ehvcor->randomMultipoleFactor,
+                                            &(ehvcor->totalMultipoleData), eptr->name);
+        ehvcor->multipolesRandomized = 1;
       }
       multData = &(ehvcor->totalMultipoleData);
     }
@@ -188,15 +185,15 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
 
   /* xkick and ykick are actually angles, not kicks */
   theta0 = atan(sqrt(sqr(tan(xkick)) + sqr(tan(ykick))));
-  if (theta0==0) {
+  if (theta0 == 0) {
     exactDrift(part, n_part, length);
     return n_part;
   }
   /* the tilt will account for the direction of bending */
   /* theta0 and rho0 are positive values */
   tilt += atan2(tan(ykick), tan(xkick));
-  rho0 = fabs(length)/sin(theta0);
-  if (length<0) /* back tracking */
+  rho0 = fabs(length) / sin(theta0);
+  if (length < 0) /* back tracking */
     tilt += PI;
 
   if (sigmaDelta2)
@@ -204,7 +201,7 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
 
   i_top = -1;
   if (isSlave || !notSinglePart) {
-    i_top = n_part-1;
+    i_top = n_part - 1;
 
     if (dx || dy || dz)
       offsetBeamCoordinatesForMisalignment(part, n_part, dx, dy, dz);
@@ -212,7 +209,7 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
       rotateBeamCoordinatesForMisalignment(part, n_part, tilt);
 
     /* Apply steering kicks */
-    for (i_part=0; i_part<=i_top; i_part++) {
+    for (i_part = 0; i_part <= i_top; i_part++) {
       lost = 0;
       if (!(coord = part[i_part])) {
         printf("error: null coordinate pointer for particle %ld (trackThroughExactCorrector)\n", i_part);
@@ -221,29 +218,29 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
       }
 
       if (multData && multData->orders)
-        lost = !applySteeringMultipoleKicks(coord, theta0/2, 0.0, multData);
+        lost = !applySteeringMultipoleKicks(coord, theta0 / 2, 0.0, multData);
 
       if (!lost) {
-        if (rho0==0 || length==0) {
-          coord[1] = tan(theta0/(1+coord[5]) + atan(coord[1]));
+        if (rho0 == 0 || length == 0) {
+          coord[1] = tan(theta0 / (1 + coord[5]) + atan(coord[1]));
         } else {
           alpha = atan(coord[1]);
-          rho = rho0*(1+coord[5]);
-          if (rho>0 && (arg = length/rho + sin(alpha))<=1 && arg >= -1) {
+          rho = rho0 * (1 + coord[5]);
+          if (rho > 0 && (arg = length / rho + sin(alpha)) <= 1 && arg >= -1) {
             double dyf;
             theta = asin(arg) - alpha;
-            dyf = coord[3]/sqrt(1 + sqr(coord[1]) - sqr(coord[3]));
-            coord[2] += dyf*theta*rho;
-            coord[4] += theta*rho*sqrt(1 + sqr(dyf));
-            coord[0] += rho*(cos(alpha) - cos(theta+alpha)); 
-            coord[1]  = tan(theta + alpha);
+            dyf = coord[3] / sqrt(1 + sqr(coord[1]) - sqr(coord[3]));
+            coord[2] += dyf * theta * rho;
+            coord[4] += theta * rho * sqrt(1 + sqr(dyf));
+            coord[0] += rho * (cos(alpha) - cos(theta + alpha));
+            coord[1] = tan(theta + alpha);
           } else
             lost = 1;
         }
 
         if (!lost) {
           if (multData && multData->orders)
-            lost = !applySteeringMultipoleKicks(coord, theta0/2, 0.0, multData);
+            lost = !applySteeringMultipoleKicks(coord, theta0 / 2, 0.0, multData);
         }
       }
 
@@ -252,15 +249,15 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
         if (accepted) {
           if (!accepted[i_top]) {
             printf(
-                    "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (trackThroughExactCorrector)\n",
-                    i_part, i_top);
+              "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (trackThroughExactCorrector)\n",
+              i_part, i_top);
             fflush(stdout);
             abort();
           }
           swapParticles(accepted[i_part], accepted[i_top]);
         }
         part[i_top][4] = z_start;
-        part[i_top][5] = Po*(1+part[i_top][5]);
+        part[i_top][5] = Po * (1 + part[i_top][5]);
         i_top--;
         i_part--;
       }
@@ -272,34 +269,31 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
     if (dx || dy || dz)
       offsetBeamCoordinatesForMisalignment(part, n_part, -dx, -dy, -dz);
   }
-  
+
   if (sr)
     addCorrectorRadiationKick(part, i_top, eptr, eptr->type, Po, sigmaDelta2, !isr);
-  
-  return i_top+1;
+
+  return i_top + 1;
 }
 
 void computeTotalSteeringMultipoleErrors(MULTIPOLE_DATA *systematicMult, double sysFactor,
-					 MULTIPOLE_DATA *randomMult, double ranFactor,
-					 MULTIPOLE_DATA *totalMult,
-					 char *name)
-{
+                                         MULTIPOLE_DATA *randomMult, double ranFactor,
+                                         MULTIPOLE_DATA *totalMult,
+                                         char *name) {
   long i;
   if (!totalMult->initialized) {
     totalMult->orders = systematicMult->orders;
-    totalMult->order = tmalloc(sizeof(*(totalMult->order))*totalMult->orders);
-    totalMult->KnL = tmalloc(sizeof(*(totalMult->KnL))*totalMult->orders);
-    totalMult->JnL = tmalloc(sizeof(*(totalMult->JnL))*totalMult->orders);
+    totalMult->order = tmalloc(sizeof(*(totalMult->order)) * totalMult->orders);
+    totalMult->KnL = tmalloc(sizeof(*(totalMult->KnL)) * totalMult->orders);
+    totalMult->JnL = tmalloc(sizeof(*(totalMult->JnL)) * totalMult->orders);
     totalMult->initialized = 1;
   }
-  for (i=0; i<systematicMult->orders; i++) {
-    if (systematicMult->order[i]!=randomMult->order[i])
-      bombElegantVA("Error: order mismatch for STEERING_MULTIPOLES and RANDOM_MULTIPOLES for EVKICK %s\n", 
-		    name);
+  for (i = 0; i < systematicMult->orders; i++) {
+    if (systematicMult->order[i] != randomMult->order[i])
+      bombElegantVA("Error: order mismatch for STEERING_MULTIPOLES and RANDOM_MULTIPOLES for EVKICK %s\n",
+                    name);
     totalMult->order[i] = randomMult->order[i];
-    totalMult->KnL[i] = systematicMult->KnL[i]*sysFactor 
-      + gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant)*randomMult->KnL[i]*ranFactor;
-    totalMult->JnL[i] = systematicMult->JnL[i]*sysFactor
-      + gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant)*randomMult->JnL[i]*ranFactor;
+    totalMult->KnL[i] = systematicMult->KnL[i] * sysFactor + gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant) * randomMult->KnL[i] * ranFactor;
+    totalMult->JnL[i] = systematicMult->JnL[i] * sysFactor + gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant) * randomMult->JnL[i] * ranFactor;
   }
 }

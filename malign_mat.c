@@ -20,32 +20,32 @@
 VMATRIX *transformMatrixBetweenMomentumAndSlopes(VMATRIX *VM);
 
 /* Modify a matrix to include misalignments */
-void misalign_matrix
-(
- VMATRIX *M,                            /* matrix to modify, will be changed */
- double dx, double dy, double dz,       /* displacements */
- double pitch, double yaw, double tilt, /* angular errors */
- double designTilt,                     /* design tilt (meaningful for dipoles) */
- double thetaBend,                      /* bending angle */
- double length,                         /* length */
- short method,                          /* 0 = "traditional", 1 = Venturini */
- short bodyCentered                     /* method=1: if non-zero, misalignment is relative to element central coordinates,
+void misalign_matrix(
+  VMATRIX *M,                            /* matrix to modify, will be changed */
+  double dx, double dy, double dz,       /* displacements */
+  double pitch, double yaw, double tilt, /* angular errors */
+  double designTilt,                     /* design tilt (meaningful for dipoles) */
+  double thetaBend,                      /* bending angle */
+  double length,                         /* length */
+  short method,                          /* 0 = "traditional", 1 = Venturini */
+  short bodyCentered                     /* method=1: if non-zero, misalignment is relative to element central coordinates,
                                            otherwise, relative to entrance face */
- )
-{
+) {
   log_entry("misalign_matrix");
 
-  if (method==0) {
+  if (method == 0) {
     VMATRIX *M1, *M2, *tmp;
     static MALIGN mal;
 
-    tilt_matrices(M, tilt+designTilt);
+    tilt_matrices(M, tilt + designTilt);
 
     /* entrance misalignment corresponds to opposite tranverse offset of the beam
      * plus propagation of beam forward/backward to the new entrance of the magnet 
      */
-    mal.dx = -dx; mal.dxp = 0;
-    mal.dy = -dy; mal.dyp = 0;
+    mal.dx = -dx;
+    mal.dxp = 0;
+    mal.dy = -dy;
+    mal.dyp = 0;
     mal.dz = dz;
     mal.dp = mal.dt = 0;
     M1 = misalignment_matrix(&mal, M->order);
@@ -55,134 +55,140 @@ void misalign_matrix
      * system at the exit may be rotated relative to that at the exit.  This
      * code is incorrect if the bending magnet is tilted!
      */
-    mal.dx =   dx*cos(thetaBend) + dz*sin(thetaBend);
-    mal.dz =   dx*sin(thetaBend) - dz*cos(thetaBend);
+    mal.dx = dx * cos(thetaBend) + dz * sin(thetaBend);
+    mal.dz = dx * sin(thetaBend) - dz * cos(thetaBend);
     mal.dy = dy;
     M2 = misalignment_matrix(&mal, M->order);
-    
+
     tmp = tmalloc(sizeof(*tmp));
-    initialize_matrices(tmp, tmp->order=M->order);
+    initialize_matrices(tmp, tmp->order = M->order);
 
     concat_matrices(tmp, M, M1, 0);
     concat_matrices(M, M2, tmp, 0);
 
-    free_matrices(tmp); tfree(tmp); tmp = NULL;
-    free_matrices(M1); tfree(M1); M1 = NULL;
-    free_matrices(M2); tfree(M2); M2 = NULL;
+    free_matrices(tmp);
+    tfree(tmp);
+    tmp = NULL;
+    free_matrices(M1);
+    tfree(M1);
+    M1 = NULL;
+    free_matrices(M2);
+    tfree(M2);
+    M2 = NULL;
   } else {
     VMATRIX *MEntrance, *MExit, *tmp;
 
     if (bodyCentered) {
-      offsetParticlesForBodyCenteredMisalignmentLinearized(&MEntrance, NULL, 0, 
+      offsetParticlesForBodyCenteredMisalignmentLinearized(&MEntrance, NULL, 0,
                                                            dx, dy, dz,
                                                            pitch, yaw, tilt,
                                                            designTilt, thetaBend, length, 1);
-      offsetParticlesForBodyCenteredMisalignmentLinearized(&MExit, NULL, 0, 
+      offsetParticlesForBodyCenteredMisalignmentLinearized(&MExit, NULL, 0,
                                                            dx, dy, dz,
                                                            pitch, yaw, tilt,
                                                            designTilt, thetaBend, length, 2);
     } else {
-      offsetParticlesForEntranceCenteredMisalignmentLinearized(&MEntrance, NULL, 0, 
+      offsetParticlesForEntranceCenteredMisalignmentLinearized(&MEntrance, NULL, 0,
                                                                dx, dy, dz,
                                                                pitch, yaw, tilt,
                                                                designTilt, thetaBend, length, 1);
-      offsetParticlesForEntranceCenteredMisalignmentLinearized(&MExit, NULL, 0, 
+      offsetParticlesForEntranceCenteredMisalignmentLinearized(&MExit, NULL, 0,
                                                                dx, dy, dz,
                                                                pitch, yaw, tilt,
                                                                designTilt, thetaBend, length, 2);
     }
-    
+
     tmp = tmalloc(sizeof(*tmp));
-    initialize_matrices(tmp, tmp->order=M->order);
-    
+    initialize_matrices(tmp, tmp->order = M->order);
+
     concat_matrices(tmp, M, MEntrance, 0);
     concat_matrices(M, MExit, tmp, 0);
-    
-    free_matrices(tmp); tfree(tmp);
-    free_matrices(MEntrance); tfree(MEntrance);
-    free_matrices(MExit); tfree(MExit);
-  }
 
+    free_matrices(tmp);
+    tfree(tmp);
+    free_matrices(MEntrance);
+    tfree(MEntrance);
+    free_matrices(MExit);
+    tfree(MExit);
+  }
 }
-    
+
 /* routine: misalignment_matrix()
  * purpose: provide a matrix for a misalignment
  *
  * Michael Borland, 1991.
  */
-    
-VMATRIX *misalignment_matrix(MALIGN *malign, long order)
-{
-    VMATRIX *M;
-    static VMATRIX *M1 = NULL;
-    double *C, **R;
 
-    log_entry("misalignment_matrix");
+VMATRIX *misalignment_matrix(MALIGN *malign, long order) {
+  VMATRIX *M;
+  static VMATRIX *M1 = NULL;
+  double *C, **R;
 
-    M = tmalloc(sizeof(*M));
-    M->order = order;
-    initialize_matrices(M, M->order);
-    R = M->R;
-    C = M->C;
+  log_entry("misalignment_matrix");
 
-    C[0] = malign->dx;
-    C[1] = malign->dxp;
-    C[2] = malign->dy;
-    C[3] = malign->dyp;
-    C[4] = 0;
-    /* ignore malign->dt.  Not sure what it really means. */
-    C[5] = malign->dp + malign->de;            /* missing 1/beta^2 on malign->de term here ... */
+  M = tmalloc(sizeof(*M));
+  M->order = order;
+  initialize_matrices(M, M->order);
+  R = M->R;
+  C = M->C;
 
-    R[0][0] = R[1][1] = R[2][2] = R[3][3] = R[4][4] = R[5][5] = 1;
+  C[0] = malign->dx;
+  C[1] = malign->dxp;
+  C[2] = malign->dy;
+  C[3] = malign->dyp;
+  C[4] = 0;
+  /* ignore malign->dt.  Not sure what it really means. */
+  C[5] = malign->dp + malign->de; /* missing 1/beta^2 on malign->de term here ... */
 
-    if (malign->dz) {
-        /* do longitudinal misalignment */
-        VMATRIX *tmp;
+  R[0][0] = R[1][1] = R[2][2] = R[3][3] = R[4][4] = R[5][5] = 1;
 
-        if (!M1) {
-            M1 = tmalloc(sizeof(*M1));
-            initialize_matrices(M1, M1->order=M->order);
-            }
-        tmp = drift_matrix(malign->dz, M->order);
-        concat_matrices(M1, M, tmp, 0);
-        free_matrices(tmp); tfree(tmp); tmp = NULL;
-        copy_matrices1(M, M1);
-        }
-    log_exit("misalignment_matrix");
-    return(M);
+  if (malign->dz) {
+    /* do longitudinal misalignment */
+    VMATRIX *tmp;
+
+    if (!M1) {
+      M1 = tmalloc(sizeof(*M1));
+      initialize_matrices(M1, M1->order = M->order);
     }
-
+    tmp = drift_matrix(malign->dz, M->order);
+    concat_matrices(M1, M, tmp, 0);
+    free_matrices(tmp);
+    tfree(tmp);
+    tmp = NULL;
+    copy_matrices1(M, M1);
+  }
+  log_exit("misalignment_matrix");
+  return (M);
+}
 
 /* We offset the coordinates of a beam to implement the mislignment of the upcoming element by (dx, dy, dz).
  * Hence, the particles are offset by the negative of the given (dx, dy) values, and are drifted an extra
  * distance dz.
  */
 
-void offsetBeamCoordinatesForMisalignment(double **coord, long np, double dx, double dy, double dz)
-{
+void offsetBeamCoordinatesForMisalignment(double **coord, long np, double dx, double dy, double dz) {
   long ip;
   double *part;
-  
-  for (ip=np-1; ip>=0; ip--) {
+
+  for (ip = np - 1; ip >= 0; ip--) {
     part = coord[ip];
-    part[4] += dz*sqrt(1 + sqr(part[1]) + sqr(part[3]));
-    part[0]  = part[0] - dx + dz*part[1];
-    part[2]  = part[2] - dy + dz*part[3];
+    part[4] += dz * sqrt(1 + sqr(part[1]) + sqr(part[3]));
+    part[0] = part[0] - dx + dz * part[1];
+    part[2] = part[2] - dy + dz * part[3];
   }
 }
 
 /* Compute Hadamard product of two matrices */
 
-double m_hproduct(MATRIX *M1, MATRIX *M2)
-{
+double m_hproduct(MATRIX *M1, MATRIX *M2) {
   double dot;
   long i, j;
   if ((M1->n != M2->n) || (M1->m != M2->m))
     bombElegant("matrix mismatch in m_hproduct", NULL);
   dot = 0;
-  for (i=0; i<M1->n; i++) 
-    for (j=0; j<M1->m; j++)
-      dot += M1->a[i][j]*M2->a[i][j];
+  for (i = 0; i < M1->n; i++)
+    for (j = 0; j < M1->m; j++)
+      dot += M1->a[i][j] * M2->a[i][j];
   return dot;
 }
 
@@ -190,27 +196,25 @@ double m_hproduct(MATRIX *M1, MATRIX *M2)
 
 /* Algorithm due to M. Venturini, ALSU-AP-TN-2021-001. */
 /* This is a fairly literal translation of his Mathematica code */
-void offsetParticlesForEntranceCenteredMisalignmentLinearized
-(
- VMATRIX **VM,            /* if matrix return is desired */
- double **coord, long np, /* if particle transformation is desired */
- double dx, double dy, double dz,  /* error displacements */
- double ax,  /* error pitch */
- double ay,  /* error yaw */
- double az,  /* error roll or tilt */
- double tilt, /* design tilt */
- double thetaBend,
- double length,
- short face /* 1 => entry, 2 => exit */
- )
-{
+void offsetParticlesForEntranceCenteredMisalignmentLinearized(
+  VMATRIX **VM,                    /* if matrix return is desired */
+  double **coord, long np,         /* if particle transformation is desired */
+  double dx, double dy, double dz, /* error displacements */
+  double ax,                       /* error pitch */
+  double ay,                       /* error yaw */
+  double az,                       /* error roll or tilt */
+  double tilt,                     /* design tilt */
+  double thetaBend,
+  double length,
+  short face /* 1 => entry, 2 => exit */
+) {
   double cx, cy, cz, sx, sy, sz;
   static MATRIX *xAxis, *yAxis, *zAxis, *dVector, *OP, *OPp;
   static MATRIX *XaxiSxyz, *YaxiSxyz, *ZaxiSxyz;
   static MATRIX *RX, *R, *tmp, *LinMat;
   static MATRIX *tA, *tE, *tD0;
-  static MATRIX *V1; /* working 3x1 matrix */
-  static MATRIX *M1, *M2; /* working 3x3 matrices */
+  static MATRIX *V1;           /* working 3x1 matrix */
+  static MATRIX *M1, *M2;      /* working 3x3 matrices */
   static MATRIX *t0, *t1, *t2; /* working 6x1 matrices */
   static MATRIX *RB, *RBT, *RXT, *OOp, *OpPp, *MTilt;
   static short initialized = 0;
@@ -248,35 +252,47 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized
     m_alloc(&t1, 6, 1);
     m_alloc(&t2, 6, 1);
     LVM = tmalloc(sizeof(*LVM));
-    initialize_matrices(LVM, LVM->order=1);
+    initialize_matrices(LVM, LVM->order = 1);
     initialized = 1;
   }
 
   /* unit vectors of the xyz coordinate-system axes */
-  xAxis->a[0][0] = 1; xAxis->a[1][0] = 0; xAxis->a[2][0] = 0; 
-  yAxis->a[0][0] = 0; yAxis->a[1][0] = 1; yAxis->a[2][0] = 0; 
-  zAxis->a[0][0] = 0; zAxis->a[1][0] = 0; zAxis->a[2][0] = 1;
+  xAxis->a[0][0] = 1;
+  xAxis->a[1][0] = 0;
+  xAxis->a[2][0] = 0;
+  yAxis->a[0][0] = 0;
+  yAxis->a[1][0] = 1;
+  yAxis->a[2][0] = 0;
+  zAxis->a[0][0] = 0;
+  zAxis->a[1][0] = 0;
+  zAxis->a[2][0] = 1;
 
   /* displacement-error vector in the xyz coordinate system */
-  dVector->a[0][0] = dx; dVector->a[1][0] = dy; dVector->a[2][0] = dz;
+  dVector->a[0][0] = dx;
+  dVector->a[1][0] = dy;
+  dVector->a[2][0] = dz;
   if (!m_copy(OP, dVector))
     bombElegant("m_copy(OP, dVector);", NULL);
 
   /* rotational-error matrix in the xyz coordinate system */
-  cx = cos(ax); cy = cos(ay); cz = cos(az+tilt);
-  sx = sin(ax); sy = sin(ay); sz = sin(az+tilt);
+  cx = cos(ax);
+  cy = cos(ay);
+  cz = cos(az + tilt);
+  sx = sin(ax);
+  sy = sin(ay);
+  sz = sin(az + tilt);
 
-  RX->a[0][0] = cy*cz;
-  RX->a[0][1] = -cy*sz;
+  RX->a[0][0] = cy * cz;
+  RX->a[0][1] = -cy * sz;
   RX->a[0][2] = sy;
-  RX->a[1][0] = cz*sx*sy + cx*sz;
-  RX->a[1][1] = cx*cz - sx*sy*sz;
-  RX->a[1][2] = -cy*sx;
-  RX->a[2][0] = -cx*cz*sy + sx*sz;
-  RX->a[2][1] = cz*sx + cx*sy*sz;
-  RX->a[2][2] = cx*cy;
+  RX->a[1][0] = cz * sx * sy + cx * sz;
+  RX->a[1][1] = cx * cz - sx * sy * sz;
+  RX->a[1][2] = -cy * sx;
+  RX->a[2][0] = -cx * cz * sy + sx * sz;
+  RX->a[2][1] = cz * sx + cx * sy * sz;
+  RX->a[2][2] = cx * cy;
 
-  if (thetaBend!=0 && tilt!=0) {
+  if (thetaBend != 0 && tilt != 0) {
     MTilt->a[0][0] = cos(tilt);
     MTilt->a[0][1] = -sin(tilt);
     MTilt->a[0][2] = 0;
@@ -288,7 +304,7 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized
     MTilt->a[2][2] = 1;
   }
 
-  if (face==1) {
+  if (face == 1) {
     if (!m_copy(R, RX))
       bombElegant("m_copy(R, RX);", NULL);
     if (!m_mult(XaxiSxyz, R, xAxis))
@@ -300,7 +316,7 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized
     LD = m_hproduct(ZaxiSxyz, OP);
     if (!m_copy(tmp, OP))
       bombElegant("m_copy(tmp, OP);", NULL);
-  } else if (face==2) {
+  } else if (face == 2) {
     RB->a[0][0] = cos(thetaBend);
     RB->a[0][1] = 0;
     RB->a[0][2] = -sin(thetaBend);
@@ -311,7 +327,7 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized
     RB->a[2][1] = 0;
     RB->a[2][2] = cos(thetaBend);
 
-    if (thetaBend!=0 && tilt!=0) {
+    if (thetaBend != 0 && tilt != 0) {
       if (!m_mult(M2, MTilt, RB))
         bombElegant("m_mult(M2, M1, RB));", NULL);
       if (!m_copy(RB, M2))
@@ -326,7 +342,7 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized
       bombElegant("m_mult(M1, RBT, RXT);", NULL);
     if (!m_mult(R, M1, RB))
       bombElegant("m_mult(R, M1, RB);", NULL);
-    
+
     /* XYZ-axes unit-vectors expressed in the x'y'z' coordinate system */
     if (!m_mult(XaxiSxyz, RB, xAxis))
       bombElegant("m_mult(XaxiSxyz, RB, xAxis);", NULL);
@@ -335,16 +351,16 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized
     if (!m_mult(ZaxiSxyz, RB, zAxis))
       bombElegant("m_mult(ZaxiSxyz, RB, zAxis);", NULL);
 
-    if (fabs(thetaBend)<SMALL_ANGLE) {
+    if (fabs(thetaBend) < SMALL_ANGLE) {
       OPp->a[0][0] = 0;
       OPp->a[1][0] = 0;
       OPp->a[2][0] = length;
     } else {
-      OPp->a[0][0] = length/thetaBend*(cos(thetaBend)-1);
+      OPp->a[0][0] = length / thetaBend * (cos(thetaBend) - 1);
       OPp->a[1][0] = 0;
-      OPp->a[2][0] = length*sin(thetaBend)/thetaBend;
+      OPp->a[2][0] = length * sin(thetaBend) / thetaBend;
     }
-    if (thetaBend!=0 && tilt!=0) {
+    if (thetaBend != 0 && tilt != 0) {
       if (!m_mult(V1, MTilt, OPp))
         bombElegant("m_mult(V1, MTilt, OPp));", NULL);
       m_copy(OPp, V1);
@@ -368,10 +384,10 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized
   tD0->a[2][0] = -m_hproduct(tmp, YaxiSxyz);
   tD0->a[3][0] = tD0->a[4][0] = tD0->a[5][0] = 0;
 
-  LinMat->a[0][0] = R->a[1][1]/R->a[2][2];
-  LinMat->a[0][1] = LD*sqrt(R->a[1][1]/R->a[2][2]);
-  LinMat->a[0][2] = -R->a[0][1]/R->a[2][2];
-  LinMat->a[0][3] = -LD*sqr(R->a[0][1]/R->a[2][2]);
+  LinMat->a[0][0] = R->a[1][1] / R->a[2][2];
+  LinMat->a[0][1] = LD * sqrt(R->a[1][1] / R->a[2][2]);
+  LinMat->a[0][2] = -R->a[0][1] / R->a[2][2];
+  LinMat->a[0][3] = -LD * sqr(R->a[0][1] / R->a[2][2]);
   LinMat->a[0][4] = 0;
   LinMat->a[0][5] = 0;
   LinMat->a[1][0] = 0;
@@ -380,10 +396,10 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized
   LinMat->a[1][3] = R->a[1][0];
   LinMat->a[1][4] = 0;
   LinMat->a[1][5] = R->a[2][0];
-  LinMat->a[2][0] = -R->a[1][0]/R->a[2][2];
-  LinMat->a[2][1] = -LD*sqr(R->a[1][0]/R->a[2][2]);
-  LinMat->a[2][2] = R->a[0][0]/R->a[2][2];
-  LinMat->a[2][3] = LD*sqr(R->a[0][0]/R->a[2][2]);
+  LinMat->a[2][0] = -R->a[1][0] / R->a[2][2];
+  LinMat->a[2][1] = -LD * sqr(R->a[1][0] / R->a[2][2]);
+  LinMat->a[2][2] = R->a[0][0] / R->a[2][2];
+  LinMat->a[2][3] = LD * sqr(R->a[0][0] / R->a[2][2]);
   LinMat->a[2][4] = 0;
   LinMat->a[2][5] = 0;
   LinMat->a[3][0] = 0;
@@ -392,10 +408,10 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized
   LinMat->a[3][3] = R->a[1][1];
   LinMat->a[3][4] = 0;
   LinMat->a[3][5] = R->a[2][1];
-  LinMat->a[4][0] = -R->a[0][2]/R->a[2][2];
-  LinMat->a[4][1] = -LD*sqr(R->a[0][2]/R->a[2][2]);
-  LinMat->a[4][2] = -R->a[1][2]/R->a[2][2];
-  LinMat->a[4][3] = -LD*sqr(R->a[1][2]/R->a[2][2]);
+  LinMat->a[4][0] = -R->a[0][2] / R->a[2][2];
+  LinMat->a[4][1] = -LD * sqr(R->a[0][2] / R->a[2][2]);
+  LinMat->a[4][2] = -R->a[1][2] / R->a[2][2];
+  LinMat->a[4][3] = -LD * sqr(R->a[1][2] / R->a[2][2]);
   LinMat->a[4][4] = 1;
   LinMat->a[4][5] = 0;
   LinMat->a[5][0] = 0;
@@ -405,52 +421,51 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized
   LinMat->a[5][4] = 0;
   LinMat->a[5][5] = 1;
 
-  t0->a[0][0] = LD*R->a[2][0]/R->a[2][2];
+  t0->a[0][0] = LD * R->a[2][0] / R->a[2][2];
   t0->a[1][0] = R->a[2][0];
-  t0->a[2][0] = LD*R->a[2][1]/R->a[2][2];
+  t0->a[2][0] = LD * R->a[2][1] / R->a[2][2];
   t0->a[3][0] = R->a[2][1];
-  t0->a[4][0] = LD/R->a[2][2];
+  t0->a[4][0] = LD / R->a[2][2];
   t0->a[5][0] = 0;
 
-  for (i=0; i<6; i++) {
+  for (i = 0; i < 6; i++) {
     LVM->C[i] = t0->a[i][0] + tD0->a[i][0];
-    for (j=0; j<6; j++) {
+    for (j = 0; j < 6; j++) {
       LVM->R[i][j] = LinMat->a[i][j];
     }
   }
 
-  if (coord && np!=0) {
+  if (coord && np != 0) {
     double qx, qy;
-    for (ip=0; ip<np; ip++) {
+    for (ip = 0; ip < np; ip++) {
       /* convert from (x, xp, y, yp, s, delta) to (x, qx, y, qy, s, delta) */
-      factor = (1+coord[ip][5])/sqrt(1+sqr(coord[ip][1])+sqr(coord[ip][3]));
+      factor = (1 + coord[ip][5]) / sqrt(1 + sqr(coord[ip][1]) + sqr(coord[ip][3]));
       coord[ip][1] *= factor;
       coord[ip][3] *= factor;
     }
-    
+
     track_particles(coord, LVM, coord, np);
 
-    for (ip=0; ip<np; ip++) {
+    for (ip = 0; ip < np; ip++) {
       /* convert from (x, qx, y, qy, s, delta) to (x, xp, y, yp, s, delta) */
       qx = coord[ip][1];
       qy = coord[ip][3];
-      factor = 1/sqrt(sqr(1+coord[ip][5]) - sqr(qx) - sqr(qy));
+      factor = 1 / sqrt(sqr(1 + coord[ip][5]) - sqr(qx) - sqr(qy));
       coord[ip][1] *= factor;
       coord[ip][3] *= factor;
     }
-      
   }
 
   /* These matrices are in (x, qx, y, qy, s, delta) coordinates.
    * Transform to (x, xp, y, yp, s, delta).
    * Use 3rd order to get higher precision.
-   */ 
+   */
   if (VM) {
     (*VM) = tmalloc(sizeof(**VM));
-    initialize_matrices((*VM), (*VM)->order=3);
-    for (i=0; i<6; i++) {
+    initialize_matrices((*VM), (*VM)->order = 3);
+    for (i = 0; i < 6; i++) {
       (*VM)->C[i] = t0->a[i][0] + tD0->a[i][0];
-      for (j=0; j<6; j++) {
+      for (j = 0; j < 6; j++) {
         (*VM)->R[i][j] = LinMat->a[i][j];
       }
     }
@@ -461,26 +476,24 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized
 
 /* Algorithm due to M. Venturini, ALSU-AP-TN-2021-001. */
 /* This is a fairly literal translation of his Mathematica code */
-void offsetParticlesForEntranceCenteredMisalignmentExact
-(
- double **coord, long np,
- double dx, double dy, double dz,  /* error displacements */
- double ax,  /* error pitch */
- double ay,  /* error yaw */
- double az,  /* error roll or tilt */
- double tilt, /* design tilt */
- double thetaBend,
- double length,
- short face /* 1 => entry, 2 => exit */
- )
-{
+void offsetParticlesForEntranceCenteredMisalignmentExact(
+  double **coord, long np,
+  double dx, double dy, double dz, /* error displacements */
+  double ax,                       /* error pitch */
+  double ay,                       /* error yaw */
+  double az,                       /* error roll or tilt */
+  double tilt,                     /* design tilt */
+  double thetaBend,
+  double length,
+  short face /* 1 => entry, 2 => exit */
+) {
   double cx, cy, cz, sx, sy, sz;
   static MATRIX *xAxis, *yAxis, *zAxis, *dVector, *OP, *OPp;
   static MATRIX *XaxiSxyz, *YaxiSxyz, *ZaxiSxyz;
   static MATRIX *RX, *R, *tmp, *LinMat;
   static MATRIX *tA, *tE, *tD0;
-  static MATRIX *V1, *V2; /* working 3x1 matrix */
-  static MATRIX *M1, *M2; /* working 3x3 matrices */
+  static MATRIX *V1, *V2;      /* working 3x1 matrix */
+  static MATRIX *M1, *M2;      /* working 3x3 matrices */
   static MATRIX *t0, *t1, *t2; /* working 6x1 matrices */
   static MATRIX *RB, *RBT, *RXT, *OOp, *OpPp, *MTilt;
   static short initialized = 0;
@@ -544,30 +557,42 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
   }
 
   /* unit vectors of the xyz coordinate-system axes */
-  xAxis->a[0][0] = 1; xAxis->a[1][0] = 0; xAxis->a[2][0] = 0; 
-  yAxis->a[0][0] = 0; yAxis->a[1][0] = 1; yAxis->a[2][0] = 0; 
-  zAxis->a[0][0] = 0; zAxis->a[1][0] = 0; zAxis->a[2][0] = 1;
+  xAxis->a[0][0] = 1;
+  xAxis->a[1][0] = 0;
+  xAxis->a[2][0] = 0;
+  yAxis->a[0][0] = 0;
+  yAxis->a[1][0] = 1;
+  yAxis->a[2][0] = 0;
+  zAxis->a[0][0] = 0;
+  zAxis->a[1][0] = 0;
+  zAxis->a[2][0] = 1;
 
   /* displacement-error vector in the xyz coordinate system */
-  dVector->a[0][0] = dx; dVector->a[1][0] = dy; dVector->a[2][0] = dz;
+  dVector->a[0][0] = dx;
+  dVector->a[1][0] = dy;
+  dVector->a[2][0] = dz;
   if (!m_copy(OP, dVector))
     bombElegant("m_copy(OP, dVector);", NULL);
 
   /* rotational-error matrix in the xyz coordinate system */
-  cx = cos(ax); cy = cos(ay); cz = cos(az+tilt);
-  sx = sin(ax); sy = sin(ay); sz = sin(az+tilt);
+  cx = cos(ax);
+  cy = cos(ay);
+  cz = cos(az + tilt);
+  sx = sin(ax);
+  sy = sin(ay);
+  sz = sin(az + tilt);
 
-  RX->a[0][0] = cy*cz;
-  RX->a[0][1] = -cy*sz;
+  RX->a[0][0] = cy * cz;
+  RX->a[0][1] = -cy * sz;
   RX->a[0][2] = sy;
-  RX->a[1][0] = cz*sx*sy + cx*sz;
-  RX->a[1][1] = cx*cz - sx*sy*sz;
-  RX->a[1][2] = -cy*sx;
-  RX->a[2][0] = -cx*cz*sy + sx*sz;
-  RX->a[2][1] = cz*sx + cx*sy*sz;
-  RX->a[2][2] = cx*cy;
+  RX->a[1][0] = cz * sx * sy + cx * sz;
+  RX->a[1][1] = cx * cz - sx * sy * sz;
+  RX->a[1][2] = -cy * sx;
+  RX->a[2][0] = -cx * cz * sy + sx * sz;
+  RX->a[2][1] = cz * sx + cx * sy * sz;
+  RX->a[2][2] = cx * cy;
 
-  if (thetaBend!=0 && tilt!=0) {
+  if (thetaBend != 0 && tilt != 0) {
     MTilt->a[0][0] = cos(tilt);
     MTilt->a[0][1] = -sin(tilt);
     MTilt->a[0][2] = 0;
@@ -579,10 +604,10 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
     MTilt->a[2][2] = 1;
   }
 
-  if (face==1) {
+  if (face == 1) {
     if (!m_copy(R, RX))
       bombElegant("m_copy(R, RX);", NULL);
-  } else if (face==2) {
+  } else if (face == 2) {
     RB->a[0][0] = cos(thetaBend);
     RB->a[0][1] = 0;
     RB->a[0][2] = -sin(thetaBend);
@@ -593,7 +618,7 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
     RB->a[2][1] = 0;
     RB->a[2][2] = cos(thetaBend);
 
-    if (thetaBend!=0 && tilt!=0) {
+    if (thetaBend != 0 && tilt != 0) {
       if (!m_mult(M2, MTilt, RB))
         bombElegant("m_mult(M2, M1, RB));", NULL);
       if (!m_copy(RB, M2))
@@ -607,7 +632,7 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
     if (!m_mult(M1, RBT, RXT))
       bombElegant("m_mult(M1, RBT, RXT);", NULL);
     if (!m_mult(R, M1, RB))
-      bombElegant("m_mult(R, M1, RB);", NULL);    
+      bombElegant("m_mult(R, M1, RB);", NULL);
   } else
     bombElegantVA("Invalid face code %hd in call to offsetParticlesForMisalignment", face);
 
@@ -617,26 +642,26 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
     bombElegant("m_mult(Yaxis, R, yAxis);", NULL);
   if (!m_mult(Zaxis, R, zAxis))
     bombElegant("m_mult(Zaxis, R, zAxis);", NULL);
-  
-  if (R->a[0][2]==0) {
+
+  if (R->a[0][2] == 0) {
     /* R13 == 0 */
-    if (R->a[1][2]!=0) {
+    if (R->a[1][2] != 0) {
       /* R23 !=0 */
-      if (!m_mult(ZaxiSxyz, R, zAxis)) 
+      if (!m_mult(ZaxiSxyz, R, zAxis))
         bombElegant("m_mult(ZaxiSxyz, R, zAxis)", NULL);
       if (!m_scmul(etaAxis, xAxis, -SIGN(R->a[1][2])))
         bombElegant("m_scmul(etaAxis, xAxis, -SIGN(R->a[1][2]));", NULL);
       if (!m_scmul(csiAxis, yAxis, SIGN(R->a[1][2])))
         bombElegant("m_scmul(csiAxis, yAxis, SIGN(R->a[1][2]));", NULL);
-      if (!m_scmul(V1, zAxis, -SIGN(R->a[1][2])*R->a[1][2]))
+      if (!m_scmul(V1, zAxis, -SIGN(R->a[1][2]) * R->a[1][2]))
         bombElegant("m_scmul(V1, zAxis, -SIGN(R->a[1][2])*R->a[1][2)];", NULL);
-      if (!m_scmul(V2, yAxis, SIGN(R->a[1][2])*R->a[2][2]))
+      if (!m_scmul(V2, yAxis, SIGN(R->a[1][2]) * R->a[2][2]))
         bombElegant("m_scmul(V2, yAxis, SIGN(R->a[1][2])*R->a[2][2)];", NULL);
       if (!m_add(csiPAxis, V1, V2))
         bombElegant("m_add(csiPAxis, V1, V)2;", NULL);
-      sinThetaW = -SIGN(R->a[1][2])*R->a[1][2];
-      cosThetaW = sqrt(1-sqr(sinThetaW));
-      tanThetaW = sinThetaW/cosThetaW;
+      sinThetaW = -SIGN(R->a[1][2]) * R->a[1][2];
+      cosThetaW = sqrt(1 - sqr(sinThetaW));
+      tanThetaW = sinThetaW / cosThetaW;
     } else {
       sinThetaW = tanThetaW = 0;
       cosThetaW = 1;
@@ -649,27 +674,27 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
     }
   } else {
     /* R13 !=0 */
-    sinThetaW = - SIGN(R->a[0][2])*sqrt(sqr(R->a[0][2]) + sqr(R->a[1][2]));
-    cosThetaW = sqrt(1-sqr(sinThetaW));
-    tanThetaW = sinThetaW/cosThetaW;
-    etaAxis->a[0][0] = R->a[1][2]/sinThetaW;
-    etaAxis->a[1][0] = -R->a[0][2]/sinThetaW;
+    sinThetaW = -SIGN(R->a[0][2]) * sqrt(sqr(R->a[0][2]) + sqr(R->a[1][2]));
+    cosThetaW = sqrt(1 - sqr(sinThetaW));
+    tanThetaW = sinThetaW / cosThetaW;
+    etaAxis->a[0][0] = R->a[1][2] / sinThetaW;
+    etaAxis->a[1][0] = -R->a[0][2] / sinThetaW;
     etaAxis->a[2][0] = 0;
-    csiAxis->a[0][0] = -R->a[0][2]/sinThetaW;
-    csiAxis->a[1][0] = -R->a[1][2]/sinThetaW;
+    csiAxis->a[0][0] = -R->a[0][2] / sinThetaW;
+    csiAxis->a[1][0] = -R->a[1][2] / sinThetaW;
     csiAxis->a[2][0] = 0;
-    csiPAxis->a[0][0] = -R->a[0][2]/tanThetaW;
-    csiPAxis->a[1][0] = -R->a[1][2]/tanThetaW;
+    csiPAxis->a[0][0] = -R->a[0][2] / tanThetaW;
+    csiPAxis->a[1][0] = -R->a[1][2] / tanThetaW;
     csiPAxis->a[2][0] = sinThetaW;
   }
   if (!m_copy(etaPAxis, etaAxis))
     bombElegant("m_copy(etaPAxis, etaAxis);", NULL);
   if (!m_copy(etaPPAxis, etaAxis))
     bombElegant("m_copy(etaPPAxis, etaAxis);", NULL);
-  if (!m_copy(csiPPAxis, csiPAxis)) 
+  if (!m_copy(csiPPAxis, csiPAxis))
     bombElegant("m_copy(csiPPAxis, csiPAxis);", NULL);
 
-  if (face==1) {
+  if (face == 1) {
     /* XYZ-axes unit-vectors expresed in the xyz coordinate system */
     if (!m_copy(XaxiSxyz, Xaxis))
       bombElegant("m_copy(XaxiSxyz, Xaxis);", NULL);
@@ -679,14 +704,14 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
     if (!m_copy(tmp, OP))
       bombElegant("m_copy(tmp, OP);", NULL);
   } else {
-    if (fabs(thetaBend)<SMALL_ANGLE) {
+    if (fabs(thetaBend) < SMALL_ANGLE) {
       OPp->a[0][0] = 0;
       OPp->a[1][0] = 0;
       OPp->a[2][0] = length;
     } else {
-      OPp->a[0][0] = length/thetaBend*(cos(thetaBend)-1);
+      OPp->a[0][0] = length / thetaBend * (cos(thetaBend) - 1);
       OPp->a[1][0] = 0;
-      OPp->a[2][0] = length*sin(thetaBend)/thetaBend;
+      OPp->a[2][0] = length * sin(thetaBend) / thetaBend;
     }
     if (!m_mult(XaxiSxyz, RB, xAxis))
       bombElegant("m_mult(XaxiSxyz, RB, xAxis);", NULL);
@@ -705,9 +730,9 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
       bombElegant("m_copy(tmp, OpPp);", NULL);
   }
 
-  if (coord && np!=0) {
+  if (coord && np != 0) {
     double qx, qy;
-    for (ip=0; ip<np; ip++) {
+    for (ip = 0; ip < np; ip++) {
       /*
       if (face==1) {
         coord[ip][4] += dz*sqrt(1 + sqr(coord[ip][1]) + sqr(coord[ip][3]));
@@ -717,15 +742,15 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
       */
 
       /* convert from (x, xp, y, yp, s, delta) to (x, qx, y, qy, s, delta) */
-      factor = (1+coord[ip][5])/sqrt(1+sqr(coord[ip][1])+sqr(coord[ip][3]));
-      qx = coord[ip][1]*factor;
-      qy = coord[ip][3]*factor;
-      
+      factor = (1 + coord[ip][5]) / sqrt(1 + sqr(coord[ip][1]) + sqr(coord[ip][3]));
+      qx = coord[ip][1] * factor;
+      qy = coord[ip][3] * factor;
+
       /* This step has different meaning for face=1 and face=2:
          face==1 : change from xyz coordinates to csi-eta coordinates
          face==2 : change from x'y'z' coordinates to csi-eta coordinates
       */
-      
+
       rA->a[0][0] = coord[ip][0];
       rA->a[1][0] = coord[ip][2];
       rA->a[2][0] = 0;
@@ -733,7 +758,7 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
       pA->a[0][0] = qx;
       pA->a[1][0] = qy;
       pA->a[2][0] = 0;
-      
+
       tB1 = m_hproduct(csiAxis, rA);
       tB2 = m_hproduct(csiAxis, pA);
       tB3 = m_hproduct(etaAxis, rA);
@@ -742,24 +767,24 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
       tB6 = coord[ip][5];
 
       /* wedge-drift propagation */
-      pz = sqrt(sqr(1+tB6) - sqr(tB2) - sqr(tB4));
-      factor1 = tB1/(1-tB2*tanThetaW/pz);
-      factor2 = factor1*tanThetaW/pz;
-      
-      tC1 = factor1/cosThetaW;
-      tC2 = tB2*cosThetaW + pz*sinThetaW;
-      tC3 = tB3 + tB4*factor2;
+      pz = sqrt(sqr(1 + tB6) - sqr(tB2) - sqr(tB4));
+      factor1 = tB1 / (1 - tB2 * tanThetaW / pz);
+      factor2 = factor1 * tanThetaW / pz;
+
+      tC1 = factor1 / cosThetaW;
+      tC2 = tB2 * cosThetaW + pz * sinThetaW;
+      tC3 = tB3 + tB4 * factor2;
       tC4 = tB4;
-      tC5 = tB5 + (1+tB6)*factor2;
+      tC5 = tB5 + (1 + tB6) * factor2;
       tC6 = tB6;
 
       /* conventional-drift propagation */
-      pzP = sqrt(sqr(1+tC6) - sqr(tC2) - sqr(tC4));
-      tD1 = tC1 + LD*tC2/pzP;
+      pzP = sqrt(sqr(1 + tC6) - sqr(tC2) - sqr(tC4));
+      tD1 = tC1 + LD * tC2 / pzP;
       tD2 = tC2;
-      tD3 = tC3 + LD*tC4/pzP;
+      tD3 = tC3 + LD * tC4 / pzP;
       tD4 = tC4;
-      tD5 = tC5 + LD*(1+tC6)/pzP;
+      tD5 = tC5 + LD * (1 + tC6) / pzP;
 
       /* This step has different meaing for face=1 and face=2
          face==1: change from csi''-eta'' to XYZ coordinates
@@ -785,9 +810,9 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
       coord[ip][4] = tD5;
       qx = m_hproduct(pD, Xaxis);
       qy = m_hproduct(pD, Yaxis);
-      factor = 1/sqrt(sqr(1+coord[ip][5]) - sqr(qx) - sqr(qy));
-      coord[ip][1] = qx*factor;
-      coord[ip][3] = qy*factor;
+      factor = 1 / sqrt(sqr(1 + coord[ip][5]) - sqr(qx) - sqr(qy));
+      coord[ip][1] = qx * factor;
+      coord[ip][3] = qy * factor;
 
       /*
       if (face==2) {
@@ -802,32 +827,30 @@ void offsetParticlesForEntranceCenteredMisalignmentExact
 
 /* Algorithm due to M. Venturini, ALSU-AP-TN-2021-001. */
 /* This is a fairly literal translation of his Mathematica code */
-void offsetParticlesForBodyCenteredMisalignmentLinearized
-(
- VMATRIX **VM,            /* if matrix return is desired */
- double **coord, long np, /* if particle transformation is desired */
- /* error displacements */
- double dx0, double dy0, double dz0,
- double ax0,  /* error pitch */
- double ay0,  /* error yaw */
- double az0,  /* error roll or tilt */
- double tilt, /* design tilt */
- double thetaBend,
- double length,
- short face /* 1 => entry, 2 => exit */
- )
-{
+void offsetParticlesForBodyCenteredMisalignmentLinearized(
+  VMATRIX **VM,            /* if matrix return is desired */
+  double **coord, long np, /* if particle transformation is desired */
+  /* error displacements */
+  double dx0, double dy0, double dz0,
+  double ax0,  /* error pitch */
+  double ay0,  /* error yaw */
+  double az0,  /* error roll or tilt */
+  double tilt, /* design tilt */
+  double thetaBend,
+  double length,
+  short face /* 1 => entry, 2 => exit */
+) {
   double cx, cy, cz, sx, sy, sz;
   static MATRIX *xAxis, *yAxis, *zAxis, *d0Vector, *OP, *OPp;
   static MATRIX *XaxiSxyz, *YaxiSxyz, *ZaxiSxyz;
   static MATRIX *RX, *R, *R0, *RB2, *tmp, *LinMat;
   static MATRIX *tA, *tE, *tD0;
-  static MATRIX *V1, *V2; /* working 3x1 matrices */
-  static MATRIX *M1, *M2; /* working 3x3 matrices */
+  static MATRIX *V1, *V2;      /* working 3x1 matrices */
+  static MATRIX *M1, *M2;      /* working 3x3 matrices */
   static MATRIX *t0, *t1, *t2; /* working 6x1 matrices */
   static MATRIX *RB, *RBT, *RXT, *OOp, *OpPp, *OO0, *P0P, *MTilt;
   static short initialized = 0;
-  double LD=0, Rc;
+  double LD = 0, Rc;
   long ip, i, j;
   static VMATRIX *LVM;
 
@@ -866,47 +889,59 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
     m_alloc(&OO0, 3, 1);
     m_alloc(&P0P, 3, 1);
     LVM = tmalloc(sizeof(*LVM));
-    initialize_matrices(LVM, LVM->order=1);
+    initialize_matrices(LVM, LVM->order = 1);
     initialized = 1;
   }
 
   /* unit vectors of the xyz coordinate-system axes */
-  xAxis->a[0][0] = 1; xAxis->a[1][0] = 0; xAxis->a[2][0] = 0; 
-  yAxis->a[0][0] = 0; yAxis->a[1][0] = 1; yAxis->a[2][0] = 0; 
-  zAxis->a[0][0] = 0; zAxis->a[1][0] = 0; zAxis->a[2][0] = 1;
+  xAxis->a[0][0] = 1;
+  xAxis->a[1][0] = 0;
+  xAxis->a[2][0] = 0;
+  yAxis->a[0][0] = 0;
+  yAxis->a[1][0] = 1;
+  yAxis->a[2][0] = 0;
+  zAxis->a[0][0] = 0;
+  zAxis->a[1][0] = 0;
+  zAxis->a[2][0] = 1;
 
   /* displacement-error vector in the xyz coordinate system */
-  d0Vector->a[0][0] = dx0; d0Vector->a[1][0] = dy0; d0Vector->a[2][0] = dz0;
+  d0Vector->a[0][0] = dx0;
+  d0Vector->a[1][0] = dy0;
+  d0Vector->a[2][0] = dz0;
   if (!m_copy(OP, d0Vector))
     bombElegant("m_copy(OP, d0Vector);", NULL);
-  if (fabs(thetaBend)>=SMALL_ANGLE)
-    Rc = length/thetaBend;
+  if (fabs(thetaBend) >= SMALL_ANGLE)
+    Rc = length / thetaBend;
   else
     Rc = 0; /* not actually used */
 
   /* rotational-error matrix in the x0y0z0 coordinate system */
-  cx = cos(ax0); cy = cos(ay0); cz = cos(az0+tilt);
-  sx = sin(ax0); sy = sin(ay0); sz = sin(az0+tilt);
+  cx = cos(ax0);
+  cy = cos(ay0);
+  cz = cos(az0 + tilt);
+  sx = sin(ax0);
+  sy = sin(ay0);
+  sz = sin(az0 + tilt);
 
-  R0->a[0][0] = cy*cz;
-  R0->a[0][1] = -cy*sz;
+  R0->a[0][0] = cy * cz;
+  R0->a[0][1] = -cy * sz;
   R0->a[0][2] = sy;
-  R0->a[1][0] = cz*sx*sy + cx*sz;
-  R0->a[1][1] = cx*cz - sx*sy*sz;
-  R0->a[1][2] = -cy*sx;
-  R0->a[2][0] = -cx*cz*sy + sx*sz;
-  R0->a[2][1] = cz*sx + cx*sy*sz;
-  R0->a[2][2] = cx*cy;
+  R0->a[1][0] = cz * sx * sy + cx * sz;
+  R0->a[1][1] = cx * cz - sx * sy * sz;
+  R0->a[1][2] = -cy * sx;
+  R0->a[2][0] = -cx * cz * sy + sx * sz;
+  R0->a[2][1] = cz * sx + cx * sy * sz;
+  R0->a[2][2] = cx * cy;
 
-  RB2->a[0][0] = cos(thetaBend/2);
+  RB2->a[0][0] = cos(thetaBend / 2);
   RB2->a[0][1] = 0;
-  RB2->a[0][2] = -sin(thetaBend/2);
+  RB2->a[0][2] = -sin(thetaBend / 2);
   RB2->a[1][0] = 0;
   RB2->a[1][1] = 1;
   RB2->a[1][2] = 0;
-  RB2->a[2][0] = sin(thetaBend/2);
+  RB2->a[2][0] = sin(thetaBend / 2);
   RB2->a[2][1] = 0;
-  RB2->a[2][2] = cos(thetaBend/2);
+  RB2->a[2][2] = cos(thetaBend / 2);
 
   if (!m_trans(M2, RB2))
     bombElegant("m_trans(M2, RB2);", NULL);
@@ -915,23 +950,23 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
   if (!m_mult(RX, RB2, M1))
     bombElegant("m_mult(RX, RB2, M1);", NULL);
 
-  if (fabs(thetaBend)>=SMALL_ANGLE) {
+  if (fabs(thetaBend) >= SMALL_ANGLE) {
     if (!m_mult(V1, RB2, zAxis))
       bombElegant("m_mult(V1, RB2, zAxis);", NULL);
-    if (!m_scmul(OO0, V1, Rc*sin(thetaBend/2)))
+    if (!m_scmul(OO0, V1, Rc * sin(thetaBend / 2)))
       bombElegant("m_scmul(OO0, V1, Rc*sin(thetaBend/2));", NULL);
     if (!m_mult(M1, RX, RB2))
       bombElegant("m_mult(M1, RX, RB2);", NULL);
     if (!m_mult(V1, M1, zAxis))
       bombElegant("m_mult(V1, M1, zAxis);", NULL);
-    if (!m_scmul(P0P, V1, -Rc*sin(thetaBend/2)))
+    if (!m_scmul(P0P, V1, -Rc * sin(thetaBend / 2)))
       bombElegant("m_scmul(P0P, V1, -Rc*sin(thetaBend/2));", NULL);
   } else {
-    if (!m_scmul(OO0, zAxis, length/2))
+    if (!m_scmul(OO0, zAxis, length / 2))
       bombElegant("m_scmul(OO0, zAxis, length/2);", NULL);
     if (!m_mult(V1, RX, zAxis))
       bombElegant("m_mult(V1, RX, zAxis);", NULL);
-    if (!m_scmul(P0P, V1, -length/2))
+    if (!m_scmul(P0P, V1, -length / 2))
       bombElegant("m_scmul(P0P, V1, -length/2);", NULL);
   }
   if (!m_add(V1, OO0, P0P))
@@ -941,7 +976,7 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
   if (!m_add(OP, V1, V2))
     bombElegant("m_add(OP, V1, V2);", NULL);
 
-  if (thetaBend!=0 && tilt!=0) {
+  if (thetaBend != 0 && tilt != 0) {
     MTilt->a[0][0] = cos(tilt);
     MTilt->a[0][1] = -sin(tilt);
     MTilt->a[0][2] = 0;
@@ -953,7 +988,7 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
     MTilt->a[2][2] = 1;
   }
 
-  if (face==1) {
+  if (face == 1) {
     if (!m_copy(R, RX))
       bombElegant("m_copy(R, RX);", NULL);
     if (!m_mult(XaxiSxyz, R, xAxis))
@@ -965,7 +1000,7 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
     LD = m_hproduct(ZaxiSxyz, OP);
     if (!m_copy(tmp, OP))
       bombElegant("m_copy(tmp, OP);", NULL);
-  } else if (face==2) {
+  } else if (face == 2) {
     RB->a[0][0] = cos(thetaBend);
     RB->a[0][1] = 0;
     RB->a[0][2] = -sin(thetaBend);
@@ -976,7 +1011,7 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
     RB->a[2][1] = 0;
     RB->a[2][2] = cos(thetaBend);
 
-    if (thetaBend!=0 && tilt!=0) {
+    if (thetaBend != 0 && tilt != 0) {
       if (!m_mult(M2, MTilt, RB))
         bombElegant("m_mult(M2, M1, RB));", NULL);
       if (!m_copy(RB, M2))
@@ -992,7 +1027,7 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
       bombElegant("m_mult(M1, RBT, RXT);", NULL);
     if (!m_mult(R, M1, RB))
       bombElegant("m_mult(R, M1, RB);", NULL);
-    
+
     /* XYZ-axes unit-vectors expressed in the x'y'z' coordinate system */
     if (!m_mult(XaxiSxyz, RB, xAxis))
       bombElegant("m_mult(XaxiSxyz, RB, xAxis);", NULL);
@@ -1001,16 +1036,16 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
     if (!m_mult(ZaxiSxyz, RB, zAxis))
       bombElegant("m_mult(ZaxiSxyz, RB, zAxis);", NULL);
 
-    if (fabs(thetaBend)<SMALL_ANGLE) {
+    if (fabs(thetaBend) < SMALL_ANGLE) {
       OPp->a[0][0] = 0;
       OPp->a[1][0] = 0;
       OPp->a[2][0] = length;
     } else {
-      OPp->a[0][0] = length/thetaBend*(cos(thetaBend)-1);
+      OPp->a[0][0] = length / thetaBend * (cos(thetaBend) - 1);
       OPp->a[1][0] = 0;
-      OPp->a[2][0] = length*sin(thetaBend)/thetaBend;
+      OPp->a[2][0] = length * sin(thetaBend) / thetaBend;
     }
-    if (thetaBend!=0 && tilt!=0) {
+    if (thetaBend != 0 && tilt != 0) {
       if (!m_mult(V1, MTilt, OPp))
         bombElegant("m_mult(V1, MTilt, OPp));", NULL);
       m_copy(OPp, V1);
@@ -1034,10 +1069,10 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
   tD0->a[2][0] = -m_hproduct(tmp, YaxiSxyz);
   tD0->a[3][0] = tD0->a[4][0] = tD0->a[5][0] = 0;
 
-  LinMat->a[0][0] = R->a[1][1]/R->a[2][2];
-  LinMat->a[0][1] = LD*sqrt(R->a[1][1]/R->a[2][2]);
-  LinMat->a[0][2] = -R->a[0][1]/R->a[2][2];
-  LinMat->a[0][3] = -LD*sqr(R->a[0][1]/R->a[2][2]);
+  LinMat->a[0][0] = R->a[1][1] / R->a[2][2];
+  LinMat->a[0][1] = LD * sqrt(R->a[1][1] / R->a[2][2]);
+  LinMat->a[0][2] = -R->a[0][1] / R->a[2][2];
+  LinMat->a[0][3] = -LD * sqr(R->a[0][1] / R->a[2][2]);
   LinMat->a[0][4] = 0;
   LinMat->a[0][5] = 0;
   LinMat->a[1][0] = 0;
@@ -1046,10 +1081,10 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
   LinMat->a[1][3] = R->a[1][0];
   LinMat->a[1][4] = 0;
   LinMat->a[1][5] = R->a[2][0];
-  LinMat->a[2][0] = -R->a[1][0]/R->a[2][2];
-  LinMat->a[2][1] = -LD*sqr(R->a[1][0]/R->a[2][2]);
-  LinMat->a[2][2] = R->a[0][0]/R->a[2][2];
-  LinMat->a[2][3] = LD*sqr(R->a[0][0]/R->a[2][2]);
+  LinMat->a[2][0] = -R->a[1][0] / R->a[2][2];
+  LinMat->a[2][1] = -LD * sqr(R->a[1][0] / R->a[2][2]);
+  LinMat->a[2][2] = R->a[0][0] / R->a[2][2];
+  LinMat->a[2][3] = LD * sqr(R->a[0][0] / R->a[2][2]);
   LinMat->a[2][4] = 0;
   LinMat->a[2][5] = 0;
   LinMat->a[3][0] = 0;
@@ -1058,10 +1093,10 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
   LinMat->a[3][3] = R->a[1][1];
   LinMat->a[3][4] = 0;
   LinMat->a[3][5] = R->a[2][1];
-  LinMat->a[4][0] = -R->a[0][2]/R->a[2][2];
-  LinMat->a[4][1] = -LD*sqr(R->a[0][2]/R->a[2][2]);
-  LinMat->a[4][2] = -R->a[1][2]/R->a[2][2];
-  LinMat->a[4][3] = -LD*sqr(R->a[1][2]/R->a[2][2]);
+  LinMat->a[4][0] = -R->a[0][2] / R->a[2][2];
+  LinMat->a[4][1] = -LD * sqr(R->a[0][2] / R->a[2][2]);
+  LinMat->a[4][2] = -R->a[1][2] / R->a[2][2];
+  LinMat->a[4][3] = -LD * sqr(R->a[1][2] / R->a[2][2]);
   LinMat->a[4][4] = 1;
   LinMat->a[4][5] = 0;
   LinMat->a[5][0] = 0;
@@ -1071,36 +1106,36 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
   LinMat->a[5][4] = 0;
   LinMat->a[5][5] = 1;
 
-  t0->a[0][0] = LD*R->a[2][0]/R->a[2][2];
+  t0->a[0][0] = LD * R->a[2][0] / R->a[2][2];
   t0->a[1][0] = R->a[2][0];
-  t0->a[2][0] = LD*R->a[2][1]/R->a[2][2];
+  t0->a[2][0] = LD * R->a[2][1] / R->a[2][2];
   t0->a[3][0] = R->a[2][1];
-  t0->a[4][0] = LD/R->a[2][2];
+  t0->a[4][0] = LD / R->a[2][2];
   t0->a[5][0] = 0;
 
-  for (i=0; i<6; i++) {
+  for (i = 0; i < 6; i++) {
     LVM->C[i] = t0->a[i][0] + tD0->a[i][0];
-    for (j=0; j<6; j++) {
+    for (j = 0; j < 6; j++) {
       LVM->R[i][j] = LinMat->a[i][j];
     }
   }
 
-  if (coord && np!=0) {
+  if (coord && np != 0) {
     double qx, qy;
-    for (ip=0; ip<np; ip++) {
+    for (ip = 0; ip < np; ip++) {
       /* convert from (x, xp, y, yp, s, delta) to (x, qx, y, qy, s, delta) */
-      factor = (1+coord[ip][5])/sqrt(1+sqr(coord[ip][1])+sqr(coord[ip][3]));
+      factor = (1 + coord[ip][5]) / sqrt(1 + sqr(coord[ip][1]) + sqr(coord[ip][3]));
       coord[ip][1] *= factor;
       coord[ip][3] *= factor;
     }
-    
+
     track_particles(coord, LVM, coord, np);
 
-    for (ip=0; ip<np; ip++) {
+    for (ip = 0; ip < np; ip++) {
       /* convert from (x, qx, y, qy, s, delta) to (x, xp, y, yp, s, delta) */
       qx = coord[ip][1];
       qy = coord[ip][3];
-      factor = 1/sqrt(sqr(1+coord[ip][5]) - sqr(qx) - sqr(qy));
+      factor = 1 / sqrt(sqr(1 + coord[ip][5]) - sqr(qx) - sqr(qy));
       coord[ip][1] *= factor;
       coord[ip][3] *= factor;
     }
@@ -1109,35 +1144,33 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized
   /* These matrices are in (x, qx, y, qy, s, delta) coordinates.
    * Transform to (x, xp, y, yp, s, delta).
    * Use 3rd order to get higher precision.
-   */ 
+   */
   if (VM) {
     (*VM) = tmalloc(sizeof(**VM));
-    initialize_matrices((*VM), (*VM)->order=3);
-    for (i=0; i<6; i++) {
+    initialize_matrices((*VM), (*VM)->order = 3);
+    for (i = 0; i < 6; i++) {
       (*VM)->C[i] = t0->a[i][0] + tD0->a[i][0];
-      for (j=0; j<6; j++) {
+      for (j = 0; j < 6; j++) {
         (*VM)->R[i][j] = LinMat->a[i][j];
       }
     }
     /* Transform to slope coordinates */
     transformMatrixBetweenMomentumAndSlopes(*VM);
   }
-
 }
 
-VMATRIX *transformMatrixBetweenMomentumAndSlopes(VMATRIX *VM)
-{
+VMATRIX *transformMatrixBetweenMomentumAndSlopes(VMATRIX *VM) {
   VMATRIX *X, *tmp;
   long i, order;
 
-  order= VM->order;
+  order = VM->order;
 
   X = tmalloc(sizeof(*X));
   initialize_matrices(X, X->order = 3);
   tmp = tmalloc(sizeof(*tmp));
   initialize_matrices(tmp, tmp->order = 3);
 
-  for (i=0; i<6; i++)
+  for (i = 0; i < 6; i++)
     X->R[i][i] = 1;
 
   /* From (x, xp, y, yp, s, delta) to (x, qx, y, qy, s, delta)
@@ -1152,7 +1185,7 @@ VMATRIX *transformMatrixBetweenMomentumAndSlopes(VMATRIX *VM)
   X->Q[1][1][1][1] = X->Q[3][3][3][3] = -3;
   X->Q[1][3][3][1] = X->Q[3][3][1][1] = -1;
   concat_matrices(tmp, VM, X, 0);
-  
+
   /* From (x, qx, y, qy, s, delta) to (x, xp, y, yp, s, delta)
      T262 = -1
      T464 = -1
@@ -1163,13 +1196,13 @@ VMATRIX *transformMatrixBetweenMomentumAndSlopes(VMATRIX *VM)
      U4444 = 3
      U4664 = 2
   */
-  
+
   X->T[1][5][1] = X->T[3][5][3] = -1;
   X->Q[1][1][1][1] = X->Q[3][3][3][3] = 3;
   X->Q[1][3][3][1] = X->Q[3][3][1][1] = 1;
   X->Q[1][5][5][1] = X->Q[3][5][5][3] = 2;
   concat_matrices(VM, X, tmp, 0);
-  
+
   free_matrices(X);
   free_matrices(tmp);
   free(X);
@@ -1194,26 +1227,24 @@ VMATRIX *transformMatrixBetweenMomentumAndSlopes(VMATRIX *VM)
 /* This is a fairly literal translation of his Mathematica code, modified
  * to perform the misalignment in the body-centered frame 
  */
-void offsetParticlesForBodyCenteredMisalignmentExact
-(
- double **coord, long np,
- double dx0, double dy0, double dz0,
- double ax0,  /* error pitch */
- double ay0,  /* error yaw */
- double az0,  /* error roll or tilt */
- double tilt, /* design tilt */
- double thetaBend,
- double length,
- short face /* 1 => entry, 2 => exit */
- )
-{
+void offsetParticlesForBodyCenteredMisalignmentExact(
+  double **coord, long np,
+  double dx0, double dy0, double dz0,
+  double ax0,  /* error pitch */
+  double ay0,  /* error yaw */
+  double az0,  /* error roll or tilt */
+  double tilt, /* design tilt */
+  double thetaBend,
+  double length,
+  short face /* 1 => entry, 2 => exit */
+) {
   double cx, cy, cz, sx, sy, sz;
   static MATRIX *xAxis, *yAxis, *zAxis, *d0Vector, *OP, *OPp;
   static MATRIX *XaxiSxyz, *YaxiSxyz, *ZaxiSxyz;
   static MATRIX *RX, *R, *tmp, *LinMat;
   static MATRIX *tA, *tE, *tD0;
-  static MATRIX *V1, *V2; /* working 3x1 matrix */
-  static MATRIX *M1, *M2; /* working 3x3 matrices */
+  static MATRIX *V1, *V2;      /* working 3x1 matrix */
+  static MATRIX *M1, *M2;      /* working 3x3 matrices */
   static MATRIX *t0, *t1, *t2; /* working 6x1 matrices */
   static MATRIX *R0, *RB, *RB2, *RBT, *RXT, *OOp, *OpPp, *OO0, *O0P0, *P0P, *MTilt;
   static short initialized = 0;
@@ -1282,42 +1313,54 @@ void offsetParticlesForBodyCenteredMisalignmentExact
   }
 
   /* unit vectors of the xyz coordinate-system axes */
-  xAxis->a[0][0] = 1; xAxis->a[1][0] = 0; xAxis->a[2][0] = 0; 
-  yAxis->a[0][0] = 0; yAxis->a[1][0] = 1; yAxis->a[2][0] = 0; 
-  zAxis->a[0][0] = 0; zAxis->a[1][0] = 0; zAxis->a[2][0] = 1;
+  xAxis->a[0][0] = 1;
+  xAxis->a[1][0] = 0;
+  xAxis->a[2][0] = 0;
+  yAxis->a[0][0] = 0;
+  yAxis->a[1][0] = 1;
+  yAxis->a[2][0] = 0;
+  zAxis->a[0][0] = 0;
+  zAxis->a[1][0] = 0;
+  zAxis->a[2][0] = 1;
 
   /* displacement-error vector in the xyz coordinate system */
-  d0Vector->a[0][0] = dx0; d0Vector->a[1][0] = dy0; d0Vector->a[2][0] = dz0;
+  d0Vector->a[0][0] = dx0;
+  d0Vector->a[1][0] = dy0;
+  d0Vector->a[2][0] = dz0;
   if (!m_copy(OP, d0Vector))
     bombElegant("m_copy(OP, d0Vector);", NULL);
-  if (fabs(thetaBend)>=SMALL_ANGLE)
-    Rc = length/thetaBend;
+  if (fabs(thetaBend) >= SMALL_ANGLE)
+    Rc = length / thetaBend;
   else
     Rc = 0; /* not actually used */
 
   /* rotational-error matrix in the x0y0z0 coordinate system */
-  cx = cos(ax0); cy = cos(ay0); cz = cos(az0+tilt);
-  sx = sin(ax0); sy = sin(ay0); sz = sin(az0+tilt);
+  cx = cos(ax0);
+  cy = cos(ay0);
+  cz = cos(az0 + tilt);
+  sx = sin(ax0);
+  sy = sin(ay0);
+  sz = sin(az0 + tilt);
 
-  R0->a[0][0] = cy*cz;
-  R0->a[0][1] = -cy*sz;
+  R0->a[0][0] = cy * cz;
+  R0->a[0][1] = -cy * sz;
   R0->a[0][2] = sy;
-  R0->a[1][0] = cz*sx*sy + cx*sz;
-  R0->a[1][1] = cx*cz - sx*sy*sz;
-  R0->a[1][2] = -cy*sx;
-  R0->a[2][0] = -cx*cz*sy + sx*sz;
-  R0->a[2][1] = cz*sx + cx*sy*sz;
-  R0->a[2][2] = cx*cy;
+  R0->a[1][0] = cz * sx * sy + cx * sz;
+  R0->a[1][1] = cx * cz - sx * sy * sz;
+  R0->a[1][2] = -cy * sx;
+  R0->a[2][0] = -cx * cz * sy + sx * sz;
+  R0->a[2][1] = cz * sx + cx * sy * sz;
+  R0->a[2][2] = cx * cy;
 
-  RB2->a[0][0] = cos(thetaBend/2);
+  RB2->a[0][0] = cos(thetaBend / 2);
   RB2->a[0][1] = 0;
-  RB2->a[0][2] = -sin(thetaBend/2);
+  RB2->a[0][2] = -sin(thetaBend / 2);
   RB2->a[1][0] = 0;
   RB2->a[1][1] = 1;
   RB2->a[1][2] = 0;
-  RB2->a[2][0] = sin(thetaBend/2);
+  RB2->a[2][0] = sin(thetaBend / 2);
   RB2->a[2][1] = 0;
-  RB2->a[2][2] = cos(thetaBend/2);
+  RB2->a[2][2] = cos(thetaBend / 2);
 
   if (!m_trans(M2, RB2))
     bombElegant("m_trans(M2, RB2);", NULL);
@@ -1326,23 +1369,23 @@ void offsetParticlesForBodyCenteredMisalignmentExact
   if (!m_mult(RX, RB2, M1))
     bombElegant("m_mult(RX, RB2, M1);", NULL);
 
-  if (fabs(thetaBend)>=SMALL_ANGLE) {
+  if (fabs(thetaBend) >= SMALL_ANGLE) {
     if (!m_mult(V1, RB2, zAxis))
       bombElegant("m_mult(V1, RB2, zAxis);", NULL);
-    if (!m_scmul(OO0, V1, Rc*sin(thetaBend/2)))
+    if (!m_scmul(OO0, V1, Rc * sin(thetaBend / 2)))
       bombElegant("m_scmul(OO0, V1, Rc*sin(thetaBend/2));", NULL);
     if (!m_mult(M1, RX, RB2))
       bombElegant("m_mult(M1, RX, RB2);", NULL);
     if (!m_mult(V1, M1, zAxis))
       bombElegant("m_mult(V1, M1, zAxis);", NULL);
-    if (!m_scmul(P0P, V1, -Rc*sin(thetaBend/2)))
+    if (!m_scmul(P0P, V1, -Rc * sin(thetaBend / 2)))
       bombElegant("m_scmul(P0P, V1, -Rc*sin(thetaBend/2));", NULL);
   } else {
-    if (!m_scmul(OO0, zAxis, length/2))
+    if (!m_scmul(OO0, zAxis, length / 2))
       bombElegant("m_scmul(OO0, zAxis, length/2);", NULL);
     if (!m_mult(V1, RX, zAxis))
       bombElegant("m_mult(V1, RX, zAxis);", NULL);
-    if (!m_scmul(P0P, V1, -length/2))
+    if (!m_scmul(P0P, V1, -length / 2))
       bombElegant("m_scmul(P0P, V1, -length/2);", NULL);
   }
   if (!m_add(V1, OO0, P0P))
@@ -1352,7 +1395,7 @@ void offsetParticlesForBodyCenteredMisalignmentExact
   if (!m_add(OP, V1, V2))
     bombElegant("m_add(OP, V1, V2);", NULL);
 
-  if (thetaBend!=0 && tilt!=0) {
+  if (thetaBend != 0 && tilt != 0) {
     MTilt->a[0][0] = cos(tilt);
     MTilt->a[0][1] = -sin(tilt);
     MTilt->a[0][2] = 0;
@@ -1364,7 +1407,7 @@ void offsetParticlesForBodyCenteredMisalignmentExact
     MTilt->a[2][2] = 1;
   }
 
-  if (face==1) {
+  if (face == 1) {
     if (!m_copy(R, RX))
       bombElegant("m_copy(R, RX);", NULL);
     if (!m_mult(XaxiSxyz, R, xAxis))
@@ -1376,7 +1419,7 @@ void offsetParticlesForBodyCenteredMisalignmentExact
     LD = m_hproduct(ZaxiSxyz, OP);
     if (!m_copy(tmp, OP))
       bombElegant("m_copy(tmp, OP);", NULL);
-  } else if (face==2) {
+  } else if (face == 2) {
     RB->a[0][0] = cos(thetaBend);
     RB->a[0][1] = 0;
     RB->a[0][2] = -sin(thetaBend);
@@ -1387,7 +1430,7 @@ void offsetParticlesForBodyCenteredMisalignmentExact
     RB->a[2][1] = 0;
     RB->a[2][2] = cos(thetaBend);
 
-    if (thetaBend!=0 && tilt!=0) {
+    if (thetaBend != 0 && tilt != 0) {
       if (!m_mult(M2, MTilt, RB))
         bombElegant("m_mult(M2, M1, RB));", NULL);
       if (!m_copy(RB, M2))
@@ -1403,7 +1446,7 @@ void offsetParticlesForBodyCenteredMisalignmentExact
       bombElegant("m_mult(M1, RBT, RXT);", NULL);
     if (!m_mult(R, M1, RB))
       bombElegant("m_mult(R, M1, RB);", NULL);
-    
+
     /* XYZ-axes unit-vectors expressed in the x'y'z' coordinate system */
     if (!m_mult(XaxiSxyz, RB, xAxis))
       bombElegant("m_mult(XaxiSxyz, RB, xAxis);", NULL);
@@ -1412,16 +1455,16 @@ void offsetParticlesForBodyCenteredMisalignmentExact
     if (!m_mult(ZaxiSxyz, RB, zAxis))
       bombElegant("m_mult(ZaxiSxyz, RB, zAxis);", NULL);
 
-    if (fabs(thetaBend)<SMALL_ANGLE) {
+    if (fabs(thetaBend) < SMALL_ANGLE) {
       OPp->a[0][0] = 0;
       OPp->a[1][0] = 0;
       OPp->a[2][0] = length;
     } else {
-      OPp->a[0][0] = length/thetaBend*(cos(thetaBend)-1);
+      OPp->a[0][0] = length / thetaBend * (cos(thetaBend) - 1);
       OPp->a[1][0] = 0;
-      OPp->a[2][0] = length*sin(thetaBend)/thetaBend;
+      OPp->a[2][0] = length * sin(thetaBend) / thetaBend;
     }
-    if (thetaBend!=0 && tilt!=0) {
+    if (thetaBend != 0 && tilt != 0) {
       if (!m_mult(V1, MTilt, OPp))
         bombElegant("m_mult(V1, MTilt, OPp));", NULL);
       m_copy(OPp, V1);
@@ -1438,25 +1481,25 @@ void offsetParticlesForBodyCenteredMisalignmentExact
   } else
     bombElegantVA("Invalid face code %hd in call to offsetParticlesForMisalignment", face);
 
-  if (R->a[0][2]==0) {
+  if (R->a[0][2] == 0) {
     /* R13 == 0 */
-    if (R->a[1][2]!=0) {
+    if (R->a[1][2] != 0) {
       /* R23 !=0 */
-      if (!m_mult(ZaxiSxyz, R, zAxis)) 
+      if (!m_mult(ZaxiSxyz, R, zAxis))
         bombElegant("m_mult(ZaxiSxyz, R, zAxis)", NULL);
       if (!m_scmul(etaAxis, xAxis, -SIGN(R->a[1][2])))
         bombElegant("m_scmul(etaAxis, xAxis, -SIGN(R->a[1][2]));", NULL);
       if (!m_scmul(csiAxis, yAxis, SIGN(R->a[1][2])))
         bombElegant("m_scmul(csiAxis, yAxis, SIGN(R->a[1][2]));", NULL);
-      if (!m_scmul(V1, zAxis, -SIGN(R->a[1][2])*R->a[1][2]))
+      if (!m_scmul(V1, zAxis, -SIGN(R->a[1][2]) * R->a[1][2]))
         bombElegant("m_scmul(V1, zAxis, -SIGN(R->a[1][2])*R->a[1][2)];", NULL);
-      if (!m_scmul(V2, yAxis, SIGN(R->a[1][2])*R->a[2][2]))
+      if (!m_scmul(V2, yAxis, SIGN(R->a[1][2]) * R->a[2][2]))
         bombElegant("m_scmul(V2, yAxis, SIGN(R->a[1][2])*R->a[2][2)];", NULL);
       if (!m_add(csiPAxis, V1, V2))
         bombElegant("m_add(csiPAxis, V1, V)2;", NULL);
-      sinThetaW = -SIGN(R->a[1][2])*R->a[1][2];
-      cosThetaW = sqrt(1-sqr(sinThetaW));
-      tanThetaW = sinThetaW/cosThetaW;
+      sinThetaW = -SIGN(R->a[1][2]) * R->a[1][2];
+      cosThetaW = sqrt(1 - sqr(sinThetaW));
+      tanThetaW = sinThetaW / cosThetaW;
     } else {
       sinThetaW = tanThetaW = 0;
       cosThetaW = 1;
@@ -1469,24 +1512,24 @@ void offsetParticlesForBodyCenteredMisalignmentExact
     }
   } else {
     /* R13 !=0 */
-    sinThetaW = - SIGN(R->a[0][2])*sqrt(sqr(R->a[0][2]) + sqr(R->a[1][2]));
-    cosThetaW = sqrt(1-sqr(sinThetaW));
-    tanThetaW = sinThetaW/cosThetaW;
-    etaAxis->a[0][0] = R->a[1][2]/sinThetaW;
-    etaAxis->a[1][0] = -R->a[0][2]/sinThetaW;
+    sinThetaW = -SIGN(R->a[0][2]) * sqrt(sqr(R->a[0][2]) + sqr(R->a[1][2]));
+    cosThetaW = sqrt(1 - sqr(sinThetaW));
+    tanThetaW = sinThetaW / cosThetaW;
+    etaAxis->a[0][0] = R->a[1][2] / sinThetaW;
+    etaAxis->a[1][0] = -R->a[0][2] / sinThetaW;
     etaAxis->a[2][0] = 0;
-    csiAxis->a[0][0] = -R->a[0][2]/sinThetaW;
-    csiAxis->a[1][0] = -R->a[1][2]/sinThetaW;
+    csiAxis->a[0][0] = -R->a[0][2] / sinThetaW;
+    csiAxis->a[1][0] = -R->a[1][2] / sinThetaW;
     csiAxis->a[2][0] = 0;
-    csiPAxis->a[0][0] = -R->a[0][2]/tanThetaW;
-    csiPAxis->a[1][0] = -R->a[1][2]/tanThetaW;
+    csiPAxis->a[0][0] = -R->a[0][2] / tanThetaW;
+    csiPAxis->a[1][0] = -R->a[1][2] / tanThetaW;
     csiPAxis->a[2][0] = sinThetaW;
   }
   if (!m_copy(etaPAxis, etaAxis))
     bombElegant("m_copy(etaPAxis, etaAxis);", NULL);
   if (!m_copy(etaPPAxis, etaAxis))
     bombElegant("m_copy(etaPPAxis, etaAxis);", NULL);
-  if (!m_copy(csiPPAxis, csiPAxis)) 
+  if (!m_copy(csiPPAxis, csiPAxis))
     bombElegant("m_copy(csiPPAxis, csiPAxis);", NULL);
 
   if (!m_mult(Xaxis, R, xAxis))
@@ -1495,8 +1538,8 @@ void offsetParticlesForBodyCenteredMisalignmentExact
     bombElegant("m_mult(Yaxis, R, yAxis);", NULL);
   if (!m_mult(Zaxis, R, zAxis))
     bombElegant("m_mult(Zaxis, R, zAxis);", NULL);
-  
-  if (face==1) {
+
+  if (face == 1) {
     /* XYZ-axes unit-vectors expresed in the xyz coordinate system */
     if (!m_copy(XaxiSxyz, Xaxis))
       bombElegant("m_copy(XaxiSxyz, Xaxis);", NULL);
@@ -1506,14 +1549,14 @@ void offsetParticlesForBodyCenteredMisalignmentExact
     if (!m_copy(tmp, OP))
       bombElegant("m_copy(tmp, OP);", NULL);
   } else {
-    if (fabs(thetaBend)<SMALL_ANGLE) {
+    if (fabs(thetaBend) < SMALL_ANGLE) {
       OPp->a[0][0] = 0;
       OPp->a[1][0] = 0;
       OPp->a[2][0] = length;
     } else {
-      OPp->a[0][0] = length/thetaBend*(cos(thetaBend)-1);
+      OPp->a[0][0] = length / thetaBend * (cos(thetaBend) - 1);
       OPp->a[1][0] = 0;
-      OPp->a[2][0] = length*sin(thetaBend)/thetaBend;
+      OPp->a[2][0] = length * sin(thetaBend) / thetaBend;
     }
     if (!m_mult(XaxiSxyz, RB, xAxis))
       bombElegant("m_mult(XaxiSxyz, RB, xAxis);", NULL);
@@ -1532,10 +1575,9 @@ void offsetParticlesForBodyCenteredMisalignmentExact
       bombElegant("m_copy(tmp, OpPp);", NULL);
   }
 
-
-  if (coord && np!=0) {
+  if (coord && np != 0) {
     double qx, qy;
-    for (ip=0; ip<np; ip++) {
+    for (ip = 0; ip < np; ip++) {
       /*
       if (face==1) {
         coord[ip][4] += dz*sqrt(1 + sqr(coord[ip][1]) + sqr(coord[ip][3]));
@@ -1545,15 +1587,15 @@ void offsetParticlesForBodyCenteredMisalignmentExact
       */
 
       /* convert from (x, xp, y, yp, s, delta) to (x, qx, y, qy, s, delta) */
-      factor = (1+coord[ip][5])/sqrt(1+sqr(coord[ip][1])+sqr(coord[ip][3]));
-      qx = coord[ip][1]*factor;
-      qy = coord[ip][3]*factor;
-      
+      factor = (1 + coord[ip][5]) / sqrt(1 + sqr(coord[ip][1]) + sqr(coord[ip][3]));
+      qx = coord[ip][1] * factor;
+      qy = coord[ip][3] * factor;
+
       /* This step has different meaning for face=1 and face=2:
          face==1 : change from xyz coordinates to csi-eta coordinates
          face==2 : change from x'y'z' coordinates to csi-eta coordinates
       */
-      
+
       rA->a[0][0] = coord[ip][0];
       rA->a[1][0] = coord[ip][2];
       rA->a[2][0] = 0;
@@ -1561,7 +1603,7 @@ void offsetParticlesForBodyCenteredMisalignmentExact
       pA->a[0][0] = qx;
       pA->a[1][0] = qy;
       pA->a[2][0] = 0;
-      
+
       tB1 = m_hproduct(csiAxis, rA);
       tB2 = m_hproduct(csiAxis, pA);
       tB3 = m_hproduct(etaAxis, rA);
@@ -1570,24 +1612,24 @@ void offsetParticlesForBodyCenteredMisalignmentExact
       tB6 = coord[ip][5];
 
       /* wedge-drift propagation */
-      pz = sqrt(sqr(1+tB6) - sqr(tB2) - sqr(tB4));
-      factor1 = tB1/(1-tB2*tanThetaW/pz);
-      factor2 = factor1*tanThetaW/pz;
-      
-      tC1 = factor1/cosThetaW;
-      tC2 = tB2*cosThetaW + pz*sinThetaW;
-      tC3 = tB3 + tB4*factor2;
+      pz = sqrt(sqr(1 + tB6) - sqr(tB2) - sqr(tB4));
+      factor1 = tB1 / (1 - tB2 * tanThetaW / pz);
+      factor2 = factor1 * tanThetaW / pz;
+
+      tC1 = factor1 / cosThetaW;
+      tC2 = tB2 * cosThetaW + pz * sinThetaW;
+      tC3 = tB3 + tB4 * factor2;
       tC4 = tB4;
-      tC5 = tB5 + (1+tB6)*factor2;
+      tC5 = tB5 + (1 + tB6) * factor2;
       tC6 = tB6;
 
       /* conventional-drift propagation */
-      pzP = sqrt(sqr(1+tC6) - sqr(tC2) - sqr(tC4));
-      tD1 = tC1 + LD*tC2/pzP;
+      pzP = sqrt(sqr(1 + tC6) - sqr(tC2) - sqr(tC4));
+      tD1 = tC1 + LD * tC2 / pzP;
       tD2 = tC2;
-      tD3 = tC3 + LD*tC4/pzP;
+      tD3 = tC3 + LD * tC4 / pzP;
       tD4 = tC4;
-      tD5 = tC5 + LD*(1+tC6)/pzP;
+      tD5 = tC5 + LD * (1 + tC6) / pzP;
 
       /* This step has different meaing for face=1 and face=2
          face==1: change from csi''-eta'' to XYZ coordinates
@@ -1614,9 +1656,9 @@ void offsetParticlesForBodyCenteredMisalignmentExact
       coord[ip][4] = tD5;
       qx = m_hproduct(pD, Xaxis);
       qy = m_hproduct(pD, Yaxis);
-      factor = 1/sqrt(sqr(1+coord[ip][5]) - sqr(qx) - sqr(qy));
-      coord[ip][1] = qx*factor;
-      coord[ip][3] = qy*factor;
+      factor = 1 / sqrt(sqr(1 + coord[ip][5]) - sqr(qx) - sqr(qy));
+      coord[ip][1] = qx * factor;
+      coord[ip][3] = qy * factor;
     }
   }
 }

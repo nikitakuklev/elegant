@@ -11,20 +11,19 @@
 #include "mdbsun.h"
 #include "track.h"
 
-TRACKING_CONTEXT trackingContext = 
+TRACKING_CONTEXT trackingContext =
   {"", -1, 0, -1, NULL, NULL, 0.0, 0.0, ""
 #if USE_MPI
-   ,-1
+   ,
+   -1
 #endif
 };
 
-void getTrackingContext(TRACKING_CONTEXT *trackingContext0) 
-{
+void getTrackingContext(TRACKING_CONTEXT *trackingContext0) {
   memcpy(trackingContext0, &trackingContext, sizeof(trackingContext));
 }
 
-void setTrackingContext(char *name, long occurence, long type, char *rootname, ELEMENT_LIST *eptr) 
-{
+void setTrackingContext(char *name, long occurence, long type, char *rootname, ELEMENT_LIST *eptr) {
 #if USE_MPI
   trackingContext.myid = myid;
 #endif
@@ -44,5 +43,3 @@ void setTrackingContext(char *name, long occurence, long type, char *rootname, E
   else
     trackingContext.rootname[0] = 0;
 }
- 
-

@@ -8,10 +8,9 @@
 double dlaran_OAG(long int *iseed);
 
 static long initialized = 0;
-static long savedRandomNumberSeed[4] = {0,0,0,0};
+static long savedRandomNumberSeed[4] = {0, 0, 0, 0};
 
-void seedElegantRandomNumbers(long iseed, unsigned long restart)
-{
+void seedElegantRandomNumbers(long iseed, unsigned long restart) {
 #if USE_MPI
   long i, offset = 0;
 #endif
@@ -21,27 +20,27 @@ void seedElegantRandomNumbers(long iseed, unsigned long restart)
   } else {
     initialized = 1;
     savedRandomNumberSeed[0] = labs(iseed);
-    savedRandomNumberSeed[2] = labs(iseed+4);
+    savedRandomNumberSeed[2] = labs(iseed + 4);
 #if (!USE_MPI)
-    savedRandomNumberSeed[1] = labs(iseed+2);
-    savedRandomNumberSeed[3] = labs(iseed+6);
+    savedRandomNumberSeed[1] = labs(iseed + 2);
+    savedRandomNumberSeed[3] = labs(iseed + 6);
 #else
     switch (mpiRandomizationMode) {
     case 2:
       /* Quadratic dependence of seed on processor ID */
-      savedRandomNumberSeed[1] = labs(iseed+2*myid*myid  ); 
-      savedRandomNumberSeed[3] = labs(iseed+2*myid*myid+4);
+      savedRandomNumberSeed[1] = labs(iseed + 2 * myid * myid);
+      savedRandomNumberSeed[3] = labs(iseed + 2 * myid * myid + 4);
       break;
     case 4:
       /* Use system generator to create modified seed for each processor */
       srand(labs(iseed));
-      for (i=0; i<myid; i++)
-	offset = 2*(rand()/2);
-      if (offset>=RAND_MAX/4)
-	offset /= 4;
+      for (i = 0; i < myid; i++)
+        offset = 2 * (rand() / 2);
+      if (offset >= RAND_MAX / 4)
+        offset /= 4;
       iseed = labs(iseed);
-      if (iseed>=RAND_MAX/2)
-	iseed /= 2;
+      if (iseed >= RAND_MAX / 2)
+        iseed /= 2;
       iseed += offset;
       savedRandomNumberSeed[1] = iseed;
       iseed += offset;
@@ -49,21 +48,21 @@ void seedElegantRandomNumbers(long iseed, unsigned long restart)
       break;
     case 1:
       /* Original method */
-      savedRandomNumberSeed[1] = labs(iseed+2*myid  );
-      savedRandomNumberSeed[3] = labs(iseed+2*myid+4);
+      savedRandomNumberSeed[1] = labs(iseed + 2 * myid);
+      savedRandomNumberSeed[3] = labs(iseed + 2 * myid + 4);
       break;
     case 3:
     default:
       /* Quadratic dependence of seed on processor ID, but guaranteed to have an even offset */
-      savedRandomNumberSeed[1] = labs(iseed+myid*(myid+1)  );
-      savedRandomNumberSeed[3] = labs(iseed+myid*(myid+1)+4);
+      savedRandomNumberSeed[1] = labs(iseed + myid * (myid + 1));
+      savedRandomNumberSeed[3] = labs(iseed + myid * (myid + 1) + 4);
       break;
     }
 #endif
   }
 
 #if USE_MPI
-  if (myid==0) {
+  if (myid == 0) {
     printf("Seeding random number generators (mode=%ld)\n", mpiRandomizationMode);
     fflush(stdout);
   }
@@ -79,55 +78,51 @@ void seedElegantRandomNumbers(long iseed, unsigned long restart)
    * random_4 is used for beam generation 
    */
 
-  if (savedRandomNumberSeed[0]==987654321)
+  if (savedRandomNumberSeed[0] == 987654321)
     inhibitRandomSeedPermutation(1);
-  
-  if (!restart || restart&RESTART_RN_BEAMLINE) 
+
+  if (!restart || restart & RESTART_RN_BEAMLINE)
     random_1_elegant(-savedRandomNumberSeed[0]);
-  if (!restart || restart&RESTART_RN_SCATTER)
+  if (!restart || restart & RESTART_RN_SCATTER)
     random_2(-savedRandomNumberSeed[1]);
-  if (!restart || restart&RESTART_RN_BPMNOISE)
+  if (!restart || restart & RESTART_RN_BPMNOISE)
     random_3(-savedRandomNumberSeed[2]);
-  if (!restart || restart&RESTART_RN_BEAMGEN)
+  if (!restart || restart & RESTART_RN_BEAMGEN)
     random_4(-savedRandomNumberSeed[3]);
 }
 
-double random_1_elegant(long iseed)
-{
+double random_1_elegant(long iseed) {
 
-    static short initialized = 0;
-    static long int seed[4] = {0,0,0,0};
+  static short initialized = 0;
+  static long int seed[4] = {0, 0, 0, 0};
 
-    if (!initialized || iseed<0) {
-        if (iseed<0)
-          iseed = -iseed;
-	/* random_1_elegant() is used for beamline errors, same on all processors */
-        if (iseed!=987654321)
-          iseed = permuteSeedBitOrder(iseed);
-        iseed = (iseed/2)*2 + 1;
-        seed[3] = (iseed & 4095);
-        seed[2] = (iseed >>= 12) & 4095;
-        seed[1] = (iseed >>= 12) & 4095;
-        seed[0] = (iseed >>= 12) & 4095;
-        initialized = 1;
-        }
-    if (!initialized)
-        bombElegant("random_1_elegant not properly initialized", NULL);
+  if (!initialized || iseed < 0) {
+    if (iseed < 0)
+      iseed = -iseed;
+    /* random_1_elegant() is used for beamline errors, same on all processors */
+    if (iseed != 987654321)
+      iseed = permuteSeedBitOrder(iseed);
+    iseed = (iseed / 2) * 2 + 1;
+    seed[3] = (iseed & 4095);
+    seed[2] = (iseed >>= 12) & 4095;
+    seed[1] = (iseed >>= 12) & 4095;
+    seed[0] = (iseed >>= 12) & 4095;
+    initialized = 1;
+  }
+  if (!initialized)
+    bombElegant("random_1_elegant not properly initialized", NULL);
 
-    return dlaran_OAG(seed);
-
+  return dlaran_OAG(seed);
 }
 
-double dlaran_OAG(long int *iseed)
-{
-    /* System generated locals */
-    double ret_val;
+double dlaran_OAG(long int *iseed) {
+  /* System generated locals */
+  double ret_val;
 
-    /* Local variables */
-    static long int it1, it2, it3, it4;
+  /* Local variables */
+  static long int it1, it2, it3, it4;
 
-
-/*  -- LAPACK auxiliary routine (version 3.0) --   
+  /*  -- LAPACK auxiliary routine (version 3.0) --   
        Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,   
        Courant Institute, Argonne National Lab, and Rice University   
        February 29, 1992   
@@ -167,33 +162,30 @@ double dlaran_OAG(long int *iseed)
        multiply the seed by the multiplier modulo 2**48   
 
        Parameter adjustments */
-    --iseed;
+  --iseed;
 
-    /* Function Body */
-    it4 = iseed[4] * 2549;
-    it3 = it4 / 4096;
-    it4 -= it3 << 12;
-    it3 = it3 + iseed[3] * 2549 + iseed[4] * 2508;
-    it2 = it3 / 4096;
-    it3 -= it2 << 12;
-    it2 = it2 + iseed[2] * 2549 + iseed[3] * 2508 + iseed[4] * 322;
-    it1 = it2 / 4096;
-    it2 -= it1 << 12;
-    it1 = it1 + iseed[1] * 2549 + iseed[2] * 2508 + iseed[3] * 322 + iseed[4] 
-	    * 494;
-    it1 %= 4096;
+  /* Function Body */
+  it4 = iseed[4] * 2549;
+  it3 = it4 / 4096;
+  it4 -= it3 << 12;
+  it3 = it3 + iseed[3] * 2549 + iseed[4] * 2508;
+  it2 = it3 / 4096;
+  it3 -= it2 << 12;
+  it2 = it2 + iseed[2] * 2549 + iseed[3] * 2508 + iseed[4] * 322;
+  it1 = it2 / 4096;
+  it2 -= it1 << 12;
+  it1 = it1 + iseed[1] * 2549 + iseed[2] * 2508 + iseed[3] * 322 + iseed[4] * 494;
+  it1 %= 4096;
 
-/*     return updated seed */
+  /*     return updated seed */
 
-    iseed[1] = it1;
-    iseed[2] = it2;
-    iseed[3] = it3;
-    iseed[4] = it4;
+  iseed[1] = it1;
+  iseed[2] = it2;
+  iseed[3] = it3;
+  iseed[4] = it4;
 
-/*     convert 48-bit integer to a real number in the interval (0,1) */
+  /*     convert 48-bit integer to a real number in the interval (0,1) */
 
-    ret_val = ((double) it1 + ((double) it2 + ((double) it3 + (double) it4 * 2.44140625e-4) * 2.44140625e-4) * 2.44140625e-4) * 2.44140625e-4;
-    return ret_val;
-
+  ret_val = ((double)it1 + ((double)it2 + ((double)it3 + (double)it4 * 2.44140625e-4) * 2.44140625e-4) * 2.44140625e-4) * 2.44140625e-4;
+  return ret_val;
 }
-

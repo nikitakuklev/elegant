@@ -6,8 +6,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-void bombElegant(char *error, char *usage)
-{
+void bombElegant(char *error, char *usage) {
   if (error)
     fprintf(stderr, "error: %s\n", error);
   if (usage)
@@ -15,24 +14,22 @@ void bombElegant(char *error, char *usage)
   exit(1);
 }
 
-void exitElegant(long status)
-{
+void exitElegant(long status) {
   exit(status);
 }
 
-void bombElegantVA(char *template, ...) 
-{
+void bombElegantVA(char *template, ...) {
   char *p;
   char c, *s;
   int i;
   long j;
   va_list argp;
   double d;
-  
+
   va_start(argp, template);
   p = template;
   while (*p) {
-    if (*p=='%') {
+    if (*p == '%') {
       switch (*++p) {
       case 'l':
         switch (*++p) {
@@ -41,15 +38,15 @@ void bombElegantVA(char *template, ...)
           printf("%ld", j);
           break;
         case 'e':
-          d =  va_arg(argp, double);
+          d = va_arg(argp, double);
           printf("%21.15le", d);
           break;
         case 'f':
-          d =  va_arg(argp, double);
+          d = va_arg(argp, double);
           printf("%lf", d);
           break;
         case 'g':
-          d =  va_arg(argp, double);
+          d = va_arg(argp, double);
           printf("%21.15lg", d);
           break;
         default:
@@ -85,12 +82,10 @@ void bombElegantVA(char *template, ...)
         printf("%%%c", *p);
         break;
       }
-    }
-    else {
+    } else {
       putchar(*p);
     }
     p++;
   }
   exit(1);
 }
-

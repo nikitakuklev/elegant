@@ -36,7 +36,7 @@ void BRAT_deriv_function(double *qp, double *q, double s);
 long BRAT_lorentz_integration(double *accelCoord, double *q, long doStoreData, double *BMaxReturn);
 void BRAT_store_data(double *qp, double *q, double s, double exval);
 void BRAT_optimize_magnet(unsigned long flags);
-double refineAngle(double theta, double z0, double x0, double zv, double xv, 
+double refineAngle(double theta, double z0, double x0, double zv, double xv,
                    double z1, double x1);
 void BRAT_store_data_permuted(double p0, double *p, double *q1, double *B, double s, double exval);
 static long verbose_optimize = 0;
@@ -45,7 +45,7 @@ void add2dMapList(double interpValue);
 void readBratFieldFile(BRAT *brat, char *filename, short additionalFile);
 
 /* parameters of element needed for integration */
-static double theta, fse=0, interpParameter=0;
+static double theta, fse = 0, interpParameter = 0;
 static long interpOrder = 1;
 static double dXOffset = 0, dYOffset = 0, dZOffset = 0;
 static double magnetYaw = 0;
@@ -61,7 +61,7 @@ static double xfWeight = 1, xfpWeight = 1;
 static double dxDzFactor;
 
 #define BRAT_INTERP_EXTRAPOLATE 0x001UL
-#define BRAT_INTERP_PERMISSIVE  0x002UL
+#define BRAT_INTERP_PERMISSIVE 0x002UL
 static unsigned long bratInterpFlags = 0;
 
 /* parameters for field calculation: */
@@ -83,7 +83,7 @@ static double xi, xf, dx;
 static double yi, yf, dy;
 static double zi, zf, dz, z_outer;
 static long nx, ny, nz;
-static long extend_data, particle_inside, single_scan=0, arc_scan=0;
+static long extend_data, particle_inside, single_scan = 0, arc_scan = 0;
 static double extend_edge_angle;
 static double gap = 0.04;
 static double central_length;
@@ -96,19 +96,19 @@ static double integ_tol, zero_tol;
 
 /* variables for storing integration history */
 static short storeData = 0; /* 0: no data stored, 1: only (X, Y, Z, BX, BY, BZ) are stored, 2: everything stored */
-static double *X_stored=NULL, *Z_stored=NULL, *Y_stored=NULL;
-static double *wX_stored=NULL, *wZ_stored=NULL, *wY_stored=NULL;
-static double *aX_stored=NULL, *aZ_stored=NULL, *aY_stored=NULL;
-static double *FX_stored=NULL, *FZ_stored=NULL, *FY_stored=NULL, *Fint_stored=NULL;
+static double *X_stored = NULL, *Z_stored = NULL, *Y_stored = NULL;
+static double *wX_stored = NULL, *wZ_stored = NULL, *wY_stored = NULL;
+static double *aX_stored = NULL, *aZ_stored = NULL, *aY_stored = NULL;
+static double *FX_stored = NULL, *FZ_stored = NULL, *FY_stored = NULL, *Fint_stored = NULL;
 static double *s_stored;
 static long n_stored, max_store;
 
 /* particle trajectory parameters */
-static double zStart, zEnd;            /* starting and ending point of integration */
-static double xNomEntry, zNomEntry;    /* coordinates of hard-edge entry */
-static double xNomExit, zNomExit;      /* coordinates of hard-edge exit */
+static double zStart, zEnd;         /* starting and ending point of integration */
+static double xNomEntry, zNomEntry; /* coordinates of hard-edge entry */
+static double xNomExit, zNomExit;   /* coordinates of hard-edge exit */
 static double xVertex, zVertex;
-static double thetaEntry;              /* angle of the initial nominal trajectory */
+static double thetaEntry; /* angle of the initial nominal trajectory */
 static double rigidity;
 static double xCenter, zCenter;
 static double global_delta;
@@ -119,19 +119,19 @@ static double lossCoordinates[4]; /* X, Z, thetaX, y */
 #endif
 
 #define TOLERANCE_FACTOR 1e-14
-#define OPTIMIZE_ON        0x0001
-#define OPTIMIZE_FSE       0x0002
-#define OPTIMIZE_DX        0x0004
-#define OPTIMIZE_VERBOSE   0x0008
-#define OPTIMIZE_QUIET     0x0010
-#define OPTIMIZE_DZ        0x0020
-#define OPTIMIZE_YAW       0x0040
+#define OPTIMIZE_ON 0x0001
+#define OPTIMIZE_FSE 0x0002
+#define OPTIMIZE_DX 0x0004
+#define OPTIMIZE_VERBOSE 0x0008
+#define OPTIMIZE_QUIET 0x0010
+#define OPTIMIZE_DZ 0x0020
+#define OPTIMIZE_YAW 0x0040
 
-static long quiet=0;
+static long quiet = 0;
 static long useFTABLE = 0;
 static double Po;
 
-static short idealMode = 0, fieldMapDimension=2, xyInterpolationOrder, xyGridExcess=0, xyExtrapolate=1;
+static short idealMode = 0, fieldMapDimension = 2, xyInterpolationOrder, xyGridExcess = 0, xyExtrapolate = 1;
 /* static double idealB; */
 static double idealChord, idealEdgeAngle;
 
@@ -145,10 +145,10 @@ typedef struct {
   long nx, ny, nz;
   short singlePrecision, additionalMap;
   /* used if singlePrecision=0 */
-  double *Bx, *By, *Bz;   
+  double *Bx, *By, *Bz;
   double *BxAdditional, *ByAdditional, *BzAdditional;
   /* used if singlePrecision!=0 */
-  float *Bx1, *By1, *Bz1; 
+  float *Bx1, *By1, *Bz1;
   float *Bx1Additional, *By1Additional, *Bz1Bend;
   double xi, xf, dx;
   double yi, yf, dy;
@@ -158,8 +158,7 @@ typedef struct {
 static BRAT_3D_DATA *brat3dData = NULL;
 static long nBrat3dData = 0;
 
-long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **accepted)
-{
+long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **accepted) {
   long ip, ic, itop;
   TRACKING_CONTEXT tcontext;
 
@@ -173,43 +172,42 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
 
     brat->dataIndex = brat->dataIndexAdditional = -1;
     readBratFieldFile(brat, brat->filename, 0);
-    if (brat->filenameAdditional && strlen(brat->filenameAdditional)) 
+    if (brat->filenameAdditional && strlen(brat->filenameAdditional))
       readBratFieldFile(brat, brat->filenameAdditional, 1);
 
 #ifndef ABRAT_PROGRAM
     if (brat->particleOutput && strlen(brat->particleOutput) && isSlave) {
-#if USE_MPI
+#  if USE_MPI
       brat->particleOutput = compose_filename_per_processor(brat->particleOutput, tcontext.rootname);
-#else
+#  else
       brat->particleOutput = compose_filename(brat->particleOutput, tcontext.rootname);
-#endif
+#  endif
       brat->SDDSparticleOutput = tmalloc(sizeof(SDDS_DATASET));
       if (!SDDS_InitializeOutput(brat->SDDSparticleOutput, SDDS_BINARY, 0, NULL, NULL, brat->particleOutput)) {
-	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-	exitElegant(1);
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exitElegant(1);
       }
       if (!SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "x", "m", SDDS_FLOAT) ||
-	  !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "y", "m", SDDS_FLOAT) ||
-	  !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "z", "m", SDDS_FLOAT) ||
-	  !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bx", "T", SDDS_FLOAT) ||
-	  !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "By", "T", SDDS_FLOAT) ||
-	  !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bz", "m", SDDS_FLOAT) ||
-	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "particleID", NULL, SDDS_ULONG64) ||
-	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "XLoss", "m", SDDS_FLOAT) ||
-	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "yLoss", "m", SDDS_FLOAT) ||
-	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "ZLoss", "m", SDDS_FLOAT) ||
-	  !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "thetaLoss", NULL, SDDS_FLOAT) 
-	  ) {
-	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-	exitElegant(1);
+          !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "y", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "z", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bx", "T", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "By", "T", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bz", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "particleID", NULL, SDDS_ULONG64) ||
+          !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "XLoss", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "yLoss", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "ZLoss", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "thetaLoss", NULL, SDDS_FLOAT)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exitElegant(1);
       }
       if (!SDDS_WriteLayout(brat->SDDSparticleOutput)) {
-	printf("Unable to write SDDS layout for file %s (%s)\n", brat->particleOutput, tcontext.elementName);
-	fflush(stdout);
-	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-	exitElegant(1);
+        printf("Unable to write SDDS layout for file %s (%s)\n", brat->particleOutput, tcontext.elementName);
+        fflush(stdout);
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exitElegant(1);
       }
-    } else 
+    } else
       brat->SDDSparticleOutput = NULL;
 #endif /* not abrat program */
 
@@ -217,71 +215,71 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   }
 
   /* Store nothing if running test particles, otherwise store (x, y, z, Bx, By, Bz) */
-  storeData = tcontext.flags&TEST_PARTICLES ? 0: 1;
+  storeData = tcontext.flags & TEST_PARTICLES ? 0 : 1;
 
-  if (brat->dataIndex<0 || brat->dataIndex>=nBrat3dData)
+  if (brat->dataIndex < 0 || brat->dataIndex >= nBrat3dData)
     bombElegant("BRAT data indexing bug (1). Please report.", NULL);
-  if (strcmp(brat->filename, brat3dData[brat->dataIndex].filename)!=0)
+  if (strcmp(brat->filename, brat3dData[brat->dataIndex].filename) != 0)
     bombElegant("BRAT data indexing bug (2). Please report.", NULL);
   if (brat->filenameAdditional && strlen(brat->filenameAdditional)) {
-    if (brat->dataIndexAdditional<0 || brat->dataIndexAdditional>=nBrat3dData)
+    if (brat->dataIndexAdditional < 0 || brat->dataIndexAdditional >= nBrat3dData)
       bombElegant("BRAT data indexing bug (3). Please report.", NULL);
 
-    if (strcmp(brat->filenameAdditional, brat3dData[brat->dataIndexAdditional].filename)!=0)
+    if (strcmp(brat->filenameAdditional, brat3dData[brat->dataIndexAdditional].filename) != 0)
       bombElegant("BRAT data indexing bug (4). Please report.", NULL);
 
-    if (brat3dData[brat->dataIndex].nx != brat3dData[brat->dataIndexAdditional].nx) 
-      bombElegantVA("BRAT main (%s) and additional (%s) files have different number of x grid points (%ld vs %ld).\n", 
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename,
-		    brat3dData[brat->dataIndex].nx, brat3dData[brat->dataIndexAdditional].nx);
-    if (brat3dData[brat->dataIndex].ny != brat3dData[brat->dataIndexAdditional].ny) 
-      bombElegantVA("BRAT main (%s) and additional (%s) files have different number of y grid points.\n", 
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename);
-    if (brat3dData[brat->dataIndex].nz != brat3dData[brat->dataIndexAdditional].nz) 
-      bombElegantVA("BRAT main (%s) and additional (%s) files have different number of z grid points.\n", 
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].nx != brat3dData[brat->dataIndexAdditional].nx)
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different number of x grid points (%ld vs %ld).\n",
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename,
+                    brat3dData[brat->dataIndex].nx, brat3dData[brat->dataIndexAdditional].nx);
+    if (brat3dData[brat->dataIndex].ny != brat3dData[brat->dataIndexAdditional].ny)
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different number of y grid points.\n",
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].nz != brat3dData[brat->dataIndexAdditional].nz)
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different number of z grid points.\n",
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
 
-    if (brat3dData[brat->dataIndex].xi != brat3dData[brat->dataIndexAdditional].xi) 
+    if (brat3dData[brat->dataIndex].xi != brat3dData[brat->dataIndexAdditional].xi)
       bombElegantVA("BRAT main (%s) and additional (%s) files have different x lower limit.\n",
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename);
-    if (brat3dData[brat->dataIndex].yi != brat3dData[brat->dataIndexAdditional].yi) 
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].yi != brat3dData[brat->dataIndexAdditional].yi)
       bombElegantVA("BRAT main (%s) and additional (%s) files have different y lower limit.\n",
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename);
-    if (brat3dData[brat->dataIndex].zi != brat3dData[brat->dataIndexAdditional].zi) 
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].zi != brat3dData[brat->dataIndexAdditional].zi)
       bombElegantVA("BRAT main (%s) and additional (%s) files have different z lower limit.\n",
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename);
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
 
-    if (brat3dData[brat->dataIndex].xf != brat3dData[brat->dataIndexAdditional].xf) 
+    if (brat3dData[brat->dataIndex].xf != brat3dData[brat->dataIndexAdditional].xf)
       bombElegantVA("BRAT main (%s) and additional (%s) files have different x upper limit.\n",
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename);
-    if (brat3dData[brat->dataIndex].yf != brat3dData[brat->dataIndexAdditional].yf) 
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].yf != brat3dData[brat->dataIndexAdditional].yf)
       bombElegantVA("BRAT main (%s) and additional (%s) files have different y upper limit.\n",
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename);
-    if (brat3dData[brat->dataIndex].zf != brat3dData[brat->dataIndexAdditional].zf) 
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].zf != brat3dData[brat->dataIndexAdditional].zf)
       bombElegantVA("BRAT main (%s) and additional (%s) files have different z upper limit.\n",
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename);
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
 
-    if (brat3dData[brat->dataIndex].dx != brat3dData[brat->dataIndexAdditional].dx) 
+    if (brat3dData[brat->dataIndex].dx != brat3dData[brat->dataIndexAdditional].dx)
       bombElegantVA("BRAT main (%s) and additional (%s) files have different x grid spacing.\n",
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename);
-    if (brat3dData[brat->dataIndex].dy != brat3dData[brat->dataIndexAdditional].dy) 
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].dy != brat3dData[brat->dataIndexAdditional].dy)
       bombElegantVA("BRAT main (%s) and additional (%s) files have different y grid spacing.\n",
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename);
-    if (brat3dData[brat->dataIndex].dz != brat3dData[brat->dataIndexAdditional].dz) 
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].dz != brat3dData[brat->dataIndexAdditional].dz)
       bombElegantVA("BRAT main (%s) and additional (%s) files have different z grid spacing.\n",
-		    brat3dData[brat->dataIndex].filename,
-		    brat3dData[brat->dataIndexAdditional].filename);
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
   }
 
   BxNorm = brat3dData[brat->dataIndex].Bx;
@@ -290,14 +288,14 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   xf = brat3dData[brat->dataIndex].xf;
   dx = brat3dData[brat->dataIndex].dx;
   nx = brat3dData[brat->dataIndex].nx;
-  
+
   ByNorm = brat3dData[brat->dataIndex].By;
   By1Norm = brat3dData[brat->dataIndex].By1;
   yi = brat3dData[brat->dataIndex].yi;
   yf = brat3dData[brat->dataIndex].yf;
   dy = brat3dData[brat->dataIndex].dy;
   ny = brat3dData[brat->dataIndex].ny;
-  
+
   BzNorm = brat3dData[brat->dataIndex].Bz;
   Bz1Norm = brat3dData[brat->dataIndex].Bz1;
   zi = brat3dData[brat->dataIndex].zi;
@@ -321,7 +319,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   xyExtrapolate = brat->xyExtrapolate;
   singlePrecision = brat3dData[brat->dataIndex].singlePrecision;
 
-  zStart = zi-dz;
+  zStart = zi - dz;
   z_outer = MAX(fabs(zi), fabs(zf));
 
   fieldMapDimension = 3;
@@ -334,134 +332,130 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   dYOffset = brat->dyMap;
   dZOffset = brat->dzMap;
   magnetYaw = brat->yawMap;
-  
+
   xVertex = brat->xVertex;
   zVertex = brat->zVertex;
   xNomEntry = brat->xEntry;
   zNomEntry = brat->zEntry;
   xNomExit = brat->xExit;
   zNomExit = brat->zExit;
-  zCenter = (zNomEntry+zNomExit)/2;
-  xCenter = (xNomEntry+xNomExit)/2;
-  central_length = 100*(zNomExit-zNomEntry);
+  zCenter = (zNomEntry + zNomExit) / 2;
+  xCenter = (xNomEntry + xNomExit) / 2;
+  central_length = 100 * (zNomExit - zNomEntry);
 
   theta = refineAngle(theta, zNomEntry, xNomEntry, zVertex, xVertex,
                       zNomExit, xNomExit);
-  thetaEntry = atan2(xVertex-xNomEntry, zVertex-zNomEntry);
+  thetaEntry = atan2(xVertex - xNomEntry, zVertex - zNomEntry);
 
-  rigidity = pCentral*particleMass*c_mks/particleCharge*particleRelSign;
-  rhoMax = fabs(rigidity/brat3dData[brat->dataIndex].Bmax);
+  rigidity = pCentral * particleMass * c_mks / particleCharge * particleRelSign;
+  rhoMax = fabs(rigidity / brat3dData[brat->dataIndex].Bmax);
   deltaByInside = brat->deltaByInside;
-  
+
   integ_tol = brat->accuracy;
-  zero_tol = integ_tol*10;
+  zero_tol = integ_tol * 10;
   useFTABLE = brat->useFTABLE;
 
-  itop = np-1;
-  for (ip=0; ip<=itop; ip++) {
+  itop = np - 1;
+  for (ip = 0; ip <= itop; ip++) {
     double accelCoord[6], q[10];
 #ifndef ABRAT_PROGRAM
     long i, j;
     long iOut;
 #endif
-    for (ic=0; ic<6; ic++)
+    for (ic = 0; ic < 6; ic++)
       accelCoord[ic] = part[ip][ic];
     n_stored = 0;
-    BRAT_lorentz_integration(accelCoord, q, brat->SDDSparticleOutput?1:0, NULL);
-    for (ic=0; ic<6; ic++)
+    BRAT_lorentz_integration(accelCoord, q, brat->SDDSparticleOutput ? 1 : 0, NULL);
+    for (ic = 0; ic < 6; ic++)
       part[ip][ic] = accelCoord[ic];
 #ifndef ABRAT_PROGRAM
     iOut = ip;
     if (isLost) {
-      if (globalLossCoordOffset!=-1)
-        for (ic=0; ic<GLOBAL_LOSS_PROPERTIES_PER_PARTICLE; ic++) 
-          part[ip][globalLossCoordOffset+ic] = lossCoordinates[ic];
+      if (globalLossCoordOffset != -1)
+        for (ic = 0; ic < GLOBAL_LOSS_PROPERTIES_PER_PARTICLE; ic++)
+          part[ip][globalLossCoordOffset + ic] = lossCoordinates[ic];
       part[ip][2] = lossCoordinates[3];
-      part[ip][5] = pCentral*(1+global_delta);
+      part[ip][5] = pCentral * (1 + global_delta);
       swapParticles(part[ip], part[itop]);
-      if (accepted) 
+      if (accepted)
         swapParticles(accepted[ip], accepted[itop]);
       iOut = itop;
       itop--;
       ip--;
     }
-    if (isSlave && brat->SDDSparticleOutput && (!brat->particleOutputLostOnly || isLost)
-	&& (brat->particleOutputSelectionInterval<=1 || 
-	    ((long)part[iOut][particleIDIndex])%brat->particleOutputSelectionInterval==0)) {
+    if (isSlave && brat->SDDSparticleOutput && (!brat->particleOutputLostOnly || isLost) && (brat->particleOutputSelectionInterval <= 1 || ((long)part[iOut][particleIDIndex]) % brat->particleOutputSelectionInterval == 0)) {
       SDDS_DATASET *SDDS_table;
       SDDS_table = brat->SDDSparticleOutput;
       if (!SDDS_StartTable(SDDS_table, n_stored)) {
-	SDDS_SetError("Problem starting SDDS table (BRAT)");
-	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_SetError("Problem starting SDDS table (BRAT)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
-      if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-			      "particleID", 
-			      (uint64_t)part[iOut][particleIDIndex], 
-			      "XLoss", (float)lossCoordinates[0], 
-			      "yLoss", (float)lossCoordinates[3],
-			      "ZLoss", (float)lossCoordinates[1], 
-			      "thetaLoss", (float)lossCoordinates[2], 
-			      NULL)) {
-	SDDS_SetError("Problem setting data in SDDS table (BRAT)");
-	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE,
+                              "particleID",
+                              (uint64_t)part[iOut][particleIDIndex],
+                              "XLoss", (float)lossCoordinates[0],
+                              "yLoss", (float)lossCoordinates[3],
+                              "ZLoss", (float)lossCoordinates[1],
+                              "thetaLoss", (float)lossCoordinates[2],
+                              NULL)) {
+        SDDS_SetError("Problem setting data in SDDS table (BRAT)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
-      if (brat->particleOutputSampleInterval<1)
-	brat->particleOutputSampleInterval = 1;
-      for (i=j=0; i<n_stored; i+=brat->particleOutputSampleInterval, j++) {
-	if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j,
-			       0, (float) X_stored[i], 1, (float) Y_stored[i], 2, (float) Z_stored[i],
-			       3, (float)FX_stored[i], 4, (float)FY_stored[i], 5, (float)FZ_stored[i], -1)) {
-	  SDDS_SetError("Problem setting data in SDDS table (BRAT)");
-	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-	}
+      if (brat->particleOutputSampleInterval < 1)
+        brat->particleOutputSampleInterval = 1;
+      for (i = j = 0; i < n_stored; i += brat->particleOutputSampleInterval, j++) {
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX | SDDS_PASS_BY_VALUE, j,
+                               0, (float)X_stored[i], 1, (float)Y_stored[i], 2, (float)Z_stored[i],
+                               3, (float)FX_stored[i], 4, (float)FY_stored[i], 5, (float)FZ_stored[i], -1)) {
+          SDDS_SetError("Problem setting data in SDDS table (BRAT)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        }
       }
       if (!SDDS_WriteTable(SDDS_table)) {
-	SDDS_SetError("Problem writing data in SDDS table (BRAT)");
-	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_SetError("Problem writing data in SDDS table (BRAT)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
     }
 #endif /* If not ABRAT program */
   }
 
-  return itop+1;
+  return itop + 1;
 }
 
-
-double BRAT_optim_function(double *param, long *invalid)
-{
+double BRAT_optim_function(double *param, long *invalid) {
   double q[9], result;
-  double accelCoord[6] = {0,0,0,0,0,0};
+  double accelCoord[6] = {0, 0, 0, 0, 0, 0};
   double *w;
 
   fse = param[0];
   dXOffset = param[1];
   dZOffset = param[2];
   magnetYaw = param[3];
-  if (length2dMapList>1) {
+  if (length2dMapList > 1) {
     /* interpolate field maps */
     long i, ix, iz;
     unsigned long interpCode;
     double *xbuffer, *ybuffer;
     OUTRANGE_CONTROL outRange;
-    xbuffer = tmalloc(sizeof(*xbuffer)*length2dMapList);
-    ybuffer = tmalloc(sizeof(*ybuffer)*length2dMapList);
-    if (bratInterpFlags&BRAT_INTERP_EXTRAPOLATE)
+    xbuffer = tmalloc(sizeof(*xbuffer) * length2dMapList);
+    ybuffer = tmalloc(sizeof(*ybuffer) * length2dMapList);
+    if (bratInterpFlags & BRAT_INTERP_EXTRAPOLATE)
       outRange.flags = OUTRANGE_EXTRAPOLATE;
     else
       outRange.flags = 0;
-    for (i=0; i<length2dMapList; i++) 
+    for (i = 0; i < length2dMapList; i++)
       xbuffer[i] = interpolationParameterValue[i];
-    for (ix=0; ix<nx; ix++) 
-      for (iz=0; iz<nz; iz++) {
-        for (i=0; i<length2dMapList; i++) 
+    for (ix = 0; ix < nx; ix++)
+      for (iz = 0; iz < nz; iz++) {
+        for (i = 0; i < length2dMapList; i++)
           ybuffer[i] = BnormList[i][ix][iz];
         Bnorm[ix][iz] = interpolate(ybuffer, xbuffer, length2dMapList, param[4], &outRange, &outRange, interpOrder,
                                     &interpCode, 1);
-        for (i=0; i<length2dMapList; i++) 
+        for (i = 0; i < length2dMapList; i++)
           ybuffer[i] = dBnormdxList[i][ix][iz];
         dBnormdx[ix][iz] = interpolate(ybuffer, xbuffer, length2dMapList, param[4], &outRange, &outRange, interpOrder,
                                        &interpCode, 1);
-        for (i=0; i<length2dMapList; i++) 
+        for (i = 0; i < length2dMapList; i++)
           ybuffer[i] = dBnormdzList[i][ix][iz];
         dBnormdz[ix][iz] = interpolate(ybuffer, xbuffer, length2dMapList, param[4], &outRange, &outRange, interpOrder,
                                        &interpCode, 1);
@@ -469,17 +463,16 @@ double BRAT_optim_function(double *param, long *invalid)
   }
   BRAT_lorentz_integration(accelCoord, q, 0, NULL);
   *invalid = 0;
-  w = q+3;
-  result = sqrt(xfWeight*sqr(accelCoord[0]) + xfpWeight*sqr(accelCoord[1]));
+  w = q + 3;
+  result = sqrt(xfWeight * sqr(accelCoord[0]) + xfpWeight * sqr(accelCoord[1]));
   if (verbose_optimize && !quiet)
-    printf("optim_function called: FSE = %e   dX = %e   w1/w0 = %e  sf = %e  penalty function = %e\n", 
-           param[0], param[1], w[1]/w[0], fabs(accelCoord[4]), result); 
-  return(result);
+    printf("optim_function called: FSE = %e   dX = %e   w1/w0 = %e  sf = %e  penalty function = %e\n",
+           param[0], param[1], w[1] / w[0], fabs(accelCoord[4]), result);
+  return (result);
 }
 
 void BRAT_report_function(double result, double *param, long pass,
-                     long n_evals, long n_dim)
-{
+                          long n_evals, long n_dim) {
   if (!quiet) {
     printf("report for pass %ld of optimization:\n", pass);
     printf("    %ld evaluations so far\n", n_evals);
@@ -494,10 +487,9 @@ void BRAT_report_function(double result, double *param, long pass,
 #define N_EVAL_MAX 1500
 #define N_PASS_MAX 3
 
-void BRAT_optimize_magnet(unsigned long flags)
-{
+void BRAT_optimize_magnet(unsigned long flags) {
   double x[5], dx[5], xlo[5], xhi[5];
-  short disable[5] = {0,0,0,0,1}; /* fse, dx, dz, yaw, parameter */
+  short disable[5] = {0, 0, 0, 0, 1}; /* fse, dx, dz, yaw, parameter */
   double tolerance, result;
   long dummy;
 
@@ -508,63 +500,63 @@ void BRAT_optimize_magnet(unsigned long flags)
   x[3] = magnetYaw;
   x[4] = 0;
   dx[0] = dx[1] = dx[2] = dx[3] = dx[4] = 1e-4;
-  xlo[0] = fseLimit[0]; 
+  xlo[0] = fseLimit[0];
   xhi[0] = fseLimit[1];
-  xlo[1] = dxLimit[0]; 
+  xlo[1] = dxLimit[0];
   xhi[1] = dxLimit[1];
-  xlo[2] = dzLimit[0]; 
+  xlo[2] = dzLimit[0];
   xhi[2] = dzLimit[1];
-  xlo[3] = yawLimit[0]; 
+  xlo[3] = yawLimit[0];
   xhi[3] = yawLimit[1];
   xlo[4] = -1;
   xhi[4] = 1;
-  if (length2dMapList>1) {
+  if (length2dMapList > 1) {
     double range;
     find_min_max(&xlo[4], &xhi[4], interpolationParameterValue, length2dMapList);
-    dx[4] = (range=xhi[4]-xlo[4])*1e-4;
-    x[4] = (xhi[4]+xlo[4])/2;
-    if (bratInterpFlags&BRAT_INTERP_EXTRAPOLATE) {
-      xlo[4] = x[4] - range*5;
-      xhi[4] = x[4] + range*5;
+    dx[4] = (range = xhi[4] - xlo[4]) * 1e-4;
+    x[4] = (xhi[4] + xlo[4]) / 2;
+    if (bratInterpFlags & BRAT_INTERP_EXTRAPOLATE) {
+      xlo[4] = x[4] - range * 5;
+      xhi[4] = x[4] + range * 5;
     }
     disable[4] = 0;
   }
-  if (!(flags&OPTIMIZE_FSE))
+  if (!(flags & OPTIMIZE_FSE))
     disable[0] = 1;
-  if (!(flags&OPTIMIZE_DX))
+  if (!(flags & OPTIMIZE_DX))
     disable[1] = 1;
-  if (!(flags&OPTIMIZE_DZ))
+  if (!(flags & OPTIMIZE_DZ))
     disable[2] = 1;
-  if (!(flags&OPTIMIZE_YAW))
+  if (!(flags & OPTIMIZE_YAW))
     disable[3] = 1;
   if (simplexMin(&result, x, dx, xlo, xhi, disable, 5, tolerance,
                  tolerance, BRAT_optim_function, BRAT_report_function,
-                 N_EVAL_MAX, N_PASS_MAX, 12, 3.0, 1.0, 0)<0) {
+                 N_EVAL_MAX, N_PASS_MAX, 12, 3.0, 1.0, 0) < 0) {
     printWarningForTracking("optimization of magnet failed", NULL);
   }
   dx[0] = dx[1] = dx[2] = dx[3] = 1e-4;
-  if (length2dMapList>1)
-    dx[4] = (xhi[4]-xlo[4])*1e-4;
+  if (length2dMapList > 1)
+    dx[4] = (xhi[4] - xlo[4]) * 1e-4;
   if (simplexMin(&result, x, dx, xlo, xhi, disable, 5, tolerance,
                  tolerance, BRAT_optim_function, BRAT_report_function,
-                 N_EVAL_MAX, N_PASS_MAX, 12, 3.0, 1.0, 0)<0) {
+                 N_EVAL_MAX, N_PASS_MAX, 12, 3.0, 1.0, 0) < 0) {
     printWarningForTracking("optimization of magnet failed", NULL);
   }
   fse = x[0];
   dXOffset = x[1];
   dZOffset = x[2];
   magnetYaw = x[3];
-  if (length2dMapList>1) 
-    interpParameter= x[4];
+  if (length2dMapList > 1)
+    interpParameter = x[4];
   BMaxOnTrajectory = -DBL_MAX;
   result = BRAT_optim_function(x, &dummy);
   if (!quiet) {
     printf("penalty function after optimization: %e\n", result);
     printf("FSE = %.15e\n", x[0]);
-    printf("dX  = %.15e\n", x[1] + x[2]*dxDzFactor);
+    printf("dX  = %.15e\n", x[1] + x[2] * dxDzFactor);
     printf("dZ  = %.15e\n", x[2]);
     printf("Yaw = %.15e\n", x[3]);
-    if (length2dMapList>1) 
+    if (length2dMapList > 1)
       printf("Parameter = %.15e\n", x[4]);
   }
 }
@@ -572,22 +564,20 @@ void BRAT_optimize_magnet(unsigned long flags)
 #define MIN_N_STEPS 100
 
 #ifdef USE_GSL
-#include "gsl/gsl_poly.h"
+#  include "gsl/gsl_poly.h"
 #endif
 
 long BRAT_lorentz_integration(
-                            double *accelCoord, 
-                            double *q,   /* z, x, y, dz/dS, dx/dS, dy/dS, dF/dS */
-                            long doStoreData,
-                            double *BMaxReturn
-                            )
-{
+  double *accelCoord,
+  double *q, /* z, x, y, dz/dS, dx/dS, dy/dS, dF/dS */
+  long doStoreData,
+  double *BMaxReturn) {
   long n_eq = 10;
   double exvalue, qptest[10];
   long misses[10], accmode[10];
   double accuracy[10], tiny[10];
   double hrec, hmax, dSds;
-  double s_start=0, s_end, exit_toler, ds, dz;
+  double s_start = 0, s_end, exit_toler, ds, dz;
   long int_return;
   double *w, *IF;
   /* double xStart, dx; */
@@ -600,13 +590,13 @@ long BRAT_lorentz_integration(
   particle_inside = 0;
   n_stored = 0;
   /* drift to parallel plane for start of integration */
-  slope = (xVertex-xNomEntry)/(zVertex-zNomEntry);
+  slope = (xVertex - xNomEntry) / (zVertex - zNomEntry);
   phi = atan(slope);
   if (idealMode) {
     dz = idealChord;
     /* dx = slope*dz; */
   } else {
-    dz = zf-zi;
+    dz = zf - zi;
     /* dx = slope*dz; */
   }
   /* xStart = xNomEntry - dx; */
@@ -615,7 +605,7 @@ long BRAT_lorentz_integration(
   /* Compute drift-back distance and apply to path length */
   /* ds = (zStart-(zNomEntry+accelCoord[0]*sin(phi)))/(cos(phi+atan(accelCoord[1]))*cos(atan(accelCoord[3]))); */
   /* New expression from R. Lindberg */
-  ds = (zStart-(zNomEntry-accelCoord[0]*sin(phi)))*sqrt(1+sqr(accelCoord[1])+sqr(accelCoord[3]))/(cos(phi)-accelCoord[1]*sin(phi));
+  ds = (zStart - (zNomEntry - accelCoord[0] * sin(phi))) * sqrt(1 + sqr(accelCoord[1]) + sqr(accelCoord[3])) / (cos(phi) - accelCoord[1] * sin(phi));
   accelCoord[4] += ds;
 
 #ifdef DEBUG
@@ -626,26 +616,25 @@ long BRAT_lorentz_integration(
 
   /* note that w0^2+w1^2+w2^2 = 1 */
   /* dS/ds is the rate of change of distance traveled w.r.t. distance of the fiducial particle */
-  dSds = sqrt(1+sqr(accelCoord[1])+sqr(accelCoord[3]));
-  w = q+3;
-  w[0] = (-accelCoord[1]*sin(phi)+cos(phi))/dSds;
-  w[1] = ( accelCoord[1]*cos(phi)+sin(phi))/dSds;
-  w[2] = accelCoord[3]/dSds;
+  dSds = sqrt(1 + sqr(accelCoord[1]) + sqr(accelCoord[3]));
+  w = q + 3;
+  w[0] = (-accelCoord[1] * sin(phi) + cos(phi)) / dSds;
+  w[1] = (accelCoord[1] * cos(phi) + sin(phi)) / dSds;
+  w[2] = accelCoord[3] / dSds;
 
-  q[0] = zNomEntry - accelCoord[0]*sin(phi) + ds*w[0];
-  q[1] = xNomEntry + accelCoord[0]*cos(phi) + ds*w[1];
-  q[2] = accelCoord[2] + ds*w[2];
+  q[0] = zNomEntry - accelCoord[0] * sin(phi) + ds * w[0];
+  q[1] = xNomEntry + accelCoord[0] * cos(phi) + ds * w[1];
+  q[2] = accelCoord[2] + ds * w[2];
 
 #ifdef DEBUG
   fprintf(stderr, "initial: q[0] = %21.15e, q[1] = %21.15e, q[2] = %21.15e\n",
           q[0], q[1], q[2]);
 #endif
 
-
-  IF = q+6;
+  IF = q + 6;
   IF[0] = IF[1] = IF[2] = IF[3] = 0;
   BRAT_deriv_function(qptest, q, 0.0L);
-  if (qptest[3]!=0 || qptest[4]!=0 || qptest[5]!=0)
+  if (qptest[3] != 0 || qptest[4] != 0 || qptest[5] != 0)
     bomb("particle started inside the magnet!", NULL);
   isLost = 0;
 
@@ -657,19 +646,19 @@ long BRAT_lorentz_integration(
 
     /* use adaptive integration */
     s_start = 0;
-    s_end   = central_length*2;
-    hmax    = fabs(rhoMax*theta)/MIN_N_STEPS;
-    hrec    = hmax/10;
+    s_end = central_length * 2;
+    hmax = fabs(rhoMax * theta) / MIN_N_STEPS;
+    hrec = hmax / 10;
     if (idealMode)
-      zEnd = 2*idealChord;
+      zEnd = 2 * idealChord;
     else
-      zEnd = zf + (zf-zi);
-    if ((exit_toler = sqr(integ_tol)*s_end)<central_length*TOLERANCE_FACTOR)
-      exit_toler = central_length*TOLERANCE_FACTOR;
+      zEnd = zf + (zf - zi);
+    if ((exit_toler = sqr(integ_tol) * s_end) < central_length * TOLERANCE_FACTOR)
+      exit_toler = central_length * TOLERANCE_FACTOR;
     switch (int_return = bs_odeint(q, BRAT_deriv_function, n_eq, accuracy,
                                    accmode, tiny, misses,
                                    &s_start, s_end, exit_toler, hrec, hmax, &hrec, BRAT_exit_function,
-                                   exit_toler, 0, doStoreData?BRAT_store_data:NULL)) {
+                                   exit_toler, 0, doStoreData ? BRAT_store_data : NULL)) {
     case DIFFEQ_ZERO_STEPSIZE:
     case DIFFEQ_CANT_TAKE_STEP:
     case DIFFEQ_OUTSIDE_INTERVAL:
@@ -681,7 +670,7 @@ long BRAT_lorentz_integration(
       break;
     default:
       if (!isLost) {
-        if ((exvalue = BRAT_exit_function(NULL, q, 0.0L))>exit_toler)
+        if ((exvalue = BRAT_exit_function(NULL, q, 0.0L)) > exit_toler)
           bomb("error: exit value of exceeds tolerance for BRAT (please report to developers)", NULL);
       }
       break;
@@ -697,106 +686,106 @@ long BRAT_lorentz_integration(
     double eomc;
     double **A, BA, pA, step, p[3], xyz0[3], xyz[3], p0, B[3], rho;
     double theta, theta0, theta1, theta2, tm_a, tm_b, tm_c, pathLength, zStop;
-    long  nKicks;
+    long nKicks;
     nKicks = useFTABLE;
-    eomc = -particleCharge/particleMass/c_mks;
-    step = 2*(zf-zi)/nKicks;
-    A = (double**)czarray_2d(sizeof(double), 3, 3);
+    eomc = -particleCharge / particleMass / c_mks;
+    step = 2 * (zf - zi) / nKicks;
+    A = (double **)czarray_2d(sizeof(double), 3, 3);
 
     /* 1. get particle's coordinates */
-    p0 = (1.+accelCoord[5])*Po;
+    p0 = (1. + accelCoord[5]) * Po;
     /* working coordinate order is (X, Y, Z), whereas BRAT uses (Z, X, Y) */
-    p[2] = w[0]*p0;
-    p[0] = w[1]*p0;
-    p[1] = w[2]*p0;
+    p[2] = w[0] * p0;
+    p[0] = w[1] * p0;
+    p[1] = w[2] * p0;
     xyz0[2] = q[0];
     xyz0[0] = q[1];
     xyz0[1] = q[2];
     pathLength = 0;
     B[0] = B[1] = B[2] = 0;
     zStop = -q[0];
-    if (zStop<zf)
+    if (zStop < zf)
       zStop = zf;
 
-    while (xyz0[2]<=zStop && !isLost) {
+    while (xyz0[2] <= zStop && !isLost) {
       BRAT_store_data_permuted(p0, p, xyz0, B, pathLength, 0.0);
       /* 2. get field at the middle point */
-      xyz[0] = xyz0[0] + p[0]/p[2]*step/2.0;
-      xyz[1] = xyz0[1] + p[1]/p[2]*step/2.0;
-      xyz[2] = xyz0[2] + step/2.0;
+      xyz[0] = xyz0[0] + p[0] / p[2] * step / 2.0;
+      xyz[1] = xyz0[1] + p[1] / p[2] * step / 2.0;
+      xyz[2] = xyz0[2] + step / 2.0;
       BRAT_B_field_permuted(B, xyz);
-#ifdef DEBUG
+#  ifdef DEBUG
       fprintf(stderr, "xyz: %le, %le, %le   pxyz: %le, %le, %le  B: %le, %le, %le\n",
               xyz[0], xyz[1], xyz[2],
               p[0], p[1], p[2],
               B[0], B[1], B[2]);
-#endif
+#  endif
       BA = sqrt(sqr(B[0]) + sqr(B[1]) + sqr(B[2]));
-      if (BA>BMaxOnTrajectory) {
+      if (BA > BMaxOnTrajectory) {
         BMaxOnTrajectory = BA;
         BSignOnTrajectory = SIGN(B[2]);
       }
       /* 3. calculate the rotation matrix */
-      A[0][0] = -(p[1]*B[2] - p[2]*B[1]);
-      A[0][1] = -(p[2]*B[0] - p[0]*B[2]);
-      A[0][2] = -(p[0]*B[1] - p[1]*B[0]);
+      A[0][0] = -(p[1] * B[2] - p[2] * B[1]);
+      A[0][1] = -(p[2] * B[0] - p[0] * B[2]);
+      A[0][2] = -(p[0] * B[1] - p[1] * B[0]);
       pA = sqrt(sqr(A[0][0]) + sqr(A[0][1]) + sqr(A[0][2]));
       /* When field not equal to zero or not parallel to the particles motion */
-      if (BA>1e-8 && pA) {
+      if (BA > 1e-8 && pA) {
         A[0][0] /= pA;
         A[0][1] /= pA;
         A[0][2] /= pA;
-        A[1][0] = B[0]/BA;
-        A[1][1] = B[1]/BA;
-        A[1][2] = B[2]/BA;
-        A[2][0] = A[0][1]*A[1][2]-A[0][2]*A[1][1];
-        A[2][1] = A[0][2]*A[1][0]-A[0][0]*A[1][2];
-        A[2][2] = A[0][0]*A[1][1]-A[0][1]*A[1][0];
-        
+        A[1][0] = B[0] / BA;
+        A[1][1] = B[1] / BA;
+        A[1][2] = B[2] / BA;
+        A[2][0] = A[0][1] * A[1][2] - A[0][2] * A[1][1];
+        A[2][1] = A[0][2] * A[1][0] - A[0][0] * A[1][2];
+        A[2][2] = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+
         /* 4. rotate coordinates from (x,y,z) to (u,v,w) with u point to BxP, v point to B */
         rotate_coordinate(A, p, 0);
         if (p[2] < 0)
           bombElegant("Table function doesn't support particle going backward", NULL);
         rotate_coordinate(A, B, 0);
-        
-        /* 5. apply kick */
-        rho = p[2]/(eomc*B[1]);
-        theta0=theta1=theta2=0.;
-        if (A[2][2]) {
-          tm_a =  3.0*A[0][2]/A[2][2];
-          tm_b = -6.0*A[1][2]*p[1]/p[2]/A[2][2]-6.0;
-          tm_c =  6.0*step/rho/A[2][2];
-#ifdef USE_GSL
-          gsl_poly_solve_cubic (tm_a, tm_b, tm_c, &theta0, &theta1, &theta2);
-#else
-          bombElegant("gsl_poly_solve_cubic function is not available becuase this version of elegant was not built against the gsl library", NULL);
-#endif
-        } else if (A[0][2]) {
-          tm_a = A[1][2]*p[1]/p[2]+A[2][2];
-          theta0 = (tm_a-sqrt(sqr(tm_a)-2.*A[0][2]*step/rho))/A[0][2];
-          theta1 = (tm_a+sqrt(sqr(tm_a)-2.*A[0][2]*step/rho))/A[0][2];
-        } else {
-          tm_a = A[1][2]*p[1]/p[2]+A[2][2];          
-          theta0 = step/rho/tm_a;
-        }
-        theta=choose_theta(rho, theta0, theta1, theta2);
 
-        p[0] = -p[2]*sin(theta);
+        /* 5. apply kick */
+        rho = p[2] / (eomc * B[1]);
+        theta0 = theta1 = theta2 = 0.;
+        if (A[2][2]) {
+          tm_a = 3.0 * A[0][2] / A[2][2];
+          tm_b = -6.0 * A[1][2] * p[1] / p[2] / A[2][2] - 6.0;
+          tm_c = 6.0 * step / rho / A[2][2];
+#  ifdef USE_GSL
+          gsl_poly_solve_cubic(tm_a, tm_b, tm_c, &theta0, &theta1, &theta2);
+#  else
+          bombElegant("gsl_poly_solve_cubic function is not available becuase this version of elegant was not built against the gsl library", NULL);
+#  endif
+        } else if (A[0][2]) {
+          tm_a = A[1][2] * p[1] / p[2] + A[2][2];
+          theta0 = (tm_a - sqrt(sqr(tm_a) - 2. * A[0][2] * step / rho)) / A[0][2];
+          theta1 = (tm_a + sqrt(sqr(tm_a) - 2. * A[0][2] * step / rho)) / A[0][2];
+        } else {
+          tm_a = A[1][2] * p[1] / p[2] + A[2][2];
+          theta0 = step / rho / tm_a;
+        }
+        theta = choose_theta(rho, theta0, theta1, theta2);
+
+        p[0] = -p[2] * sin(theta);
         p[2] *= cos(theta);
-        xyz[0] = rho*(cos(theta)-1);
-        xyz[1] = (p[1]/p[2])*rho*theta;
-        xyz[2] = rho*sin(theta);
-        
+        xyz[0] = rho * (cos(theta) - 1);
+        xyz[1] = (p[1] / p[2]) * rho * theta;
+        xyz[2] = rho * sin(theta);
+
         /* 6. rotate back to (x,y,z) */
         rotate_coordinate(A, xyz, 1);
         rotate_coordinate(A, p, 1);
         xyz0[0] += xyz[0];
         xyz0[1] += xyz[1];
-        pathLength += sqrt(sqr(rho*theta)+sqr(xyz[1]));
+        pathLength += sqrt(sqr(rho * theta) + sqr(xyz[1]));
         xyz0[2] += step;
       } else {
-        xyz0[0] += p[0]/p[2]*step;
-        xyz0[1] += p[1]/p[2]*step;
+        xyz0[0] += p[0] / p[2] * step;
+        xyz0[1] += p[1] / p[2] * step;
         pathLength += step;
         xyz0[2] += step;
       }
@@ -804,9 +793,9 @@ long BRAT_lorentz_integration(
 #endif
     BRAT_store_data_permuted(p0, p, xyz0, B, pathLength, 0.0);
     /* convert back to (Z, X, Y, WZ, WX, WY) */
-    w[0] = p[2]/p0;
-    w[1] = p[0]/p0;
-    w[2] = p[1]/p0;
+    w[0] = p[2] / p0;
+    w[1] = p[0] / p0;
+    w[2] = p[1] / p0;
     q[0] = xyz0[2];
     q[1] = xyz0[0];
     q[2] = xyz0[1];
@@ -815,24 +804,24 @@ long BRAT_lorentz_integration(
 
   if (!isLost) {
     /* drift back to reference plane */
-    slope = (xVertex-xNomExit)/(zVertex-zNomExit);
+    slope = (xVertex - xNomExit) / (zVertex - zNomExit);
     phi = -atan(slope);
-    ds = ((zNomExit-q[0])*cos(phi) - (xNomExit-q[1])*sin(phi))/(w[0]*cos(phi) - w[1]*sin(phi));
+    ds = ((zNomExit - q[0]) * cos(phi) - (xNomExit - q[1]) * sin(phi)) / (w[0] * cos(phi) - w[1] * sin(phi));
 #ifdef DEBUG
     printf("exit: phi = %le, ds = %le\n", phi, ds);
 #endif
-    q[0] += ds*w[0];
-    q[1] += ds*w[1];
-    q[2] += ds*w[2];
-    
+    q[0] += ds * w[0];
+    q[1] += ds * w[1];
+    q[2] += ds * w[2];
+
     /* convert back to accelerator coordinates */
-    dSds = 1./(-w[1]*sin(phi)+w[0]*cos(phi));
-    
-    accelCoord[1] = (w[1]*cos(phi)+w[0]*sin(phi))*dSds;
-    accelCoord[3] = w[2]*dSds;
-    accelCoord[0] = (q[0]-zNomExit)/sin(phi);
+    dSds = 1. / (-w[1] * sin(phi) + w[0] * cos(phi));
+
+    accelCoord[1] = (w[1] * cos(phi) + w[0] * sin(phi)) * dSds;
+    accelCoord[3] = w[2] * dSds;
+    accelCoord[0] = (q[0] - zNomExit) / sin(phi);
     accelCoord[2] = q[2];
-    accelCoord[4] += s_start+ds;
+    accelCoord[4] += s_start + ds;
   } else {
     /* some accelerator coordinates are unknown because a loss occurred inside
      * the integration region and we haven't worked out how to compute the
@@ -843,7 +832,7 @@ long BRAT_lorentz_integration(
   }
 
   if (BMaxReturn)
-    *BMaxReturn = BMaxOnTrajectory*BSignOnTrajectory;
+    *BMaxReturn = BMaxOnTrajectory * BSignOnTrajectory;
 
 #ifdef DEBUG
   fprintf(stderr, "final: x=%e, xp=%e, y=%e, yp=%e\n",
@@ -862,78 +851,73 @@ long BRAT_lorentz_integration(
 
 #undef DEBUG
 
-double BRAT_exit_function(double *qp, double *q, double s)
-{
+double BRAT_exit_function(double *qp, double *q, double s) {
   if (isLost)
     return 0.0;
   return q[0] - zEnd;
 }
 
-void BRAT_deriv_function(double *qp, double *q, double s)
-{
+void BRAT_deriv_function(double *qp, double *q, double s) {
   double *F;
   static double *w, *wp, factor, BA;
 
-  F = qp+6;
+  F = qp + 6;
   BRAT_B_field(F, q);
-  BA = sqrt(F[0]*F[0] + F[1]*F[1] + F[2]*F[2]);
-  if (BA>BMaxOnTrajectory) {
+  BA = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
+  if (BA > BMaxOnTrajectory) {
     BMaxOnTrajectory = BA;
     BSignOnTrajectory = SIGN(F[2]);
   }
-  F[3] = (1-F[2])*F[2];
-  w  = q+3;
-  wp = qp+3;
+  F[3] = (1 - F[2]) * F[2];
+  w = q + 3;
+  wp = qp + 3;
   qp[0] = w[0];
   qp[1] = w[1];
   qp[2] = w[2];
-  factor = 1/(rigidity*(1+global_delta));
-  wp[0] = (w[2]*F[1]-w[1]*F[2])*factor;
-  wp[1] = (w[0]*F[2]-w[2]*F[0])*factor;
-  wp[2] = (w[1]*F[0]-w[0]*F[1])*factor;
+  factor = 1 / (rigidity * (1 + global_delta));
+  wp[0] = (w[2] * F[1] - w[1] * F[2]) * factor;
+  wp[1] = (w[0] * F[2] - w[2] * F[0]) * factor;
+  wp[2] = (w[1] * F[0] - w[0] * F[1]) * factor;
 }
 
-void BRAT_store_data_permuted(double p0, double *p, double *q1, double *B, double s, double exval)
-{
-  double q[9]={0,0,0,0,0,0,0,0,0}, qp[9]={0,0,0,0,0,0,0,0,0};
+void BRAT_store_data_permuted(double p0, double *p, double *q1, double *B, double s, double exval) {
+  double q[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}, qp[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
   q[0] = q1[2];
   q[1] = q1[0];
   q[2] = q1[1];
-  q[4] = p[2]/p0;
-  q[5] = p[0]/p0;
-  q[6] = p[1]/p0;
+  q[4] = p[2] / p0;
+  q[5] = p[0] / p0;
+  q[6] = p[1] / p0;
   qp[6] = B[2];
   qp[7] = B[0];
   qp[8] = B[1];
   BRAT_store_data(qp, q, s, 0.0);
 }
 
-
-void BRAT_store_data(double *qp, double *q, double s, double exval)
-{
-  if (fabs(q[0])>2*z_outer || !storeData)
+void BRAT_store_data(double *qp, double *q, double s, double exval) {
+  if (fabs(q[0]) > 2 * z_outer || !storeData)
     return;
 #if DEBUG
   printf("Storing particle and field data on trajectory\n");
   fflush(stdout);
 #endif
-  if (n_stored>=max_store) {
+  if (n_stored >= max_store) {
     max_store += 100;
-    X_stored = trealloc(X_stored, sizeof(*X_stored)*max_store);
-    Y_stored = trealloc(Y_stored, sizeof(*Y_stored)*max_store);
-    Z_stored = trealloc(Z_stored, sizeof(*Z_stored)*max_store);
-    FX_stored = trealloc(FX_stored, sizeof(*FX_stored)*max_store);
-    FY_stored = trealloc(FY_stored, sizeof(*FY_stored)*max_store);
-    FZ_stored = trealloc(FZ_stored, sizeof(*FZ_stored)*max_store);
-    if (storeData>1) {
-      wX_stored = trealloc(wX_stored, sizeof(*X_stored)*max_store);
-      wY_stored = trealloc(wY_stored, sizeof(*Y_stored)*max_store);
-      wZ_stored = trealloc(wZ_stored, sizeof(*Z_stored)*max_store);
-      aX_stored = trealloc(aX_stored, sizeof(*X_stored)*max_store);
-      aY_stored = trealloc(aY_stored, sizeof(*Y_stored)*max_store);
-      aZ_stored = trealloc(aZ_stored, sizeof(*Z_stored)*max_store);
-      Fint_stored = trealloc(Fint_stored, sizeof(*Fint_stored)*max_store);
-      s_stored = trealloc(s_stored, sizeof(*s_stored)*max_store);
+    X_stored = trealloc(X_stored, sizeof(*X_stored) * max_store);
+    Y_stored = trealloc(Y_stored, sizeof(*Y_stored) * max_store);
+    Z_stored = trealloc(Z_stored, sizeof(*Z_stored) * max_store);
+    FX_stored = trealloc(FX_stored, sizeof(*FX_stored) * max_store);
+    FY_stored = trealloc(FY_stored, sizeof(*FY_stored) * max_store);
+    FZ_stored = trealloc(FZ_stored, sizeof(*FZ_stored) * max_store);
+    if (storeData > 1) {
+      wX_stored = trealloc(wX_stored, sizeof(*X_stored) * max_store);
+      wY_stored = trealloc(wY_stored, sizeof(*Y_stored) * max_store);
+      wZ_stored = trealloc(wZ_stored, sizeof(*Z_stored) * max_store);
+      aX_stored = trealloc(aX_stored, sizeof(*X_stored) * max_store);
+      aY_stored = trealloc(aY_stored, sizeof(*Y_stored) * max_store);
+      aZ_stored = trealloc(aZ_stored, sizeof(*Z_stored) * max_store);
+      Fint_stored = trealloc(Fint_stored, sizeof(*Fint_stored) * max_store);
+      s_stored = trealloc(s_stored, sizeof(*s_stored) * max_store);
     }
   }
   Z_stored[n_stored] = q[0];
@@ -942,14 +926,14 @@ void BRAT_store_data(double *qp, double *q, double s, double exval)
   FZ_stored[n_stored] = qp[6];
   FX_stored[n_stored] = qp[7];
   FY_stored[n_stored] = qp[8];
-  if (storeData>1) {
+  if (storeData > 1) {
     wZ_stored[n_stored] = q[3];
     wX_stored[n_stored] = q[4];
     wY_stored[n_stored] = q[5];
     aZ_stored[n_stored] = qp[3];
     aX_stored[n_stored] = qp[4];
     aY_stored[n_stored] = qp[5];
-    Fint_stored[n_stored] = q[9]/gap/2;
+    Fint_stored[n_stored] = q[9] / gap / 2;
     s_stored[n_stored] = s;
   }
   n_stored++;
@@ -959,97 +943,91 @@ void BRAT_store_data(double *qp, double *q, double s, double exval)
 #endif
 }
 
-double BRAT_setup_arc_field_data(char *input, char *sName, char *fieldName, double xCenter)
-{
+double BRAT_setup_arc_field_data(char *input, char *sName, char *fieldName, double xCenter) {
   SDDS_DATASET SDDS_table;
   long iData, increasing;
   double BRef, BMin, BMax, sMin, sMax;
-  
+
   if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, input) || !SDDS_ReadPage(&SDDS_table)) {
     SDDS_SetError("Unable to read data file");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
   }
-  if (!(nArcPoints=SDDS_CountRowsOfInterest(&SDDS_table)))
+  if (!(nArcPoints = SDDS_CountRowsOfInterest(&SDDS_table)))
     bomb("no data in field file", NULL);
-  if (nArcPoints<2)
+  if (nArcPoints < 2)
     bomb("too little data in field file", NULL);
-  
-  if (SDDS_CheckColumn(&SDDS_table, sName, "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) 
+
+  if (SDDS_CheckColumn(&SDDS_table, sName, "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY)
     exit(1);
-  if (SDDS_CheckColumn(&SDDS_table, fieldName, "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY)
+  if (SDDS_CheckColumn(&SDDS_table, fieldName, "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY)
     exit(1);
 
   if (!(sArc = SDDS_GetColumnInDoubles(&SDDS_table, sName)) ||
-      !(BArcNorm = SDDS_GetColumnInDoubles(&SDDS_table, fieldName)))  {
+      !(BArcNorm = SDDS_GetColumnInDoubles(&SDDS_table, fieldName))) {
     SDDS_SetError("Unable to retrieve data columns");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
   }
-  if (!(dBArcNormds = malloc(sizeof(*dBArcNormds)*nArcPoints))) {
+  if (!(dBArcNormds = malloc(sizeof(*dBArcNormds) * nArcPoints))) {
     fprintf(stderr, "brat: memory allocation failure\n");
     exit(1);
   }
-  
+
   increasing = 0;
-  if (sArc[0]<sArc[1])
+  if (sArc[0] < sArc[1])
     increasing = 1;
   BMin = -(BMax = -DBL_MAX);
   sMin = -(sMax = -DBL_MAX);
-  for (iData=0; iData<nArcPoints; iData++) {
-    if (BArcNorm[iData]>BMax)
+  for (iData = 0; iData < nArcPoints; iData++) {
+    if (BArcNorm[iData] > BMax)
       BMax = BArcNorm[iData];
-    if (BArcNorm[iData]<BMin)
+    if (BArcNorm[iData] < BMin)
       BMin = BArcNorm[iData];
-    if (sArc[iData]>sMax)
+    if (sArc[iData] > sMax)
       sMax = sArc[iData];
-    if (sArc[iData]<sMin)
+    if (sArc[iData] < sMin)
       sMin = sArc[iData];
-    if (iData==0)
+    if (iData == 0)
       continue;
-    if ((increasing  && sArc[iData-1]>=sArc[iData]) ||
-        (!increasing && sArc[iData-1]<=sArc[iData]))
+    if ((increasing && sArc[iData - 1] >= sArc[iData]) ||
+        (!increasing && sArc[iData - 1] <= sArc[iData]))
       bomb("arc s values not monotonic", NULL);
   }
-  
-  if (fabs(BMin)>fabs(BMax))
+
+  if (fabs(BMin) > fabs(BMax))
     BRef = BMin;
   else
     BRef = BMax;
-  if (sMin!=0) {
+  if (sMin != 0) {
     fprintf(stderr, "minimum value of s is %le, but must be zero for arc data\n",
             sMin);
     exit(1);
   }
 
-  if (BRef==0)
+  if (BRef == 0)
     bomb("field appears to be zero in arc data", NULL);
   /*
   for (iData=0; iData<nArcPoints; iData++)
     BArcNorm[iData] /= BRef;
   */
 
-  dBArcNormds[0] = (BArcNorm[1]-BArcNorm[0])/(sArc[1]-sArc[0]);
-  dBArcNormds[nArcPoints-1] 
-    = (BArcNorm[nArcPoints-1]-BArcNorm[nArcPoints-2])
-      /(sArc[nArcPoints-1]-sArc[nArcPoints-2]);
+  dBArcNormds[0] = (BArcNorm[1] - BArcNorm[0]) / (sArc[1] - sArc[0]);
+  dBArcNormds[nArcPoints - 1] = (BArcNorm[nArcPoints - 1] - BArcNorm[nArcPoints - 2]) / (sArc[nArcPoints - 1] - sArc[nArcPoints - 2]);
 
-  for (iData=1; iData<(nArcPoints-1); iData++) {
-    dBArcNormds[iData] 
-      = (BArcNorm[iData+1]-BArcNorm[iData-1])
-        /(sArc[iData+1]-sArc[iData-1]);
+  for (iData = 1; iData < (nArcPoints - 1); iData++) {
+    dBArcNormds[iData] = (BArcNorm[iData + 1] - BArcNorm[iData - 1]) / (sArc[iData + 1] - sArc[iData - 1]);
   }
-  
+
   return BRef;
 }
 
-double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *interpolationParameter)
-{
+double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *interpolationParameter) {
   SDDS_TABLE SDDS_table;
   long idata, ix, iz, rows;
-  double x, z, B, *xd=NULL, *zd=NULL, *Bd=NULL, xCheck, zCheck;
+  double x, z, B, *xd = NULL, *zd = NULL, *Bd = NULL, xCheck, zCheck;
   double *yd = NULL, *Bxd = NULL, *Byd = NULL, *Bzd = NULL;
   double Bmin, Bmax;
   long ix0, ix1, iz0, iz1;
-  double dz0=0, dx0=0;
+  double dz0 = 0, dx0 = 0;
 #ifdef DEBUG
   double xc;
 #endif
@@ -1059,14 +1037,14 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
 
   if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, input) || !SDDS_ReadPage(&SDDS_table)) {
     SDDS_SetError("Unable to read data file");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
   }
-  if (!(rows=SDDS_CountRowsOfInterest(&SDDS_table)))
+  if (!(rows = SDDS_CountRowsOfInterest(&SDDS_table)))
     bomb("no data in field file", NULL);
 
   clear2dMapList();
 
-  if (fieldMapDimension==2) {
+  if (fieldMapDimension == 2) {
     long firstPage = 1;
     double interpParamValue;
     interpolationParameterUnits = NULL;
@@ -1079,92 +1057,90 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
       if (!single_scan) {
         if (firstPage) {
           if (interpolationParameter) {
-            if (SDDS_CheckParameter(&SDDS_table, interpolationParameter, NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY)
+            if (SDDS_CheckParameter(&SDDS_table, interpolationParameter, NULL, SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY)
               exit(1);
-            if (SDDS_GetParameterInformation(&SDDS_table, "units", &interpolationParameterUnits, SDDS_GET_BY_NAME, interpolationParameter)
-                !=SDDS_STRING)
+            if (SDDS_GetParameterInformation(&SDDS_table, "units", &interpolationParameterUnits, SDDS_GET_BY_NAME, interpolationParameter) != SDDS_STRING)
               bomb("unable to get units for interpolation parameter", NULL);
           }
-          if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-              SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-              SDDS_CheckColumn(&SDDS_table, "B", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+          if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+              SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+              SDDS_CheckColumn(&SDDS_table, "B", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY) {
             exit(1);
           }
-          if (SDDS_CheckParameter(&SDDS_table, "xMinimum", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY || 
-              SDDS_CheckParameter(&SDDS_table, "xInterval", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY ||
-              SDDS_CheckParameter(&SDDS_table, "xDimension", NULL, SDDS_LONG, stderr)!=SDDS_CHECK_OKAY ||
-              SDDS_CheckParameter(&SDDS_table, "zMinimum", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY || 
-              SDDS_CheckParameter(&SDDS_table, "zInterval", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY ||
-              SDDS_CheckParameter(&SDDS_table, "zDimension", NULL, SDDS_LONG, stderr)!=SDDS_CHECK_OKAY)
+          if (SDDS_CheckParameter(&SDDS_table, "xMinimum", "m", SDDS_DOUBLE, stderr) != SDDS_CHECK_OKAY ||
+              SDDS_CheckParameter(&SDDS_table, "xInterval", "m", SDDS_DOUBLE, stderr) != SDDS_CHECK_OKAY ||
+              SDDS_CheckParameter(&SDDS_table, "xDimension", NULL, SDDS_LONG, stderr) != SDDS_CHECK_OKAY ||
+              SDDS_CheckParameter(&SDDS_table, "zMinimum", "m", SDDS_DOUBLE, stderr) != SDDS_CHECK_OKAY ||
+              SDDS_CheckParameter(&SDDS_table, "zInterval", "m", SDDS_DOUBLE, stderr) != SDDS_CHECK_OKAY ||
+              SDDS_CheckParameter(&SDDS_table, "zDimension", NULL, SDDS_LONG, stderr) != SDDS_CHECK_OKAY)
             exit(1);
         }
-        if (!(xd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "x")) ||
-            !(zd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "z")) ||
-            !((Bd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "B")))) {
+        if (!(xd = (double *)SDDS_GetColumnInDoubles(&SDDS_table, "x")) ||
+            !(zd = (double *)SDDS_GetColumnInDoubles(&SDDS_table, "z")) ||
+            !((Bd = (double *)SDDS_GetColumnInDoubles(&SDDS_table, "B")))) {
           SDDS_SetError("Unable to retrieve data column(s)");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
         }
         xi = xf = dx = 0;
         zi = zf = dz = 0;
         nx = nz = 0;
-        
+
         if (!SDDS_GetParameter(&SDDS_table, "xMinimum", &xi) || !SDDS_GetParameter(&SDDS_table, "xDimension", &nx) ||
             !SDDS_GetParameter(&SDDS_table, "xInterval", &dx) ||
             !SDDS_GetParameter(&SDDS_table, "zMinimum", &zi) || !SDDS_GetParameter(&SDDS_table, "zDimension", &nz) ||
             !SDDS_GetParameter(&SDDS_table, "zInterval", &dz)) {
           SDDS_SetError("Unable to retrieve parameter value(s)");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
         }
         if (interpolationParameter && !SDDS_GetParameterAsDouble(&SDDS_table, interpolationParameter, &interpParamValue)) {
           SDDS_SetError("Unable to retrieve parameter value(s)");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
         }
 
-        if (nx<=0 || nz<=0) 
+        if (nx <= 0 || nz <= 0)
           bomb("non-positive value for dx and/or dz", NULL);
-        xf = (nx-1)*dx+xi;
-        zf = (nz-1)*dz+zi;
-        if (nx==1) {
+        xf = (nx - 1) * dx + xi;
+        zf = (nz - 1) * dz + zi;
+        if (nx == 1) {
           single_scan = 1;
           xi = xf = 0;
           if (!quiet) {
             printf("data treated as single scan\n");
             fflush(stdout);
           }
-        }
-        else if (!quiet) {
+        } else if (!quiet) {
           printf("data grid:\n    x: [%.8f, %.8f]m   dx = %.8fm   nx = %ld\n",
                  xi, xf, dx, nx);
           fflush(stdout);
         }
-        if (!quiet){
+        if (!quiet) {
           printf("     z: [%.8f, %.8f]m   dz = %.8fm   nz = %ld\n",
                  zi, zf, dz, nz);
-          fflush(stdout);        
+          fflush(stdout);
         }
       } else {
         if (interpolationParameter)
           bomb("interpolation not supported for single scan", NULL);
-        if (SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) 
+        if (SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY)
           exit(1);
-        if (SDDS_CheckColumn(&SDDS_table, "B", "T", SDDS_ANY_FLOATING_TYPE, stderr)==SDDS_CHECK_OKAY)
+        if (SDDS_CheckColumn(&SDDS_table, "B", "T", SDDS_ANY_FLOATING_TYPE, stderr) == SDDS_CHECK_OKAY)
           exit(1);
-        if (!(zd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "z"))) {
+        if (!(zd = (double *)SDDS_GetColumnInDoubles(&SDDS_table, "z"))) {
           SDDS_SetError("Unable to retrieve data z column");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
         }
-        if (!(Bd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "B"))) {
+        if (!(Bd = (double *)SDDS_GetColumnInDoubles(&SDDS_table, "B"))) {
           SDDS_SetError("Unable to retrieve data field column");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
         }
         nx = 1;
         xi = xf = 0;
         zi = zd[0];
-        zf = zd[rows-1];
+        zf = zd[rows - 1];
         nz = rows;
-        if (nz<1)
+        if (nz < 1)
           bomb("nz < 1 in single scan data", NULL);
-        dz = (zf-zi)/(nz-1);
+        dz = (zf - zi) / (nz - 1);
         if (!quiet) {
           printf("data grid:\n    ");
           printf("    z: [%.8f, %.8f]m   dz = %.8fm   nz = %ld\n",
@@ -1172,19 +1148,19 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
           fflush(stdout);
         }
       }
-      
+
 #ifdef DEBUG
-      fprintf(stderr, "Allocating %ld x %ld field and gradient arrays\n", 
+      fprintf(stderr, "Allocating %ld x %ld field and gradient arrays\n",
               nx, nz);
 #endif
-      Bnorm = (double**)zarray_2d(sizeof(**Bnorm), nx, nz);
-      dBnormdz = (double**)zarray_2d(sizeof(**dBnormdz), nx, nz);
-      dBnormdx = (double**)zarray_2d(sizeof(**dBnormdx), nx, nz);
+      Bnorm = (double **)zarray_2d(sizeof(**Bnorm), nx, nz);
+      dBnormdz = (double **)zarray_2d(sizeof(**dBnormdz), nx, nz);
+      dBnormdx = (double **)zarray_2d(sizeof(**dBnormdx), nx, nz);
 #ifdef DEBUG
       fprintf(stderr, "Initializing Bnorm array\n");
 #endif
-      for (ix=0; ix<nx; ix++)
-        for (iz=0; iz<nz; iz++)
+      for (ix = 0; ix < nx; ix++)
+        for (iz = 0; iz < nz; iz++)
           Bnorm[ix][iz] = DBL_MAX;
       idata = 0;
 #ifdef DEBUG
@@ -1194,65 +1170,65 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
       ix = 0;
       if (single_scan)
         dx = 1;
-      for (idata=0; idata<rows; idata++) {
+      for (idata = 0; idata < rows; idata++) {
 #ifdef DEBUG
         fprintf(stderr, "Checking idata=%ld\n", idata);
 #endif
-        x = single_scan?0:xd[idata];
+        x = single_scan ? 0 : xd[idata];
         z = zd[idata];
         B = Bd[idata];
 #ifdef DEBUG
         fprintf(stderr, "x=%e, z=%e, B=%e\n", x, z, B);
 #endif
         if (!single_scan)
-          ix = (x-xi)/dx+0.5;
-        iz = (z-zi)/dz+0.5;
-        xCheck = ix*dx+xi;
-        zCheck = iz*dz+zi;
+          ix = (x - xi) / dx + 0.5;
+        iz = (z - zi) / dz + 0.5;
+        xCheck = ix * dx + xi;
+        zCheck = iz * dz + zi;
 #ifdef DEBUG
         fprintf(stderr, "ix = %ld, iz = %ld, xc=%e, zc=%e\n", ix, iz,
                 xCheck, zCheck);
 #endif
-        if (fabs(x-xCheck)/dx>1e-2 || fabs(z-zCheck)/dz>1e-2) {
+        if (fabs(x - xCheck) / dx > 1e-2 || fabs(z - zCheck) / dz > 1e-2) {
           fprintf(stderr, "Grid data not uniform: (%e, %e) -> (%e, %e)\n",
                   x, z, xCheck, zCheck);
           exit(1);
         }
-        if (ix<0 || ix>nx || iz<0 || iz>nz) {
+        if (ix < 0 || ix > nx || iz < 0 || iz > nz) {
           fprintf(stderr, "Point outside grid: (%e, %e) -> (%ld, %ld)\n",
                   x, z, ix, iz);
           exit(1);
         }
-        if (Bnorm[ix][iz]!=DBL_MAX)
+        if (Bnorm[ix][iz] != DBL_MAX)
           bomb("two data points map to one grid point", NULL);
         Bnorm[ix][iz] = B;
-        if (B<Bmin)
+        if (B < Bmin)
           Bmin = B;
-        if (B>Bmax)
+        if (B > Bmax)
           Bmax = B;
       }
-      if (!single_scan) 
+      if (!single_scan)
         free(xd);
       free(zd);
       free(Bd);
-    
+
       idata = 0;
-      for (ix=0; ix<nx; ix++)
-        for (iz=0; iz<nz; iz++) {
-          if (Bnorm[ix][iz]==DBL_MAX) {
-            idata ++;
+      for (ix = 0; ix < nx; ix++)
+        for (iz = 0; iz < nz; iz++) {
+          if (Bnorm[ix][iz] == DBL_MAX) {
+            idata++;
             Bnorm[ix][iz] = 0;
           }
         }
       if (idata && !quiet) {
         char buffer[16384];
-        snprintf(buffer, 16384, "No data for %ld of %ld points\n", idata, nx*nz);
+        snprintf(buffer, 16384, "No data for %ld of %ld points\n", idata, nx * nz);
         printWarningForTracking(buffer, NULL);
       }
 
-      if (fabs(Bmin)>fabs(Bmax))
+      if (fabs(Bmin) > fabs(Bmax))
         Bmax = Bmin;
-      if (Bmax==0)
+      if (Bmax == 0)
         bomb("extremal B value is zero", NULL);
       if (!quiet) {
         printf("Maximum value of B is %.8f T\n", Bmax);
@@ -1267,78 +1243,74 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
       */
 
       /* compute derivatives */
-      for (ix=0; ix<nx; ix++) {
-        if (nx==1)
+      for (ix = 0; ix < nx; ix++) {
+        if (nx == 1)
           ix0 = ix1 = 0;
         else {
-          if (ix==0) {
+          if (ix == 0) {
             dx0 = dx;
-            ix1 = ix+1;
+            ix1 = ix + 1;
             ix0 = ix;
-          }
-          else if (ix==(nx-1)) {
+          } else if (ix == (nx - 1)) {
             dx0 = dx;
             ix1 = ix;
-            ix0 = ix-1;
-          }
-          else {
-            dx0 = 2*dx;
-            ix1 = ix+1;
-            ix0 = ix-1;
+            ix0 = ix - 1;
+          } else {
+            dx0 = 2 * dx;
+            ix1 = ix + 1;
+            ix0 = ix - 1;
           }
         }
-        for (iz=0; iz<nz; iz++) {
-          if (iz==0) {
+        for (iz = 0; iz < nz; iz++) {
+          if (iz == 0) {
             dz0 = dz;
-            iz1 = iz+1;
+            iz1 = iz + 1;
             iz0 = iz;
-          }
-          else if (iz==(nz-1)) {
+          } else if (iz == (nz - 1)) {
             dz0 = dz;
             iz1 = iz;
-            iz0 = iz-1;
+            iz0 = iz - 1;
+          } else {
+            dz0 = 2 * dz;
+            iz1 = iz + 1;
+            iz0 = iz - 1;
           }
-          else {
-            dz0 = 2*dz;
-            iz1 = iz+1;
-            iz0 = iz-1;
-          }
-          dBnormdz[ix][iz] = (Bnorm[ix][iz1]-Bnorm[ix][iz0])/dz0;
+          dBnormdz[ix][iz] = (Bnorm[ix][iz1] - Bnorm[ix][iz0]) / dz0;
           if (!single_scan)
-            dBnormdx[ix][iz] = (Bnorm[ix1][iz]-Bnorm[ix0][iz])/dx0;
-          else 
+            dBnormdx[ix][iz] = (Bnorm[ix1][iz] - Bnorm[ix0][iz]) / dx0;
+          else
             dBnormdx[ix][iz] = 0;
         }
       }
       if (interpolationParameter)
         add2dMapList(interpParamValue);
       if (!quiet) {
-        printf("Finished processing page from field file\n"); 
+        printf("Finished processing page from field file\n");
         fflush(stdout);
       }
-    } while (interpolationParameter && SDDS_ReadPage(&SDDS_table)>0 && (rows=SDDS_CountRowsOfInterest(&SDDS_table))>0);
+    } while (interpolationParameter && SDDS_ReadPage(&SDDS_table) > 0 && (rows = SDDS_CountRowsOfInterest(&SDDS_table)) > 0);
     if (interpolationParameter) {
-      if (length2dMapList<=1)
+      if (length2dMapList <= 1)
         bomb("interpolation parameter was given but only one page was found in the input file", NULL);
       /* these will be used for holding the interpolated map */
-      Bnorm = (double**)zarray_2d(sizeof(**Bnorm), nx, nz);
-      dBnormdz = (double**)zarray_2d(sizeof(**dBnormdz), nx, nz);
-      dBnormdx = (double**)zarray_2d(sizeof(**dBnormdx), nx, nz);
+      Bnorm = (double **)zarray_2d(sizeof(**Bnorm), nx, nz);
+      dBnormdz = (double **)zarray_2d(sizeof(**dBnormdz), nx, nz);
+      dBnormdx = (double **)zarray_2d(sizeof(**dBnormdx), nx, nz);
     }
     if (!SDDS_Terminate(&SDDS_table))
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
   } else {
     /* 3d field map */
     if (interpolationParameter)
       bomb("interpolation not supported for 3D maps", NULL);
-    if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-        SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-        SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+    if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY) {
       exit(1);
     }
-    if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-        SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-        SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+    if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY) {
       exit(1);
     }
     if (!(xd = SDDS_GetColumnInDoubles(&SDDS_table, "x")) ||
@@ -1347,7 +1319,7 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
         !(Bxd = SDDS_GetColumnInDoubles(&SDDS_table, "Bx")) ||
         !(Byd = SDDS_GetColumnInDoubles(&SDDS_table, "By")) ||
         !(Bzd = SDDS_GetColumnInDoubles(&SDDS_table, "Bz"))) {
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
 
     /* It is assumed that the data is ordered so that x changes fastest.
@@ -1356,81 +1328,79 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
      */
     nx = 1;
     xi = xd[0];
-    while (nx<rows) {
-      if (xd[nx-1]>xd[nx])
+    while (nx < rows) {
+      if (xd[nx - 1] > xd[nx])
         break;
-      nx ++;
+      nx++;
     }
-    if (nx==rows) {
+    if (nx == rows) {
       fprintf(stderr, "file doesn't have correct structure or amount of data (x)\n");
       fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
       exit(1);
-    }  
-    xf = xd[nx-1];
-    dx = (xf-xi)/(nx-1);
+    }
+    xf = xd[nx - 1];
+    dx = (xf - xi) / (nx - 1);
 
     ny = 1;
     yi = yd[0];
-    while (ny<(rows/nx)) {
-      if (yd[(ny-1)*nx]>yd[ny*nx])
+    while (ny < (rows / nx)) {
+      if (yd[(ny - 1) * nx] > yd[ny * nx])
         break;
       ny++;
     }
-    if (ny==rows) {
+    if (ny == rows) {
       fprintf(stderr, "file doesn't have correct structure or amount of data (y)\n");
       fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
       exit(1);
     }
-    yf = yd[(ny-1)*nx];
-    dy = (yf-yi)/(ny-1);
+    yf = yd[(ny - 1) * nx];
+    dy = (yf - yi) / (ny - 1);
 
-    if (nx<=1 || ny<=1 || (nz = rows/(nx*ny))<=1) {
+    if (nx <= 1 || ny <= 1 || (nz = rows / (nx * ny)) <= 1) {
       fprintf(stderr, "file doesn't have correct structure or amount of data (z)\n");
       fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
       exit(1);
     }
     zi = zd[0];
-    zf = zd[rows-1];
-    dz = (zf-zi)/(nz-1);
+    zf = zd[rows - 1];
+    dz = (zf - zi) / (nz - 1);
 
     Bmin = -(Bmax = -DBL_MAX);
-    for (idata=0; idata<rows; idata++) {
+    for (idata = 0; idata < rows; idata++) {
       /* if (fabs(yd[idata])<dy/2 && fabs(xd[idata])<dx/2) { */
-        if (Byd[idata]>Bmax)
-          Bmax = Byd[idata];
-        if (Byd[idata]<Bmin)
-          Bmin = Byd[idata];
-        /* } */
+      if (Byd[idata] > Bmax)
+        Bmax = Byd[idata];
+      if (Byd[idata] < Bmin)
+        Bmin = Byd[idata];
+      /* } */
     }
     free(xd);
     free(yd);
     free(zd);
-    if (Bmax==-DBL_MAX) {
+    if (Bmax == -DBL_MAX) {
       fprintf(stderr, "BRAT file doesn't have valid Bmax value\n");
       fprintf(stderr, "Bmax = %le, Bmin = %le\n", Bmax, Bmin);
       exit(1);
     }
-    if (fabs(Bmin)>fabs(Bmax))
+    if (fabs(Bmin) > fabs(Bmax))
       SWAP_DOUBLE(Bmin, Bmax);
     BxNorm = Bxd;
     ByNorm = Byd;
     BzNorm = Bzd;
-    
+
     printf("3D field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\nBy:[%e, %e]\n",
            nx, ny, nz, dx, dy, dz,
            xi, xf, yi, yf, zi, zf,
-           Bmin, Bmax
-           );
+           Bmin, Bmax);
   }
 
   return Bmax;
 }
 
 void BRAT_B_field_permuted(
-                           double *Fp,  /* Output: Bx, By, Bz */
-                           double *Qp   /* Input: X, Y, Z */
-                           )
-{
+  double *Fp, /* Output: Bx, By, Bz */
+  double *Qp  /* Input: X, Y, Z */
+) {
   double Q[3];
   double F[3];
   Q[0] = Qp[2];
@@ -1442,65 +1412,64 @@ void BRAT_B_field_permuted(
   Fp[2] = F[0];
 }
 
-void BRAT_B_field(double *F, double *Qg)
-{
+void BRAT_B_field(double *F, double *Qg) {
   long ix, iy, iz, j, outside;
   double fx, fy, fz, val_z1, val_z2, f[3];
 #ifndef BRAT_PROGRAM
-  double xSlope; 
+  double xSlope;
 #endif
-  double x, y, z, derivSign=1;
+  double x, y, z, derivSign = 1;
   double Q[3];
 
-  memcpy(Q, Qg, 3*sizeof(*Q));
+  memcpy(Q, Qg, 3 * sizeof(*Q));
   if (idealMode) {
     double Lx;
-    Lx = idealChord + 2*Qg[1]*tan(idealEdgeAngle*PI/180);
-    if (fabs(Qg[0])>Lx/2) {
+    Lx = idealChord + 2 * Qg[1] * tan(idealEdgeAngle * PI / 180);
+    if (fabs(Qg[0]) > Lx / 2) {
       F[0] = F[1] = F[2] = 0;
     } else {
       F[0] = F[1] = 0;
       F[2] = 1;
     }
-    for (j=0; j<3; j++)
-      F[j] *= fieldSign*(1+fse);
+    for (j = 0; j < 3; j++)
+      F[j] *= fieldSign * (1 + fse);
     return;
   }
   if (arc_scan) {
     double phi, s, dByds;
     /* double R; */
     long inStraight;
-    OUTRANGE_CONTROL belowRange = {0.0,  OUTRANGE_SATURATE } ;
-    OUTRANGE_CONTROL aboveRange = {0.0,  OUTRANGE_VALUE } ;
+    OUTRANGE_CONTROL belowRange = {0.0, OUTRANGE_SATURATE};
+    OUTRANGE_CONTROL aboveRange = {0.0, OUTRANGE_VALUE};
     unsigned long code;
     phi = fabs(atan2(Q[0], Q[1]));
 #ifdef DEBUG
     fprintf(stderr, "computing arc field for Z=%e, X=%e, phi=%e: ",
             Q[0], Q[1], phi);
 #endif
-    if (phi<=theta/2) {
-      s = phi*rhoArc;
+    if (phi <= theta / 2) {
+      s = phi * rhoArc;
       inStraight = 0;
     } else {
       /* R = sqrt(sqr(Q[0])+sqr(Q[1])); */
-      s = rhoArc*((theta/2) + tan(phi-theta/2));
+      s = rhoArc * ((theta / 2) + tan(phi - theta / 2));
       inStraight = 1;
     }
     F[2] = interpolate(BArcNorm, sArc, nArcPoints, s, &belowRange, &aboveRange, 1, &code, 1.0);
     dByds = interpolate(dBArcNormds, sArc, nArcPoints, s, &belowRange, &aboveRange, 1, &code, 1.0);
     if (inStraight) {
-      phi = theta/2;
+      phi = theta / 2;
     }
-    F[0] = SIGN(Q[0])*Q[2]*dByds*cos(phi);
-    F[1] = -Q[2]*dByds*sin(phi);
+    F[0] = SIGN(Q[0]) * Q[2] * dByds * cos(phi);
+    F[1] = -Q[2] * dByds * sin(phi);
 #ifdef DEBUG
     fprintf(stderr, "s=%e, B=%e\n", s, F[2]);
 #endif
-    if (Q[0]>=zNomEntry && Q[0]<=zNomExit && deltaByInside) 
+    if (Q[0] >= zNomEntry && Q[0] <= zNomExit && deltaByInside)
       F[2] += deltaByInside;
-    for (j=0; j<3; j++)
-      F[j] *= fieldSign*(1+fse);
-    return ;
+    for (j = 0; j < 3; j++)
+      F[j] *= fieldSign * (1 + fse);
+    return;
   }
 
 #ifndef ABRAT_PROGRAM
@@ -1509,10 +1478,10 @@ void BRAT_B_field(double *F, double *Qg)
   y = Q[2];
   lossCoordinates[3] = y; /* just in case it is needed */
   xSlope = 0;
-  if (Qg[3]!=0)
-    xSlope = Qg[4]/Qg[3];
-  if (!isLost && 
-      (z>=zNomEntry && z<=zNomExit) && 
+  if (Qg[3] != 0)
+    xSlope = Qg[4] / Qg[3];
+  if (!isLost &&
+      (z >= zNomEntry && z <= zNomExit) &&
       insideObstruction_XYZ(x, y, z, xNomEntry, 0.0, zNomEntry, thetaEntry, xSlope, lossCoordinates)) {
     /*
     printf("Loss coordinates: X = %le, Z = %le, theta = %le, Q[3] = %le, Q[4] = %le, Q[5] = %le\n",
@@ -1528,19 +1497,19 @@ void BRAT_B_field(double *F, double *Qg)
     double Qy[2];
     Qy[0] = Q[0];
     Qy[1] = Q[1];
-    Q[0] =  Qy[0]*cos(magnetYaw) + Qy[1]*sin(magnetYaw);
-    Q[1] = -Qy[0]*sin(magnetYaw) + Qy[1]*cos(magnetYaw);
+    Q[0] = Qy[0] * cos(magnetYaw) + Qy[1] * sin(magnetYaw);
+    Q[1] = -Qy[0] * sin(magnetYaw) + Qy[1] * cos(magnetYaw);
   }
   z = Q[0];
-  if (zDuplicate && z>0) {
+  if (zDuplicate && z > 0) {
     z = -fabs(z);
     derivSign = -1;
   }
 
-  x = Q[1] - dXOffset + dZOffset*dxDzFactor;
+  x = Q[1] - dXOffset + dZOffset * dxDzFactor;
   y = Q[2] - dYOffset;
   z -= dZOffset;
-  
+
   F[0] = F[1] = F[2] = 0;
 
 #ifdef DEBUG
@@ -1549,20 +1518,20 @@ void BRAT_B_field(double *F, double *Qg)
 
   if (!single_scan) {
     if (!particle_inside) {
-      if ((xi-x)>dx*1e-6 || (x-xf)>dx*1e-6) {
+      if ((xi - x) > dx * 1e-6 || (x - xf) > dx * 1e-6) {
 #ifdef DEBUG
         fprintf(stderr, "Particle outside grid [%le, %le] in x\n", xi, xf);
 #endif
         return;
       }
-      if ((zi-z)>dz*1e-6 || (z-zf)>dz*1e-6) {
+      if ((zi - z) > dz * 1e-6 || (z - zf) > dz * 1e-6) {
 #ifdef DEBUG
         fprintf(stderr, "Particle outside grid [%le, %le] in z\n", zi, zf);
 #endif
         return;
       }
-      if (fieldMapDimension==3 &&
-          ((yi-y)>dy*1e-6 || (y-yf)>dy*1e-6)) {
+      if (fieldMapDimension == 3 &&
+          ((yi - y) > dy * 1e-6 || (y - yf) > dy * 1e-6)) {
 #ifdef DEBUG
         fprintf(stderr, "Particle outside grid [%le, %le] in y\n", yi, yf);
 #endif
@@ -1572,102 +1541,101 @@ void BRAT_B_field(double *F, double *Qg)
 
     particle_inside = 1;
     if (!extend_data) {
-      if ((xi-x)>dx*1e-6 || (x-xf)>dx*1e-6)
+      if ((xi - x) > dx * 1e-6 || (x - xf) > dx * 1e-6)
         return;
-      if ((zi-z)>dz*1e-6 || (z-zf)>dz*1e-6)
+      if ((zi - z) > dz * 1e-6 || (z - zf) > dz * 1e-6)
         return;
-      if (fieldMapDimension==3 &&
-          ((yi-y)>dy*1e-6 || (y-yf)>dy*1e-6))
+      if (fieldMapDimension == 3 &&
+          ((yi - y) > dy * 1e-6 || (y - yf) > dy * 1e-6))
         return;
     }
-  }
-  else {
+  } else {
     if (extend_data && extend_edge_angle)
-      z = z-x*tan(extend_edge_angle);
-    if ((zi-z)>dz*1e-6 || (z-zf)>dz*1e-6)
+      z = z - x * tan(extend_edge_angle);
+    if ((zi - z) > dz * 1e-6 || (z - zf) > dz * 1e-6)
       return;
   }
 
-  iz = (z-zi)/dz;
-  if (iz>=nz-1) {
-    iz = nz-2;
+  iz = (z - zi) / dz;
+  if (iz >= nz - 1) {
+    iz = nz - 2;
     z = zf;
   }
-  if (iz<0) {
+  if (iz < 0) {
     iz = 0;
     z = zi;
   }
-  fz = (z-zi)/dz-iz;
+  fz = (z - zi) / dz - iz;
 
   if (single_scan) {
-    F[2] = Bnorm[0][iz] + fz*(Bnorm[0][iz+1]-Bnorm[0][iz]);
+    F[2] = Bnorm[0][iz] + fz * (Bnorm[0][iz + 1] - Bnorm[0][iz]);
     if (y) {
-      F[0] = derivSign*y*(dBnormdz[0][iz] + fz*(dBnormdz[0][iz+1]-dBnormdz[0][iz]));
-      F[1] = y*(dBnormdx[0][iz] + fz*(dBnormdx[0][iz+1]-dBnormdx[0][iz]));
+      F[0] = derivSign * y * (dBnormdz[0][iz] + fz * (dBnormdz[0][iz + 1] - dBnormdz[0][iz]));
+      F[1] = y * (dBnormdx[0][iz] + fz * (dBnormdx[0][iz + 1] - dBnormdx[0][iz]));
     }
-    if (z>=zNomEntry && z<=zNomExit && deltaByInside) 
+    if (z >= zNomEntry && z <= zNomExit && deltaByInside)
       F[2] += deltaByInside;
-    for (j=0; j<3; j++)
-      F[j] *= fieldSign*(1+fse);
+    for (j = 0; j < 3; j++)
+      F[j] *= fieldSign * (1 + fse);
     return;
   }
 
   outside = 0;
-  ix = (x-xi)/dx;
-  if (ix>=nx-1) {
-    ix = nx-2;
-    x  = xf;
+  ix = (x - xi) / dx;
+  if (ix >= nx - 1) {
+    ix = nx - 2;
+    x = xf;
     outside = 1;
   }
-  if (ix<0) {
+  if (ix < 0) {
     ix = 0;
     x = xi;
     outside = 1;
   }
-  fx = (x-xi)/dx-ix;
+  fx = (x - xi) / dx - ix;
 
-  if (fieldMapDimension==3) {
-    iy = (y-yi)/dy;
-    if (iy>=ny-1) {
-      iy = ny-2;
+  if (fieldMapDimension == 3) {
+    iy = (y - yi) / dy;
+    if (iy >= ny - 1) {
+      iy = ny - 2;
       y = yf;
       outside = 1;
     }
-    if (iy<0) {
+    if (iy < 0) {
       iy = 0;
       y = yi;
       outside = 1;
     }
-    fy = (y-yi)/dy-iy;
+    fy = (y - yi) / dy - iy;
   } else {
     iy = 0;
     fy = 0;
   }
 
   if (outside && !xyExtrapolate) {
-    for (j=0; j<3; j++)
+    for (j = 0; j < 3; j++)
       F[j] = 0;
     return;
   }
-  
-  if (fieldMapDimension==2) {
-    val_z1 = Bnorm[ix][iz] + fx*(Bnorm[ix+1][iz]-Bnorm[ix][iz]);
-    val_z2 = Bnorm[ix][iz+1] + fx*(Bnorm[ix+1][iz+1]-Bnorm[ix][iz+1]);
-    F[2] = val_z1 + fz*(val_z2-val_z1);
-    val_z1 = derivSign*(dBnormdz[ix][iz] + fx*(dBnormdz[ix+1][iz]-dBnormdz[ix][iz]));
-    val_z2 = derivSign*(dBnormdz[ix][iz+1] + fx*(dBnormdz[ix+1][iz+1]-dBnormdz[ix][iz+1]));
-    f[0] = y*(val_z1 + fz*(val_z2-val_z1));
-    val_z1 = dBnormdx[ix][iz] + fx*(dBnormdx[ix+1][iz]-dBnormdx[ix][iz]);
-    val_z2 = dBnormdx[ix][iz+1] + fx*(dBnormdx[ix+1][iz+1]-dBnormdx[ix][iz+1]);
-    f[1] = y*(val_z1 + fz*(val_z2-val_z1));
-    F[0] =  f[0];
-    F[1] =  f[1];
-    if (z>=zNomEntry && z<=zNomExit && deltaByInside) 
+
+  if (fieldMapDimension == 2) {
+    val_z1 = Bnorm[ix][iz] + fx * (Bnorm[ix + 1][iz] - Bnorm[ix][iz]);
+    val_z2 = Bnorm[ix][iz + 1] + fx * (Bnorm[ix + 1][iz + 1] - Bnorm[ix][iz + 1]);
+    F[2] = val_z1 + fz * (val_z2 - val_z1);
+    val_z1 = derivSign * (dBnormdz[ix][iz] + fx * (dBnormdz[ix + 1][iz] - dBnormdz[ix][iz]));
+    val_z2 = derivSign * (dBnormdz[ix][iz + 1] + fx * (dBnormdz[ix + 1][iz + 1] - dBnormdz[ix][iz + 1]));
+    f[0] = y * (val_z1 + fz * (val_z2 - val_z1));
+    val_z1 = dBnormdx[ix][iz] + fx * (dBnormdx[ix + 1][iz] - dBnormdx[ix][iz]);
+    val_z2 = dBnormdx[ix][iz + 1] + fx * (dBnormdx[ix + 1][iz + 1] - dBnormdx[ix][iz + 1]);
+    f[1] = y * (val_z1 + fz * (val_z2 - val_z1));
+    F[0] = f[0];
+    F[1] = f[1];
+    if (z >= zNomEntry && z <= zNomExit && deltaByInside)
       F[2] += deltaByInside;
   } else {
     long iq;
     double Finterp1[2][2], Finterp2[2];
-    double *Fq[3], Freturn[3]={0,0,0};
+    double *Fq[3], Freturn[3] = {0, 0, 0};
     float *Fq1[3];
     Fq[0] = BzNorm;
     Fq[1] = BxNorm;
@@ -1677,73 +1645,73 @@ void BRAT_B_field(double *F, double *Qg)
     Fq1[2] = By1Norm;
 
 #ifdef DEBUG
-    fprintf(stderr, "Doing 3d interpolation: x=(%le, %le, %le), i=(%ld, %ld, %ld), f=(%le, %le, %le)\n", 
+    fprintf(stderr, "Doing 3d interpolation: x=(%le, %le, %le), i=(%ld, %ld, %ld), f=(%le, %le, %le)\n",
             x, y, z, ix, iy, iz, fx, fy, fz);
 #endif
 
-    if (xyInterpolationOrder>1) {
+    if (xyInterpolationOrder > 1) {
       double FOutput1[3], FOutput2[3];
       long offset;
-      offset = iz*nx*ny;
-      if (!singlePrecision) 
-	interpolate2dFieldMapHigherOrder2(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-					  Fq[0], Fq[1], Fq[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
-      else 
-	interpolate2dFieldMapHigherOrder2(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-					  Fq1[0], Fq1[1], Fq1[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+      offset = iz * nx * ny;
+      if (!singlePrecision)
+        interpolate2dFieldMapHigherOrder2(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny,
+                                          Fq[0], Fq[1], Fq[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+      else
+        interpolate2dFieldMapHigherOrder2(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny,
+                                          Fq1[0], Fq1[1], Fq1[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
 
-      offset = (iz+1)*nx*ny;
-      if (!singlePrecision) 
-	interpolate2dFieldMapHigherOrder2(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-					  Fq[0], Fq[1], Fq[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
-      else 
-	interpolate2dFieldMapHigherOrder2(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-					  Fq1[0], Fq1[1], Fq1[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+      offset = (iz + 1) * nx * ny;
+      if (!singlePrecision)
+        interpolate2dFieldMapHigherOrder2(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny,
+                                          Fq[0], Fq[1], Fq[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+      else
+        interpolate2dFieldMapHigherOrder2(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny,
+                                          Fq1[0], Fq1[1], Fq1[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
 
-      for (iq=0; iq<3; iq++)
-	Freturn[iq] = (1-fz)*FOutput1[iq] + fz*FOutput2[iq];
+      for (iq = 0; iq < 3; iq++)
+        Freturn[iq] = (1 - fz) * FOutput1[iq] + fz * FOutput2[iq];
     } else {
-      for (iq=0; iq<3; iq++) {
-	  /* interpolate vs z to get four points in a x-y grid */
-	if (!singlePrecision) {
-	  /* (ix, iy) */
-	  Finterp1[0][0] = (1-fz)*(*(Fq[iq]+(ix+0)+iy*nx + iz*nx*ny)) +
-	    fz*(*(Fq[iq]+(ix+0)+iy*nx + (iz+1)*nx*ny));
-	  /* (ix+1, iy) */        
-	  Finterp1[1][0] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+0)*nx + iz*nx*ny)) +
-	    fz*(*(Fq[iq]+(ix+1)+(iy+0)*nx + (iz+1)*nx*ny));
-	  /* (ix, iy+1) */
-	  Finterp1[0][1] = (1-fz)*(*(Fq[iq]+(ix+0)+(iy+1)*nx + iz*nx*ny)) +
-	    fz*(*(Fq[iq]+(ix+0)+(iy+1)*nx + (iz+1)*nx*ny));
-	  /* (ix+1, iy+1) */
-	  Finterp1[1][1] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+1)*nx + iz*nx*ny)) +
-	    fz*(*(Fq[iq]+(ix+1)+(iy+1)*nx + (iz+1)*nx*ny));
-	} else {
-	  Finterp1[0][0] = (1-fz)*(*(Fq1[iq]+(ix+0)+iy*nx + iz*nx*ny)) +
-	    fz*(*(Fq1[iq]+(ix+0)+iy*nx + (iz+1)*nx*ny));
-	  /* (ix+1, iy) */        
-	  Finterp1[1][0] = (1-fz)*(*(Fq1[iq]+(ix+1)+(iy+0)*nx + iz*nx*ny)) +
-	    fz*(*(Fq1[iq]+(ix+1)+(iy+0)*nx + (iz+1)*nx*ny));
-	  /* (ix, iy+1) */
-	  Finterp1[0][1] = (1-fz)*(*(Fq1[iq]+(ix+0)+(iy+1)*nx + iz*nx*ny)) +
-	    fz*(*(Fq1[iq]+(ix+0)+(iy+1)*nx + (iz+1)*nx*ny));
-	  /* (ix+1, iy+1) */
-	  Finterp1[1][1] = (1-fz)*(*(Fq1[iq]+(ix+1)+(iy+1)*nx + iz*nx*ny)) +
-	    fz*(*(Fq1[iq]+(ix+1)+(iy+1)*nx + (iz+1)*nx*ny));
-	}
-	  
-	/* interpolate vs y to get two points spaced by dx */
-	/* ix */
-	Finterp2[0] = (1-fy)*Finterp1[0][0] + fy*Finterp1[0][1];
-	/* ix+1 */
-	Finterp2[1] = (1-fy)*Finterp1[1][0] + fy*Finterp1[1][1];
-	
-	/* interpolate vs x to get 1 value */
-	Freturn[iq] = (1-fx)*Finterp2[0] + fx*Finterp2[1];
+      for (iq = 0; iq < 3; iq++) {
+        /* interpolate vs z to get four points in a x-y grid */
+        if (!singlePrecision) {
+          /* (ix, iy) */
+          Finterp1[0][0] = (1 - fz) * (*(Fq[iq] + (ix + 0) + iy * nx + iz * nx * ny)) +
+                           fz * (*(Fq[iq] + (ix + 0) + iy * nx + (iz + 1) * nx * ny));
+          /* (ix+1, iy) */
+          Finterp1[1][0] = (1 - fz) * (*(Fq[iq] + (ix + 1) + (iy + 0) * nx + iz * nx * ny)) +
+                           fz * (*(Fq[iq] + (ix + 1) + (iy + 0) * nx + (iz + 1) * nx * ny));
+          /* (ix, iy+1) */
+          Finterp1[0][1] = (1 - fz) * (*(Fq[iq] + (ix + 0) + (iy + 1) * nx + iz * nx * ny)) +
+                           fz * (*(Fq[iq] + (ix + 0) + (iy + 1) * nx + (iz + 1) * nx * ny));
+          /* (ix+1, iy+1) */
+          Finterp1[1][1] = (1 - fz) * (*(Fq[iq] + (ix + 1) + (iy + 1) * nx + iz * nx * ny)) +
+                           fz * (*(Fq[iq] + (ix + 1) + (iy + 1) * nx + (iz + 1) * nx * ny));
+        } else {
+          Finterp1[0][0] = (1 - fz) * (*(Fq1[iq] + (ix + 0) + iy * nx + iz * nx * ny)) +
+                           fz * (*(Fq1[iq] + (ix + 0) + iy * nx + (iz + 1) * nx * ny));
+          /* (ix+1, iy) */
+          Finterp1[1][0] = (1 - fz) * (*(Fq1[iq] + (ix + 1) + (iy + 0) * nx + iz * nx * ny)) +
+                           fz * (*(Fq1[iq] + (ix + 1) + (iy + 0) * nx + (iz + 1) * nx * ny));
+          /* (ix, iy+1) */
+          Finterp1[0][1] = (1 - fz) * (*(Fq1[iq] + (ix + 0) + (iy + 1) * nx + iz * nx * ny)) +
+                           fz * (*(Fq1[iq] + (ix + 0) + (iy + 1) * nx + (iz + 1) * nx * ny));
+          /* (ix+1, iy+1) */
+          Finterp1[1][1] = (1 - fz) * (*(Fq1[iq] + (ix + 1) + (iy + 1) * nx + iz * nx * ny)) +
+                           fz * (*(Fq1[iq] + (ix + 1) + (iy + 1) * nx + (iz + 1) * nx * ny));
+        }
+
+        /* interpolate vs y to get two points spaced by dx */
+        /* ix */
+        Finterp2[0] = (1 - fy) * Finterp1[0][0] + fy * Finterp1[0][1];
+        /* ix+1 */
+        Finterp2[1] = (1 - fy) * Finterp1[1][0] + fy * Finterp1[1][1];
+
+        /* interpolate vs x to get 1 value */
+        Freturn[iq] = (1 - fx) * Finterp2[0] + fx * Finterp2[1];
       }
     }
-    for (iq=0; iq<3; iq++)
-      Freturn[iq] *= mainFactor*fieldFactor;
+    for (iq = 0; iq < 3; iq++)
+      Freturn[iq] *= mainFactor * fieldFactor;
 
     if (additionalFactor) {
       Fq[0] = BzNormAdditional;
@@ -1754,82 +1722,82 @@ void BRAT_B_field(double *F, double *Qg)
       Fq1[2] = By1NormAdditional;
 
 #ifdef DEBUG
-      fprintf(stderr, "Doing 3d interpolation: x=(%le, %le, %le), i=(%ld, %ld, %ld), f=(%le, %le, %le)\n", 
-	      x, y, z, ix, iy, iz, fx, fy, fz);
+      fprintf(stderr, "Doing 3d interpolation: x=(%le, %le, %le), i=(%ld, %ld, %ld), f=(%le, %le, %le)\n",
+              x, y, z, ix, iy, iz, fx, fy, fz);
 #endif
-      
-      if (xyInterpolationOrder>1) {
-	double FOutput1[3], FOutput2[3];
-	long offset;
-	offset = iz*nx*ny;
-	if (!singlePrecision) 
-	  interpolate2dFieldMapHigherOrder2(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-					    Fq[0], Fq[1], Fq[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
-	else 
-	  interpolate2dFieldMapHigherOrder2(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-					    Fq1[0], Fq1[1], Fq1[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
-	
-	offset = (iz+1)*nx*ny;
-	if (!singlePrecision) 
-	  interpolate2dFieldMapHigherOrder2(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-					    Fq[0], Fq[1], Fq[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
-	else 
-	  interpolate2dFieldMapHigherOrder2(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny, 
-					    Fq1[0], Fq1[1], Fq1[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
-	
-	for (iq=0; iq<3; iq++)
-	  Freturn[iq] += additionalFactor*fieldFactor*((1-fz)*FOutput1[iq] + fz*FOutput2[iq]);
+
+      if (xyInterpolationOrder > 1) {
+        double FOutput1[3], FOutput2[3];
+        long offset;
+        offset = iz * nx * ny;
+        if (!singlePrecision)
+          interpolate2dFieldMapHigherOrder2(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny,
+                                            Fq[0], Fq[1], Fq[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+        else
+          interpolate2dFieldMapHigherOrder2(&FOutput1[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny,
+                                            Fq1[0], Fq1[1], Fq1[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+
+        offset = (iz + 1) * nx * ny;
+        if (!singlePrecision)
+          interpolate2dFieldMapHigherOrder2(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny,
+                                            Fq[0], Fq[1], Fq[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+        else
+          interpolate2dFieldMapHigherOrder2(&FOutput2[0], x, y, dx, dy, xi, yi, xf, yf, nx, ny,
+                                            Fq1[0], Fq1[1], Fq1[2], offset, singlePrecision, xyInterpolationOrder, xyGridExcess);
+
+        for (iq = 0; iq < 3; iq++)
+          Freturn[iq] += additionalFactor * fieldFactor * ((1 - fz) * FOutput1[iq] + fz * FOutput2[iq]);
       } else {
-	for (iq=0; iq<3; iq++) {
-	  /* interpolate vs z to get four points in a x-y grid */
-	  if (!singlePrecision) {
-	    /* (ix, iy) */
-	    Finterp1[0][0] = (1-fz)*(*(Fq[iq]+(ix+0)+iy*nx + iz*nx*ny)) +
-	      fz*(*(Fq[iq]+(ix+0)+iy*nx + (iz+1)*nx*ny));
-	    /* (ix+1, iy) */        
-	    Finterp1[1][0] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+0)*nx + iz*nx*ny)) +
-	      fz*(*(Fq[iq]+(ix+1)+(iy+0)*nx + (iz+1)*nx*ny));
-	    /* (ix, iy+1) */
-	    Finterp1[0][1] = (1-fz)*(*(Fq[iq]+(ix+0)+(iy+1)*nx + iz*nx*ny)) +
-	      fz*(*(Fq[iq]+(ix+0)+(iy+1)*nx + (iz+1)*nx*ny));
-	    /* (ix+1, iy+1) */
-	    Finterp1[1][1] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+1)*nx + iz*nx*ny)) +
-	      fz*(*(Fq[iq]+(ix+1)+(iy+1)*nx + (iz+1)*nx*ny));
-	  } else {
-	    Finterp1[0][0] = (1-fz)*(*(Fq1[iq]+(ix+0)+iy*nx + iz*nx*ny)) +
-	      fz*(*(Fq1[iq]+(ix+0)+iy*nx + (iz+1)*nx*ny));
-	    /* (ix+1, iy) */        
-	    Finterp1[1][0] = (1-fz)*(*(Fq1[iq]+(ix+1)+(iy+0)*nx + iz*nx*ny)) +
-	      fz*(*(Fq1[iq]+(ix+1)+(iy+0)*nx + (iz+1)*nx*ny));
-	    /* (ix, iy+1) */
-	    Finterp1[0][1] = (1-fz)*(*(Fq1[iq]+(ix+0)+(iy+1)*nx + iz*nx*ny)) +
-	      fz*(*(Fq1[iq]+(ix+0)+(iy+1)*nx + (iz+1)*nx*ny));
-	    /* (ix+1, iy+1) */
-	    Finterp1[1][1] = (1-fz)*(*(Fq1[iq]+(ix+1)+(iy+1)*nx + iz*nx*ny)) +
-	      fz*(*(Fq1[iq]+(ix+1)+(iy+1)*nx + (iz+1)*nx*ny));
-	  }
-	  
-	  /* interpolate vs y to get two points spaced by dx */
-	  /* ix */
-	  Finterp2[0] = (1-fy)*Finterp1[0][0] + fy*Finterp1[0][1];
-	  /* ix+1 */
-	  Finterp2[1] = (1-fy)*Finterp1[1][0] + fy*Finterp1[1][1];
-	  
-	  /* interpolate vs x to get 1 value */
-	  Freturn[iq] += additionalFactor*fieldFactor*((1-fx)*Finterp2[0] + fx*Finterp2[1]);
-	}
+        for (iq = 0; iq < 3; iq++) {
+          /* interpolate vs z to get four points in a x-y grid */
+          if (!singlePrecision) {
+            /* (ix, iy) */
+            Finterp1[0][0] = (1 - fz) * (*(Fq[iq] + (ix + 0) + iy * nx + iz * nx * ny)) +
+                             fz * (*(Fq[iq] + (ix + 0) + iy * nx + (iz + 1) * nx * ny));
+            /* (ix+1, iy) */
+            Finterp1[1][0] = (1 - fz) * (*(Fq[iq] + (ix + 1) + (iy + 0) * nx + iz * nx * ny)) +
+                             fz * (*(Fq[iq] + (ix + 1) + (iy + 0) * nx + (iz + 1) * nx * ny));
+            /* (ix, iy+1) */
+            Finterp1[0][1] = (1 - fz) * (*(Fq[iq] + (ix + 0) + (iy + 1) * nx + iz * nx * ny)) +
+                             fz * (*(Fq[iq] + (ix + 0) + (iy + 1) * nx + (iz + 1) * nx * ny));
+            /* (ix+1, iy+1) */
+            Finterp1[1][1] = (1 - fz) * (*(Fq[iq] + (ix + 1) + (iy + 1) * nx + iz * nx * ny)) +
+                             fz * (*(Fq[iq] + (ix + 1) + (iy + 1) * nx + (iz + 1) * nx * ny));
+          } else {
+            Finterp1[0][0] = (1 - fz) * (*(Fq1[iq] + (ix + 0) + iy * nx + iz * nx * ny)) +
+                             fz * (*(Fq1[iq] + (ix + 0) + iy * nx + (iz + 1) * nx * ny));
+            /* (ix+1, iy) */
+            Finterp1[1][0] = (1 - fz) * (*(Fq1[iq] + (ix + 1) + (iy + 0) * nx + iz * nx * ny)) +
+                             fz * (*(Fq1[iq] + (ix + 1) + (iy + 0) * nx + (iz + 1) * nx * ny));
+            /* (ix, iy+1) */
+            Finterp1[0][1] = (1 - fz) * (*(Fq1[iq] + (ix + 0) + (iy + 1) * nx + iz * nx * ny)) +
+                             fz * (*(Fq1[iq] + (ix + 0) + (iy + 1) * nx + (iz + 1) * nx * ny));
+            /* (ix+1, iy+1) */
+            Finterp1[1][1] = (1 - fz) * (*(Fq1[iq] + (ix + 1) + (iy + 1) * nx + iz * nx * ny)) +
+                             fz * (*(Fq1[iq] + (ix + 1) + (iy + 1) * nx + (iz + 1) * nx * ny));
+          }
+
+          /* interpolate vs y to get two points spaced by dx */
+          /* ix */
+          Finterp2[0] = (1 - fy) * Finterp1[0][0] + fy * Finterp1[0][1];
+          /* ix+1 */
+          Finterp2[1] = (1 - fy) * Finterp1[1][0] + fy * Finterp1[1][1];
+
+          /* interpolate vs x to get 1 value */
+          Freturn[iq] += additionalFactor * fieldFactor * ((1 - fx) * Finterp2[0] + fx * Finterp2[1]);
+        }
       }
     }
 
     F[0] = Freturn[0];
     F[1] = Freturn[1];
     F[2] = Freturn[2];
-    if (z>=zNomEntry && z<=zNomExit && deltaByInside) 
+    if (z >= zNomEntry && z <= zNomExit && deltaByInside)
       F[2] += deltaByInside;
-  } 
-  
-  for (j=0; j<3; j++)
-    F[j] *= fieldSign*(1+fse);
+  }
+
+  for (j = 0; j < 3; j++)
+    F[j] *= fieldSign * (1 + fse);
 
 #ifdef DEBUG
   fprintf(stderr, "F[0] = %e, F[1] = %e, F[2] = %e, FSE = %e\n", F[0], F[1], F[2], fse);
@@ -1838,26 +1806,25 @@ void BRAT_B_field(double *F, double *Qg)
   return;
 }
 
-double refineAngle(double theta, 
+double refineAngle(double theta,
                    double z0, double x0,
-                   double zv, double xv, 
-                   double z1, double x1)
-{
+                   double zv, double xv,
+                   double z1, double x1) {
   double dot, mag0, mag1;
   double cos_theta, theta1;
 
-  if ((xv>x0 && theta<0)  || (xv<x0 && theta>0)) {
+  if ((xv > x0 && theta < 0) || (xv < x0 && theta > 0)) {
     printf("Error for BRAT: angle and vertex-entry data are inconsistent in sign\n");
     exit(1);
   }
 
-  dot = (xv-x0)*(x1-xv) + (zv-z0)*(z1-zv);
-  mag0 = sqrt(sqr(xv-x0) + sqr(zv-z0));
-  mag1 = sqrt(sqr(xv-x1) + sqr(zv-z1));
-  cos_theta = dot/(mag0*mag1);
+  dot = (xv - x0) * (x1 - xv) + (zv - z0) * (z1 - zv);
+  mag0 = sqrt(sqr(xv - x0) + sqr(zv - z0));
+  mag1 = sqrt(sqr(xv - x1) + sqr(zv - z1));
+  cos_theta = dot / (mag0 * mag1);
 
-  theta1 = acos(cos_theta)*SIGN(theta);
-  if (fabs(theta1-theta)<1e-4) {
+  theta1 = acos(cos_theta) * SIGN(theta);
+  if (fabs(theta1 - theta) < 1e-4) {
     /*
     printf("Refined BRAT angle from %21.15e to %21.15e (1)\n",
 	   theta, theta1);
@@ -1865,8 +1832,8 @@ double refineAngle(double theta,
     return theta1;
   }
 
-  theta1 = PIx2-theta1;
-  if (fabs(theta1-theta)<1e-4) {
+  theta1 = PIx2 - theta1;
+  if (fabs(theta1 - theta) < 1e-4) {
     /*
     printf("Refined BRAT angle from %21.15e to %21.15e (2)\n",
 	   theta, theta1);
@@ -1883,39 +1850,44 @@ double refineAngle(double theta,
 
 void rotate_coordinate(double **A, double *x, long inverse) {
   long i, j;
-  double temp[3] = {0,0,0}; /* prevent spurious compiler warning */
+  double temp[3] = {0, 0, 0}; /* prevent spurious compiler warning */
 
-  for (i=0; i<3; i++) {
+  for (i = 0; i < 3; i++) {
     temp[i] = 0;
-    for (j=0; j<3; j++) {
+    for (j = 0; j < 3; j++) {
       if (!inverse)
-        temp[i] += A[i][j]*x[j];
+        temp[i] += A[i][j] * x[j];
       else
-        temp[i] += A[j][i]*x[j];
+        temp[i] += A[j][i] * x[j];
     }
   }
 
-  for (i=0; i<3; i++)
-    x[i] =  temp[i];
+  for (i = 0; i < 3; i++)
+    x[i] = temp[i];
 
   return;
 }
 
 /* choose suitable value from cubic solver */
-double choose_theta(double rho, double x0, double x1, double x2)
-{
+double choose_theta(double rho, double x0, double x1, double x2) {
   double temp = 0;
 
-  if (rho<0) {
+  if (rho < 0) {
     temp = -DBL_MAX;
-    if (x0<0 && x0>temp) temp = x0;
-    if (x1<0 && x1>temp) temp = x1;
-    if (x2<0 && x2>temp) temp = x2;
-  } else if (rho>0) {
+    if (x0 < 0 && x0 > temp)
+      temp = x0;
+    if (x1 < 0 && x1 > temp)
+      temp = x1;
+    if (x2 < 0 && x2 > temp)
+      temp = x2;
+  } else if (rho > 0) {
     temp = DBL_MAX;
-    if (x0>0 && x0<temp) temp = x0;
-    if (x1>0 && x1<temp) temp = x1;
-    if (x2>0 && x2<temp) temp = x2;
+    if (x0 > 0 && x0 < temp)
+      temp = x0;
+    if (x1 > 0 && x1 < temp)
+      temp = x1;
+    if (x2 > 0 && x2 < temp)
+      temp = x2;
   } else {
     fprintf(stderr, "choose_theta: rho = %21.15e, x0 = %21.15e,  x1 = %21.15e, x2 = %21.15e\n", rho, x0, x1, x2);
     bombElegant("rho = 0 in choose_theta (FTABLE). Seek expert help.", NULL);
@@ -1924,33 +1896,35 @@ double choose_theta(double rho, double x0, double x1, double x2)
   return temp;
 }
 
-static long last_nx=-1, last_nz=-1;
+static long last_nx = -1, last_nz = -1;
 static double last_xi, last_xf, last_dx;
 static double last_zi, last_zf, last_dz;
 
-void clear2dMapList() 
-{
+void clear2dMapList() {
   long i;
-  for (i=0; i<length2dMapList; i++) {
-    free_zarray_2d((void**)BnormList[i], nx, nz);
-    free_zarray_2d((void**)dBnormdzList[i], nx, nz);
-    free_zarray_2d((void**)dBnormdxList[i], nx, nz);
+  for (i = 0; i < length2dMapList; i++) {
+    free_zarray_2d((void **)BnormList[i], nx, nz);
+    free_zarray_2d((void **)dBnormdzList[i], nx, nz);
+    free_zarray_2d((void **)dBnormdxList[i], nx, nz);
   }
-  if (BnormList) free(BnormList);
-  if (dBnormdzList) free(dBnormdzList);
-  if (dBnormdxList) free(dBnormdxList);
-  if (interpolationParameterValue) free(interpolationParameterValue);
+  if (BnormList)
+    free(BnormList);
+  if (dBnormdzList)
+    free(dBnormdzList);
+  if (dBnormdxList)
+    free(dBnormdxList);
+  if (interpolationParameterValue)
+    free(interpolationParameterValue);
   BnormList = dBnormdzList = dBnormdxList = NULL;
   interpolationParameterValue = NULL;
   length2dMapList = 0;
 }
 
-void add2dMapList(double interpValue) 
-{
-  BnormList = SDDS_Realloc(BnormList, sizeof(*BnormList)*(length2dMapList+1));
-  dBnormdxList = SDDS_Realloc(dBnormdxList, sizeof(*dBnormdxList)*(length2dMapList+1));
-  dBnormdzList = SDDS_Realloc(dBnormdzList, sizeof(*dBnormdzList)*(length2dMapList+1));
-  interpolationParameterValue = SDDS_Realloc(interpolationParameterValue, sizeof(*interpolationParameterValue)*(length2dMapList+1));
+void add2dMapList(double interpValue) {
+  BnormList = SDDS_Realloc(BnormList, sizeof(*BnormList) * (length2dMapList + 1));
+  dBnormdxList = SDDS_Realloc(dBnormdxList, sizeof(*dBnormdxList) * (length2dMapList + 1));
+  dBnormdzList = SDDS_Realloc(dBnormdzList, sizeof(*dBnormdzList) * (length2dMapList + 1));
+  interpolationParameterValue = SDDS_Realloc(interpolationParameterValue, sizeof(*interpolationParameterValue) * (length2dMapList + 1));
   /* the map is stored in the global variables, so just copy it */
   BnormList[length2dMapList] = Bnorm;
   Bnorm = NULL;
@@ -1960,21 +1934,21 @@ void add2dMapList(double interpValue)
   dBnormdz = NULL;
   interpolationParameterValue[length2dMapList] = interpValue;
   length2dMapList++;
-  if (length2dMapList>1) {
-    if (interpolationParameterValue[length2dMapList-2] >= interpolationParameterValue[length2dMapList-1])
+  if (length2dMapList > 1) {
+    if (interpolationParameterValue[length2dMapList - 2] >= interpolationParameterValue[length2dMapList - 1])
       bomb("interpolation parameter values are not monotonically increasing in the input file", NULL);
-    if (last_nx!=nx)
+    if (last_nx != nx)
       bomb("x grid size changed between pages", NULL);
-    if (last_nz!=nz)
+    if (last_nz != nz)
       bomb("z grid size changed between pages", NULL);
-    if (!(bratInterpFlags&BRAT_INTERP_PERMISSIVE)) {
-      if (last_xi!=xi || last_xf!=xf || last_dx!=dx) {
+    if (!(bratInterpFlags & BRAT_INTERP_PERMISSIVE)) {
+      if (last_xi != xi || last_xf != xf || last_dx != dx) {
         printf("x grid parameters changed from %ld, %le, %le, %le to %ld, %le, %le, %le!\n",
                last_nx, last_xi, last_xf, last_dx,
                nx, xi, xf, dx);
         exit(1);
       }
-      if (last_nz!=nz || last_zi!=zi || last_zf!=zf || last_dz!=dz) {
+      if (last_nz != nz || last_zi != zi || last_zf != zf || last_dz != dz) {
         printf("z grid parameters changed from %ld, %le, %le, %le to %ld, %le, %le, %le!\n",
                last_nz, last_zi, last_zf, last_dz,
                nz, zi, zf, dz);
@@ -1993,35 +1967,33 @@ void add2dMapList(double interpValue)
   }
 }
 
-int interpolate2dFieldMapHigherOrder
-(
- double *Foutput,    /* output of interpolation */
- double x, double y,
- double dx, double dy,
- double xmin, double ymin,
- double xmax, double ymax,
- long nx, long ny,
- double *F0, double *F1, double *F2, /* maps to interpolate, ignored if NULL */
- short order,
- short gridExcess
- )
+int interpolate2dFieldMapHigherOrder(
+  double *Foutput, /* output of interpolation */
+  double x, double y,
+  double dx, double dy,
+  double xmin, double ymin,
+  double xmax, double ymax,
+  long nx, long ny,
+  double *F0, double *F1, double *F2, /* maps to interpolate, ignored if NULL */
+  short order,
+  short gridExcess)
 /* Performs 2nd- and  higher order interpolation of uniformly-spaced 2d field maps.
    Method is to solve XY*A = F, where for 2nd order
    XY is a 16x6 matrix for the grid such that XY[i][j] = (1, y[i], y[i]^2, x[i], x[i]*y[i], x[i]^2), i=0, ..., 15
    F is 16x1 with F = Trans[(f[0][0], f[0][1], f[0][2], f[0][3], f[1][0], f[1][1], f[1][2], f[1][3], ... f[3][3])]
    A is determined from Inv[XY*Transpose[XY]]*Tranpose[XY]*F, then used to determine F values of x and y not on the grid
  */
-  
+
 {
-  static MATRIX *XY=NULL, *xy=NULL, *XYTrans=NULL, *XYTransXY=NULL, *S=NULL, *T=NULL, *U=NULL;
+  static MATRIX *XY = NULL, *xy = NULL, *XYTrans = NULL, *XYTransXY = NULL, *S = NULL, *T = NULL, *U = NULL;
   double *Field[3] = {NULL, NULL, NULL};
   long i, j, l, k, m, n, f, nc;
-  static double *xPow=NULL, *yPow=NULL;
+  static double *xPow = NULL, *yPow = NULL;
   static long lastOrder = -1, dim = -1, ng = -1, gridOffset = -1;
   long ix, iy, minGrid;
   double fx, fy;
-  
-  if (lastOrder!=order) {
+
+  if (lastOrder != order) {
     if (XY) {
       m_free(&XY);
       m_free(&XYTrans);
@@ -2034,27 +2006,27 @@ int interpolate2dFieldMapHigherOrder
     }
     lastOrder = order;
 
-    nc = (order+2)*(order+1)/2;   /* number of polynomial coefficients */
+    nc = (order + 2) * (order + 1) / 2; /* number of polynomial coefficients */
     /* ensure that we have sufficient data for the required number of coefficients */
     minGrid = sqrt(nc);
-    while (nc>(minGrid*minGrid))
-      minGrid ++;
+    while (nc > (minGrid * minGrid))
+      minGrid++;
     /* add the user's "excess" number of rows and columns */
-    if (gridExcess<0)
+    if (gridExcess < 0)
       gridExcess = 0;
-    ng = minGrid + gridExcess;    /* number of rows and columns of data to use */
-    dim = sqr(ng);                /* number of points in the ng x ng grid*/
-    if (dim<nc)
+    ng = minGrid + gridExcess; /* number of rows and columns of data to use */
+    dim = sqr(ng);             /* number of points in the ng x ng grid*/
+    if (dim < nc)
       bombElegant("Something wrong with setting up the number of rows and columns of data for higher-order x-y fitting", NULL);
-    gridOffset = (ng-1)/2;
+    gridOffset = (ng - 1) / 2;
 
-    m_alloc(&XY, dim, nc);        /* array of polynomial terms */
-    m_alloc(&XYTrans, nc, dim);   /* transpose of same */
-    m_alloc(&XYTransXY, nc, nc);  /* product of transpose and XY */
-    m_alloc(&T, nc, nc);          /* inverse of (XYTrans*XY) */
-    m_alloc(&S, nc, dim);         /* T*(XYTrans*XY)^{-1} */
-    m_alloc(&xy, 1, nc);          /* vector of polynomial terms for fit evaluation */
-    m_alloc(&U, 1, dim);          /* xy*S */
+    m_alloc(&XY, dim, nc);       /* array of polynomial terms */
+    m_alloc(&XYTrans, nc, dim);  /* transpose of same */
+    m_alloc(&XYTransXY, nc, nc); /* product of transpose and XY */
+    m_alloc(&T, nc, nc);         /* inverse of (XYTrans*XY) */
+    m_alloc(&S, nc, dim);        /* T*(XYTrans*XY)^{-1} */
+    m_alloc(&xy, 1, nc);         /* vector of polynomial terms for fit evaluation */
+    m_alloc(&U, 1, dim);         /* xy*S */
     /*
     printf("Using %ld x %ld grid for order=%hd interpolation in BRAT/BMXYZ elements (%ld coefficients, %ld fit points)\n",
 	   ng, ng, order, nc, dim);
@@ -2062,22 +2034,22 @@ int interpolate2dFieldMapHigherOrder
     */
 
     /* arrays of stored powers of x and y */
-    xPow = tmalloc(sizeof(*xPow)*(order+1));
-    yPow = tmalloc(sizeof(*yPow)*(order+1));
+    xPow = tmalloc(sizeof(*xPow) * (order + 1));
+    yPow = tmalloc(sizeof(*yPow) * (order + 1));
 
-    for (i=l=0; i<ng; i++) {
+    for (i = l = 0; i < ng; i++) {
       /* i is (xGrid-x0)/dx */
-      for (j=0; j<ng; j++, l++) {
-	/* j is (yGrid-y0)/dy */
+      for (j = 0; j < ng; j++, l++) {
+        /* j is (yGrid-y0)/dy */
         xPow[0] = yPow[0] = 1;
-        for (m=1; m<=order; m++) {
-          xPow[m] = i*xPow[m-1];
-          yPow[m] = j*yPow[m-1];
+        for (m = 1; m <= order; m++) {
+          xPow[m] = i * xPow[m - 1];
+          yPow[m] = j * yPow[m - 1];
         }
-	for (m=k=0; m<=order; m++) {
-	  for (n=0; n<=(order-m); n++, k++)
-	    XY->a[l][k] = xPow[m]*yPow[n];
-	}
+        for (m = k = 0; m <= order; m++) {
+          for (n = 0; n <= (order - m); n++, k++)
+            XY->a[l][k] = xPow[m] * yPow[n];
+        }
       }
     }
     if (!m_trans(XYTrans, XY))
@@ -2091,33 +2063,33 @@ int interpolate2dFieldMapHigherOrder
   }
 
   /* calculate minimum x index for the grid points */
-  ix = (x-xmin)/dx - gridOffset;
+  ix = (x - xmin) / dx - gridOffset;
   /* ensure that all the points are within the full grid */
-  if ((ix+ng)>(nx-1))
-    ix = nx-1-ng;
-  if (ix<0)
+  if ((ix + ng) > (nx - 1))
+    ix = nx - 1 - ng;
+  if (ix < 0)
     ix = 0;
   /* fractional position of the particle for the reduced (local) grid */
-  fx = (x-(ix*dx+xmin))/dx;
+  fx = (x - (ix * dx + xmin)) / dx;
 
   /* calculate minimum y index for the grid points */
-  iy = (y-ymin)/dy - gridOffset;
+  iy = (y - ymin) / dy - gridOffset;
   /* ensure that all the points are within the full grid */
-  if ((iy+ng)>(ny-1))
-    iy = ny-1-ng;
-  if (iy<0)
+  if ((iy + ng) > (ny - 1))
+    iy = ny - 1 - ng;
+  if (iy < 0)
     iy = 0;
   /* fractional position of the particle for the reduced (local) grid */
-  fy = (y-(iy*dy+ymin))/dy;
-  
+  fy = (y - (iy * dy + ymin)) / dy;
+
   xPow[0] = yPow[0] = 1;
-  for (m=1; m<=order; m++) {
-    xPow[m] = fx*xPow[m-1];
-    yPow[m] = fy*yPow[m-1];
+  for (m = 1; m <= order; m++) {
+    xPow[m] = fx * xPow[m - 1];
+    yPow[m] = fy * yPow[m - 1];
   }
-  for (m=k=0; m<=order; m++) {
-    for (n=0; n<=(order-m); n++, k++)
-      xy->a[0][k] = xPow[m]*yPow[n];
+  for (m = k = 0; m <= order; m++) {
+    for (n = 0; n <= (order - m); n++, k++)
+      xy->a[0][k] = xPow[m] * yPow[n];
   }
 
   m_mult(U, xy, S);
@@ -2125,51 +2097,50 @@ int interpolate2dFieldMapHigherOrder
   Field[0] = F0;
   Field[1] = F1;
   Field[2] = F2;
-  for (f=0; f<3; f++) {
+  for (f = 0; f < 3; f++) {
     if (!Field[f])
       continue;
     Foutput[f] = 0;
-    for (i=k=0; i<ng; i++) {
-      for (j=0; j<ng; j++, k++) {
-        Foutput[f] +=  *(Field[f]+(ix+i)+(iy+j)*nx) * U->a[0][k];
+    for (i = k = 0; i < ng; i++) {
+      for (j = 0; j < ng; j++, k++) {
+        Foutput[f] += *(Field[f] + (ix + i) + (iy + j) * nx) * U->a[0][k];
       }
     }
   }
-  
+
   return 1;
 }
 
 int interpolate2dFieldMapHigherOrder2
-/* allows single- or double-precision field maps */
-(
- double *Foutput,    /* output of interpolation */
- double x, double y,
- double dx, double dy,
- double xmin, double ymin,
- double xmax, double ymax,
- long nx, long ny,
- void *F0, void *F1, void *F2, /* maps to interpolate, ignored if NULL */
- long offset,
- short singlePrecision,
- short order,
- short gridExcess
- )
+  /* allows single- or double-precision field maps */
+  (
+    double *Foutput, /* output of interpolation */
+    double x, double y,
+    double dx, double dy,
+    double xmin, double ymin,
+    double xmax, double ymax,
+    long nx, long ny,
+    void *F0, void *F1, void *F2, /* maps to interpolate, ignored if NULL */
+    long offset,
+    short singlePrecision,
+    short order,
+    short gridExcess)
 /* Performs 2nd- and  higher order interpolation of uniformly-spaced 2d field maps.
    Method is to solve XY*A = F, where for 2nd order
    XY is a 16x6 matrix for the grid such that XY[i][j] = (1, y[i], y[i]^2, x[i], x[i]*y[i], x[i]^2), i=0, ..., 15
    F is 16x1 with F = Trans[(f[0][0], f[0][1], f[0][2], f[0][3], f[1][0], f[1][1], f[1][2], f[1][3], ... f[3][3])]
    A is determined from Inv[XY*Transpose[XY]]*Tranpose[XY]*F, then used to determine F values of x and y not on the grid
  */
-  
+
 {
-  static MATRIX *XY=NULL, *xy=NULL, *XYTrans=NULL, *XYTransXY=NULL, *S=NULL, *T=NULL, *U=NULL;
+  static MATRIX *XY = NULL, *xy = NULL, *XYTrans = NULL, *XYTransXY = NULL, *S = NULL, *T = NULL, *U = NULL;
   long i, j, l, k, m, n, f, nc;
-  static double *xPow=NULL, *yPow=NULL;
+  static double *xPow = NULL, *yPow = NULL;
   static long lastOrder = -1, dim = -1, ng = -1, gridOffset = -1;
   long ix, iy, minGrid;
   double fx, fy;
 
-  if (lastOrder!=order) {
+  if (lastOrder != order) {
     if (XY) {
       m_free(&XY);
       m_free(&XYTrans);
@@ -2182,27 +2153,27 @@ int interpolate2dFieldMapHigherOrder2
     }
     lastOrder = order;
 
-    nc = (order+2)*(order+1)/2;   /* number of polynomial coefficients */
+    nc = (order + 2) * (order + 1) / 2; /* number of polynomial coefficients */
     /* ensure that we have sufficient data for the required number of coefficients */
     minGrid = sqrt(nc);
-    while (nc>(minGrid*minGrid))
-      minGrid ++;
+    while (nc > (minGrid * minGrid))
+      minGrid++;
     /* add the user's "excess" number of rows and columns */
-    if (gridExcess<0)
+    if (gridExcess < 0)
       gridExcess = 0;
-    ng = minGrid + gridExcess;    /* number of rows and columns of data to use */
-    dim = sqr(ng);                /* number of points in the ng x ng grid*/
-    if (dim<nc)
+    ng = minGrid + gridExcess; /* number of rows and columns of data to use */
+    dim = sqr(ng);             /* number of points in the ng x ng grid*/
+    if (dim < nc)
       bombElegant("Something wrong with setting up the number of rows and columns of data for higher-order x-y fitting", NULL);
-    gridOffset = (ng-1)/2;
+    gridOffset = (ng - 1) / 2;
 
-    m_alloc(&XY, dim, nc);        /* array of polynomial terms */
-    m_alloc(&XYTrans, nc, dim);   /* transpose of same */
-    m_alloc(&XYTransXY, nc, nc);  /* product of transpose and XY */
-    m_alloc(&T, nc, nc);          /* inverse of (XYTrans*XY) */
-    m_alloc(&S, nc, dim);         /* T*(XYTrans*XY)^{-1} */
-    m_alloc(&xy, 1, nc);          /* vector of polynomial terms for fit evaluation */
-    m_alloc(&U, 1, dim);          /* xy*S */
+    m_alloc(&XY, dim, nc);       /* array of polynomial terms */
+    m_alloc(&XYTrans, nc, dim);  /* transpose of same */
+    m_alloc(&XYTransXY, nc, nc); /* product of transpose and XY */
+    m_alloc(&T, nc, nc);         /* inverse of (XYTrans*XY) */
+    m_alloc(&S, nc, dim);        /* T*(XYTrans*XY)^{-1} */
+    m_alloc(&xy, 1, nc);         /* vector of polynomial terms for fit evaluation */
+    m_alloc(&U, 1, dim);         /* xy*S */
     /*
     printf("Using %ld x %ld grid for order=%hd interpolation in BRAT/BMXYZ elements (%ld coefficients, %ld fit points)\n",
 	   ng, ng, order, nc, dim);
@@ -2210,22 +2181,22 @@ int interpolate2dFieldMapHigherOrder2
     */
 
     /* arrays of stored powers of x and y */
-    xPow = tmalloc(sizeof(*xPow)*(order+1));
-    yPow = tmalloc(sizeof(*yPow)*(order+1));
+    xPow = tmalloc(sizeof(*xPow) * (order + 1));
+    yPow = tmalloc(sizeof(*yPow) * (order + 1));
 
-    for (i=l=0; i<ng; i++) {
+    for (i = l = 0; i < ng; i++) {
       /* i is (xGrid-x0)/dx */
-      for (j=0; j<ng; j++, l++) {
-	/* j is (yGrid-y0)/dy */
+      for (j = 0; j < ng; j++, l++) {
+        /* j is (yGrid-y0)/dy */
         xPow[0] = yPow[0] = 1;
-        for (m=1; m<=order; m++) {
-          xPow[m] = i*xPow[m-1];
-          yPow[m] = j*yPow[m-1];
+        for (m = 1; m <= order; m++) {
+          xPow[m] = i * xPow[m - 1];
+          yPow[m] = j * yPow[m - 1];
         }
-	for (m=k=0; m<=order; m++) {
-	  for (n=0; n<=(order-m); n++, k++)
-	    XY->a[l][k] = xPow[m]*yPow[n];
-	}
+        for (m = k = 0; m <= order; m++) {
+          for (n = 0; n <= (order - m); n++, k++)
+            XY->a[l][k] = xPow[m] * yPow[n];
+        }
       }
     }
     if (!m_trans(XYTrans, XY))
@@ -2239,65 +2210,65 @@ int interpolate2dFieldMapHigherOrder2
   }
 
   /* calculate minimum x index for the grid points */
-  ix = (x-xmin)/dx - gridOffset;
+  ix = (x - xmin) / dx - gridOffset;
   /* ensure that all the points are within the full grid */
-  if ((ix+ng)>(nx-1))
-    ix = nx-1-ng;
-  if (ix<0)
+  if ((ix + ng) > (nx - 1))
+    ix = nx - 1 - ng;
+  if (ix < 0)
     ix = 0;
   /* fractional position of the particle for the reduced (local) grid */
-  fx = (x-(ix*dx+xmin))/dx;
+  fx = (x - (ix * dx + xmin)) / dx;
 
   /* calculate minimum y index for the grid points */
-  iy = (y-ymin)/dy - gridOffset;
+  iy = (y - ymin) / dy - gridOffset;
   /* ensure that all the points are within the full grid */
-  if ((iy+ng)>(ny-1))
-    iy = ny-1-ng;
-  if (iy<0)
+  if ((iy + ng) > (ny - 1))
+    iy = ny - 1 - ng;
+  if (iy < 0)
     iy = 0;
   /* fractional position of the particle for the reduced (local) grid */
-  fy = (y-(iy*dy+ymin))/dy;
-  
+  fy = (y - (iy * dy + ymin)) / dy;
+
   xPow[0] = yPow[0] = 1;
-  for (m=1; m<=order; m++) {
-    xPow[m] = fx*xPow[m-1];
-    yPow[m] = fy*yPow[m-1];
+  for (m = 1; m <= order; m++) {
+    xPow[m] = fx * xPow[m - 1];
+    yPow[m] = fy * yPow[m - 1];
   }
-  for (m=k=0; m<=order; m++) {
-    for (n=0; n<=(order-m); n++, k++)
-      xy->a[0][k] = xPow[m]*yPow[n];
+  for (m = k = 0; m <= order; m++) {
+    for (n = 0; n <= (order - m); n++, k++)
+      xy->a[0][k] = xPow[m] * yPow[n];
   }
 
   m_mult(U, xy, S);
 
   if (!singlePrecision) {
     double *Field[3] = {NULL, NULL, NULL};
-    Field[0] = ((double*)F0) + offset;
-    Field[1] = ((double*)F1) + offset;
-    Field[2] = ((double*)F2) + offset;
-    for (f=0; f<3; f++) {
+    Field[0] = ((double *)F0) + offset;
+    Field[1] = ((double *)F1) + offset;
+    Field[2] = ((double *)F2) + offset;
+    for (f = 0; f < 3; f++) {
       if (!Field[f])
-	continue;
+        continue;
       Foutput[f] = 0;
-      for (i=k=0; i<ng; i++) {
-	for (j=0; j<ng; j++, k++) {
-	  Foutput[f] +=  *(Field[f]+(ix+i)+(iy+j)*nx) * U->a[0][k];
-	}
+      for (i = k = 0; i < ng; i++) {
+        for (j = 0; j < ng; j++, k++) {
+          Foutput[f] += *(Field[f] + (ix + i) + (iy + j) * nx) * U->a[0][k];
+        }
       }
     }
   } else {
     float *Field[3] = {NULL, NULL, NULL};
-    Field[0] = ((float*)F0) + offset;
-    Field[1] = ((float*)F1) + offset;
-    Field[2] = ((float*)F2) + offset;
-    for (f=0; f<3; f++) {
+    Field[0] = ((float *)F0) + offset;
+    Field[1] = ((float *)F1) + offset;
+    Field[2] = ((float *)F2) + offset;
+    for (f = 0; f < 3; f++) {
       if (!Field[f])
-	continue;
+        continue;
       Foutput[f] = 0;
-      for (i=k=0; i<ng; i++) {
-	for (j=0; j<ng; j++, k++) {
-	  Foutput[f] +=  *(Field[f]+(ix+i)+(iy+j)*nx) * U->a[0][k];
-	}
+      for (i = k = 0; i < ng; i++) {
+        for (j = 0; j < ng; j++, k++) {
+          Foutput[f] += *(Field[f] + (ix + i) + (iy + j) * nx) * U->a[0][k];
+        }
       }
     }
   }
@@ -2305,27 +2276,26 @@ int interpolate2dFieldMapHigherOrder2
   return 1;
 }
 
-void readBratFieldFile(BRAT *brat, char *filename, short additionalFile)
-{
+void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
   long i, idata, rows;
   long nx, ny, nz;
   SDDS_DATASET SDDS_table;
   double Bmin, Bmax;
 
   /* See if we've read this file already---should use a hash table */
-  for (i=0; i<nBrat3dData; i++) {
-    if (strcmp(filename, brat3dData[i].filename)==0) {
+  for (i = 0; i < nBrat3dData; i++) {
+    if (strcmp(filename, brat3dData[i].filename) == 0) {
       printf("Using previously-read data for BRAT file %s\n",
-	     filename);
+             filename);
       break;
     }
   }
 
-  if (i!=nBrat3dData) {
+  if (i != nBrat3dData) {
     if ((brat->singlePrecision && !brat3dData[i].singlePrecision) ||
-	(!brat->singlePrecision && brat3dData[i].singlePrecision))
+        (!brat->singlePrecision && brat3dData[i].singlePrecision))
       bombElegantVA("Error: inconsistent SINGLE_PRECISION settings for use of field map %s", filename);
-    if (!additionalFile) 
+    if (!additionalFile)
       brat->dataIndex = i;
     else
       brat->dataIndexAdditional = i;
@@ -2333,23 +2303,23 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile)
   } else if (!brat->singlePrecision) {
     double *xd, *yd, *zd, *Bxd, *Byd, *Bzd;
     xd = yd = zd = Bxd = Byd = Bzd = NULL;
-    
+
     /* read data from file */
-    
+
     printf("Reading BRAT field data from %s\n", filename);
     fflush(stdout);
-    
+
     if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, filename) || !SDDS_ReadPage(&SDDS_table)) {
       SDDS_SetError("Unable to read BRAT data file");
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
     }
-    if (!(rows=SDDS_CountRowsOfInterest(&SDDS_table)))
+    if (!(rows = SDDS_CountRowsOfInterest(&SDDS_table)))
       bomb("no data in BRAT field file", NULL);
     printf("%ld rows of data\n", rows);
     fflush(stdout);
-    if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-	SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-	SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+    if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY) {
       printf("units wrong on x, y, or z\n");
       fflush(stdout);
       exit(1);
@@ -2357,13 +2327,13 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile)
     printf("x, y, and z found with expected units\n");
     fflush(stdout);
     if (!(xd = SDDS_GetColumnInDoubles(&SDDS_table, "x")) ||
-	!(yd = SDDS_GetColumnInDoubles(&SDDS_table, "y")) ||
-	!(zd = SDDS_GetColumnInDoubles(&SDDS_table, "z")) ) {
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        !(yd = SDDS_GetColumnInDoubles(&SDDS_table, "y")) ||
+        !(zd = SDDS_GetColumnInDoubles(&SDDS_table, "z"))) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
-    if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-	SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-	SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+    if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY) {
       printf("units wrong on Bx, By, or Bz\n");
       fflush(stdout);
       exit(1);
@@ -2371,92 +2341,91 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile)
     printf("Bx, By, and Bz found with expected units\n");
     fflush(stdout);
     if (!(Bxd = SDDS_GetColumnInDoubles(&SDDS_table, "Bx")) ||
-	!(Byd = SDDS_GetColumnInDoubles(&SDDS_table, "By")) ||
-	!(Bzd = SDDS_GetColumnInDoubles(&SDDS_table, "Bz"))) {
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        !(Byd = SDDS_GetColumnInDoubles(&SDDS_table, "By")) ||
+        !(Bzd = SDDS_GetColumnInDoubles(&SDDS_table, "Bz"))) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
-    if (!SDDS_Terminate(&SDDS_table)) 
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    if (!SDDS_Terminate(&SDDS_table))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     printf("Finished reading data from file\n");
     fflush(stdout);
-    
+
     /* It is assumed that the data is ordered so that x changes fastest.
      * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
      * The points are assumed to be equipspaced.
      */
     nx = 1;
     xi = xd[0];
-    while (nx<rows) {
-      if (xd[nx-1]>xd[nx])
-	break;
-      nx ++;
+    while (nx < rows) {
+      if (xd[nx - 1] > xd[nx])
+        break;
+      nx++;
     }
-    if (nx==rows) {
+    if (nx == rows) {
       fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (x)\n");
       fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
       exit(1);
-    }  
-    xf = xd[nx-1];
-    dx = (xf-xi)/(nx-1);
-      
+    }
+    xf = xd[nx - 1];
+    dx = (xf - xi) / (nx - 1);
+
     ny = 1;
     yi = yd[0];
-    while (ny<(rows/nx)) {
-      if (yd[(ny-1)*nx]>yd[ny*nx])
-	break;
+    while (ny < (rows / nx)) {
+      if (yd[(ny - 1) * nx] > yd[ny * nx])
+        break;
       ny++;
     }
-    if (ny==rows) {
+    if (ny == rows) {
       fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (y)\n");
       fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
       exit(1);
     }
-    yf = yd[(ny-1)*nx];
-    dy = (yf-yi)/(ny-1);
-      
-    if (nx<=1 || ny<=1 || (nz = rows/(nx*ny))<=1) {
+    yf = yd[(ny - 1) * nx];
+    dy = (yf - yi) / (ny - 1);
+
+    if (nx <= 1 || ny <= 1 || (nz = rows / (nx * ny)) <= 1) {
       fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (z)\n");
       fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
       exit(1);
     }
     zi = zd[0];
-    zf = zd[rows-1];
-    dz = (zf-zi)/(nz-1);
-      
+    zf = zd[rows - 1];
+    dz = (zf - zi) / (nz - 1);
+
     Bmin = -(Bmax = -DBL_MAX);
-    for (idata=0; idata<rows; idata++) {
+    for (idata = 0; idata < rows; idata++) {
       /* if (fabs(yd[idata])<dy/2 && fabs(xd[idata])<dx/2) { */
-      if (Byd[idata]>Bmax)
-	Bmax = Byd[idata];
-      if (Byd[idata]<Bmin)
-	Bmin = Byd[idata];
+      if (Byd[idata] > Bmax)
+        Bmax = Byd[idata];
+      if (Byd[idata] < Bmin)
+        Bmin = Byd[idata];
       /* } */
     }
     free(xd);
     free(yd);
     free(zd);
-    if (Bmax==-DBL_MAX) {
+    if (Bmax == -DBL_MAX) {
       fprintf(stderr, "BRAT file doesn't have valid Bmax value\n");
       fprintf(stderr, "Bmax = %le, Bmin = %le\n", Bmax, Bmin);
       exit(1);
     }
-    if (fabs(Bmin)>fabs(Bmax))
+    if (fabs(Bmin) > fabs(Bmax))
       SWAP_DOUBLE(Bmin, Bmax);
-      
-    if (!quiet) 
+
+    if (!quiet)
       printf("3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%21.15e, dy=%21.15e, dz=%21.15e\nx:[%21.15e, %21.15e], y:[%21.15e, %21.15e], z:[%21.15e, %21.15e]\nBy:[%21.15e, %21.15e]\n",
-	     nx, ny, nz, dx, dy, dz,
-	     xi, xf, yi, yf, zi, zf,
-	     Bmin, Bmax
-	     );
+             nx, ny, nz, dx, dy, dz,
+             xi, xf, yi, yf, zi, zf,
+             Bmin, Bmax);
 
     /* copy to storage area */
-    if (!(brat3dData = SDDS_Realloc(brat3dData, sizeof(*brat3dData)*(nBrat3dData+1))))
+    if (!(brat3dData = SDDS_Realloc(brat3dData, sizeof(*brat3dData) * (nBrat3dData + 1))))
       bombElegant("memory allocation failure storage BRAT data", NULL);
 
     brat3dData[nBrat3dData].Bmin = Bmin;
     brat3dData[nBrat3dData].Bmax = Bmax;
-      
+
     brat3dData[nBrat3dData].Bx1 = brat3dData[nBrat3dData].By1 = brat3dData[nBrat3dData].Bz1 = NULL;
 
     brat3dData[nBrat3dData].Bx = Bxd;
@@ -2482,23 +2451,23 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile)
     /* single-precision data */
     float *xd, *yd, *zd, *Bxd, *Byd, *Bzd;
     xd = yd = zd = Bxd = Byd = Bzd = NULL;
-    
+
     /* read data from file */
-      
+
     printf("Reading BRAT field data from %s\n", filename);
     fflush(stdout);
 
     if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, filename) || !SDDS_ReadPage(&SDDS_table)) {
       SDDS_SetError("Unable to read BRAT data file");
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
     }
-    if (!(rows=SDDS_CountRowsOfInterest(&SDDS_table)))
+    if (!(rows = SDDS_CountRowsOfInterest(&SDDS_table)))
       bomb("no data in BRAT field file", NULL);
     printf("%ld rows of data\n", rows);
     fflush(stdout);
-    if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-	SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-	SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+    if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY) {
       printf("units wrong on x, y, or z\n");
       fflush(stdout);
       exit(1);
@@ -2506,13 +2475,13 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile)
     printf("x, y, and z found with expected units\n");
     fflush(stdout);
     if (!(xd = SDDS_GetColumnInFloats(&SDDS_table, "x")) ||
-	!(yd = SDDS_GetColumnInFloats(&SDDS_table, "y")) ||
-	!(zd = SDDS_GetColumnInFloats(&SDDS_table, "z")) ) {
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        !(yd = SDDS_GetColumnInFloats(&SDDS_table, "y")) ||
+        !(zd = SDDS_GetColumnInFloats(&SDDS_table, "z"))) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
-    if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-	SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-	SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+    if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
+        SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY) {
       printf("units wrong on Bx, By, or Bz\n");
       fflush(stdout);
       exit(1);
@@ -2520,12 +2489,12 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile)
     printf("Bx, By, and Bz found with expected units\n");
     fflush(stdout);
     if (!(Bxd = SDDS_GetColumnInFloats(&SDDS_table, "Bx")) ||
-	!(Byd = SDDS_GetColumnInFloats(&SDDS_table, "By")) ||
-	!(Bzd = SDDS_GetColumnInFloats(&SDDS_table, "Bz"))) {
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        !(Byd = SDDS_GetColumnInFloats(&SDDS_table, "By")) ||
+        !(Bzd = SDDS_GetColumnInFloats(&SDDS_table, "Bz"))) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
-    if (!SDDS_Terminate(&SDDS_table)) 
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    if (!SDDS_Terminate(&SDDS_table))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     printf("Finished reading data from file\n");
     fflush(stdout);
 
@@ -2535,76 +2504,75 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile)
      */
     nx = 1;
     xi = xd[0];
-    while (nx<rows) {
-      if (xd[nx-1]>xd[nx])
-	break;
-      nx ++;
+    while (nx < rows) {
+      if (xd[nx - 1] > xd[nx])
+        break;
+      nx++;
     }
-    if (nx==rows) {
+    if (nx == rows) {
       fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (x)\n");
       fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
       exit(1);
-    }  
-    xf = xd[nx-1];
-    dx = (xf-xi)/(nx-1);
-      
+    }
+    xf = xd[nx - 1];
+    dx = (xf - xi) / (nx - 1);
+
     ny = 1;
     yi = yd[0];
-    while (ny<(rows/nx)) {
-      if (yd[(ny-1)*nx]>yd[ny*nx])
-	break;
+    while (ny < (rows / nx)) {
+      if (yd[(ny - 1) * nx] > yd[ny * nx])
+        break;
       ny++;
     }
-    if (ny==rows) {
+    if (ny == rows) {
       fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (y)\n");
       fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
       exit(1);
     }
-    yf = yd[(ny-1)*nx];
-    dy = (yf-yi)/(ny-1);
-      
-    if (nx<=1 || ny<=1 || (nz = rows/(nx*ny))<=1) {
+    yf = yd[(ny - 1) * nx];
+    dy = (yf - yi) / (ny - 1);
+
+    if (nx <= 1 || ny <= 1 || (nz = rows / (nx * ny)) <= 1) {
       fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (z)\n");
       fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
       exit(1);
     }
     zi = zd[0];
-    zf = zd[rows-1];
-    dz = (zf-zi)/(nz-1);
-      
+    zf = zd[rows - 1];
+    dz = (zf - zi) / (nz - 1);
+
     Bmin = -(Bmax = -DBL_MAX);
-    for (idata=0; idata<rows; idata++) {
+    for (idata = 0; idata < rows; idata++) {
       /* if (fabs(yd[idata])<dy/2 && fabs(xd[idata])<dx/2) { */
-      if (Byd[idata]>Bmax)
-	Bmax = Byd[idata];
-      if (Byd[idata]<Bmin)
-	Bmin = Byd[idata];
+      if (Byd[idata] > Bmax)
+        Bmax = Byd[idata];
+      if (Byd[idata] < Bmin)
+        Bmin = Byd[idata];
       /* } */
     }
     free(xd);
     free(yd);
     free(zd);
-    if (Bmax==-DBL_MAX) {
+    if (Bmax == -DBL_MAX) {
       fprintf(stderr, "BRAT file doesn't have valid Bmax value\n");
       fprintf(stderr, "Bmax = %le, Bmin = %le\n", Bmax, Bmin);
       exit(1);
     }
-    if (fabs(Bmin)>fabs(Bmax))
+    if (fabs(Bmin) > fabs(Bmax))
       SWAP_DOUBLE(Bmin, Bmax);
-      
-    if (!quiet) 
+
+    if (!quiet)
       printf("3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%21.15e, dy=%21.15e, dz=%21.15e\nx:[%21.15e, %21.15e], y:[%21.15e, %21.15e], z:[%21.15e, %21.15e]\nBy:[%21.15e, %21.15e]\n",
-	     nx, ny, nz, dx, dy, dz,
-	     xi, xf, yi, yf, zi, zf,
-	     Bmin, Bmax
-	     );
+             nx, ny, nz, dx, dy, dz,
+             xi, xf, yi, yf, zi, zf,
+             Bmin, Bmax);
 
     /* copy to storage area */
-    if (!(brat3dData = SDDS_Realloc(brat3dData, sizeof(*brat3dData)*(nBrat3dData+1))))
+    if (!(brat3dData = SDDS_Realloc(brat3dData, sizeof(*brat3dData) * (nBrat3dData + 1))))
       bombElegant("memory allocation failure storage BRAT data", NULL);
 
     brat3dData[nBrat3dData].Bx = brat3dData[nBrat3dData].By = brat3dData[nBrat3dData].Bz = NULL;
-      
+
     brat3dData[nBrat3dData].Bmin = Bmin;
     brat3dData[nBrat3dData].Bmax = Bmax;
 
@@ -2625,7 +2593,7 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile)
     brat3dData[nBrat3dData].zf = zf;
     brat3dData[nBrat3dData].dz = dz;
     brat3dData[nBrat3dData].nz = nz;
-      
+
     brat3dData[nBrat3dData].singlePrecision = 1;
   }
   cp_str(&brat3dData[nBrat3dData].filename, filename);

@@ -16,30 +16,27 @@
 #include "mdb.h"
 #include "track.h"
 
-void extend_line_list(LINE_LIST **lptr)
-{
-    log_entry("extend_line_list");
-    (*lptr)->succ = tmalloc((unsigned)sizeof(**lptr));
-    ((*lptr)->succ)->pred = *lptr;
-    *lptr                 = (*lptr)->succ;
-    (*lptr)->succ         = NULL;
-    (*lptr)->links        = NULL;
-    log_exit("extend_line_list");
-    }
+void extend_line_list(LINE_LIST **lptr) {
+  log_entry("extend_line_list");
+  (*lptr)->succ = tmalloc((unsigned)sizeof(**lptr));
+  ((*lptr)->succ)->pred = *lptr;
+  *lptr = (*lptr)->succ;
+  (*lptr)->succ = NULL;
+  (*lptr)->links = NULL;
+  log_exit("extend_line_list");
+}
 
-void extend_elem_list(ELEMENT_LIST **eptr)
-{
-    (*eptr)->succ = calloc(1, sizeof(**eptr));
-    ((*eptr)->succ)->pred = *eptr;
-    *eptr                 = (*eptr)->succ;
-    (*eptr)->succ         = NULL;
+void extend_elem_list(ELEMENT_LIST **eptr) {
+  (*eptr)->succ = calloc(1, sizeof(**eptr));
+  ((*eptr)->succ)->pred = *eptr;
+  *eptr = (*eptr)->succ;
+  (*eptr)->succ = NULL;
 
-    (*eptr)->matrix  = (*eptr)->accumMatrix = (*eptr)->Mld = NULL;
-    (*eptr)->type    = (*eptr)->flags = (*eptr)->end_pos = 0;
-    (*eptr)->p_elem  = (*eptr)->name  = (*eptr)->group = (*eptr)->definition_text = NULL;
-    (*eptr)->D       = (*eptr)->accumD  = NULL;
-    (*eptr)->twiss   = NULL;
-    (*eptr)->part_of = NULL;
-    (*eptr)->sigmaMatrix = NULL;
-    }
-
+  (*eptr)->matrix = (*eptr)->accumMatrix = (*eptr)->Mld = NULL;
+  (*eptr)->type = (*eptr)->flags = (*eptr)->end_pos = 0;
+  (*eptr)->p_elem = (*eptr)->name = (*eptr)->group = (*eptr)->definition_text = NULL;
+  (*eptr)->D = (*eptr)->accumD = NULL;
+  (*eptr)->twiss = NULL;
+  (*eptr)->part_of = NULL;
+  (*eptr)->sigmaMatrix = NULL;
+}

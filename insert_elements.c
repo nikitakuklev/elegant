@@ -25,37 +25,33 @@ static long add_elem_flag = 0;
 /* static char elementDefCopy[COPYLEN+1]; */
 static long insertCount = 0;
 
-long getAddElemFlag() 
-{
+long getAddElemFlag() {
   return (add_elem_flag);
 }
 
-char *getElemDefinition()
-{
+char *getElemDefinition() {
   return (addElem.elemDef);
-} 
+}
 
-long getAddEndFlag()
-{
+long getAddEndFlag() {
   return (addElem.add_end);
-} 
+}
 
-long getAddStartFlag()
-{
+long getAddStartFlag() {
   return (addElem.add_start);
-} 
+}
 
-void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) 
-{
+void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) {
   long i, nNames;
   char **nameList;
-  
+
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  if (processNamelist(&insert_elements, nltext)==NAMELIST_ERROR)
+  if (processNamelist(&insert_elements, nltext) == NAMELIST_ERROR)
     bombElegant(NULL, NULL);
-  if (echoNamelists) print_namelist(stdout, &insert_elements);
+  if (echoNamelists)
+    print_namelist(stdout, &insert_elements);
 
   if (disable)
     return;
@@ -69,7 +65,7 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       bombElegant("element name has to be specified if you use the occurrence feature", NULL);
   }
   add_elem_flag = 0;
-  
+
   if ((!name || !strlen(name)) && !type)
     bombElegant("name or type needs to be given", NULL);
   if (!element_def || !strlen(element_def))
@@ -80,8 +76,8 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   if (name) {
     char *ptr;
     str_toupper(name);
-    while ((ptr=get_token_t(name, ", "))) {
-      nameList = SDDS_Realloc(nameList, sizeof(*nameList)*(nNames+1));
+    while ((ptr = get_token_t(name, ", "))) {
+      nameList = SDDS_Realloc(nameList, sizeof(*nameList) * (nNames + 1));
       nameList[nNames] = ptr;
       if (has_wildcards(ptr) && strchr(ptr, '-')) {
         nameList[nNames] = expand_ranges(ptr);
@@ -91,15 +87,15 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       nNames++;
     }
   }
-  
+
   if (type) {
     str_toupper(type);
     if (has_wildcards(type) && strchr(type, '-'))
       type = expand_ranges(type);
-    for (i=0; i<N_TYPES; i++)
+    for (i = 0; i < N_TYPES; i++)
       if (wild_match(entity_name[i], type))
-	break;
-    if (i==N_TYPES) {
+        break;
+    if (i == N_TYPES) {
       fprintf(stderr, "type pattern %s does not match any known type", type);
       exitElegant(1);
     }
@@ -127,8 +123,8 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   /* strncpy(elementDefCopy, element_def, COPYLEN); */
 
   addElem.total = total_occurrences;
-  for (i=0; i< addElem.total; i++) {
-    addElem.occur[i] =  occurrence[i];
+  for (i = 0; i < addElem.total; i++) {
+    addElem.occur[i] = occurrence[i];
   }
 
   insertCount = 0;
@@ -144,51 +140,49 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   return;
 }
 
-long insertElem(char *name, long type, long *skip, long occurPosition, double endPosition) 
-{
+long insertElem(char *name, long type, long *skip, long occurPosition, double endPosition) {
   long i;
 
   if (addElem.exclude && wild_match(name, addElem.exclude))
-    return(0);
+    return (0);
   if (addElem.type && !wild_match(entity_name[type], addElem.type))
-    return(0);
+    return (0);
   if (addElem.name) {
-    for (i=0; i<addElem.nNames; i++) {
+    for (i = 0; i < addElem.nNames; i++) {
       if (addElem.name[i] && wild_match(name, addElem.name[i]))
         break;
     }
-    if (i==addElem.nNames)
-      return(0);
+    if (i == addElem.nNames)
+      return (0);
   }
 
-  if ((addElem.sStart>=0 && endPosition<addElem.sStart) ||
-      (addElem.sEnd>=0 && endPosition>addElem.sEnd))
+  if ((addElem.sStart >= 0 && endPosition < addElem.sStart) ||
+      (addElem.sEnd >= 0 && endPosition > addElem.sEnd))
     return 0;
 
   if (addElem.total) {
-    for (i=0; i<addElem.total; i++) {
+    for (i = 0; i < addElem.total; i++) {
       if (occurPosition == addElem.occur[i]) {
-	if (verbose)
-	  printf("Adding \"%s\" %s occurrence %ld of %s\n",
-		 addElem.elemDef, addElem.before?"before":"after", occurPosition, name);
-	insertCount ++;
-	return(addElem.before?2:1);
+        if (verbose)
+          printf("Adding \"%s\" %s occurrence %ld of %s\n",
+                 addElem.elemDef, addElem.before ? "before" : "after", occurPosition, name);
+        insertCount++;
+        return (addElem.before ? 2 : 1);
       }
     }
-    return(0);
+    return (0);
   }
 
   if (addElem.nskip) {
     (*skip)++;
     if (*skip < addElem.nskip)
-      return(0);
+      return (0);
     *skip = 0;
     if (verbose)
       printf("Adding \"%s\" %s occurrence %ld of %s\n",
-	     addElem.elemDef, addElem.before?"before":"after", occurPosition, name);
-    insertCount ++;
-    return(addElem.before?2:1);
+             addElem.elemDef, addElem.before ? "before" : "after", occurPosition, name);
+    insertCount++;
+    return (addElem.before ? 2 : 1);
   }
-  return(0);
+  return (0);
 }
-

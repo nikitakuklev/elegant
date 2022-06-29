@@ -21,55 +21,53 @@ static ELEMENT_LIST *eptrCopy = NULL;
 static double PoCopy, lastX, lastXp, lastRho;
 /* These variables are used for optimization of the FSE and x offset */
 static double xMin, xFinal, xAve, xMax, xError, xpInitial, xInitial, xpError;
-#define OPTIMIZE_X  0x01UL
+#define OPTIMIZE_X 0x01UL
 #define OPTIMIZE_XP 0x02UL
 static unsigned long optimizationFlags = 0;
-static long edgeMultActive[2]; 
+static long edgeMultActive[2];
 #ifdef DEBUG
 static short logHamiltonian = 0;
 static FILE *fpHam = NULL;
 #endif
 
 void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
-void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, double gK, 
+void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, double gK,
                          double *fringeIntKn, short angleSign, short isExit, short fringeModel, short order);
 double ccbend_trajectory_error(double *value, long *invalid);
 
 long track_through_ccbend(
-                          double **particle,   /* initial/final phase-space coordinates */
-                          long n_part,         /* number of particles */
-			  ELEMENT_LIST *eptr,
-                          CCBEND *ccbend,
-                          double Po,
-                          double **accepted,
-                          double z_start,
-                          double *sigmaDelta2, /* use for accumulation of energy spread for radiation matrix computation */
-                          char *rootname,
-                          MAXAMP *maxamp,
-                          APCONTOUR *apContour,
-                          APERTURE_DATA *apFileData,
-                          /* If iPart non-negative, we do one step. The caller is responsible 
+  double **particle, /* initial/final phase-space coordinates */
+  long n_part,       /* number of particles */
+  ELEMENT_LIST *eptr,
+  CCBEND *ccbend,
+  double Po,
+  double **accepted,
+  double z_start,
+  double *sigmaDelta2, /* use for accumulation of energy spread for radiation matrix computation */
+  char *rootname,
+  MAXAMP *maxamp,
+  APCONTOUR *apContour,
+  APERTURE_DATA *apFileData,
+  /* If iPart non-negative, we do one step. The caller is responsible 
                            * for handling the coordinates appropriately outside this routine. 
                            * The element must have been previously optimized to determine FSE and X offsets.
                            */
-                          long iPart,
-                          /* If iFinalSlice is positive, we terminate integration inside the magnet. The caller is responsible 
+  long iPart,
+  /* If iFinalSlice is positive, we terminate integration inside the magnet. The caller is responsible 
                            * for handling the coordinates appropriately outside this routine. 
                            * The element must have been previously optimized to determine FSE and X offsets.
                            */
-                          long iFinalSlice
-                          )
-{
+  long iFinalSlice) {
   double KnL[9];
   long iTerm, nTerms;
   double dx, dy, dz; /* offsets of the multipole center */
   long nSlices, integ_order;
   long i_part, i_top;
   double *coef;
-  double fse, etilt, tilt, rad_coef, isr_coef, dzLoss=0;
+  double fse, etilt, tilt, rad_coef, isr_coef, dzLoss = 0;
   double rho0, arcLength, length, angle, yaw, angleSign, extraTilt;
   MULTIPOLE_DATA *multData = NULL, *edge1MultData = NULL, *edge2MultData = NULL;
-  long freeMultData=0;
+  long freeMultData = 0;
   MULT_APERTURE_DATA apertureData;
   double referenceKnL = 0;
   double gK[2];
@@ -79,26 +77,26 @@ long track_through_ccbend(
   if (!particle)
     bombTracking("particle array is null (track_through_ccbend)");
 
-  if (iPart>=0 && ccbend->optimized!=1)
+  if (iPart >= 0 && ccbend->optimized != 1)
     bombTracking("Programming error: one-step mode invoked for unoptimized CCBEND.");
-  if (iFinalSlice>0 && iPart>=0)
+  if (iFinalSlice > 0 && iPart >= 0)
     bombTracking("Programming error: partial integration mode and one-step mode invoked together for CCBEND.");
-  if (iFinalSlice>0 && ccbend->optimized!=1)
+  if (iFinalSlice > 0 && ccbend->optimized != 1)
     bombTracking("Programming error: partial integration mode invoked for unoptimized CCBEND.");
-  if (iFinalSlice>=ccbend->nSlices)
+  if (iFinalSlice >= ccbend->nSlices)
     iFinalSlice = 0;
 
-  if (N_CCBEND_FRINGE_INT!=8)
+  if (N_CCBEND_FRINGE_INT != 8)
     bombTracking("Coding error detected: number of fringe integrals for CCBEND is different than expected.");
-  if (ccbend->fringeModel<0 || ccbend->fringeModel>1) 
+  if (ccbend->fringeModel < 0 || ccbend->fringeModel > 1)
     bombTracking("FRINGEMODEL parameter of CCBEND must be 0 or 1.");
 
   if (!ccbend->edgeFlip) {
-    memcpy(fringeInt1, ccbend->fringeInt1, N_CCBEND_FRINGE_INT*sizeof(fringeInt1[0]));
-    memcpy(fringeInt2, ccbend->fringeInt2, N_CCBEND_FRINGE_INT*sizeof(fringeInt2[0]));
+    memcpy(fringeInt1, ccbend->fringeInt1, N_CCBEND_FRINGE_INT * sizeof(fringeInt1[0]));
+    memcpy(fringeInt2, ccbend->fringeInt2, N_CCBEND_FRINGE_INT * sizeof(fringeInt2[0]));
   } else {
-    memcpy(fringeInt1, ccbend->fringeInt2, N_CCBEND_FRINGE_INT*sizeof(fringeInt1[0]));
-    memcpy(fringeInt2, ccbend->fringeInt1, N_CCBEND_FRINGE_INT*sizeof(fringeInt2[0]));
+    memcpy(fringeInt1, ccbend->fringeInt2, N_CCBEND_FRINGE_INT * sizeof(fringeInt1[0]));
+    memcpy(fringeInt2, ccbend->fringeInt1, N_CCBEND_FRINGE_INT * sizeof(fringeInt2[0]));
     // Per R. Lindberg, these integrals change sign from entrance to exit orientation
     fringeInt1[0] *= -1;
     fringeInt1[3] *= -1;
@@ -108,22 +106,22 @@ long track_through_ccbend(
     fringeInt2[5] *= -1;
   }
 
-  if ((ccbend->optimizeFse || ccbend->optimizeDx) && ccbend->optimized!=-1 && ccbend->angle!=0) {
-    if (ccbend->optimized==0 || 
-        ccbend->length!=ccbend->referenceData[0] ||
-        ccbend->angle!=ccbend->referenceData[1] ||
-        ccbend->K1!=ccbend->referenceData[2] ||
-        ccbend->K2!=ccbend->referenceData[3] ||
-        ccbend->yaw!=ccbend->referenceData[4]) {
+  if ((ccbend->optimizeFse || ccbend->optimizeDx) && ccbend->optimized != -1 && ccbend->angle != 0) {
+    if (ccbend->optimized == 0 ||
+        ccbend->length != ccbend->referenceData[0] ||
+        ccbend->angle != ccbend->referenceData[1] ||
+        ccbend->K1 != ccbend->referenceData[2] ||
+        ccbend->K2 != ccbend->referenceData[3] ||
+        ccbend->yaw != ccbend->referenceData[4]) {
       double acc;
       double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
       short disable[2] = {0, 0};
-      PoCopy = lastRho1 = lastX = lastXp = 
+      PoCopy = lastRho1 = lastX = lastXp =
         xMin = xFinal = xAve = xMax = xError = xpInitial = xInitial = xpError = 0;
-      if (ccbend->verbose>5) {
+      if (ccbend->verbose > 5) {
         long ifr;
         printf("Fringe integrals used for %s:\n", eptr->name);
-        for (ifr=0; ifr<N_CCBEND_FRINGE_INT; ifr++)
+        for (ifr = 0; ifr < N_CCBEND_FRINGE_INT; ifr++)
           printf("I[%ld] = %e, %e\n", ifr, fringeInt1[ifr], fringeInt2[ifr]);
       }
       /*
@@ -134,9 +132,9 @@ long track_through_ccbend(
       printf("delta K2: %le\n", ccbend->K2-ccbend->referenceData[3]);
       fflush(stdout);
       */
-      if (iPart>=0)
+      if (iPart >= 0)
         bombTracking("Programming error: oneStep mode is incompatible with optmization for CCBEND.");
-      optimizationFlags = OPTIMIZE_X|OPTIMIZE_XP;
+      optimizationFlags = OPTIMIZE_X | OPTIMIZE_XP;
       if (ccbend->optimized) {
         startValue[0] = ccbend->fseOffset;
         startValue[1] = ccbend->dxOffset;
@@ -160,34 +158,34 @@ long track_through_ccbend(
         }
       }
       if (!disable[0] || !disable[1]) {
-        double **particle0; 
+        double **particle0;
         ccbend->optimized = -1; /* flag to indicate calls to track_through_ccbend will be for FSE optimization */
         memcpy(&ccbendCopy, ccbend, sizeof(ccbendCopy));
-        if (ccbend->length<0) {
+        if (ccbend->length < 0) {
           /* For backtracking. This seems to help improve results. Otherwise, the offsets are different, which doesn't
            * make sense. */
           ccbendCopy.length = fabs(ccbend->length);
-          ccbendCopy.angle =  -ccbend->angle;
+          ccbendCopy.angle = -ccbend->angle;
           ccbendCopy.yaw = -ccbend->yaw;
         }
         eptrCopy = eptr;
-        ccbendCopy.fse = ccbendCopy.fseDipole = ccbendCopy.fseQuadrupole = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = 
-          ccbendCopy.etilt = ccbendCopy.tilt = ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = 
-          ccbendCopy.KnDelta = ccbendCopy.lengthCorrection = ccbendCopy.xKick = 0;
+        ccbendCopy.fse = ccbendCopy.fseDipole = ccbendCopy.fseQuadrupole = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz =
+          ccbendCopy.etilt = ccbendCopy.tilt = ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle =
+            ccbendCopy.KnDelta = ccbendCopy.lengthCorrection = ccbendCopy.xKick = 0;
         PoCopy = Po;
         stepSize[0] = 1e-3; /* FSE */
         stepSize[1] = 1e-4; /* X */
         lowerLimit[0] = lowerLimit[1] = -1;
         upperLimit[0] = upperLimit[1] = 1;
-        if (simplexMin(&acc, startValue, stepSize, lowerLimit, upperLimit, disable, 2, 
-                       fabs(1e-15*ccbend->length), fabs(1e-16*ccbend->length),
-                       ccbend_trajectory_error, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
+        if (simplexMin(&acc, startValue, stepSize, lowerLimit, upperLimit, disable, 2,
+                       fabs(1e-15 * ccbend->length), fabs(1e-16 * ccbend->length),
+                       ccbend_trajectory_error, NULL, 1500, 3, 12, 3.0, 1.0, 0) < 0) {
           bombElegantVA("failed to find FSE and x offset to center trajectory for ccbend. accuracy acheived was %le.", acc);
         }
         ccbend->fseOffset = startValue[0];
         ccbend->dxOffset = startValue[1];
         /* This gets subtracted from the final x coordinates to ensure the magnet doesn't produce a trajectory error */
-        ccbend->xAdjust = xFinal; 
+        ccbend->xAdjust = xFinal;
         ccbend->KnDelta = ccbendCopy.KnDelta;
         ccbend->referenceData[0] = ccbend->length;
         ccbend->referenceData[1] = ccbend->angle;
@@ -195,27 +193,27 @@ long track_through_ccbend(
         ccbend->referenceData[3] = ccbend->K2;
         ccbend->referenceData[4] = ccbend->yaw;
 
-        particle0 = (double**)czarray_2d(sizeof(**particle0), 1, totalPropertiesPerParticle);
-        memset(particle0[0], 0, totalPropertiesPerParticle*sizeof(**particle));
+        particle0 = (double **)czarray_2d(sizeof(**particle0), 1, totalPropertiesPerParticle);
+        memset(particle0[0], 0, totalPropertiesPerParticle * sizeof(**particle));
         track_through_ccbend(particle0, 1, eptr, ccbend, Po, NULL, 0.0, NULL, NULL, NULL, NULL, NULL, -1, 0);
         ccbend->lengthCorrection = ccbend->length - particle0[0][4];
-        free_czarray_2d((void**)particle0, 1, totalPropertiesPerParticle);
+        free_czarray_2d((void **)particle0, 1, totalPropertiesPerParticle);
         ccbend->optimized = 1;
-	if (ccbend->verbose) {
-	  printf("CCBEND %s#%ld optimized: FSE=%le, dx=%le, accuracy=%le\n",
-		 eptr?eptr->name:"?", eptr?eptr->occurence:-1, ccbend->fseOffset, ccbend->dxOffset, acc);
+        if (ccbend->verbose) {
+          printf("CCBEND %s#%ld optimized: FSE=%le, dx=%le, accuracy=%le\n",
+                 eptr ? eptr->name : "?", eptr ? eptr->occurence : -1, ccbend->fseOffset, ccbend->dxOffset, acc);
           printf("length = %18.12le, angle = %18.12le, K1 = %18.12le\nK2 = %18.12le, yaw = %18.12le, lengthCorrection = %21.12le\n",
                  ccbend->length, ccbend->angle, ccbend->K1, ccbend->K2, ccbend->yaw, ccbend->lengthCorrection);
-          printf("xMin = %le, xMax = %le, xAve = %le, xInitial = %le, xFinal = %le, xpError = %le\n", 
+          printf("xMin = %le, xMax = %le, xAve = %le, xInitial = %le, xFinal = %le, xpError = %le\n",
                  xMin, xMax, xAve, xInitial, xFinal, xpError);
-	  fflush(stdout);
-	}
+          fflush(stdout);
+        }
       }
     }
   }
 
 #ifdef DEBUG
-  if (ccbend->optimized==1) {
+  if (ccbend->optimized == 1) {
     char filename[1000];
     logHamiltonian = 1;
     snprintf(filename, 1000, "ccbend-%s.sdds", eptr->name);
@@ -234,83 +232,82 @@ long track_through_ccbend(
 
   nSlices = ccbend->nSlices;
   arcLength = ccbend->length;
-  if (ccbend->optimized!=0)
+  if (ccbend->optimized != 0)
     fse = ccbend->fse + ccbend->fseOffset;
-  else 
+  else
     fse = ccbend->fse;
-  for (iTerm=0; iTerm<9; iTerm++)
+  for (iTerm = 0; iTerm < 9; iTerm++)
     KnL[iTerm] = 0;
   length = rho0 = 0; /* prevent compiler warnings */
-  if ((angle = ccbend->angle)!=0) {
-    rho0 = arcLength/angle;
-    length = 2*rho0*sin(angle/2);
-    KnL[0] = (1+fse+ccbend->fseDipole)/rho0*length - ccbend->xKick;
-  }
-  else {
+  if ((angle = ccbend->angle) != 0) {
+    rho0 = arcLength / angle;
+    length = 2 * rho0 * sin(angle / 2);
+    KnL[0] = (1 + fse + ccbend->fseDipole) / rho0 * length - ccbend->xKick;
+  } else {
     /* TODO: Use KQUAD as substitute */
     bombTracking("Can't have zero ANGLE for CCBEND.");
   }
-  KnL[1] = (1+fse+ccbend->fseQuadrupole)*ccbend->K1*length/(1-ccbend->KnDelta);
-  KnL[2] = (1+fse)*ccbend->K2*length/(1-ccbend->KnDelta);
-  KnL[3] = (1+fse)*ccbend->K3*length/(1-ccbend->KnDelta);
-  KnL[4] = (1+fse)*ccbend->K4*length/(1-ccbend->KnDelta);
-  KnL[5] = (1+fse)*ccbend->K5*length/(1-ccbend->KnDelta);
-  KnL[6] = (1+fse)*ccbend->K6*length/(1-ccbend->KnDelta);
-  KnL[7] = (1+fse)*ccbend->K7*length/(1-ccbend->KnDelta);
-  KnL[8] = (1+fse)*ccbend->K8*length/(1-ccbend->KnDelta);
-  if (angle<0) {
+  KnL[1] = (1 + fse + ccbend->fseQuadrupole) * ccbend->K1 * length / (1 - ccbend->KnDelta);
+  KnL[2] = (1 + fse) * ccbend->K2 * length / (1 - ccbend->KnDelta);
+  KnL[3] = (1 + fse) * ccbend->K3 * length / (1 - ccbend->KnDelta);
+  KnL[4] = (1 + fse) * ccbend->K4 * length / (1 - ccbend->KnDelta);
+  KnL[5] = (1 + fse) * ccbend->K5 * length / (1 - ccbend->KnDelta);
+  KnL[6] = (1 + fse) * ccbend->K6 * length / (1 - ccbend->KnDelta);
+  KnL[7] = (1 + fse) * ccbend->K7 * length / (1 - ccbend->KnDelta);
+  KnL[8] = (1 + fse) * ccbend->K8 * length / (1 - ccbend->KnDelta);
+  if (angle < 0) {
     angleSign = -1;
-    for (iTerm=0; iTerm<9; iTerm+=2)
+    for (iTerm = 0; iTerm < 9; iTerm += 2)
       KnL[iTerm] *= -1;
     angle = -angle;
     rho0 = -rho0;
-    yaw = -ccbend->yaw*(ccbend->edgeFlip?-1:1);
+    yaw = -ccbend->yaw * (ccbend->edgeFlip ? -1 : 1);
     extraTilt = PI;
   } else {
     angleSign = 1;
     extraTilt = 0;
-    yaw = ccbend->yaw*(ccbend->edgeFlip?-1:1);
+    yaw = ccbend->yaw * (ccbend->edgeFlip ? -1 : 1);
   }
   if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles ||
       ccbend->edge1_multipoles || ccbend->edge2_multipoles) {
     /* Note that with referenceOrder=0, referenceKnL will always be positive if angle is nonzero */
-    if (ccbend->referenceOrder==0 && (referenceKnL=KnL[0])==0)
+    if (ccbend->referenceOrder == 0 && (referenceKnL = KnL[0]) == 0)
       bombElegant("REFERENCE_ORDER=0 but CCBEND ANGLE is zero", NULL);
-    if (ccbend->referenceOrder==1 && (referenceKnL=KnL[1])==0)
+    if (ccbend->referenceOrder == 1 && (referenceKnL = KnL[1]) == 0)
       bombElegant("REFERENCE_ORDER=1 but CCBEND K1 is zero", NULL);
-    if (ccbend->referenceOrder==2 && (referenceKnL=KnL[2])==0)
+    if (ccbend->referenceOrder == 2 && (referenceKnL = KnL[2]) == 0)
       bombElegant("REFERENCE_ORDER=2 but CCBEND K2 is zero", NULL);
-    if (ccbend->referenceOrder<0 || ccbend->referenceOrder>2)
+    if (ccbend->referenceOrder < 0 || ccbend->referenceOrder > 2)
       bombElegant("REFERENCE_ORDER must be 0, 1, or 2 for CCBEND", NULL);
   }
-  if (ccbend->edgeFlip==0) {
-    gK[0] = 2*ccbend->fint1*ccbend->hgap*(length<0?-1:1);
-    gK[1] = 2*ccbend->fint2*ccbend->hgap*(length<0?-1:1);
+  if (ccbend->edgeFlip == 0) {
+    gK[0] = 2 * ccbend->fint1 * ccbend->hgap * (length < 0 ? -1 : 1);
+    gK[1] = 2 * ccbend->fint2 * ccbend->hgap * (length < 0 ? -1 : 1);
   } else {
-    gK[1] = 2*ccbend->fint1*ccbend->hgap*(length<0?-1:1);
-    gK[0] = 2*ccbend->fint2*ccbend->hgap*(length<0?-1:1);
+    gK[1] = 2 * ccbend->fint1 * ccbend->hgap * (length < 0 ? -1 : 1);
+    gK[0] = 2 * ccbend->fint2 * ccbend->hgap * (length < 0 ? -1 : 1);
   }
 
   integ_order = ccbend->integration_order;
   if (ccbend->synch_rad)
-    rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
-  isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
-  if (!ccbend->isr || (ccbend->isr1Particle==0 && n_part==1))
+    rad_coef = sqr(particleCharge) * pow3(Po) / (6 * PI * epsilon_o * sqr(c_mks) * particleMass);
+  isr_coef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow5(Po) * 137.0359895);
+  if (!ccbend->isr || (ccbend->isr1Particle == 0 && n_part == 1))
     /* minus sign indicates we accumulate into sigmadelta^2 only, don't perturb particles */
     isr_coef *= -1;
-  if (ccbend->length<1e-6 && (ccbend->isr || ccbend->synch_rad)) {
-    rad_coef = isr_coef = 0;  /* avoid unphysical results */
+  if (ccbend->length < 1e-6 && (ccbend->isr || ccbend->synch_rad)) {
+    rad_coef = isr_coef = 0; /* avoid unphysical results */
   }
   if (!ccbend->multipolesInitialized) {
     /* read the data files for the error multipoles */
     readErrorMultipoleData(&(ccbend->systematicMultipoleData), ccbend->systematic_multipoles, 0);
     if ((ccbend->edge1_multipoles && !ccbend->edgeFlip) || (ccbend->edge2_multipoles && ccbend->edgeFlip)) {
-        readErrorMultipoleData(&(ccbend->edge1MultipoleData), 
-                               ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles, 0);
-        if (ccbend->verbose && (ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles) && eptr)
-          printf("Using file %s for edge 1 of %s#%ld\n",
-                 ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles,
-                 eptr->name, eptr->occurence);
+      readErrorMultipoleData(&(ccbend->edge1MultipoleData),
+                             ccbend->edgeFlip ? ccbend->edge2_multipoles : ccbend->edge1_multipoles, 0);
+      if (ccbend->verbose && (ccbend->edgeFlip ? ccbend->edge2_multipoles : ccbend->edge1_multipoles) && eptr)
+        printf("Using file %s for edge 1 of %s#%ld\n",
+               ccbend->edgeFlip ? ccbend->edge2_multipoles : ccbend->edge1_multipoles,
+               eptr->name, eptr->occurence);
     } else {
       readErrorMultipoleData(&(ccbend->edge1MultipoleData), ccbend->edge_multipoles, 0);
       if (ccbend->verbose && ccbend->edge_multipoles && eptr)
@@ -318,12 +315,12 @@ long track_through_ccbend(
                ccbend->edge_multipoles, eptr->name, eptr->occurence);
     }
     if ((ccbend->edge2_multipoles && !ccbend->edgeFlip) || (ccbend->edge1_multipoles && ccbend->edgeFlip)) {
-        readErrorMultipoleData(&(ccbend->edge2MultipoleData), 
-                               ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles, 0);
-        if (ccbend->verbose && (ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles) && eptr)
-          printf("Using file %s for edge 2 of %s#%ld\n",
-                 ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles,
-                 eptr->name, eptr->occurence);
+      readErrorMultipoleData(&(ccbend->edge2MultipoleData),
+                             ccbend->edgeFlip ? ccbend->edge1_multipoles : ccbend->edge2_multipoles, 0);
+      if (ccbend->verbose && (ccbend->edgeFlip ? ccbend->edge1_multipoles : ccbend->edge2_multipoles) && eptr)
+        printf("Using file %s for edge 2 of %s#%ld\n",
+               ccbend->edgeFlip ? ccbend->edge1_multipoles : ccbend->edge2_multipoles,
+               eptr->name, eptr->occurence);
     } else {
       readErrorMultipoleData(&(ccbend->edge2MultipoleData), ccbend->edge_multipoles, 0);
       if (ccbend->verbose && ccbend->edge_multipoles && eptr)
@@ -335,30 +332,29 @@ long track_through_ccbend(
   }
   if (!ccbend->totalMultipolesComputed) {
     computeTotalErrorMultipoleFields(&(ccbend->totalMultipoleData),
-                                     &(ccbend->systematicMultipoleData), ccbend->systematicMultipoleFactor, 
+                                     &(ccbend->systematicMultipoleData), ccbend->systematicMultipoleFactor,
                                      &(ccbend->edge1MultipoleData), &(ccbend->edge2MultipoleData),
                                      &(ccbend->randomMultipoleData), ccbend->randomMultipoleFactor,
                                      NULL, 0.0,
-                                     referenceKnL, 
+                                     referenceKnL,
                                      ccbend->referenceOrder, 0,
-                                     ccbend->minMultipoleOrder, ccbend->maxMultipoleOrder
-                                     );
-    if (angleSign<0) {
+                                     ccbend->minMultipoleOrder, ccbend->maxMultipoleOrder);
+    if (angleSign < 0) {
       long i;
-      for (i=0; i<ccbend->systematicMultipoleData.orders; i++) {
-        if (ccbend->totalMultipoleData.order[i]%2) {
+      for (i = 0; i < ccbend->systematicMultipoleData.orders; i++) {
+        if (ccbend->totalMultipoleData.order[i] % 2) {
           ccbend->totalMultipoleData.KnL[i] *= -1;
           ccbend->totalMultipoleData.JnL[i] *= -1;
         }
       }
-      for (i=0; i<ccbend->edge1MultipoleData.orders; i++) {
-        if (ccbend->totalMultipoleData.order[i]%2) {
+      for (i = 0; i < ccbend->edge1MultipoleData.orders; i++) {
+        if (ccbend->totalMultipoleData.order[i] % 2) {
           ccbend->edge1MultipoleData.KnL[i] *= -1;
           ccbend->edge1MultipoleData.JnL[i] *= -1;
         }
       }
-      for (i=0; i<ccbend->edge2MultipoleData.orders; i++) {
-        if (ccbend->totalMultipoleData.order[i]%2) {
+      for (i = 0; i < ccbend->edge2MultipoleData.orders; i++) {
+        if (ccbend->totalMultipoleData.order[i] % 2) {
           ccbend->edge2MultipoleData.KnL[i] *= -1;
           ccbend->edge2MultipoleData.JnL[i] *= -1;
         }
@@ -373,9 +369,9 @@ long track_through_ccbend(
   if (multData && !multData->initialized)
     multData = NULL;
 
-  if (nSlices<=0)
+  if (nSlices <= 0)
     bombTracking("nSlices<=0 in track_ccbend()");
-  if (integ_order!=2 && integ_order!=4 && integ_order!=6) 
+  if (integ_order != 2 && integ_order != 4 && integ_order != 6)
     bombTracking("multipole integration_order must be 2, 4, or 6");
 
   if (!(coef = expansion_coefficients(0)))
@@ -389,19 +385,19 @@ long track_through_ccbend(
   etilt = ccbend->etilt;
   dx = ccbend->dx;
   dy = ccbend->dy;
-  dz = ccbend->dz*(ccbend->edgeFlip?-1:1);
+  dz = ccbend->dz * (ccbend->edgeFlip ? -1 : 1);
 
   if (tilt) {
     /* this is needed because the DX and DY offsets will be applied after the particles are
      * tilted into the magnet reference frame
      */
-    dx =  ccbend->dx*cos(tilt) + ccbend->dy*sin(tilt);
-    dy = -ccbend->dx*sin(tilt) + ccbend->dy*cos(tilt);
+    dx = ccbend->dx * cos(tilt) + ccbend->dy * sin(tilt);
+    dy = -ccbend->dx * sin(tilt) + ccbend->dy * cos(tilt);
   }
 
-  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start+length/2);
+  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start + length / 2);
 
-  if (iPart<=0) {
+  if (iPart <= 0) {
     /*
     printf("input before adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
            particle[0][0], particle[0][1], particle[0][2],
@@ -412,15 +408,15 @@ long track_through_ccbend(
     /* save initial x, x' value of the possible reference particle for optimization of FSE and DX */
     xInitial = particle[0][0];
     xpInitial = particle[0][1];
-    switchRbendPlane(particle, n_part, angle/2-yaw, Po);
+    switchRbendPlane(particle, n_part, angle / 2 - yaw, Po);
     if (dx || dy || dz)
       offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
     if (ccbend->optimized)
       offsetBeamCoordinatesForMisalignment(particle, n_part, ccbend->dxOffset, 0, 0);
     if (etilt)
       rotateBeamCoordinatesForMisalignment(particle, n_part, etilt);
-    verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, KnL[1]/length, KnL[2]/length, gK[0], 
-                        &(fringeInt1[0]), angleSign, 0, ccbend->fringeModel, ccbend->edgeOrder); 
+    verticalRbendFringe(particle, n_part, angle / 2 - yaw, rho0, KnL[1] / length, KnL[2] / length, gK[0],
+                        &(fringeInt1[0]), angleSign, 0, ccbend->fringeModel, ccbend->edgeOrder);
     /*
     printf("input after adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
            particle[0][0], particle[0][1], particle[0][2],
@@ -430,25 +426,25 @@ long track_through_ccbend(
   }
 
   nTerms = 0;
-  for (iTerm=8; iTerm>=0; iTerm--)
+  for (iTerm = 8; iTerm >= 0; iTerm--)
     if (KnL[iTerm]) {
-      nTerms = iTerm+1;
+      nTerms = iTerm + 1;
       break;
     }
 
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
-  i_top = n_part-1;
+  i_top = n_part - 1;
   edgeMultActive[0] = edgeMultActive[1] = 0;
-  for (i_part=0; i_part<=i_top; i_part++) {
+  for (i_part = 0; i_part <= i_top; i_part++) {
     if (!integrate_kick_KnL(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL, nTerms,
-                            integ_order, nSlices, iPart, iFinalSlice, length, multData, edge1MultData, edge2MultData, 
+                            integ_order, nSlices, iPart, iFinalSlice, length, multData, edge1MultData, edge2MultData,
                             &apertureData, &dzLoss, sigmaDelta2, &lastRho1, tilt, 0.0)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
-      particle[i_top][4] = z_start+dzLoss;
-      particle[i_top][5] = Po*(1+particle[i_top][5]);
+      particle[i_top][4] = z_start + dzLoss;
+      particle[i_top][5] = Po * (1 + particle[i_top][5]);
       i_top--;
       i_part--;
       continue;
@@ -459,34 +455,33 @@ long track_through_ccbend(
     */
   }
   lastRho = lastRho1; /* make available for radiation integral calculations */
-  multipoleKicksDone += (i_top+1)*nSlices;
+  multipoleKicksDone += (i_top + 1) * nSlices;
   if (multData)
-    multipoleKicksDone += (i_top+1)*nSlices*multData->orders;
+    multipoleKicksDone += (i_top + 1) * nSlices * multData->orders;
   if (sigmaDelta2)
-    *sigmaDelta2 /= i_top+1;
+    *sigmaDelta2 /= i_top + 1;
 
-  if ((iPart<0 || iPart==(ccbend->nSlices-1)) && iFinalSlice<=0) {
+  if ((iPart < 0 || iPart == (ccbend->nSlices - 1)) && iFinalSlice <= 0) {
     /*
     printf("output before adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
            particle[0][0], particle[0][1], particle[0][2],
            particle[0][3], particle[0][4], particle[0][5]);
     */
-    verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, KnL[1]/length, KnL[2]/length, gK[1], 
+    verticalRbendFringe(particle, i_top + 1, angle / 2 + yaw, rho0, KnL[1] / length, KnL[2] / length, gK[1],
                         &(fringeInt2[0]), angleSign, 1, ccbend->fringeModel, ccbend->edgeOrder);
     if (etilt)
       rotateBeamCoordinatesForMisalignment(particle, n_part, -etilt);
     if (ccbend->optimized)
-      offsetBeamCoordinatesForMisalignment(particle, i_top+1, ccbend->xAdjust, 0, 0);
+      offsetBeamCoordinatesForMisalignment(particle, i_top + 1, ccbend->xAdjust, 0, 0);
     if (dx || dy || dz)
-      offsetBeamCoordinatesForMisalignment(particle, i_top+1, -dx, -dy, -dz);
-    switchRbendPlane(particle, i_top+1, angle/2+yaw, Po);
+      offsetBeamCoordinatesForMisalignment(particle, i_top + 1, -dx, -dy, -dz);
+    switchRbendPlane(particle, i_top + 1, angle / 2 + yaw, Po);
     if (ccbend->fringeModel) {
       /* If fringes are (possibly) extended, we use the difference between the initial and final 
        * x coordinates including the fringe effects as the figure of merit */
       xFinal = particle[0][0]; /* This will also be used as the x adjustment to suppress offsets in tracking */
-      xError = xInitial-xFinal;
-    }
-    else {
+      xError = xInitial - xFinal;
+    } else {
       /* For the original fringe model, we continue to try to center the beam in the magnet */
       /* xFinal is set in the trajectory error function as before, for backward compatibility */
       xError = xMax + xMin;
@@ -494,12 +489,12 @@ long track_through_ccbend(
     /* For x', want the initial and final angle errors to be equal and opposite, which ensures a symmetric 
        trajectory. In practice, xpInitial=0, so the final angle is also zero.
      */
-    xpError = xpInitial+particle[0][1];
+    xpError = xpInitial + particle[0][1];
     if (tilt)
       /* use n_part here so lost particles get rotated back */
       rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
     if (ccbend->optimized) {
-      for (i_part=0; i_part<=i_top; i_part++)
+      for (i_part = 0; i_part <= i_top; i_part++)
         particle[i_part][4] += ccbend->lengthCorrection;
     }
     /*
@@ -508,13 +503,13 @@ long track_through_ccbend(
            particle[0][3], particle[0][4], particle[0][5]);
     fflush(stdout);
     */
-  } else if (iFinalSlice>0) {
+  } else if (iFinalSlice > 0) {
     if (tilt)
       /* use n_part here so lost particles get rotated back */
       rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
   }
 
-  if (angleSign<0) {
+  if (angleSign < 0) {
     lastRho *= -1;
     lastX *= -1;
     lastXp *= -1;
@@ -536,37 +531,35 @@ long track_through_ccbend(
 #endif
 
   log_exit("track_through_ccbend");
-  return(i_top+1);
+  return (i_top + 1);
 }
-
 
 /* beta is 2^(1/3) */
 #define BETA 1.25992104989487316477
 
-int integrate_kick_KnL(double *coord, /* coordinates of the particle */
-                       double dx, double dy,  /* misalignments, needed for aperture checks */
+int integrate_kick_KnL(double *coord,                               /* coordinates of the particle */
+                       double dx, double dy,                        /* misalignments, needed for aperture checks */
                        double Po, double rad_coef, double isr_coef, /* radiation effects */
-                       double *KnLFull, 
+                       double *KnLFull,
                        long nTerms,
                        long integration_order, /* 2, 4, or 6 */
-                       long n_parts, /* NSLICES */
-                       long iPart,   /* If <0, integrate the full magnet. If >=0, integrate just a single part and return.
+                       long n_parts,           /* NSLICES */
+                       long iPart,             /* If <0, integrate the full magnet. If >=0, integrate just a single part and return.
                                       * This is needed to allow propagation of the radiation matrix. */
-                       long iFinalSlice, /* If >0, integrate to the indicated slice. Needed to allow extracting the
+                       long iFinalSlice,       /* If >0, integrate to the indicated slice. Needed to allow extracting the
                                           * interior matrix from tracking data. */
-                       double drift, /* length of the full element */
+                       double drift,           /* length of the full element */
                        /* error multipoles */
-                       MULTIPOLE_DATA *multData,       /* body terms */
-                       MULTIPOLE_DATA *edge1MultData,  /* entrance */
-                       MULTIPOLE_DATA *edge2MultData,  /* exit */
-                       MULT_APERTURE_DATA *apData,  /* aperture */
-                       double *dzLoss,      /* if particle is loss, offset from start of element where this occurs */
-                       double *sigmaDelta2,  /* accumulate the energy spread increase for propagation of radiation matrix */
-                       double *lastRho,      /* needed for radiation integrals */
+                       MULTIPOLE_DATA *multData,      /* body terms */
+                       MULTIPOLE_DATA *edge1MultData, /* entrance */
+                       MULTIPOLE_DATA *edge2MultData, /* exit */
+                       MULT_APERTURE_DATA *apData,    /* aperture */
+                       double *dzLoss,                /* if particle is loss, offset from start of element where this occurs */
+                       double *sigmaDelta2,           /* accumulate the energy spread increase for propagation of radiation matrix */
+                       double *lastRho,               /* needed for radiation integrals */
                        double refTilt,
-                       double dZOffset       /* offset of start of present segment relative to Z coordinate of entry plane */
-                       )
-{
+                       double dZOffset /* offset of start of present segment relative to Z coordinate of entry plane */
+) {
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, delta_qx, delta_qy;
   double xSum;
@@ -575,30 +568,31 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
   long maxOrder, iTerm;
   double *xpow, *ypow, *KnL;
   static double driftFrac2[2] = {
-    0.5, 0.5
-  };
+    0.5, 0.5};
   static double kickFrac2[2] = {
-    1.0, 0.0
-  };
+    1.0, 0.0};
 
   static double driftFrac4[4] = {
-    0.5/(2-BETA),  (1-BETA)/(2-BETA)/2,  (1-BETA)/(2-BETA)/2,  0.5/(2-BETA)
-  } ;
+    0.5 / (2 - BETA), (1 - BETA) / (2 - BETA) / 2, (1 - BETA) / (2 - BETA) / 2, 0.5 / (2 - BETA)};
   static double kickFrac4[4] = {
-    1./(2-BETA),  -BETA/(2-BETA),  1/(2-BETA),  0
-  } ;
+    1. / (2 - BETA), -BETA / (2 - BETA), 1 / (2 - BETA), 0};
 
   /* From AOP-TN-2020-064 */
   static double driftFrac6[8] = {
-    0.39225680523878, 0.5100434119184585, -0.47105338540975655, 0.0687531682525181,
-    0.0687531682525181, -0.47105338540975655, 0.5100434119184585, 0.39225680523878,
-  } ;
+    0.39225680523878,
+    0.5100434119184585,
+    -0.47105338540975655,
+    0.0687531682525181,
+    0.0687531682525181,
+    -0.47105338540975655,
+    0.5100434119184585,
+    0.39225680523878,
+  };
   static double kickFrac6[8] = {
     0.784513610477560, 0.235573213359357, -1.17767998417887, 1.3151863206839063,
-    -1.17767998417887,  0.235573213359357, 0.784513610477560, 0
-  } ;
+    -1.17767998417887, 0.235573213359357, 0.784513610477560, 0};
 
-  if (dZOffset<0) {
+  if (dZOffset < 0) {
     printf("coding error: dZOffset<0 (%le)\n", dZOffset);
     exit(1);
   }
@@ -626,48 +620,48 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
     break;
   }
 
-  drift = drift/n_parts;
+  drift = drift / n_parts;
 
-  KnL = tmalloc(sizeof(*KnL)*nTerms);
-  for (iTerm=0; iTerm<nTerms; iTerm++)
-    KnL[iTerm] = KnLFull[iTerm]/n_parts;
+  KnL = tmalloc(sizeof(*KnL) * nTerms);
+  for (iTerm = 0; iTerm < nTerms; iTerm++)
+    KnL[iTerm] = KnLFull[iTerm] / n_parts;
 
   x = coord[0];
   xp = coord[1];
   y = coord[2];
   yp = coord[3];
-  s  = 0;
+  s = 0;
   dp = coord[5];
-  p = Po*(1+dp);
-  beta0 = p/sqrt(sqr(p)+1);
+  p = Po * (1 + dp);
+  beta0 = p / sqrt(sqr(p) + 1);
 
 #if defined(ieee_math)
   if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
     return 0;
   }
 #endif
-  if (fabs(x)>COORD_LIMIT || fabs(y)>COORD_LIMIT ||
-      fabs(xp)>SLOPE_LIMIT || fabs(yp)>SLOPE_LIMIT) {
+  if (fabs(x) > COORD_LIMIT || fabs(y) > COORD_LIMIT ||
+      fabs(xp) > SLOPE_LIMIT || fabs(yp) > SLOPE_LIMIT) {
     return 0;
   }
 
   /* calculate initial canonical momenta */
-  qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
-  qy = (1+dp)*yp/denom;
+  qx = (1 + dp) * xp / (denom = sqrt(1 + sqr(xp) + sqr(yp)));
+  qy = (1 + dp) * yp / denom;
 
   maxOrder = findMaximumOrder(1, nTerms, edge1MultData, edge2MultData, multData);
-  xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
-  ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
+  xpow = tmalloc(sizeof(*xpow) * (maxOrder + 1));
+  ypow = tmalloc(sizeof(*ypow) * (maxOrder + 1));
 
-  if (iPart<=0 && edge1MultData && edge1MultData->orders) {
+  if (iPart <= 0 && edge1MultData && edge1MultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
-    for (iMult=0; iMult<edge1MultData->orders; iMult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edge1MultData->order[iMult], 
+    for (iMult = 0; iMult < edge1MultData->orders; iMult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow,
+                                      edge1MultData->order[iMult],
                                       edge1MultData->KnL[iMult], 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edge1MultData->order[iMult], 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow,
+                                      edge1MultData->order[iMult],
                                       edge1MultData->JnL[iMult], 1);
     }
     edgeMultActive[0] = 1;
@@ -675,57 +669,59 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
   /* we must do this to avoid numerical precision issues that may subtly change the results
    * when edge multipoles are enabled to disabled
    */
-  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+  if ((denom = sqr(1 + dp) - sqr(qx) - sqr(qy)) <= 0) {
     coord[0] = x;
     coord[2] = y;
-    free(xpow); free(ypow);
+    free(xpow);
+    free(ypow);
     free(KnL);
     return 0;
   }
   denom = sqrt(denom);
-  xp = qx/denom;
-  yp = qy/denom;
+  xp = qx / denom;
+  yp = qy / denom;
 
   *dzLoss = 0;
-  if (iFinalSlice<=0)
+  if (iFinalSlice <= 0)
     iFinalSlice = n_parts;
   xMin = DBL_MAX;
   xMax = -DBL_MAX;
   xSum = x;
   nSum = 1;
-  for (i_kick=0; i_kick<iFinalSlice; i_kick++) {
+  for (i_kick = 0; i_kick < iFinalSlice; i_kick++) {
 #ifdef DEBUG
     double H0;
     if (logHamiltonian && fpHam) {
       double H;
-      H = -sqrt(ipow(1+dp, 2)-qx*qx-qy*qy) +
-        KnL[0]/drift*x +
-        KnL[1]/(2*drift)*(x*x - y*y) +
-        KnL[2]/(6*drift)*(ipow(x, 3) - 3*x*y*y);
-      if (i_kick==0) 
+      H = -sqrt(ipow(1 + dp, 2) - qx * qx - qy * qy) +
+          KnL[0] / drift * x +
+          KnL[1] / (2 * drift) * (x * x - y * y) +
+          KnL[2] / (6 * drift) * (ipow(x, 3) - 3 * x * y * y);
+      if (i_kick == 0)
         H0 = H;
-      fprintf(fpHam, "%e %e %e %e %le %le\n", i_kick*drift, x, y, qx, qy, H-H0);
-      if (i_kick==n_parts)
+      fprintf(fpHam, "%e %e %e %e %le %le\n", i_kick * drift, x, y, qx, qy, H - H0);
+      if (i_kick == n_parts)
         fputs("\n", fpHam);
     }
 #endif
     delta_qx = delta_qy = 0;
-    if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
-	insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex], 
-			      globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
-			      refTilt,  GLOBAL_LOCAL_MODE_DZ, dZOffset+i_kick*drift, i_kick, n_parts)) {
+    if ((apData && !checkMultAperture(x + dx, y + dy, apData)) ||
+        insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex],
+                              globalLossCoordOffset > 0 ? coord + globalLossCoordOffset : NULL,
+                              refTilt, GLOBAL_LOCAL_MODE_DZ, dZOffset + i_kick * drift, i_kick, n_parts)) {
       coord[0] = x;
       coord[2] = y;
-      free(xpow); free(ypow);
+      free(xpow);
+      free(ypow);
       free(KnL);
       return 0;
     }
-    for (step=0; step<nSubsteps; step++) {
+    for (step = 0; step < nSubsteps; step++) {
       if (drift) {
-        dsh = drift*driftFrac[step];
-        x += xp*dsh;
-        y += yp*dsh;
-        s += dsh*sqrt(1 + sqr(xp) + sqr(yp));
+        dsh = drift * driftFrac[step];
+        x += xp * dsh;
+        y += yp * dsh;
+        s += dsh * sqrt(1 + sqr(xp) + sqr(yp));
         *dzLoss += dsh;
       }
 
@@ -737,50 +733,51 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
 
       delta_qx = delta_qy = 0;
 
-      for (iTerm=0; iTerm<nTerms; iTerm++)
+      for (iTerm = 0; iTerm < nTerms; iTerm++)
         if (KnL[iTerm])
-          apply_canonical_multipole_kicks(&qx, &qy, &delta_qx, &delta_qy, xpow, ypow, 
-                                          iTerm, KnL[iTerm]*kickFrac[step], 0);
+          apply_canonical_multipole_kicks(&qx, &qy, &delta_qx, &delta_qy, xpow, ypow,
+                                          iTerm, KnL[iTerm] * kickFrac[step], 0);
 
       if (multData) {
         /* do kicks for spurious multipoles */
-        for (iMult=0; iMult<multData->orders; iMult++) {
+        for (iMult = 0; iMult < multData->orders; iMult++) {
           if (multData->KnL && multData->KnL[iMult]) {
-            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                            multData->order[iMult], 
-                                            multData->KnL[iMult]*kickFrac[step]/n_parts,
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow,
+                                            multData->order[iMult],
+                                            multData->KnL[iMult] * kickFrac[step] / n_parts,
                                             0);
           }
           if (multData->JnL && multData->JnL[iMult]) {
-            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                            multData->order[iMult], 
-                                            multData->JnL[iMult]*kickFrac[step]/n_parts,
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow,
+                                            multData->order[iMult],
+                                            multData->JnL[iMult] * kickFrac[step] / n_parts,
                                             1);
           }
         }
       }
-      if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      if ((denom = sqr(1 + dp) - sqr(qx) - sqr(qy)) <= 0) {
         coord[0] = x;
         coord[2] = y;
-        free(xpow); free(ypow);
+        free(xpow);
+        free(ypow);
         free(KnL);
         return 0;
       }
-      xp = qx/(denom=sqrt(denom));
-      yp = qy/denom;
+      xp = qx / (denom = sqrt(denom));
+      yp = qy / denom;
       /* these three quantities are needed for radiation integrals */
-      if (nTerms==1)
-        *lastRho = 1/(KnL[0]/drift);
-      else if (nTerms==2)
-        *lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift));
-      else if (nTerms>2)
-        *lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift) + x*x*(KnL[2]/drift)/2);
+      if (nTerms == 1)
+        *lastRho = 1 / (KnL[0] / drift);
+      else if (nTerms == 2)
+        *lastRho = 1 / (KnL[0] / drift + x * (KnL[1] / drift));
+      else if (nTerms > 2)
+        *lastRho = 1 / (KnL[0] / drift + x * (KnL[1] / drift) + x * x * (KnL[2] / drift) / 2);
       else {
         TRACKING_CONTEXT context;
         getTrackingContext(&context);
         print_elem(stderr, context.element);
-        bombElegantVA("nTerms invalid in %s %s#%ld (value is %ld)", 
-                      entity_name[context.elementType], 
+        bombElegantVA("nTerms invalid in %s %s#%ld (value is %ld)",
+                      entity_name[context.elementType],
                       context.elementName, context.elementOccurrence, nTerms);
       }
       lastX = x;
@@ -788,72 +785,76 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
     }
     if ((rad_coef || isr_coef) && drift) {
       double deltaFactor, F2, dsFactor;
-      qx /= (1+dp);
-      qy /= (1+dp);
-      deltaFactor = sqr(1+dp);
+      qx /= (1 + dp);
+      qy /= (1 + dp);
+      deltaFactor = sqr(1 + dp);
       /* delta_qx and delta_qy are for the last step and have kickFrac[step-1] included, so remove it */
-      delta_qx /= kickFrac[step-1];
-      delta_qy /= kickFrac[step-1];
-      F2 = sqr(delta_qx/drift)+sqr(delta_qy/drift);
-      dsFactor = sqrt(1+sqr(xp)+sqr(yp))*drift;
+      delta_qx /= kickFrac[step - 1];
+      delta_qy /= kickFrac[step - 1];
+      F2 = sqr(delta_qx / drift) + sqr(delta_qy / drift);
+      dsFactor = sqrt(1 + sqr(xp) + sqr(yp)) * drift;
       if (rad_coef)
-        dp -= rad_coef*deltaFactor*F2*dsFactor;
-      if (isr_coef>0)
-        dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+        dp -= rad_coef * deltaFactor * F2 * dsFactor;
+      if (isr_coef > 0)
+        dp -= isr_coef * deltaFactor * pow(F2, 0.75) * sqrt(dsFactor) * gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
       if (sigmaDelta2)
-        *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
-      qx *= (1+dp);
-      qy *= (1+dp);
+        *sigmaDelta2 += sqr(isr_coef * deltaFactor) * pow(F2, 1.5) * dsFactor;
+      qx *= (1 + dp);
+      qy *= (1 + dp);
     }
     xSum += x;
-    nSum ++;
-    if (x>xMax) xMax = x;
-    if (x<xMin) xMin = x;
-    if (iPart>=0)
+    nSum++;
+    if (x > xMax)
+      xMax = x;
+    if (x < xMin)
+      xMin = x;
+    if (iPart >= 0)
       break;
   }
   xFinal = x; /* may be needed for fringeModel==0, for backward compatibility */
-  xAve = xSum/nSum;
+  xAve = xSum / nSum;
 
   /*
   printf("x init, min, max, fin = %le, %le, %le, %le\n", x0, xMin, xMax, x);
   printf("xp init, fin = %le, %le\n", xp0, xp);
   */
 
-  if ((apData && !checkMultAperture(x+dx, y+dy, apData)) ||
-      insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex], 
-                            globalLossCoordOffset>0?coord+globalLossCoordOffset:NULL, 
-                            refTilt,  GLOBAL_LOCAL_MODE_DZ, dZOffset+i_kick*drift, i_kick, n_parts)) {
+  if ((apData && !checkMultAperture(x + dx, y + dy, apData)) ||
+      insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex],
+                            globalLossCoordOffset > 0 ? coord + globalLossCoordOffset : NULL,
+                            refTilt, GLOBAL_LOCAL_MODE_DZ, dZOffset + i_kick * drift, i_kick, n_parts)) {
     coord[0] = x;
     coord[2] = y;
-    free(xpow); free(ypow);
+    free(xpow);
+    free(ypow);
     free(KnL);
     return 0;
   }
 
-  if ((iPart<0 || iPart==n_parts) && (iFinalSlice==n_parts) && edge2MultData && edge2MultData->orders) {
+  if ((iPart < 0 || iPart == n_parts) && (iFinalSlice == n_parts) && edge2MultData && edge2MultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
-    for (iMult=0; iMult<edge2MultData->orders; iMult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edge2MultData->order[iMult], 
+    for (iMult = 0; iMult < edge2MultData->orders; iMult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow,
+                                      edge2MultData->order[iMult],
                                       edge2MultData->KnL[iMult], 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edge2MultData->order[iMult], 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow,
+                                      edge2MultData->order[iMult],
                                       edge2MultData->JnL[iMult], 1);
     }
     edgeMultActive[1] = 1;
   }
-  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+  if ((denom = sqr(1 + dp) - sqr(qx) - sqr(qy)) <= 0) {
     coord[0] = x;
     coord[2] = y;
-    free(xpow); free(ypow);
+    free(xpow);
+    free(ypow);
     free(KnL);
     return 0;
   }
   denom = sqrt(denom);
-  xp = qx/denom;
-  yp = qy/denom;
+  xp = qx / denom;
+  yp = qy / denom;
 
   free(xpow);
   free(ypow);
@@ -864,11 +865,10 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
   coord[2] = y;
   coord[3] = yp;
   if (rad_coef) {
-    p = Po*(1+dp);
-    beta1 = p/sqrt(sqr(p)+1);
-    coord[4] = beta1*(coord[4]/beta0 + 2*s/(beta0+beta1));
-  }
-  else 
+    p = Po * (1 + dp);
+    beta1 = p / sqrt(sqr(p) + 1);
+    coord[4] = beta1 * (coord[4] / beta0 + 2 * s / (beta0 + beta1));
+  } else
     coord[4] += s;
   coord[5] = dp;
 
@@ -877,13 +877,12 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
     return 0;
   }
 #endif
-  if (fabs(x)>COORD_LIMIT || fabs(y)>COORD_LIMIT ||
-      fabs(xp)>SLOPE_LIMIT || fabs(yp)>SLOPE_LIMIT) {
+  if (fabs(x) > COORD_LIMIT || fabs(y) > COORD_LIMIT ||
+      fabs(xp) > SLOPE_LIMIT || fabs(yp) > SLOPE_LIMIT) {
     return 0;
   }
   return 1;
 }
-
 
 #define USE_NEW_SWITCH_CODE 0
 
@@ -899,15 +898,15 @@ void switchRbendPlane(double **particle, long n_part, double alpha, double po)
   tan_alpha = tan(alpha);
   cos_alpha = cos(alpha);
 
-  for (i=0; i<n_part; i++) {
-    magnet_s = particle[i][0]*tan_alpha/( 1.0 - particle[i][1]*tan_alpha );
-    particle[i][0] = (particle[i][0] + particle[i][1]*magnet_s)/cos_alpha;
-    particle[i][2] =  particle[i][2] + particle[i][3]*magnet_s;
+  for (i = 0; i < n_part; i++) {
+    magnet_s = particle[i][0] * tan_alpha / (1.0 - particle[i][1] * tan_alpha);
+    particle[i][0] = (particle[i][0] + particle[i][1] * magnet_s) / cos_alpha;
+    particle[i][2] = particle[i][2] + particle[i][3] * magnet_s;
 
-    particle[i][4] += sqrt(1.0 + sqr(particle[i][1]) + sqr(particle[i][3]))*magnet_s;
+    particle[i][4] += sqrt(1.0 + sqr(particle[i][1]) + sqr(particle[i][3])) * magnet_s;
 
-    particle[i][3] = particle[i][3]/(cos_alpha*(1.0 - particle[i][1]*tan_alpha));
-    particle[i][1] = (particle[i][1] + tan_alpha)/(1.0 - particle[i][1]*tan_alpha);
+    particle[i][3] = particle[i][3] / (cos_alpha * (1.0 - particle[i][1] * tan_alpha));
+    particle[i][1] = (particle[i][1] + tan_alpha) / (1.0 - particle[i][1] * tan_alpha);
   }
 #else
   long i;
@@ -918,81 +917,78 @@ void switchRbendPlane(double **particle, long n_part, double alpha, double po)
   cos_alpha = cos(alpha);
   sin_alpha = sin(alpha);
 
-  for (i=0; i<n_part; i++) {
+  for (i = 0; i < n_part; i++) {
     coord = particle[i];
-    s = coord[0]*tan_alpha/(1-coord[1]*tan_alpha);
-    coord[0] = (coord[0]+coord[1]*s)/cos_alpha;
-    coord[2] = (coord[2]+coord[3]*s);
+    s = coord[0] * tan_alpha / (1 - coord[1] * tan_alpha);
+    coord[0] = (coord[0] + coord[1] * s) / cos_alpha;
+    coord[2] = (coord[2] + coord[3] * s);
     coord[4] += s;
-    d = sqrt(1+sqr(coord[1])+sqr(coord[3]));
-    qx0 = coord[1]*(1+coord[5])/d;
-    qy0 = coord[3]*(1+coord[5])/d;
-    qz0 = (1+coord[5])/d;
-    qx =  qx0*cos_alpha + qz0*sin_alpha;
+    d = sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
+    qx0 = coord[1] * (1 + coord[5]) / d;
+    qy0 = coord[3] * (1 + coord[5]) / d;
+    qz0 = (1 + coord[5]) / d;
+    qx = qx0 * cos_alpha + qz0 * sin_alpha;
     qy = qy0;
-    qz = -qx0*sin_alpha + qz0*cos_alpha;
-    coord[1] = qx/qz;
-    coord[3] = qy/qz;
-    }
+    qz = -qx0 * sin_alpha + qz0 * cos_alpha;
+    coord[1] = qx / qz;
+    coord[3] = qy / qz;
+  }
 #endif
 }
 
-void verticalRbendFringe
-(
- double **particle, long n_part, 
- double alpha, // edge angle relative to beam path
- double rho0,  // bending radius (always positive)
- double K1,    // interior gradient
- double K2,    // interior sextupole
- double gK,    // conventional soft-edge parameter
- double *fringeIntKn, // fringe integrals: K0, I0, K2, I1, K4, K5, K6, K7
- short angleSign,      // -1 or 1
- short isExit, 
- short fringeModel, 
- short order
- )
-{
+void verticalRbendFringe(
+  double **particle, long n_part,
+  double alpha,        // edge angle relative to beam path
+  double rho0,         // bending radius (always positive)
+  double K1,           // interior gradient
+  double K2,           // interior sextupole
+  double gK,           // conventional soft-edge parameter
+  double *fringeIntKn, // fringe integrals: K0, I0, K2, I1, K4, K5, K6, K7
+  short angleSign,     // -1 or 1
+  short isExit,
+  short fringeModel,
+  short order) {
 
-  if (fringeModel==0) {
+  if (fringeModel == 0) {
     // old method
     long i;
     double c, d, e;
-    if (order<1)
+    if (order < 1)
       return;
     c = d = e = 0;
-    if (gK!=0) 
-      alpha -= gK/fabs(rho0)/cos(alpha)*(1+sqr(sin(alpha)));
-    c = sin(alpha)/rho0;
-    if (order>1)
-      d = sin(alpha)*K1;
-    if (order>2)
-      e = sin(alpha)*K2/2;
-    for (i=0; i<n_part; i++) {
+    if (gK != 0)
+      alpha -= gK / fabs(rho0) / cos(alpha) * (1 + sqr(sin(alpha)));
+    c = sin(alpha) / rho0;
+    if (order > 1)
+      d = sin(alpha) * K1;
+    if (order > 2)
+      e = sin(alpha) * K2 / 2;
+    for (i = 0; i < n_part; i++) {
       double x, y;
       x = particle[i][0];
       y = particle[i][2];
-      particle[i][3] -= y*(c + d*x + e*(x*x-y*y))/(1+particle[i][5]);
+      particle[i][3] -= y * (c + d * x + e * (x * x - y * y)) / (1 + particle[i][5]);
     }
   } else {
     double x1, px1, y1, py1, tau1, delta;
     double x2, px2, y2, py2, tau2;
-    
+
     double intK0, intK2, intK4, intK5, intK6, intK7, intI0, intI1;
     double invRhoPlus, invRhoMinus, K1plus, K1minus;
     double tant, sect, sect3, sint, temp;
     double focX0, focXd, focY0, focYd, invP;
     double dispX, kickPx, expT;
-  
+
     long i;
     if (isExit)
       alpha = -alpha;
-    
+
     // Per R. Lindberg, some of the fringe integrals change sign with the sign of the bending angle.
-    intK0 = fringeIntKn[0]*angleSign;
+    intK0 = fringeIntKn[0] * angleSign;
     intK2 = fringeIntKn[2];
-    intK4 = fringeIntKn[4]*angleSign;
-    intK5 = fringeIntKn[5]*angleSign;
-    intK6 = fringeIntKn[6]*angleSign;
+    intK4 = fringeIntKn[4] * angleSign;
+    intK5 = fringeIntKn[5] * angleSign;
+    intK6 = fringeIntKn[6] * angleSign;
     intK7 = fringeIntKn[7];
     // shamelessly packed the In integrals in the slots unused by the Kn's
     intI0 = fringeIntKn[1];
@@ -1002,54 +998,49 @@ void verticalRbendFringe
       // exit fringe
       K1minus = K1;
       K1plus = 0;
-      invRhoMinus = 1/rho0;
+      invRhoMinus = 1 / rho0;
       invRhoPlus = 0;
     } else {
       // entrance fringe
       K1plus = K1;
       K1minus = 0;
-      invRhoPlus = 1/rho0;
+      invRhoPlus = 1 / rho0;
       invRhoMinus = 0;
     }
-    
+
     tant = tan(alpha);
     sint = sin(alpha);
-    sect = 1.0/cos(alpha);
-    sect3 = sect*sect*sect;
-    focX0 = -tant*intK5 - 0.5*intI0*(2.0 - tant*tant);
-    focXd = sect3*intK7;
-    focY0 = -tant*(invRhoPlus - invRhoMinus) + tant*sect*sect*intK5 + 0.5*intI0*(2.0 + tant*tant);
-    focYd = sect3*((1.0+sint*sint)*intK2 - intK7);
-    for (i=0; i<n_part; i++) {
-      x1  = particle[i][0];
-      temp = sqrt( 1.0 + sqr(particle[i][1]) + sqr(particle[i][3]) );
-      px1 = (1.0 + particle[i][5])*particle[i][1]/temp;
-      y1  = particle[i][2];
-      py1 = (1.0 + particle[i][5])*particle[i][3]/temp;
-      tau1 = -particle[i][4] + sint*x1;
+    sect = 1.0 / cos(alpha);
+    sect3 = sect * sect * sect;
+    focX0 = -tant * intK5 - 0.5 * intI0 * (2.0 - tant * tant);
+    focXd = sect3 * intK7;
+    focY0 = -tant * (invRhoPlus - invRhoMinus) + tant * sect * sect * intK5 + 0.5 * intI0 * (2.0 + tant * tant);
+    focYd = sect3 * ((1.0 + sint * sint) * intK2 - intK7);
+    for (i = 0; i < n_part; i++) {
+      x1 = particle[i][0];
+      temp = sqrt(1.0 + sqr(particle[i][1]) + sqr(particle[i][3]));
+      px1 = (1.0 + particle[i][5]) * particle[i][1] / temp;
+      y1 = particle[i][2];
+      py1 = (1.0 + particle[i][5]) * particle[i][3] / temp;
+      tau1 = -particle[i][4] + sint * x1;
       delta = particle[i][5];
-      px1 = px1 - (1.0 + delta)*sint;
-      invP = 1.0/(1.0 + delta);
+      px1 = px1 - (1.0 + delta) * sint;
+      invP = 1.0 / (1.0 + delta);
 
       /** Symplectic update for Linear and Zeroth Order terms **/
-      temp = sect*intI1*invP;
-      if(fabs(temp) < 1.0e-20)
-	temp = 1.0e-20;
-      dispX = -sect*intK0*invP;
-      kickPx = - tant*(intI1 + 0.5*intK4);
+      temp = sect * intI1 * invP;
+      if (fabs(temp) < 1.0e-20)
+        temp = 1.0e-20;
+      dispX = -sect * intK0 * invP;
+      kickPx = -tant * (intI1 + 0.5 * intK4);
       expT = exp(temp);
 
-      x2 = expT*x1 + dispX*(expT - 1.0)/temp;
-      y2 = y1/expT;
-      px2 = px1/expT + kickPx*(1.0 - 1.0/expT)/temp
-	+ focX0*( x1*(expT - 1.0/expT)/(2.0*temp) + dispX*(expT + 1.0/expT - 2.0)/(2.0*temp*temp) );
-      py2 = expT*py1 + y1*(focY0 + focYd*invP)*(expT - 1.0/expT)/(2.0*temp);
-      tau2 = tau1 + invP*( kickPx*(temp*x1 + dispX)*(1.0 + temp - expT)/(temp*temp) - px1*dispX - (px1*x1 - py1*y1)*temp
-			   + (0.5*focYd*invP + focY0*(1.0/(expT*expT) - 1.0 + 2.0*temp)/(4.0*temp))*y1*y1
-			   - x1*x1*focX0*(expT*expT - 1.0 - 2.0*temp)/(4.0*temp)
-			   - x1*dispX*focX0*(expT*expT - 2.0*expT + 1.0)/(2.0*temp*temp)
-			   - dispX*dispX*focX0*(expT*expT - 4.0*expT + 2.0*temp + 3.0)/(4.0*temp*temp*temp) );
-    
+      x2 = expT * x1 + dispX * (expT - 1.0) / temp;
+      y2 = y1 / expT;
+      px2 = px1 / expT + kickPx * (1.0 - 1.0 / expT) / temp + focX0 * (x1 * (expT - 1.0 / expT) / (2.0 * temp) + dispX * (expT + 1.0 / expT - 2.0) / (2.0 * temp * temp));
+      py2 = expT * py1 + y1 * (focY0 + focYd * invP) * (expT - 1.0 / expT) / (2.0 * temp);
+      tau2 = tau1 + invP * (kickPx * (temp * x1 + dispX) * (1.0 + temp - expT) / (temp * temp) - px1 * dispX - (px1 * x1 - py1 * y1) * temp + (0.5 * focYd * invP + focY0 * (1.0 / (expT * expT) - 1.0 + 2.0 * temp) / (4.0 * temp)) * y1 * y1 - x1 * x1 * focX0 * (expT * expT - 1.0 - 2.0 * temp) / (4.0 * temp) - x1 * dispX * focX0 * (expT * expT - 2.0 * expT + 1.0) / (2.0 * temp * temp) - dispX * dispX * focX0 * (expT * expT - 4.0 * expT + 2.0 * temp + 3.0) / (4.0 * temp * temp * temp));
+
       /* x2 += 0.5*sect3*( intK5*(x1*x1 - y1*y1) + y1*y1*(invRhoPlus-invRhoMinus) )*invP;
       y2 += -sect*intK5*x1*y1*invP;
       px2 += -0.25*tant*(K1plus - K1minus)*(x1*x1 + y1*y1) - 0.5*intK6*(x1*x1 - sect*sect*y1*y1)
@@ -1059,56 +1050,54 @@ void verticalRbendFringe
       tau2 += ( sect*intK5*py1*x1*y1
       + sect3*(intK5*px1*(y1*y1-x1*x1) - px1*y1*y1*(invRhoPlus-invRhoMinus)) )*invP*invP; */
 
-      if (order>=2) {
+      if (order >= 2) {
         /** Symplectic update for second order terms **/
         x1 = x2;
-        y1 = y2*exp(-sect*intK5*x2*invP);
-        px1 = px2 - (0.5*intK6 + 0.25*tant*(K1plus-K1minus))*x2*x2 + sect*intK5*invP*py2*y2;
-        py1 = py2*exp(sect*intK5*x2*invP);
-        tau1 = tau2 + sect*intK5*invP*invP*py2*x2*y2;
-        
-        x2 = x1 - 0.5*sect3*(intK5 - (invRhoPlus-invRhoMinus))*invP*y1*y1;
+        y1 = y2 * exp(-sect * intK5 * x2 * invP);
+        px1 = px2 - (0.5 * intK6 + 0.25 * tant * (K1plus - K1minus)) * x2 * x2 + sect * intK5 * invP * py2 * y2;
+        py1 = py2 * exp(sect * intK5 * x2 * invP);
+        tau1 = tau2 + sect * intK5 * invP * invP * py2 * x2 * y2;
+
+        x2 = x1 - 0.5 * sect3 * (intK5 - (invRhoPlus - invRhoMinus)) * invP * y1 * y1;
         y2 = y1;
-        px2 = px1 + ( 0.5*sect*sect*intK6 - 0.25*tant*(K1plus-K1minus) )*y1*y1;
-        py2 = py1 + sect3*( intK5 - (invRhoPlus - invRhoMinus) )*invP*px1*y1 + (sect*sect*intK6 - 0.5*tant*(K1plus-K1minus))*x1*y1;
-        tau2 = tau1 + 0.5*sect3*(intK5 - (invRhoPlus - invRhoMinus))*invP*invP*y1*y1
-          *( px1 + (0.25*sect*sect*intK6 - 0.125*tant*(K1plus - K1minus))*y1*y1 );
-        
-        temp = -0.5*sect3*intK5*invP*x2;
-        tau2 += temp*invP*px2*x2;
+        px2 = px1 + (0.5 * sect * sect * intK6 - 0.25 * tant * (K1plus - K1minus)) * y1 * y1;
+        py2 = py1 + sect3 * (intK5 - (invRhoPlus - invRhoMinus)) * invP * px1 * y1 + (sect * sect * intK6 - 0.5 * tant * (K1plus - K1minus)) * x1 * y1;
+        tau2 = tau1 + 0.5 * sect3 * (intK5 - (invRhoPlus - invRhoMinus)) * invP * invP * y1 * y1 * (px1 + (0.25 * sect * sect * intK6 - 0.125 * tant * (K1plus - K1minus)) * y1 * y1);
+
+        temp = -0.5 * sect3 * intK5 * invP * x2;
+        tau2 += temp * invP * px2 * x2;
         temp = 1.0 + temp;
-        x2 = x2/temp;
-        px2 = px2*temp*temp;
+        x2 = x2 / temp;
+        px2 = px2 * temp * temp;
       }
 
       particle[i][0] = x2;
       particle[i][2] = y2;
-      px2 = px2 + (1.0 + delta)*sint;
-      temp = sqrt( sqr(1+delta) - sqr(px2) - sqr(py2) );
-      particle[i][1] = px2/temp;
-      particle[i][3] = py2/temp;
-      particle[i][4] = -tau2 + sint*x2;
+      px2 = px2 + (1.0 + delta) * sint;
+      temp = sqrt(sqr(1 + delta) - sqr(px2) - sqr(py2));
+      particle[i][1] = px2 / temp;
+      particle[i][3] = py2 / temp;
+      particle[i][4] = -tau2 + sint * x2;
     }
   }
 }
 
-double ccbend_trajectory_error(double *value, long *invalid)
-{
+double ccbend_trajectory_error(double *value, long *invalid) {
   static double **particle = NULL;
   double result;
 
   *invalid = 0;
-  if ((ccbendCopy.fseOffset = value[0])>=1 || value[0]<=-1) {
+  if ((ccbendCopy.fseOffset = value[0]) >= 1 || value[0] <= -1) {
     *invalid = 1;
     return DBL_MAX;
   }
-  if (value[1]>=1 || value[1]<=-1) {
+  if (value[1] >= 1 || value[1] <= -1) {
     *invalid = 1;
     return DBL_MAX;
   }
-  if (!particle) 
-    particle = (double**)czarray_2d(sizeof(**particle), 1, totalPropertiesPerParticle);
-  memset(particle[0], 0, totalPropertiesPerParticle*sizeof(**particle));
+  if (!particle)
+    particle = (double **)czarray_2d(sizeof(**particle), 1, totalPropertiesPerParticle);
+  memset(particle[0], 0, totalPropertiesPerParticle * sizeof(**particle));
   ccbendCopy.dxOffset = value[1];
   if (ccbendCopy.compensateKn)
     ccbendCopy.KnDelta = -ccbendCopy.fseOffset;
@@ -1118,10 +1107,10 @@ double ccbend_trajectory_error(double *value, long *invalid)
     return DBL_MAX;
   }
   result = 0;
-  if (optimizationFlags&OPTIMIZE_X)
+  if (optimizationFlags & OPTIMIZE_X)
     result += fabs(xError);
-  if (optimizationFlags&OPTIMIZE_XP)
-    result += fabs(xpError/ccbendCopy.angle);
+  if (optimizationFlags & OPTIMIZE_XP)
+    result += fabs(xpError / ccbendCopy.angle);
   /*
   printf("part[0][0] = %le, part[0][1] = %le, xInitial=%le, xpInitial=%le, xFinal = %le, xError = %le, xpError = %le, result = %le\n", 
          particle[0][0], particle[0][1], xInitial, xpInitial, xFinal, xError, xpError, result); fflush(stdout);
@@ -1145,54 +1134,54 @@ VMATRIX *determinePartialCcbendLinearMatrix(CCBEND *ccbend, double *startingCoor
 #if USE_MPI
   long notSinglePart_saved = notSinglePart;
 
-  /* All the particles should do the same thing for this routine. */	
+  /* All the particles should do the same thing for this routine. */
   notSinglePart = 0;
 #endif
-   		 
-  coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, totalPropertiesPerParticle);
 
-  n_track = 4*6+1;
-  for (j=0; j<6; j++)
-    for (i=0; i<n_track; i++)
+  coord = (double **)czarray_2d(sizeof(**coord), 1 + 6 * 4, totalPropertiesPerParticle);
+
+  n_track = 4 * 6 + 1;
+  for (j = 0; j < 6; j++)
+    for (i = 0; i < n_track; i++)
       coord[i][j] = startingCoord ? startingCoord[j] : 0;
 
   /* particles 0 and 1 are for d/dx */
-  coord[0][0] += stepSize[0] ;
-  coord[1][0] -= stepSize[0] ;
+  coord[0][0] += stepSize[0];
+  coord[1][0] -= stepSize[0];
   /* particles 2 and 3 are for d/dxp */
   coord[2][1] += stepSize[1];
   coord[3][1] -= stepSize[1];
   /* particles 4 and 5 are for d/dy */
-  coord[4][2] += stepSize[2] ;
-  coord[5][2] -= stepSize[2] ;
+  coord[4][2] += stepSize[2];
+  coord[5][2] -= stepSize[2];
   /* particles 6 and 7 are for d/dyp */
-  coord[6][3] += stepSize[3] ;
-  coord[7][3] -= stepSize[3] ;
+  coord[6][3] += stepSize[3];
+  coord[7][3] -= stepSize[3];
   /* particles 8 and 9 are for d/ds */
-  coord[8][4] += stepSize[4] ;
-  coord[9][4] -= stepSize[4] ;
+  coord[8][4] += stepSize[4];
+  coord[9][4] -= stepSize[4];
   /* particles 10 and 11 are for d/delta */
   coord[10][5] += stepSize[5];
   coord[11][5] -= stepSize[5];
 
   /* particles 12 and 13 are for d/dx */
-  coord[12][0] += 3*stepSize[0] ;
-  coord[13][0] -= 3*stepSize[0] ;
+  coord[12][0] += 3 * stepSize[0];
+  coord[13][0] -= 3 * stepSize[0];
   /* particles 14 and 15 are for d/dxp */
-  coord[14][1] += 3*stepSize[1];
-  coord[15][1] -= 3*stepSize[1];
+  coord[14][1] += 3 * stepSize[1];
+  coord[15][1] -= 3 * stepSize[1];
   /* particles 16 and 17 are for d/dy */
-  coord[16][2] += 3*stepSize[2] ;
-  coord[17][2] -= 3*stepSize[2] ;
+  coord[16][2] += 3 * stepSize[2];
+  coord[17][2] -= 3 * stepSize[2];
   /* particles 18 and 19 are for d/dyp */
-  coord[18][3] += 3*stepSize[3] ;
-  coord[19][3] -= 3*stepSize[3] ;
+  coord[18][3] += 3 * stepSize[3];
+  coord[19][3] -= 3 * stepSize[3];
   /* particles 20 and 21 are for d/ds */
-  coord[20][4] += 3*stepSize[4] ;
-  coord[21][4] -= 3*stepSize[4] ;
+  coord[20][4] += 3 * stepSize[4];
+  coord[21][4] -= 3 * stepSize[4];
   /* particles 22 and 23 are for d/delta */
-  coord[22][5] += 3*stepSize[5];
-  coord[23][5] -= 3*stepSize[5];
+  coord[22][5] += 3 * stepSize[5];
+  coord[23][5] -= 3 * stepSize[5];
   /* particle n_track-1 is the reference particle (coordinates set above) */
 
   /* save radiation-related parameters */
@@ -1204,7 +1193,7 @@ VMATRIX *determinePartialCcbendLinearMatrix(CCBEND *ccbend, double *startingCoor
 
   ccbend->isr = ltmp1;
   ccbend->synch_rad = ltmp2;
-  
+
   M = tmalloc(sizeof(*M));
   M->order = 1;
   initialize_matrices(M, M->order);
@@ -1214,31 +1203,31 @@ VMATRIX *determinePartialCcbendLinearMatrix(CCBEND *ccbend, double *startingCoor
   /* Rotate the coordinates into the local frame by assuming that the reference particle
    * is on the reference trajectory. Not valid if errors are present, but not a bad approximation presumably.
    */
-  for (j=0; j<2; j++)
-    angle0[j] = atan(coord[n_track-1][2*j+1]);
-  for (i=0; i<n_track; i++) {
-    for (j=0; j<2; j++)
-      coord[i][2*j] = coord[i][2*j] - coord[n_track-1][2*j];
-    for (j=0; j<2; j++)
-      coord[i][2*j+1] = tan(atan(coord[i][2*j+1])-angle0[j]);
-    coord[i][4] -= coord[n_track-1][4];
+  for (j = 0; j < 2; j++)
+    angle0[j] = atan(coord[n_track - 1][2 * j + 1]);
+  for (i = 0; i < n_track; i++) {
+    for (j = 0; j < 2; j++)
+      coord[i][2 * j] = coord[i][2 * j] - coord[n_track - 1][2 * j];
+    for (j = 0; j < 2; j++)
+      coord[i][2 * j + 1] = tan(atan(coord[i][2 * j + 1]) - angle0[j]);
+    coord[i][4] -= coord[n_track - 1][4];
   }
-  
-  for (i=0; i<6; i++) {
+
+  for (i = 0; i < 6; i++) {
     /* i indexes the dependent quantity */
 
     /* Determine C[i] */
-    C[i] = coord[n_track-1][i];
+    C[i] = coord[n_track - 1][i];
 
     /* Compute R[i][j] */
-    for (j=0; j<6; j++) {
+    for (j = 0; j < 6; j++) {
       /* j indexes the initial coordinate value */
-      R[i][j] = 
-        (27*(coord[2*j][i]-coord[2*j+1][i])-(coord[2*j+12][i]-coord[2*j+13][i]))/(48*stepSize[j]);
+      R[i][j] =
+        (27 * (coord[2 * j][i] - coord[2 * j + 1][i]) - (coord[2 * j + 12][i] - coord[2 * j + 13][i])) / (48 * stepSize[j]);
     }
   }
 
-  free_czarray_2d((void**)coord, 1+4*6, totalPropertiesPerParticle);
+  free_czarray_2d((void **)coord, 1 + 4 * 6, totalPropertiesPerParticle);
 
 #if USE_MPI
   notSinglePart = notSinglePart_saved;
@@ -1250,8 +1239,7 @@ VMATRIX *determinePartialCcbendLinearMatrix(CCBEND *ccbend, double *startingCoor
 
 void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double pCentral,
                                  double eta0, double etap0, double beta0, double alpha0,
-                                 double *I1, double *I2, double *I3, double *I4, double *I5, ELEMENT_LIST *elem)
-{
+                                 double *I1, double *I2, double *I3, double *I4, double *I5, ELEMENT_LIST *elem) {
   long iSlice;
   VMATRIX *M;
   double gamma0, K1;
@@ -1261,7 +1249,7 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
 #ifdef DEBUG
   double s0;
   static FILE *fpcr = NULL;
-  if (fpcr==NULL) {
+  if (fpcr == NULL) {
     fpcr = fopen("ccbend-RI.sdds", "w");
     fprintf(fpcr, "SDDS1\n&column name=Slice type=short &end\n&column name=s type=double units=m &end\n");
     fprintf(fpcr, "&column name=betax type=double units=m &end\n");
@@ -1274,19 +1262,19 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
   s0 = elem->end_pos - ccbend->length;
   fprintf(fpcr, "0 %le %le %le %le %le %s\n", s0, beta0, eta0, etap0, alpha0, elem->name);
 #endif
-  
+
   if (ccbend->tilt)
     bombElegant("Can't add radiation integrals for tilted CCBEND\n", NULL);
 
-  gamma0 = (1+alpha0*alpha0)/beta0;
+  gamma0 = (1 + alpha0 * alpha0) / beta0;
 
   beta1 = beta0;
   eta1 = eta0;
   etap1 = etap0;
   alpha1 = alpha0;
-  H1 = (eta1*eta1 + sqr(beta1*etap1 + alpha1*eta1))/beta1;
-  ds = ccbend->length/ccbend->nSlices; /* not really right... */
-  for (iSlice=1; iSlice<=ccbend->nSlices; iSlice++) {
+  H1 = (eta1 * eta1 + sqr(beta1 * etap1 + alpha1 * eta1)) / beta1;
+  ds = ccbend->length / ccbend->nSlices; /* not really right... */
+  for (iSlice = 1; iSlice <= ccbend->nSlices; iSlice++) {
     /* Determine matrix from start of element to exit of slice iSlice */
     M = determinePartialCcbendLinearMatrix(ccbend, startingCoord, pCentral, iSlice);
     C = M->R[0][0];
@@ -1295,10 +1283,10 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
     Sp = M->R[1][1];
 
     /* propagate lattice functions from start of element to exit of this slice */
-    beta2 = (sqr(C)*beta0 - 2*C*S*alpha0 + sqr(S)*gamma0);
-    alpha2 = -C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0;
-    eta2 = C*eta0 + S*etap0 + M->R[0][5];
-    etap2 = Cp*eta0 + Sp*etap0 + M->R[1][5];
+    beta2 = (sqr(C) * beta0 - 2 * C * S * alpha0 + sqr(S) * gamma0);
+    alpha2 = -C * Cp * beta0 + (Sp * C + S * Cp) * alpha0 - S * Sp * gamma0;
+    eta2 = C * eta0 + S * etap0 + M->R[0][5];
+    etap2 = Cp * eta0 + Sp * etap0 + M->R[1][5];
 #ifdef DEBUG
     s0 += ds;
     fprintf(fpcr, "%ld %le %le %le %le %le %s\n", iSlice, s0, beta2, eta2, etap2, alpha2, elem->name);
@@ -1308,16 +1296,16 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
      * lastRho is saved by the routine track_through_ccbend(). Since determinePartialCcbendLinearMatrix()
      * puts the reference particle first, it is appropriate to the central trajectory. 
      */
-    *I1 += ds*(eta1+eta2)/2/lastRho;
-    *I2 += ds/sqr(lastRho);
-    *I3 += ds/ipow(fabs(lastRho), 3);
+    *I1 += ds * (eta1 + eta2) / 2 / lastRho;
+    *I2 += ds / sqr(lastRho);
+    *I3 += ds / ipow(fabs(lastRho), 3);
     /* Compute effective K1 including the sextupole effect plus rotation.
      * lastX and lastXp are saved by track_through_ccbend().
      */
-    K1 = (ccbend->K1+(lastX-ccbend->dxOffset)*ccbend->K2)*cos(atan(lastXp));
-    *I4 += ds*(eta1+eta2)/2*(1/ipow(lastRho, 3) + 2*K1/lastRho); 
-    H2 = (eta2*eta2 + sqr(beta2*etap2 + alpha2*eta2))/beta2;
-    *I5 += ds/ipow(fabs(lastRho), 3)*(H1+H2)/2;
+    K1 = (ccbend->K1 + (lastX - ccbend->dxOffset) * ccbend->K2) * cos(atan(lastXp));
+    *I4 += ds * (eta1 + eta2) / 2 * (1 / ipow(lastRho, 3) + 2 * K1 / lastRho);
+    H2 = (eta2 * eta2 + sqr(beta2 * etap2 + alpha2 * eta2)) / beta2;
+    *I5 += ds / ipow(fabs(lastRho), 3) * (H1 + H2) / 2;
 
     /* Save lattice functions as values at start of next slice */
     beta1 = beta2;

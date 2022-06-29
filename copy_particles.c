@@ -16,30 +16,27 @@
 #include "track.h"
 
 void copy_particles(
-    double **copy,
-    double **original,
-    long n_particles
-    )
-{
-    register long ip, ic;
-    double *cptr, *optr;
+  double **copy,
+  double **original,
+  long n_particles) {
+  register long ip, ic;
+  double *cptr, *optr;
 
-    log_entry("copy_particles");
-    if (!copy)
-        bombElegant("can't copy particles--target is NULL pointer (copy_particles)", NULL);
-    if (!original)
-        bombElegant("can't copy particles--source is NULL pointer (copy_particles)", NULL);
+  log_entry("copy_particles");
+  if (!copy)
+    bombElegant("can't copy particles--target is NULL pointer (copy_particles)", NULL);
+  if (!original)
+    bombElegant("can't copy particles--source is NULL pointer (copy_particles)", NULL);
 
-    for (ip=n_particles-1; ip>=0; ip--) {
-        cptr = *copy++;
-        optr = *original++;
-        if (!cptr)
-            bombElegant("element of target array is NULL pointer (copy_particles)", NULL);
-        if (!optr)
-            bombElegant("element of source array is NULL pointer (copy_particles)", NULL);
-        for (ic=6; ic>=0; ic--)
-            *cptr++ = *optr++;
-        }
-    log_exit("copy_particles");
-    }
- 
+  for (ip = n_particles - 1; ip >= 0; ip--) {
+    cptr = *copy++;
+    optr = *original++;
+    if (!cptr)
+      bombElegant("element of target array is NULL pointer (copy_particles)", NULL);
+    if (!optr)
+      bombElegant("element of source array is NULL pointer (copy_particles)", NULL);
+    for (ic = 6; ic >= 0; ic--)
+      *cptr++ = *optr++;
+  }
+  log_exit("copy_particles");
+}

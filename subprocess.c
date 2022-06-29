@@ -13,23 +13,20 @@
  */
 #include <stdio.h>
 #if defined(_WIN32)
-#include <process.h>
+#  include <process.h>
 #else
-#include <unistd.h>
+#  include <unistd.h>
 #endif
 #include "mdb.h"
 #include "track.h"
 #include "subprocess.h"
 #include <signal.h>
 
-
 /* dummy signal handler for use with sigpause */
-void subprocess_sigusr1()
-{
+void subprocess_sigusr1() {
 }
 
-void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
-{
+void run_subprocess(NAMELIST_TEXT *nltext, RUN *run) {
   static char buffer[1024];
   char *ptr, *ptr0;
 
@@ -38,22 +35,22 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  if (processNamelist(&subprocess, nltext)==NAMELIST_ERROR)
+  if (processNamelist(&subprocess, nltext) == NAMELIST_ERROR)
     bombElegant(NULL, NULL);
-  if (echoNamelists) print_namelist(stdout, &subprocess);
+  if (echoNamelists)
+    print_namelist(stdout, &subprocess);
 
   if (command) {
     buffer[0] = 0;
     ptr0 = command;
-    while ((ptr=strstr(ptr0, "%s"))) {
-      if (ptr!=command && *(ptr-1)=='%') {
-        *(ptr-1) = 0;
+    while ((ptr = strstr(ptr0, "%s"))) {
+      if (ptr != command && *(ptr - 1) == '%') {
+        *(ptr - 1) = 0;
         strcat(buffer, ptr0);
         strcat(buffer, "%s");
         ptr += 2;
         ptr0 = ptr;
-      }
-      else {
+      } else {
         if (!run || !run->rootname)
           bombElegant("rootname must be initialized prior to subprocess execution if %s substitution is used", NULL);
         *ptr = 0;
@@ -72,12 +69,11 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
   log_exit("run_subprocess");
 }
 
-void executeCshCommand(char *cmd)
-{
+void executeCshCommand(char *cmd) {
   FILE *fp;
   char *filename;
   char cmd2[1000];
-  
+
 #if defined(CONDOR_COMPILE)
   _condor_ckpt_disable();
 #endif
@@ -95,4 +91,3 @@ void executeCshCommand(char *cmd)
   _condor_ckpt_enable();
 #endif
 }
-
