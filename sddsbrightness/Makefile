@@ -67,6 +67,9 @@ ifeq ($(EPICS_HOST_ARCH),linux-x86_64)
  ifeq (edison, $(findstring edison, $(HOSTNAME)))
   F77 = ftn -m64 -ffixed-line-length-132
  endif
+ ifeq (icc, $(findstring icc, $(CC)))
+  F77 = ifx -m64 -extend-source 132 -nofor-main
+ endif
 endif
 
 ifeq ($(EPICS_HOST_ARCH),linux-ppc64)
@@ -84,6 +87,7 @@ endif
 ifeq ($(EPICS_HOST_ARCH),windows-x64)
  F77 = gfortran -m64 -ffixed-line-length-132
 endif
+
 
 #RATIONAL = purify
 #RATIONAL = quantify
