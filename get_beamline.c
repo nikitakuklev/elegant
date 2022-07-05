@@ -676,6 +676,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     totalElements++;
     if (entity_description[eptr->type].flags & MATRIX_TRACKING)
       lptr->flags |= BEAMLINE_MATRICES_NEEDED;
+    if (eptr->type==T_CWIGGLER)
+      determineCWigglerEndFlags((CWIGGLER*)eptr->p_elem, eptr);
     eptr = eptr->succ;
   }
 
@@ -2115,5 +2117,38 @@ void modify_for_backtracking(ELEMENT_LIST *eptr) {
       free(eptr);
       eptr = NULL;
     }
+  }
+}
+
+void determineCWigglerEndFlags(CWIGGLER *cwig, ELEMENT_LIST *eptr0)
+{
+  ELEMENT_LIST *eptr;
+
+  eptr = eptr0->pred;
+  cwig->endFlag[0] = 1;
+  while (eptr) {
+    if (eptr->type==T_CWIGGLER) {
+      cwig->endFlag[0] = 0;
+      break;
+    }
+    if (eptr->type!=T_MARK && eptr->type!=T_WATCH) {
+      cwig->endFlag[0] = 1;
+      break;
+    } else
+      eptr = eptr->pred;
+  }
+
+  eptr = eptr0->succ;
+  cwig->endFlag[1] = 1;
+  while (eptr) {
+    if (eptr->type==T_CWIGGLER) {
+      cwig->endFlag[1] = 0;
+      break;
+    }
+    if (eptr->type!=T_MARK && eptr->type!=T_WATCH) {
+      cwig->endFlag[1] = 1;
+      break;
+    } else
+      eptr = eptr->succ;
   }
 }

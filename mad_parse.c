@@ -450,8 +450,18 @@ long expand_phys(
           entity_description[elem_list->type].flags & HAS_LENGTH &&
           (length = *(double *)(elem_list->p_elem)) > 0) {
         div = elementDivisions(entity, entity_name[elem_list->type], length);
-        if (div > 1)
+        if (div > 1) {
           elem_list->divisions = div;
+          if (elem_list->type==T_CWIGGLER) {
+            CWIGGLER *cwig;
+            cwig = (CWIGGLER*)(elem_list->p_elem);
+            if (!(cwig->sinusoidal))
+              bombElegant("CWIGGLER element can't be divided unless SINUSOIDAL=1", NULL);
+            if (cwig->periods%div!=0)
+              bombElegantVA("Can't divide %ld-period CWIGGLER %s into %ld parts. Must divide at period boundaries.",
+                            cwig->periods, elem_list->name, div);
+          }
+        }
       }
 #ifdef DEBUG
       fprintf(stderr, "Dividing %s %ld times\n",
@@ -565,9 +575,14 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
   if (divisions > 1) {
     if (division == 0)
       e1->firstOfDivGroup = 1;
+    /* TODO: use PARAM_DIVISION_RELATED to decide which parameters to divide */
     if (entity_description[e1->type].flags & HAS_LENGTH)
       *(double *)(e1->p_elem) /= divisions;
-    if (e1->type == T_RFCA) {
+    if (e1->type == T_CWIGGLER) {
+      CWIGGLER *cwig;
+      cwig = (CWIGGLER*)e1->p_elem;
+      cwig->periods /= divisions;
+    } else if (e1->type == T_RFCA) {
       RFCA *rfca;
       rfca = (RFCA *)e1->p_elem;
       rfca->volt /= divisions;
@@ -1783,3 +1798,4 @@ void configureLGBendGeometry(LGBEND *lgbend) {
   }
   lgbend->length = arcLength;
 }
+

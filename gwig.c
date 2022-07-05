@@ -670,3 +670,4 @@ double GWigPoleFactor(struct gwig *pWig, double z) {
     return pWig->cwiggler->poleFactor[1];
   return pWig->cwiggler->poleFactor[0];
 }
+

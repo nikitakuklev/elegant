@@ -46,7 +46,8 @@ void GWigInit(struct gwig *Wig,
               double *zEndPointV,  /* endpoint data for vertical harmonics (Bx) */
               double pCentral,     /* central momentum (beta*gamma) */
               long synchRad,       /* classical radiation ? */
-              long isr             /* quantum (incoherent) radiation ? */
+              long isr,            /* quantum (incoherent) radiation ? */
+              short endFlag0, short endFlag1
 ) {
   double *tmppr;
   int i;
@@ -71,14 +72,26 @@ void GWigInit(struct gwig *Wig,
   Wig->zStartV = zEndPointV[0];
   Wig->zEndV = zEndPointV[1];
 
-  /* Boundaries of first, second, penultimate, and last poles */
-  Wig->z1 = Wig->zStartH + Wig->Lw / 4.0;
-  Wig->z2 = Wig->zStartH + 3 * Wig->Lw / 4.0;
-  Wig->z3 = Wig->zStartH + 5 * Wig->Lw / 4.0;
-  /* The 0.25 Lw/N term ensures that rounding error doesn't mess things up in comparisons in GWigPoleFactor() */
-  Wig->z4 = Wig->zEndH - 5 * Wig->Lw / 4.0 - 0.25 * Wig->Lw / Nstep;
-  Wig->z5 = Wig->zEndH - 3 * Wig->Lw / 4.0 - 0.25 * Wig->Lw / Nstep;
-  Wig->z6 = Wig->zEndH - Wig->Lw / 4.0 - 0.25 * Wig->Lw / Nstep;
+  /* Boundaries of first, second, third poles */
+  if (endFlag0) {
+    Wig->z1 = Wig->zStartH + Wig->Lw / 4.0;
+    Wig->z2 = Wig->zStartH + 3 * Wig->Lw / 4.0;
+    Wig->z3 = Wig->zStartH + 5 * Wig->Lw / 4.0;
+  } else {
+    Wig->z1 = Wig->z2 = Wig->z3 = -DBL_MAX;
+    Wig->zStartH = Wig->zStartV = MIN(Wig->zStartH, Wig->zStartV);
+  }
+
+  /* Boundaries of last, second-to-last, and third-to-last poles */
+  if (endFlag1) {
+    /* The 0.25 Lw/N term ensures that rounding error doesn't mess things up in comparisons in GWigPoleFactor() */
+    Wig->z4 = Wig->zEndH - 5 * Wig->Lw / 4.0 - 0.25 * Wig->Lw / Nstep;
+    Wig->z5 = Wig->zEndH - 3 * Wig->Lw / 4.0 - 0.25 * Wig->Lw / Nstep;
+    Wig->z6 = Wig->zEndH - Wig->Lw / 4.0 - 0.25 * Wig->Lw / Nstep;
+  } else {
+    Wig->z4 = Wig->z5 = Wig->z6 = DBL_MAX;
+    Wig->zEndH = Wig->zEndV = MAX(Wig->zEndH, Wig->zEndV);
+  }
 
   if ((Wig->sr = synchRad))
     Wig->srCoef = sqr(particleCharge) * ipow(pCentral, 3) / (6 * PI * epsilon_o * particleMass * sqr(c_mks));
@@ -182,8 +195,9 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
            cwiggler->BySplitPole, cwiggler->BxSplitPole,
            cwiggler->ByData, cwiggler->BxData,
            cwiggler->zEndPointH, cwiggler->zEndPointV,
-           pCentral,
-           cwiggler->sr, cwiggler->isr && (num_particles > 1 || cwiggler->isr1Particle));
+           pCentral, 
+           cwiggler->sr, cwiggler->isr && (num_particles > 1 || cwiggler->isr1Particle),
+           cwiggler->endFlag[0], cwiggler->endFlag[1]);
 
   Wig.cwiggler = cwiggler;
 

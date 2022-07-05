@@ -2675,7 +2675,7 @@ PARAMETER wiggler_param[N_WIGGLER_PARAMS] = {
 CWIGGLER cwiggler_example;
 
 PARAMETER cwiggler_param[N_CWIGGLER_PARAMS] = {
-  {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.length), NULL, 0.0, 0, "Total length"},
+  {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&cwiggler_example.length), NULL, 0.0, 0, "Total length"},
   {"B_MAX", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.BMax), NULL, 0.0, 0, "Maximum on-axis magnetic field."},
   {"BX_MAX", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.BxMax), NULL, 0.0, 0, "Maximum on-axis magnetic field.  Ignored if B_MAX is nonzero."},
   {"BY_MAX", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.ByMax), NULL, 0.0, 0, "Maximum on-axis magnetic field.  Ignored if B_MAX is nonzero."},
@@ -2688,7 +2688,7 @@ PARAMETER cwiggler_param[N_CWIGGLER_PARAMS] = {
   {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.dy), NULL, 0.0, 0, "Misaligment."},
   {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.dz), NULL, 0.0, 0, "Misaligment."},
   {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.tilt), NULL, 0.0, 0, "Rotation about beam axis."},
-  {"PERIODS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.periods), NULL, 0.0, 0, "Number of wiggler periods."},
+  {"PERIODS", "", IS_LONG, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&cwiggler_example.periods), NULL, 0.0, 0, "Number of wiggler periods."},
   {"STEPS_PER_PERIOD", "", IS_LONG, 0, (long)((char *)&cwiggler_example.stepsPerPeriod), NULL, 0.0, 10, "Integration steps per period."},
   {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.integrationOrder), NULL, 0.0, 4, "Integration order (2, 4, or 6)."},
   {"BY_FILE", " ", IS_STRING, 0, (long)((char *)&cwiggler_example.ByFile), NULL, 0.0, 0, "Name of SDDS file with By harmonic data."},
@@ -3951,7 +3951,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
   {N_LSRMDLTR_PARAMS, MAT_LEN_NCAT | MPALGORITHM, sizeof(LSRMDLTR), lsrMdltr_param},
   {N_POLYNOMIALSERIES_PARAMS, MAT_LEN_NCAT | IS_MAGNET, sizeof(POLYNOMIALSERIES), polynomialSeries_param},
   {N_RFTM110_PARAMS, 0 | MPALGORITHM, sizeof(RFTM110), rftm110_param},
-  {N_CWIGGLER_PARAMS, MAT_LEN_NCAT | IS_MAGNET, sizeof(CWIGGLER), cwiggler_param},
+  {N_CWIGGLER_PARAMS, MAT_LEN_NCAT | IS_MAGNET | DIVIDE_OK, sizeof(CWIGGLER), cwiggler_param},
   {N_EDRIFT_PARAMS, MAT_LEN_NCAT | DIVIDE_OK | GPU_SUPPORT | BACKTRACK, sizeof(EDRIFT), edrift_param},
   {N_SCMULT_PARAMS, NO_DICT_OUTPUT, sizeof(SCMULT), scmult_param},
   {N_ILMATRIX_PARAMS, HAS_RF_MATRIX | MAT_LEN_NCAT, sizeof(ILMATRIX), ilmatrix_param},

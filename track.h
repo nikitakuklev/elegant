@@ -3204,6 +3204,7 @@ typedef struct {
   SDDS_DATASET *SDDSFieldOutput;
   short fieldOutputInitialized;
   long fieldOutputRow, fieldOutputRows;
+  short endFlag[2]; /* indicate whether to include the pole factors at entrance and exit */
 } CWIGGLER;
 
 /* names and storage structure for APPLE-II element */
@@ -3666,6 +3667,7 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
 			   (type)==T_WIGGLER || (type)==T_CWIGGLER || (type)==T_APPLE || \
                            (type)==T_HCOR || (type)==T_VCOR || (type)==T_HVCOR || (type)==T_BGGEXP || \
                            (type)==T_CCBEND || (type)==T_KICKMAP || (type)==T_LGBEND )
+
  
 /* flags for run_awe_beam and run_bunched_beam */
 #define TRACK_PREVIOUS_BUNCH 1
@@ -3876,6 +3878,7 @@ extern VMATRIX *drift_matrix(double length, long order);
 extern VMATRIX *wiggler_matrix(double length, double radius, long poles, long order, long focusing);
 extern void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 			CWIGGLER *cwiggler, double *sigmaDelta2, long singleStep, double *ZwStart);
+extern void determineCWigglerEndFlags(CWIGGLER *cwig, ELEMENT_LIST *eptr0);
 extern void InitializeAPPLE(char *file, APPLE *apple);
 extern void APPLE_Track(double **coord, long num_particles, double pCentral,
 			APPLE *apple);
