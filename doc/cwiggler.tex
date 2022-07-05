@@ -107,3 +107,13 @@ B_x & = & \left|B_0\right| \cos (k_x x) \cos (k_z z + \phi) \cosh (k_y y)\\
 B_y & = & \left|B_0\right| \frac{k_y \cos (k_z z + \phi) \sin (k_x x) \sinh (k_y y)}{k_x}
 \end{eqnarray}
 where $k_y^2 = k_x^2 + k_z^2$.
+
+{\bf Splitting wigglers}
+
+The \verb|CWIGGLER| element supports a limited ability to split a long element into parts using the
+\verb|element_divisions| command or the \verb|divide_elements| pararameter of the \verb|run_setup| command.
+
+In addition, if contiguous \verb|CWIGGLER| elements are seen in a beamline, they will be treated as part of the
+same element. That means that the pole factors will be ignored except at the ends of the sequence.
+For this purpose, \verb|CWIGGLER| elements separated only by \verb|MARK| or \verb|WATCH| elements are considered
+to be contiguous. 

@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2022.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 2022.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -43,75 +43,37 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item A bug was fixed in \verb|CSBEND| that resulted in incorrect recording of global loss coordinates.
-\item An bug was fixed with \verb|CSBEND| in that the matrix-based computations were sensitive to the
-  \verb|EDGE_ORDER| parameter whereas the tracking was not for \verb|EDGE_EFFECTS1| or \verb|EDGE_EFFECTS2|
-  equal to 3 or 4. The code now uses a more consistent approach. This issue was pointed out by L. Nadolski (SOLEIL).
-\item A bug was fixed in \verb|IBSCATTER| that gave incorrect results when \verb|PARALLEL_INTEGRATION| was nonzero.
-\item A bug was fixed in the \verb|FTRFMODE| element that resulted in the \verb|N_CAVITIES| parameter being ignored.
-  This was pointed out by forum user \verb|Siwei_Wang|.
-\item A bug was fixed in the \verb|CWIGGLER| element that resulted in the \verb|FIELD_OUTPUT| file failing to reflect
-  the values of \verb|POLE_FACTOR1|, \verb|POLE_FACTOR2|, and \verb|POLE_FACTOR3|, even though these were included
-  in the beam dynamics. This was pointed out by forum user \verb|Skamarokha|.
+\item None
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item A bug was fixed that resulted in incorrect reporting of the element definition in informational messages
-  issued by the \verb|insert_elements| command.
-\item The \verb|sdds_beam| command previously accepted negative values for \verb|duplicate_stagger[4]| (the time
-  offset between duplicated bunches. This doesn't make sense and can cause problems with multi-bunch wakes.
-  A warning is now issued.
-  Forum user \verb|Siwei_Wang| pointed out the issue.
-\item A bug was fixed for \verb|touschek_scatter| in that the scattering was not performed relative to the
-  closed orbit. This was reported by G. Penn (LBNL).
-\item A bug was fixed for \verb|error_element| that caused \verb|Pelegant| to crash when several \verb|error_element|
-  commands assigned errors to the same quantity.
+\item None
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|CCBEND| element has a new symplectic fringe modeling capability based on theory and developed
-  by R. Lindberg (APS).
-\item The \verb|LGBEND| element was added, supporting modeling of segmented longitudinal-gradient dipole magnets with
-  fringe effects. It is based on the same theory as \verb|CCBEND|.
-\item Added the ability to sum two field maps for \verb|BRAT|. This uses the new \verb|ADDITIONAL_FILENAME|, 
-  \verb|MAIN_FACTOR|, and \verb|ADDITIONAL_FACTOR| parameters.
-\item Added the ability to apply constant field components inside the hard edge boundary of the magnet
-  to \verb|BMXYZ|.
-\item The \verb|FSE| parameter on \verb|CSBEND| can now be set to any value. Previously, any value smaller than
-  -1 was treated as -1.   
+\item The \verb|CWIGGLER| element can now be split using the \verb|divide_elements| command or
+  the \verb|element_divisions| parameter of the \verb|run_setup| command. In addition, multiple \verb|CWIGGLER| elements
+  that are separated only by \verb|MARK| or \verb|WATCH| elements are considered part of the same element.
+  This was suggested by forum user \verb|Skamarokha|.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|global_settings| command has a new parameter, \verb|warning_limit|, the controls how many similar
-  warnings will be shown in detail before such warnings are suppressed. The default is 10.
-\item Added the \verb|element_occurence| parameter to the \verb|change_start| command, which allows
-  changing the starting location in a beamline.
-\item Added the \verb|change_end| command, which allows changing the end of the beamline.
-\item Added the \verb|include_commands| command, which allows including commands from another file.
-\item The apertures defined by the \verb|obstruction_data| command are now reflected inside \verb|CCBEND| elements.
-\item The \verb|correct_tunes| and \verb|chromaticity| commands now allow saving the response and correction
-  matrices to SDDS files.
+\item None
 \end{itemize}
 
 \subsection{Other Changes}
 
 \begin{itemize}
-\item The unified warning system has now been completed. All warnings from commands go through this
-  system and are collected in the summary at the end of the run.
-\item The type of the \verb|particleID| field in beam output files was changed from \verb|long| (typically
-  a 32-bit signed integer) to \verb|ulong64| (a 64-bit signed integer). Internally, only 52 bits are used.
-  This is a step toward increasing the number of particles that can be tracked, which is presently limited
-  to $2^{31}$.
+\item None
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
 
 \begin{itemize}
-\item A bug was fixed in the \verb|sdds_beam| command that resulted in a crash when multiple beam input files
-  were given.
+\item None
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -131,15 +93,7 @@ are listed in Section \ref{sect:tools}.
 
 Changes to these tools in this release include
 \begin{itemize}
-\item The program \verb|straightDipoleFringeCalc| was added. It performs fringe integral and other computations 
-  needed for setting up the fringe models in \verb|CCBEND| and \verb|LGBEND|.
-\item \verb|touschekLifetime| was modified so that the \verb|FN| and \verb|FP| columns are normalized to the
-  circumference, so that integration vs \verb|s| will give the total loss rate. The units of the columns were
-  updated.
-\item \verb|TFBFirSetup|, which generates filter coefficients  for transverse  feedback, had several bugs 
-  as pointed out by Siwei Wang on the forum. These were corrected.
-\item \verb|computeRBGGE|, which generates generalized gradient expansions in rectangular regions, now has auto-tuning
-  options to require a minimum number of multipoles or derivatives.
+\item None
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -8426,6 +8380,114 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 2022.0}
+
+Here is a summary of what's changed since release 2021.4.  Historical change logs are collected in Section
+\ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item A bug was fixed in \verb|CSBEND| that resulted in incorrect recording of global loss coordinates.
+\item An bug was fixed with \verb|CSBEND| in that the matrix-based computations were sensitive to the
+  \verb|EDGE_ORDER| parameter whereas the tracking was not for \verb|EDGE_EFFECTS1| or \verb|EDGE_EFFECTS2|
+  equal to 3 or 4. The code now uses a more consistent approach. This issue was pointed out by L. Nadolski (SOLEIL).
+\item A bug was fixed in \verb|IBSCATTER| that gave incorrect results when \verb|PARALLEL_INTEGRATION| was nonzero.
+\item A bug was fixed in the \verb|FTRFMODE| element that resulted in the \verb|N_CAVITIES| parameter being ignored.
+  This was pointed out by forum user \verb|Siwei_Wang|.
+\item A bug was fixed in the \verb|CWIGGLER| element that resulted in the \verb|FIELD_OUTPUT| file failing to reflect
+  the values of \verb|POLE_FACTOR1|, \verb|POLE_FACTOR2|, and \verb|POLE_FACTOR3|, even though these were included
+  in the beam dynamics. This was pointed out by forum user \verb|Skamarokha|.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item A bug was fixed that resulted in incorrect reporting of the element definition in informational messages
+  issued by the \verb|insert_elements| command.
+\item The \verb|sdds_beam| command previously accepted negative values for \verb|duplicate_stagger[4]| (the time
+  offset between duplicated bunches. This doesn't make sense and can cause problems with multi-bunch wakes.
+  A warning is now issued.
+  Forum user \verb|Siwei_Wang| pointed out the issue.
+\item A bug was fixed for \verb|touschek_scatter| in that the scattering was not performed relative to the
+  closed orbit. This was reported by G. Penn (LBNL).
+\item A bug was fixed for \verb|error_element| that caused \verb|Pelegant| to crash when several \verb|error_element|
+  commands assigned errors to the same quantity.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|CCBEND| element has a new symplectic fringe modeling capability based on theory and developed
+  by R. Lindberg (APS).
+\item The \verb|LGBEND| element was added, supporting modeling of segmented longitudinal-gradient dipole magnets with
+  fringe effects. It is based on the same theory as \verb|CCBEND|.
+\item Added the ability to sum two field maps for \verb|BRAT|. This uses the new \verb|ADDITIONAL_FILENAME|, 
+  \verb|MAIN_FACTOR|, and \verb|ADDITIONAL_FACTOR| parameters.
+\item Added the ability to apply constant field components inside the hard edge boundary of the magnet
+  to \verb|BMXYZ|.
+\item The \verb|FSE| parameter on \verb|CSBEND| can now be set to any value. Previously, any value smaller than
+  -1 was treated as -1.   
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|global_settings| command has a new parameter, \verb|warning_limit|, the controls how many similar
+  warnings will be shown in detail before such warnings are suppressed. The default is 10.
+\item Added the \verb|element_occurence| parameter to the \verb|change_start| command, which allows
+  changing the starting location in a beamline.
+\item Added the \verb|change_end| command, which allows changing the end of the beamline.
+\item Added the \verb|include_commands| command, which allows including commands from another file.
+\item The apertures defined by the \verb|obstruction_data| command are now reflected inside \verb|CCBEND| elements.
+\item The \verb|correct_tunes| and \verb|chromaticity| commands now allow saving the response and correction
+  matrices to SDDS files.
+\end{itemize}
+
+\subsubsection{Other Changes}
+
+\begin{itemize}
+\item The unified warning system has now been completed. All warnings from commands go through this
+  system and are collected in the summary at the end of the run.
+\item The type of the \verb|particleID| field in beam output files was changed from \verb|long| (typically
+  a 32-bit signed integer) to \verb|ulong64| (a 64-bit signed integer). Internally, only 52 bits are used.
+  This is a step toward increasing the number of particles that can be tracked, which is presently limited
+  to $2^{31}$.
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item A bug was fixed in the \verb|sdds_beam| command that resulted in a crash when multiple beam input files
+  were given.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}  Users are encouraged to check results against
+the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+The {\tt elegant} distribution includes many programs and scripts that perform computations with {\tt elegant}
+output data, provide interfaces with other programs, or prepare data for use with {\tt elegant}. These
+are listed in Section \ref{sect:tools}. 
+
+Changes to these tools in this release include
+\begin{itemize}
+\item The program \verb|straightDipoleFringeCalc| was added. It performs fringe integral and other computations 
+  needed for setting up the fringe models in \verb|CCBEND| and \verb|LGBEND|.
+\item \verb|touschekLifetime| was modified so that the \verb|FN| and \verb|FP| columns are normalized to the
+  circumference, so that integration vs \verb|s| will give the total loss rate. The units of the columns were
+  updated.
+\item \verb|TFBFirSetup|, which generates filter coefficients  for transverse  feedback, had several bugs 
+  as pointed out by Siwei Wang on the forum. These were corrected.
+\item \verb|computeRBGGE|, which generates generalized gradient expansions in rectangular regions, now has auto-tuning
+  options to require a minimum number of multipoles or derivatives.
+\end{itemize}
+
 
 \subsection{Highlights of What's New in Version 2021.4}
 

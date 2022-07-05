@@ -455,8 +455,6 @@ long expand_phys(
           if (elem_list->type==T_CWIGGLER) {
             CWIGGLER *cwig;
             cwig = (CWIGGLER*)(elem_list->p_elem);
-            if (!(cwig->sinusoidal))
-              bombElegant("CWIGGLER element can't be divided unless SINUSOIDAL=1", NULL);
             if (cwig->periods%div!=0)
               bombElegantVA("Can't divide %ld-period CWIGGLER %s into %ld parts. Must divide at period boundaries.",
                             cwig->periods, elem_list->name, div);
