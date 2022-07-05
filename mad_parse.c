@@ -1782,18 +1782,19 @@ void copyLGBend(LGBEND *target, LGBEND *source) {
 void configureLGBendGeometry(LGBEND *lgbend) {
   long i;
   double arcLength, rho, angle, entryAngle, length;
-  arcLength = lgbend->predrift + lgbend->postdrift;
+  arcLength = lgbend->predrift;
   for (i = 0; i < lgbend->nSegments; i++) {
     length = lgbend->segment[i].length;
     angle = lgbend->segment[i].angle;
     entryAngle = lgbend->segment[i].entryAngle;
     rho = length / (sin(entryAngle) + sin(angle - entryAngle));
+    lgbend->segment[i].arcLengthStart = arcLength;
     arcLength += (lgbend->segment[i].arcLength = rho * angle);
     if (i == 0)
       lgbend->segment[i].zAccumulated = length;
     else
       lgbend->segment[i].zAccumulated = lgbend->segment[i - 1].zAccumulated + length;
   }
-  lgbend->length = arcLength;
+  lgbend->length = arcLength + lgbend->postdrift;
 }
 

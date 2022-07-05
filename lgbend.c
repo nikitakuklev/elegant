@@ -276,7 +276,8 @@ long track_through_lgbend(
       dy = -lgbend->dx * sin(tilt) + lgbend->dy * cos(tilt);
     }
 
-    setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start + length / 2);
+    setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, 
+                          z_start + lgbend->segment[iSegment].arcLengthStart + lgbend->segment[iSegment].arcLength / 2);
 
 #ifdef DEBUG
     if (lgbend->optimized != -1 && iPart >= 0)
@@ -352,7 +353,7 @@ long track_through_lgbend(
         swapParticles(particle[i_part], particle[i_top]);
         if (accepted)
           swapParticles(accepted[i_part], accepted[i_top]);
-        particle[i_top][4] = z_start + dzLoss;
+        particle[i_top][4] = z_start + lgbend->segment[iSegment].arcLengthStart + dzLoss;
         particle[i_top][5] = Po * (1 + particle[i_top][5]);
         i_top--;
         i_part--;

@@ -3618,8 +3618,10 @@ extern PARAMETER lgbend_param[N_LGBEND_PARAMS];
 
 typedef struct {
   double length;    /* straight segment length */
-  double arcLength; /* arc length */
-  double K1, K2, zAccumulated;
+  double arcLength; /* arc length of segment */
+  double arcLengthStart; /* accumulated arc length at start of segment */
+  double K1, K2;
+  double zAccumulated;  /* at exit */
   double angle, entryX, entryAngle, exitX, exitAngle;
   short has1, has2;
   double fringeInt1K0, fringeInt1I0, fringeInt1K2, fringeInt1I1, fringeInt1K4, fringeInt1K5, fringeInt1K6,
