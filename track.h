@@ -178,9 +178,12 @@ extern int comp_IDs(const void *coord1, const void *coord2);
 #define malloc_verify(n) 1
 
 typedef struct {
-  double *s, *xMax, *yMax, *dx, *dy;
-  long points, periodic, initialized, persistent;
+  double *sz, *xMax, *yMax, *dx, *dy;
+  long points;
+  short periodic, initialized, persistent;
+  short zmode; /* If non-zero, data is function of z not s */
 } APERTURE_DATA;
+extern void readApertureInput(APERTURE_DATA *apData, char *input, short zmode);
 
 typedef struct {
   double *Z, *X;
@@ -1154,7 +1157,7 @@ extern char *entity_text[N_TYPES];
 #define N_BEAMBEAM_PARAMS 6
 #define N_CPICKUP_PARAMS 7
 #define N_CKICKER_PARAMS 14
-#define N_LGBEND_PARAMS 21
+#define N_LGBEND_PARAMS 22
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3064,7 +3067,7 @@ typedef struct {
   /* internal variables */
   BMAPXYZ_DATA *data; 
   SDDS_DATASET *SDDSpo;
-  long poIndex[9];
+  long poIndex[11];
   long poRow, poRows;
 } BMAPXYZ;
 
@@ -3632,7 +3635,7 @@ typedef struct {
 
 typedef struct {
   double length; /* arc length. It's actually set when the configuration file is read. */
-  char *configuration;
+  char *configurationFile, *apertureDataFile;
   double tilt;
   double dx, dy, dz, eyaw, epitch, etilt;
   double fse;
@@ -3649,6 +3652,7 @@ typedef struct {
   double *fseOpt, *KnDelta;
   short optimized, wasFlipped;
   double predrift, postdrift;
+  APERTURE_DATA *localApertureData;
 } LGBEND;
 
 
@@ -4349,10 +4353,11 @@ typedef struct {
   short elliptical, present, xExponent, yExponent;
   short openSide;
   APCONTOUR *apContour;
+  APERTURE_DATA *localAperture;
 } MULT_APERTURE_DATA;
 extern void setupMultApertureData(MULT_APERTURE_DATA *apertureData, double reverseTilt, APCONTOUR *apContour, MAXAMP *maxamp, 
-                                  APERTURE_DATA *apFileData, double zPosition);
-extern long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData);
+                                  APERTURE_DATA *apFileData, APERTURE_DATA *localApFileData, double zPosition);
+extern long checkMultAperture(double x, double y, double sLocal, MULT_APERTURE_DATA *apData);
 extern int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta);
 extern int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta);
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);

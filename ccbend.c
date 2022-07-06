@@ -395,7 +395,7 @@ long track_through_ccbend(
     dy = -ccbend->dx * sin(tilt) + ccbend->dy * cos(tilt);
   }
 
-  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start + length / 2);
+  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, NULL, z_start + length / 2);
 
   if (iPart <= 0) {
     /*
@@ -554,12 +554,13 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
                        MULTIPOLE_DATA *edge1MultData, /* entrance */
                        MULTIPOLE_DATA *edge2MultData, /* exit */
                        MULT_APERTURE_DATA *apData,    /* aperture */
-                       double *dzLoss,                /* if particle is loss, offset from start of element where this occurs */
+                       double *dsLoss,                /* if particle is lost, offset from start of element where this occurs */
                        double *sigmaDelta2,           /* accumulate the energy spread increase for propagation of radiation matrix */
                        double *lastRho,               /* needed for radiation integrals */
                        double refTilt,
                        double dZOffset /* offset of start of present segment relative to Z coordinate of entry plane */
-) {
+                       )
+{
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, delta_qx, delta_qy;
   double xSum;
@@ -592,6 +593,24 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
     0.784513610477560, 0.235573213359357, -1.17767998417887, 1.3151863206839063,
     -1.17767998417887, 0.235573213359357, 0.784513610477560, 0};
 
+#ifdef DEBUG1
+  static FILE *fpdeb = NULL;
+  static double dZOffsetLast = -1;
+  if (fpdeb==NULL) {
+    fpdeb = fopen("integ.sdds", "w");
+    fprintf(fpdeb, "SDDS1\n&column name=z type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=s type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=x type=double units=m &end\n");
+    fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+  } 
+  if (dZOffset<=dZOffsetLast)
+    fprintf(fpdeb, "\n");
+  dZOffsetLast = dZOffset;
+
+  fprintf(fpdeb, "%le %le %le\n", dZOffset, coord[4], coord[0]);
+#endif
+
+  
   if (dZOffset < 0) {
     printf("coding error: dZOffset<0 (%le)\n", dZOffset);
     exit(1);
@@ -681,7 +700,7 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
   xp = qx / denom;
   yp = qy / denom;
 
-  *dzLoss = 0;
+  *dsLoss = 0;
   if (iFinalSlice <= 0)
     iFinalSlice = n_parts;
   xMin = DBL_MAX;
@@ -705,7 +724,10 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
     }
 #endif
     delta_qx = delta_qy = 0;
-    if ((apData && !checkMultAperture(x + dx, y + dy, apData)) ||
+#ifdef DEBUG1
+    fprintf(fpdeb, "%le %le %le\n", dZOffset + i_kick*drift, s+coord[4], x);
+#endif
+    if ((apData && !checkMultAperture(x + dx, y + dy, dZOffset + i_kick*drift, apData)) ||
         insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex],
                               globalLossCoordOffset > 0 ? coord + globalLossCoordOffset : NULL,
                               refTilt, GLOBAL_LOCAL_MODE_DZ, dZOffset + i_kick * drift, i_kick, n_parts)) {
@@ -722,7 +744,7 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
         x += xp * dsh;
         y += yp * dsh;
         s += dsh * sqrt(1 + sqr(xp) + sqr(yp));
-        *dzLoss += dsh;
+        *dsLoss = s;  /* Ideally, we'd use the path length of the reference particle at this slice, but that isn't known to us */
       }
 
       if (!kickFrac[step])
@@ -819,7 +841,10 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
   printf("xp init, fin = %le, %le\n", xp0, xp);
   */
 
-  if ((apData && !checkMultAperture(x + dx, y + dy, apData)) ||
+#ifdef DEBUG1
+  fprintf(fpdeb, "%le %le %le\n", dZOffset + i_kick*drift, s+coord[4], x);
+#endif
+  if ((apData && !checkMultAperture(x + dx, y + dy, dZOffset + i_kick*drift, apData)) ||
       insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex],
                             globalLossCoordOffset > 0 ? coord + globalLossCoordOffset : NULL,
                             refTilt, GLOBAL_LOCAL_MODE_DZ, dZOffset + i_kick * drift, i_kick, n_parts)) {

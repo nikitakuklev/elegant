@@ -22,7 +22,7 @@
 unsigned long multipoleKicksDone = 0;
 unsigned short expandHamiltonian = 0;
 
-#define ODD(j) ((j) % 2)
+/* #define ODD(j) ((j) % 2) */
 
 typedef struct {
   char *filename;
@@ -1053,7 +1053,7 @@ long multipole_tracking2(
   if (multData)
     multipoleKicksDone += (i_top + 1) * n_kicks * multData->orders;
 
-  setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, z_start + drift / 2);
+  setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, NULL, z_start + drift / 2);
 
   if (iSlice <= 0) {
     if (malignMethod != 0) {
@@ -1288,7 +1288,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
 
   *dzLoss = 0;
   for (i_kick = 0; i_kick < n_parts; i_kick++) {
-    if ((apData && !checkMultAperture(x + dx, y + dy, apData)) ||
+    if ((apData && !checkMultAperture(x + dx, y + dy, drift*i_kick, apData)) ||
         insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex],
                               globalLossCoordOffset > 0 ? coord + globalLossCoordOffset : NULL,
                               refTilt, GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
@@ -1398,7 +1398,7 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
       break;
   }
 
-  if ((apData && !checkMultAperture(x + dx, y + dy, apData)) ||
+  if ((apData && !checkMultAperture(x + dx, y + dy, drift*i_kick, apData)) ||
       insideObstruction_xyz(x, xp, y, yp, coord[particleIDIndex],
                             globalLossCoordOffset > 0 ? coord + globalLossCoordOffset : NULL,
                             refTilt, GLOBAL_LOCAL_MODE_SEG, 0.0, i_kick, n_parts)) {
@@ -1720,16 +1720,21 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
   }
 }
 
-void setupMultApertureData(
-  MULT_APERTURE_DATA *apertureData,
+void setupMultApertureData
+(
+ MULT_APERTURE_DATA *apertureData,
   /* used to undo the tilt of the element when it's done for computational reasons, e.g., negative bend with TILT+=PI */
-  double reverseTilt,
-  APCONTOUR *apContour,
-  MAXAMP *maxamp, APERTURE_DATA *apFileData, double zPosition) {
+ double reverseTilt,
+ APCONTOUR *apContour,
+ MAXAMP *maxamp, 
+ APERTURE_DATA *apFileData,      /* global aperture data vs s, from aperture_data command */
+ APERTURE_DATA *localApFileData, /* local aperture data vs s (s=0 is start of element), from element definition */
+ double zPosition                /* arc length of reference location */
+ ) {
   double x_max, y_max;
 
   apertureData->apContour = apContour;
-
+  apertureData->localAperture = localApFileData;
   apertureData->reverseTilt = reverseTilt;
   apertureData->reverseTiltCS[0] = cos(reverseTilt);
   apertureData->reverseTiltCS[1] = sin(reverseTilt);
@@ -1774,13 +1779,14 @@ void setupMultApertureData(
   }
 }
 
-long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData) {
+long checkMultAperture(double xInput, double yInput, double zLocal, MULT_APERTURE_DATA *apData) {
   double xa, yb;
+  double x, y;
   if (!apData)
     return 1;
 
-  x -= apData->xCen;
-  y -= apData->yCen;
+  x = xInput - apData->xCen;
+  y = yInput - apData->yCen;
 
   if (apData->reverseTilt) {
     double x0, y0;
@@ -1788,6 +1794,13 @@ long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData) {
     y0 = y;
     x = x0 * apData->reverseTiltCS[0] + y0 * apData->reverseTiltCS[1];
     y = -x0 * apData->reverseTiltCS[1] + y0 * apData->reverseTiltCS[0];
+  }
+
+  if (apData->localAperture) {
+    double xCenF, yCenF, xMaxF, yMaxF;
+    if (interpolateApertureData(zLocal, apData->localAperture, &xCenF, &yCenF, &xMaxF, &yMaxF) && 
+        (fabs(x-xCenF)>=xMaxF || fabs(y-yCenF)>=yMaxF))
+      return 0;
   }
 
   if (apData->elliptical == 0 || apData->xMax <= 0 || apData->yMax <= 0) {

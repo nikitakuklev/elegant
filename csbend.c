@@ -817,7 +817,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     rho0 = csbend->length / angle;
   }
 
-  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start + csbend->length / 2);
+  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, NULL, z_start + csbend->length / 2);
 
   if (fabs(rho0) > 1e6) {
     if (csbend->k2 != 0)
@@ -1410,7 +1410,7 @@ long integrate_csbend_ordn(
   *dz_lost = 0; /* we'll accumulate this value even if the particle isn't lost */
   for (i = 0; i < n; i++) {
     long j;
-    if ((apData && !checkMultAperture(X, Y, apData)) ||
+    if ((apData && !checkMultAperture(X, Y, i*s, apData)) ||
         insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
       /*
       printf("Lost particle %ld on obstruction: segment %ld/%ld, Z=%le\n",
@@ -1441,7 +1441,7 @@ long integrate_csbend_ordn(
       *dz_lost += dsh;
       f = cos_phi / cosi;
       X = rho0 * (f - 1) + f * X;
-      if (apData && !checkMultAperture(X, Y, apData)) {
+      if (apData && !checkMultAperture(X, Y, i*s, apData)) {
         return 0;
       }
 
@@ -1497,7 +1497,7 @@ long integrate_csbend_ordn(
     if (iSlice >= 0)
       break;
   }
-  if ((apData && !checkMultAperture(X, Y, apData)) ||
+  if ((apData && !checkMultAperture(X, Y, i*s, apData)) ||
       insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
     /*
     printf("Lost particle %ld on obstruction: segment %ld/%ld, Z=%le\n",
@@ -1601,7 +1601,7 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
   *dz_lost = 0; /* we'll accumulate this value even if the particle isn't lost */
   for (i = 0; i < n; i++) {
     long j;
-    if ((apData && !checkMultAperture(X, Y, apData)) ||
+    if ((apData && !checkMultAperture(X, Y, i*s, apData)) ||
         insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
       return 0;
     }
@@ -1615,7 +1615,7 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       Y += QY * dsh / (1 + DPoP);
       QX += dsh * (1 + DPoP) / (2 * rho0);
 
-      if (apData && !checkMultAperture(X, Y, apData)) {
+      if (apData && !checkMultAperture(X, Y, i*s, apData)) {
         return 0;
       }
 
@@ -1659,7 +1659,7 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
     if (iSlice >= 0)
       break;
   }
-  if ((apData && !checkMultAperture(X, Y, apData)) ||
+  if ((apData && !checkMultAperture(X, Y, i*s, apData)) ||
       insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
     *dz_lost = n * s;
     return 0;
@@ -1884,7 +1884,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     rho0 = csbend->length / angle;
   }
 
-  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start + csbend->length / 2);
+  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, NULL, z_start + csbend->length / 2);
 
   if (rho0 > 1e6) {
     printWarningForTracking("CSRCSBEND has radius > 1e6 but non-zero K1.",

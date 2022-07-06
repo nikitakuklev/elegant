@@ -45,7 +45,7 @@
 void traceback_handler(int code);
 void createSemaphoreFile(char *filename);
 void manageSemaphoreFiles(char *semaphore_file, char *rootname, char *semaphoreFile[3]);
-void readApertureInput(NAMELIST_TEXT *nltext, RUN *run);
+void processApertureInput(NAMELIST_TEXT *nltext, RUN *run);
 void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *error_control, CORRECTION *correct,
                            BEAM *beam, OUTPUT_FILES *output_data, OPTIMIZATION_DATA *optimize,
                            CHROM_CORRECTION *chrom_corr_data, TUNE_CORRECTION *tune_corr_data,
@@ -2019,7 +2019,7 @@ char **argv;
           break;
         case APERTURE_INPUT:
         case APERTURE_DATAX:
-          readApertureInput(&namelist_text, &run_conditions);
+          processApertureInput(&namelist_text, &run_conditions);
           break;
         case OBSTRUCTION_DATA:
           if (!run_setuped)
@@ -2671,11 +2671,7 @@ void createSemaphoreFile(char *filename) {
   fclose(fp);
 }
 
-void readApertureInput(NAMELIST_TEXT *nltext, RUN *run) {
-  SDDS_DATASET SDDSin;
-  char s[16384];
-  long i;
-
+void processApertureInput(NAMELIST_TEXT *nltext, RUN *run) {
 #include "aperture_data.h"
 
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -2692,6 +2688,19 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run) {
   if (disable)
     return;
 
+  readApertureInput(&(run->apertureData), input, 0);
+  run->apertureData.periodic = periodic;
+  run->apertureData.persistent = persistent;
+
+  printf("\n** %ld points of aperture data read from file\n\n", run->apertureData.points);
+}
+
+void readApertureInput(APERTURE_DATA *apData, char *input, short zmode)
+{
+  SDDS_DATASET SDDSin;
+  char s[16384];
+  long i;
+
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, input)) {
     sprintf(s, "Problem opening aperture input file %s", input);
     SDDS_SetError(s);
@@ -2700,15 +2709,24 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run) {
 
   if (!check_sdds_column(&SDDSin, "xHalfAperture", "m") ||
       !check_sdds_column(&SDDSin, "yHalfAperture", "m") ||
-      !check_sdds_column(&SDDSin, "s", "m") ||
       !check_sdds_column(&SDDSin, "xCenter", "m") ||
       !check_sdds_column(&SDDSin, "yCenter", "m")) {
-    printf("Necessary data quantities (s, xHalfAperture, yHalfAperture, xCenter, and yCenter) have wrong units or are not present in %s\n",
+    printf("Necessary data quantities (xHalfAperture, yHalfAperture, xCenter, and yCenter) have wrong units or are not present in %s\n",
            input);
     printf("Note that units must be \"m\" on all quantities\n");
     fflush(stdout);
     exitElegant(1);
   }
+  
+  if ((!zmode && !check_sdds_column(&SDDSin, "s", "m")) ||
+      (zmode && !check_sdds_column(&SDDSin, "z", "m"))) {
+    printf("Necessary data quantity %s has wrong units or not present in %s\n",
+           zmode?"z":"s", input);
+    printf("Note that units must be \"m\" on all quantities\n");
+    fflush(stdout);
+    exitElegant(1);
+  }
+  apData->zmode = zmode;
 
   if (!SDDS_ReadPage(&SDDSin)) {
     sprintf(s, "Problem reading aperture input file %s---seems to be empty", input);
@@ -2716,49 +2734,47 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run) {
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
   }
 
-  if ((run->apertureData.points = SDDS_RowCount(&SDDSin)) < 2) {
+  if ((apData->points = SDDS_RowCount(&SDDSin)) < 2) {
     char buffer[16384];
     snprintf(buffer, 16384, "Aperture input file %s has only %ld rows",
-             input, run->apertureData.points);
+             input, apData->points);
     printWarning(buffer, NULL);
   }
 
-  if (!(run->apertureData.s = SDDS_GetColumnInDoubles(&SDDSin, "s")) ||
-      !(run->apertureData.xMax = SDDS_GetColumnInDoubles(&SDDSin, "xHalfAperture")) ||
-      !(run->apertureData.yMax = SDDS_GetColumnInDoubles(&SDDSin, "yHalfAperture")) ||
-      !(run->apertureData.dx = SDDS_GetColumnInDoubles(&SDDSin, "xCenter")) ||
-      !(run->apertureData.dy = SDDS_GetColumnInDoubles(&SDDSin, "yCenter"))) {
+  if (!(apData->sz = SDDS_GetColumnInDoubles(&SDDSin, zmode?"z":"s")) ||
+      !(apData->xMax = SDDS_GetColumnInDoubles(&SDDSin, "xHalfAperture")) ||
+      !(apData->yMax = SDDS_GetColumnInDoubles(&SDDSin, "yHalfAperture")) ||
+      !(apData->dx = SDDS_GetColumnInDoubles(&SDDSin, "xCenter")) ||
+      !(apData->dy = SDDS_GetColumnInDoubles(&SDDSin, "yCenter"))) {
     sprintf(s, "Problem getting data from aperture input file %s", input);
     SDDS_SetError(s);
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
   }
-  if (run->apertureData.s[0] != 0) {
-    printf("The first value of s in %s is not zero.\n", input);
+  if (apData->sz[0] != 0) {
+    printf("The first value of %s in %s is not zero.\n", input, zmode?"z":"s");
     exitElegant(1);
   }
-  for (i = 0; i < run->apertureData.points; i++) {
-    if (i && run->apertureData.s[i] < run->apertureData.s[i - 1]) {
-      printf("s values in %s are not monotonically increasing.\n", input);
+  for (i = 0; i < apData->points; i++) {
+    if (i && apData->sz[i] < apData->sz[i - 1]) {
+      printf("%s values in %s are not monotonically increasing.\n", zmode?"z":"s", input);
       exitElegant(1);
     }
-    if (run->apertureData.xMax[i] < 0 || run->apertureData.yMax[i] < 0) {
+    if (apData->xMax[i] < 0 || apData->yMax[i] < 0) {
       printf("One or more xHalfAperture and yHalfAperture values in %s are negative.\n", input);
       exitElegant(1);
     }
   }
-  run->apertureData.periodic = periodic;
-  run->apertureData.persistent = persistent;
-  run->apertureData.initialized = 1;
 
-  printf("\n** %ld points of aperture data read from file\n\n", run->apertureData.points);
+  apData->initialized = 1;
+  apData->periodic = apData->persistent = 0;
 
   return;
 }
 
 void resetApertureData(APERTURE_DATA *apData) {
   if (apData->initialized) {
-    if (apData->s)
-      free(apData->s);
+    if (apData->sz)
+      free(apData->sz);
     if (apData->xMax)
       free(apData->xMax);
     if (apData->yMax)
@@ -2767,7 +2783,7 @@ void resetApertureData(APERTURE_DATA *apData) {
       free(apData->dx);
     if (apData->dy)
       free(apData->dy);
-    apData->s = apData->xMax = apData->yMax = apData->dx = apData->dy = NULL;
+    apData->sz = apData->xMax = apData->yMax = apData->dx = apData->dy = NULL;
     apData->initialized = 0;
   }
 }

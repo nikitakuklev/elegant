@@ -1085,35 +1085,35 @@ long determineOpenSideCode(char *openSide) {
 
 #define DEBUG_APERTURE 0
 
-long interpolateApertureData(double z, APERTURE_DATA *apData,
+long interpolateApertureData(double sz, APERTURE_DATA *apData,
                              double *xCenter, double *yCenter, double *xSize, double *ySize) {
-  double z0, period;
-  long iz;
+  double sz0, period;
+  long isz;
 
-  z0 = z;
-  if (apData->s[apData->points - 1] < z) {
+  sz0 = sz;
+  if (apData->sz[apData->points - 1] < sz) {
     if (apData->periodic) {
-      period = apData->s[apData->points - 1] - apData->s[0];
-      z0 -= period * ((long)((z0 - apData->s[0]) / period));
+      period = apData->sz[apData->points - 1] - apData->sz[0];
+      sz0 -= period * ((long)((sz0 - apData->sz[0]) / period));
     } else
       return 0;
   }
-  if ((iz = binaryArraySearch(apData->s, sizeof(apData->s[0]), apData->points, &z0,
+  if ((isz = binaryArraySearch(apData->sz, sizeof(apData->sz[0]), apData->points, &sz0,
                               double_cmpasc, 1)) < 0)
     return 0;
-  if (iz == apData->points - 1)
-    iz -= 1;
+  if (isz == apData->points - 1)
+    isz -= 1;
 
-  if (apData->s[iz] == apData->s[iz + 1]) {
-    *xCenter = apData->dx[iz];
-    *yCenter = apData->dy[iz];
-    *xSize = apData->xMax[iz];
-    *ySize = apData->yMax[iz];
+  if (apData->sz[isz] == apData->sz[isz + 1]) {
+    *xCenter = apData->dx[isz];
+    *yCenter = apData->dy[isz];
+    *xSize = apData->xMax[isz];
+    *ySize = apData->yMax[isz];
   } else {
-    *xCenter = INTERPOLATE(apData->dx[iz], apData->dx[iz + 1], apData->s[iz], apData->s[iz + 1], z0);
-    *yCenter = INTERPOLATE(apData->dy[iz], apData->dy[iz + 1], apData->s[iz], apData->s[iz + 1], z0);
-    *xSize = INTERPOLATE(apData->xMax[iz], apData->xMax[iz + 1], apData->s[iz], apData->s[iz + 1], z0);
-    *ySize = INTERPOLATE(apData->yMax[iz], apData->yMax[iz + 1], apData->s[iz], apData->s[iz + 1], z0);
+    *xCenter = INTERPOLATE(apData->dx[isz], apData->dx[isz + 1], apData->sz[isz], apData->sz[isz + 1], sz0);
+    *yCenter = INTERPOLATE(apData->dy[isz], apData->dy[isz + 1], apData->sz[isz], apData->sz[isz + 1], sz0);
+    *xSize = INTERPOLATE(apData->xMax[isz], apData->xMax[isz + 1], apData->sz[isz], apData->sz[isz + 1], sz0);
+    *ySize = INTERPOLATE(apData->yMax[isz], apData->yMax[isz + 1], apData->sz[isz], apData->sz[isz + 1], sz0);
   }
   return 1;
 }

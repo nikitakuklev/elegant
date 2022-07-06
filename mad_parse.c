@@ -1590,14 +1590,14 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr) {
   for (i = 0; i < 8; i++)
     offsetGlobal[i] *= sizeof(double);
 
-  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, lgbend->configuration)) {
-    fprintf(stderr, "Error: unable to find or read LGBEND configuration file %s\n", lgbend->configuration);
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, lgbend->configurationFile)) {
+    fprintf(stderr, "Error: unable to find or read LGBEND configuration file %s\n", lgbend->configurationFile);
     exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, "ParameterName", NULL, SDDS_STRING, stdout) != SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "ParameterValue", NULL, SDDS_ANY_FLOATING_TYPE, stdout) != SDDS_CHECK_OK) {
     fprintf(stderr, "Error: required columns with required types not present in LGBEND configuration file %s\n",
-            lgbend->configuration);
+            lgbend->configurationFile);
     exitElegant(1);
   }
 
@@ -1606,13 +1606,13 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr) {
   while ((readCode = SDDS_ReadPage(&SDDSin)) >= 1) {
     if (postdriftSeen) {
       fprintf(stderr, "Error: POSTDRIFT parameter seen for interior segment reading LGBEND configuration file %s\n",
-              lgbend->configuration);
+              lgbend->configurationFile);
       exitElegant(1);
     }
     if (!(lgbend->segment = SDDS_Realloc(lgbend->segment, (lgbend->nSegments + 1) * sizeof(*(lgbend->segment)))) ||
         !(lgbend->fseOpt = SDDS_Realloc(lgbend->fseOpt, (lgbend->nSegments + 1) * sizeof(*(lgbend->fseOpt)))) ||
         !(lgbend->KnDelta = SDDS_Realloc(lgbend->KnDelta, (lgbend->nSegments + 1) * sizeof(*(lgbend->KnDelta))))) {
-      fprintf(stderr, "Error: memory allocation failure reading LGBEND configuration file %s\n", lgbend->configuration);
+      fprintf(stderr, "Error: memory allocation failure reading LGBEND configuration file %s\n", lgbend->configurationFile);
       exitElegant(1);
     }
     memset(&(lgbend->segment[lgbend->nSegments]), 0, sizeof(*(lgbend->segment)));
@@ -1621,7 +1621,7 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr) {
     if ((rows = SDDS_RowCount(&SDDSin)) <= 0 ||
         !(parameterName = SDDS_GetColumn(&SDDSin, "ParameterName")) ||
         !(parameterValue = SDDS_GetColumn(&SDDSin, "ParameterValue"))) {
-      fprintf(stderr, "Error: problem getting data from LGBEND configuration file %s\n", lgbend->configuration);
+      fprintf(stderr, "Error: problem getting data from LGBEND configuration file %s\n", lgbend->configurationFile);
       exitElegant(1);
     }
     memset(provided, 0, sizeof(provided[0]) * (NLGBEND));
@@ -1630,7 +1630,7 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr) {
       if ((index = match_string(parameterName[iRow], knownParameterName, NLGBEND, EXACT_MATCH)) < 0) {
         if ((index = match_string(parameterName[iRow], globalParameterName, 8, EXACT_MATCH)) < 0) {
           fprintf(stdout, "Error: unrecognized parameter name \"%s\" in LGBEND configuration file %s (page %ld, row %ld)\n",
-                  parameterName[iRow], lgbend->configuration,
+                  parameterName[iRow], lgbend->configurationFile,
                   readCode, iRow);
           exitElegant(1);
         } else
@@ -1646,12 +1646,12 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr) {
       if ((readCode == 1 && required[i] && !provided[i]) ||
           (readCode > 1 && required[i] == 2 && !provided[i])) {
         fprintf(stdout, "Error: parameter %s is required but was not provided in page %ld of configuration file %s for LGBEND %s#%ld\n",
-                knownParameterName[i], readCode, lgbend->configuration, eptr->name, eptr->occurence);
+                knownParameterName[i], readCode, lgbend->configurationFile, eptr->name, eptr->occurence);
         exitElegant(1);
       }
       if (readCode > 1 && provided[i] && disallowed[i]) {
         fprintf(stdout, "Error: parameter %s is provided in page %ld of configuration file %s for LGBEND %s#%ld. Not meaningful.\n",
-                knownParameterName[i], readCode, lgbend->configuration, eptr->name, eptr->occurence);
+                knownParameterName[i], readCode, lgbend->configurationFile, eptr->name, eptr->occurence);
         exitElegant(1);
       }
     }
@@ -1668,12 +1668,12 @@ void readLGBendConfiguration(LGBEND *lgbend, ELEMENT_LIST *eptr) {
   }
   SDDS_Terminate(&SDDSin);
   lgbend->initialized = 1;
-
+  lgbend->localApertureData = NULL;
   configureLGBendGeometry(lgbend);
 
   if (lgbend->verbose > 10) {
     printf("%ld segments found for LGBEND %s#%ld in file %s\n",
-           lgbend->nSegments, eptr->name, eptr->occurence, lgbend->configuration);
+           lgbend->nSegments, eptr->name, eptr->occurence, lgbend->configurationFile);
     printf("total angle is %le, total length is %le\n", lgbend->angle, lgbend->length);
     printf("predrift = %le, postdrift = %le\n", lgbend->predrift, lgbend->postdrift);
     printf("nominal entry coordinates in magnet frame: Z=%le, X=%le\n", lgbend->zEntry, lgbend->xEntry);

@@ -35,6 +35,7 @@ double lgbend_trajectory_error(double *value, long *invalid);
 
 void storeLGBendOptimizedFSEValues(LGBEND *lgbend);
 int retrieveLGBendOptimizedFSEValues(LGBEND *lgbend);
+void readLGBendApertureData(LGBEND *lgbend);
 
 long track_through_lgbend(
   double **particle, /* initial/final phase-space coordinates */
@@ -92,6 +93,9 @@ long track_through_lgbend(
     fprintf(fpDeb, "&data mode=ascii no_row_counts=1 &end\n");
   }
 #endif
+
+  if (lgbend->apertureDataFile && !(lgbend->localApertureData)) 
+    readLGBendApertureData(lgbend);
 
   if (!particle)
     bombTracking("particle array is null (track_through_lgbend)");
@@ -276,7 +280,7 @@ long track_through_lgbend(
       dy = -lgbend->dx * sin(tilt) + lgbend->dy * cos(tilt);
     }
 
-    setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, 
+    setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, lgbend->localApertureData,
                           z_start + lgbend->segment[iSegment].arcLengthStart + lgbend->segment[iSegment].arcLength / 2);
 
 #ifdef DEBUG
@@ -870,7 +874,7 @@ LGBEND *storedLGBEND = NULL;
 int retrieveLGBendOptimizedFSEValues(LGBEND *lgbend) {
   long i;
   for (i = 0; i < nStoredLGBENDs; i++) {
-    if (strcmp(lgbend->configuration, storedLGBEND[i].configuration) == 0 &&
+    if (strcmp(lgbend->configurationFile, storedLGBEND[i].configurationFile) == 0 &&
         lgbend->nSegments == storedLGBEND[i].nSegments &&
         lgbend->length == storedLGBEND[i].length &&
         lgbend->xVertex == storedLGBEND[i].xVertex &&
@@ -909,7 +913,7 @@ void storeLGBendOptimizedFSEValues(LGBEND *lgbend) {
   if (!retrieveLGBendOptimizedFSEValues(lgbend)) {
     i = nStoredLGBENDs++;
     storedLGBEND = SDDS_Realloc(storedLGBEND, sizeof(*storedLGBEND) * nStoredLGBENDs);
-    cp_str(&storedLGBEND[i].configuration, lgbend->configuration);
+    cp_str(&storedLGBEND[i].configurationFile, lgbend->configurationFile);
     storedLGBEND[i].fseOpt = tmalloc(sizeof(storedLGBEND[i].fseOpt[0]) * (lgbend->nSegments));
     storedLGBEND[i].nSegments = lgbend->nSegments;
     storedLGBEND[i].length = lgbend->length;
@@ -933,3 +937,33 @@ void storeLGBendOptimizedFSEValues(LGBEND *lgbend) {
     storedLGBEND[i].fseOpt[storedLGBEND[i].nSegments - 1] = lgbend->fseOpt[storedLGBEND[i].nSegments - 1];
   }
 }
+
+
+void readLGBendApertureData(LGBEND *lgbend)
+{
+  static htab *apertureDataHashTable = NULL;
+  static long apertureDatasets = 0;
+  static APERTURE_DATA **apertureDataset = NULL;
+  
+  char *filename, key[16834];
+  long index;
+
+  filename = findFileInSearchPath(lgbend->apertureDataFile);
+  
+  if (!apertureDataHashTable) 
+    apertureDataHashTable = hcreate(12);
+  if (hcount(apertureDataHashTable)==0 || hfind(apertureDataHashTable, filename, strlen(filename))==FALSE) {
+    /* Read file and add to hash table */
+    if (!(apertureDataset = SDDS_Realloc(apertureDataset, sizeof(*apertureDataset)*(apertureDatasets+1))) ||
+        !(apertureDataset[apertureDatasets] = malloc(sizeof(**apertureDataset))))
+      bombElegantVA("Memory allocation error in readLGBendApertureData reading file %s\n", filename);
+    readApertureInput(apertureDataset[apertureDatasets], filename, 1);
+    hadd(apertureDataHashTable, filename, strlen(filename), (void*)apertureDataset[apertureDatasets]);
+    lgbend->localApertureData = apertureDataset[apertureDatasets];
+    apertureDatasets++;
+  } else {
+    lgbend->localApertureData = hstuff(apertureDataHashTable);
+    free(filename);
+  }
+}
+

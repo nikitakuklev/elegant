@@ -310,6 +310,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           (bgg->poIndex[7] = SDDS_DefineColumn(bgg->SDDSpo, "By", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0)) < 0 ||
           (bgg->poIndex[8] = SDDS_DefineColumn(bgg->SDDSpo, "Bz", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0)) < 0 ||
           (bgg->poIndex[9] = SDDS_DefineColumn(bgg->SDDSpo, "particleID", NULL, NULL, NULL, NULL, SDDS_ULONG64, 0)) < 0 ||
+          (bgg->poIndex[10] = SDDS_DefineColumn(bgg->SDDSpo, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)) < 0 ||
           !SDDS_WriteLayout(bgg->SDDSpo)) {
         SDDS_SetError("Problem setting up particle output file for BGGEXP");
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
@@ -494,6 +495,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[7], By,
                                bgg->poIndex[8], Bz,
                                bgg->poIndex[9], (uint64_t)part[ip][particleIDIndex],
+                               bgg->poIndex[10], s, 
                                -1)) {
           SDDS_SetError("Problem setting particle output data for BGGEXP");
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
@@ -619,6 +621,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[7], By,
                                bgg->poIndex[8], Bz,
                                bgg->poIndex[9], (long)part[ip][particleIDIndex],
+                               bgg->poIndex[10], s,
                                -1) ||
             !SDDS_WritePage(bgg->SDDSpo)) {
           SDDS_SetError("Problem setting particle output data for BGGEXP");
@@ -766,6 +769,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[7], B[1],
                                bgg->poIndex[8], B[2],
                                bgg->poIndex[9], (uint64_t)part[ip][particleIDIndex],
+                               bgg->poIndex[10], s,
                                -1)) {
           SDDS_SetError("Problem setting particle output data for BGGEXP");
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
@@ -855,6 +859,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[7], B[1],
                                bgg->poIndex[8], B[2],
                                bgg->poIndex[9], (uint64_t)part[ip][particleIDIndex],
+                               bgg->poIndex[10], s,
                                -1) ||
             !SDDS_WritePage(bgg->SDDSpo)) {
           SDDS_SetError("Problem setting particle output data for BGGEXP");
