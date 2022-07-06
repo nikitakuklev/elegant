@@ -8,9 +8,14 @@ OPT_CFLAGS_YES = -O2
 else
 OPT_CFLAGS_YES = -O3
 endif
+
+ifeq ($(MDEBUG),1)
+HOST_OPT = NO
+USR_LDFLAGS+= -g
+else
 HOST_OPT = YES
 Ocustom = -O3
-#USR_LDFLAGS+= -g
+endif
 
 #RATIONAL = purify
 #RATIONAL = quantify
