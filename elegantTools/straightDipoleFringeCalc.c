@@ -51,7 +51,8 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
                       double totalBendAngle, char *edgeOutputFile, double zOffset);
 
 void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS,
-                      int Nz, double invRigidity, double zRef, double bendAngle, char *output, char *elementName);
+                      int Nz, double invRigidity, double zRef, double bendAngle, double arcLength,
+                      char *output, char *elementName);
 
 //int refineNextMaximum(double *ggeD, int *zMaxInt, int edgeNum);
 
@@ -95,7 +96,7 @@ char *option[N_OPTIONS] = {
 
 #define USAGE "straightDipoleFringeCalc -gge=<filename> <outputfile>\n\
    -elementName=<string>\n\
-   { -ccbend=pCentral=<value>,bendAngle=<radians>,xEntry=<meters>,zRefField=<meters>\n\
+   { -ccbend=pCentral=<value>,bendAngle=<radians>,[arcLength=<meters>,]xEntry=<meters>,zRefField=<meters>\n\
       | -lgbend=trajectory=<filename>,bendAngle=<radians>[,edgeOutput=<filename>]\n\
     }\n\
 \n\
@@ -124,6 +125,7 @@ char *option[N_OPTIONS] = {
 #define ZREFFIELD_GIVEN  0x004UL
 #define TRAJECTORY_GIVEN 0x008UL
 #define XENTRY_GIVEN     0x010UL
+#define ARCLENGTH_GIVEN  0x020UL
 
 #define ZREFMAX 1024
 
@@ -142,7 +144,7 @@ int main(int argc, char **argv)
   double *z=NULL, *ggeD=NULL, *ggeQ=NULL, *ggeS=NULL, *xp, *x, *By;
   double *zMagnetRef;
 
-  double pCentral=DBL_MAX, invRigidity, bendAngle=DBL_MAX;
+  double pCentral=DBL_MAX, invRigidity, bendAngle=DBL_MAX, arcLength=DBL_MAX;
   // 4.501990914651359e-05 - 1.922200520833333e-05; // should default to zero and be read in below
 
   int Nsegments, Nedges, ip, Nz;
@@ -182,6 +184,7 @@ int main(int argc, char **argv)
         if (!scanItemList(&ccbendFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
                           "pcentral", SDDS_DOUBLE, &pCentral, 1, PCENTRAL_GIVEN,
                           "bendangle", SDDS_DOUBLE, &bendAngle, 1, BENDANGLE_GIVEN,
+                          "arclength", SDDS_DOUBLE, &arcLength, 1, ARCLENGTH_GIVEN,
                           "zreffield", SDDS_DOUBLE, &(zMagnetRef[0]), 1, ZREFFIELD_GIVEN, 
                           "xentry", SDDS_DOUBLE, &(xEntry), 1, XENTRY_GIVEN,
                           NULL))
@@ -253,7 +256,8 @@ int main(int argc, char **argv)
     /* add 0.01% of dz to eliminate rounding errors when converting to ints */
     //zMagnetRef[0] += 1.0e-4 * (z[1] - z[0]);
     invRigidity = 1.0e-12 * E_CHARGE_PC / (E_MASS_MKS * C_LIGHT_MKS * pCentral);
-    CCBENDfringeCalc(z, ggeD, ggeQ, ggeS, Nz, invRigidity, zMagnetRef[0], bendAngle, output, elementName);
+    CCBENDfringeCalc(z, ggeD, ggeQ, ggeS, Nz, invRigidity, zMagnetRef[0], 
+                     bendAngle, ccbendFlags&ARCLENGTH_GIVEN?arcLength:-1, output, elementName);
   } else if (mode==LGBEND_MODE) {
     int64_t trajRows, i;
     double dzTraj, zOffset;
@@ -639,7 +643,7 @@ void LGBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, doubl
 }
 
 void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int Nz, double invRigidity, 
-                      double zRef, double bendAngle, char *output, char *elementName)
+                      double zRef, double bendAngle, double arcLength, char *output, char *elementName)
 {
   SDDS_DATASET SDDSout;
   double *stepFuncD, *stepFuncQ, *stepFuncS;
@@ -648,7 +652,7 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
   FRINGE_INT3 dipFringeInt, sextFringeInt;
   FRINGE_INT3 quadFringeInt, dipSextFringeInt;
 
-  double arcLength, fringeInt, dz = z[1] - z[0];
+  double fringeInt, dz = z[1] - z[0];
 
   int *zEdgeInt, *zMaxInt;
   int ip, edgeNum, Nedges = 2, iRow;
@@ -712,7 +716,9 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
   fringeInt = integrateTrap(ggeD, zMaxInt[1], zMaxInt[2], dz);
   zEdge[1] = (maxD[2] * (z[zMaxInt[2]] - z[zMaxInt[1]]) - fringeInt) / (maxD[2] - maxD[1]);
   zEdge[1] += z[zMaxInt[1]];
-  arcLength = 0.5*bendAngle*(zEdge[1]-zEdge[0])/sin(0.5*bendAngle);
+  if (arcLength<0)
+    /* compute the approximate arc length if the user didn't give it */
+    arcLength = 0.5*bendAngle*(zEdge[1]-zEdge[0])/sin(0.5*bendAngle);
 
   for (edgeNum = iRow = 0; edgeNum < Nedges; edgeNum++)
     {
@@ -745,8 +751,8 @@ void CCBENDfringeCalc(double *z, double *ggeD, double *ggeQ, double *ggeS, int N
       dipSextFringeInt = computeDipSextFringeInt(ggeD, stepFuncD, ggeS, stepFuncS, z, zEdge, zMaxInt, edgeNum, invRigidity, dz);
 
       // The arc length is calculated above...
-      if(edgeNum == 1)
-	arcLength = 0.5*bendAngle*(zEdge[1]-zEdge[0])/sin(0.5*bendAngle);
+      // if (edgeNum == 1)
+      // arcLength = 0.5*bendAngle*(zEdge[1]-zEdge[0])/sin(0.5*bendAngle);
       //else
 	//arcLength = bendAngle / (invRigidity * maxD[1]);
 
