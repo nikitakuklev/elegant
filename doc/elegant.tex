@@ -57,6 +57,7 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
   the \verb|element_divisions| parameter of the \verb|run_setup| command. In addition, multiple \verb|CWIGGLER| elements
   that are separated only by \verb|MARK| or \verb|WATCH| elements are considered part of the same element.
   This was suggested by forum user \verb|Skamarokha|.
+\item The \verb|LGBEND| element now allows the user to provide z-dependent aperture data via an SDDS file.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -93,7 +94,8 @@ are listed in Section \ref{sect:tools}.
 
 Changes to these tools in this release include
 \begin{itemize}
-\item None
+\item The \verb|straightDipoleFringeCalc| program now allows the user to specify the arc length of the
+  \verb|CCBEND| element, rather than relying on the internal calculation, which may not be accurate.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
