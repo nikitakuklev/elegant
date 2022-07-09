@@ -13,6 +13,7 @@ typedef struct COMPLEX
   double im;
 } COMPLEX;
 COMPLEX **createComplexArray(long nxy, long nz, double *value);
+void copyComplexArray(COMPLEX **target, COMPLEX **source, long nxy, long nz);
 COMPLEX fourierCoeffIntegralTrap(COMPLEX *Bint, double *x, double lambdaN, double dx, double xMax, int32_t Nx);
 COMPLEX fourierCoeffIntegralSimp(COMPLEX *Bint, double *x, double lambdaN, double dx, double xMax, int32_t Nx);
 COMPLEX fourierCoeffIntegralLinInterp(COMPLEX *Bint, double *x, double lambdaN, double dx, double xMax, int32_t Nx);
@@ -32,8 +33,11 @@ void FFT(COMPLEX *field, int32_t isign, int32_t npts);
 unsigned long IntCeilingPowerOf2(unsigned long i);
 
 typedef struct {
+  short cached;
   COMPLEX **ByTop, **ByBottom, **BxRight, **BxLeft;
   COMPLEX **BzTop, **BzBottom, **BzRight, **BzLeft;
+  COMPLEX **ByTopSaved, **ByBottomSaved, **BxRightSaved, **BxLeftSaved;
+  COMPLEX **BzTopSaved, **BzBottomSaved, **BzRightSaved, **BzLeftSaved;
   long Nx, Ny, Nfft;
   double dx, dy, dz;
   double xMin, xMax;
@@ -92,16 +96,17 @@ void freeFieldsOnPlanes(FIELDS_ON_PLANES *fop);
 #define SET_FUNDAMENTAL 8
 #define SET_AUTO_TUNE 9
 #define SET_EVALUATE 10
-#define N_OPTIONS 11
+#define SET_VERBOSE 11
+#define N_OPTIONS 12
 
 char *option[N_OPTIONS] = {
   "yminus", "yplus", "xminus", "xplus", "normal", "skew", "derivatives", "multipoles", "fundamental",
-  "autotune", "evaluate",
+  "autotune", "evaluate", "verbose",
 };
 
 #define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
              -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]\n\
-              [-evaluate=<filename>]\n\
+              [-evaluate=<filename>] [-verbose]\n\
               [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>][,minDerivatives=<number>][,minMultipoles=<number>]]\n\
 -yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
 -yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
@@ -114,6 +119,7 @@ char *option[N_OPTIONS] = {
 -multipoles  Number of multipoles desired in output. Default: 8\n\
 -fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\
 -evaluate    Evaluate the GGE over the interior region, including the four boundaries.\n\
+-verbose     Print information while running.\n\
 -autotune    Seeks to minimize the number of multipoles and derivatives to avoid using terms\n\
              that do not contribute to a good fit at the given level of significance. The user can\n\
              choose to minimize the maximum error (default), the rms error, or the mean absolute value\n\
@@ -153,7 +159,7 @@ int main(int argc, char **argv)
   BGGEXP_DATA bggexpData[2];
   SDDS_DATASET SDDS_autoTuneLog;
   char *autoTuneLogFile = NULL;
-  long iAutoTuneLog=0;
+  long iAutoTuneLog=0, verbose=0;
   ALL_RESIDUALS allResiduals;
 
 #ifdef DEBUG
@@ -307,6 +313,9 @@ int main(int argc, char **argv)
               } else
                 autoTuneFlags |= AUTOTUNE_MAXIMUM;
               break;
+            case SET_VERBOSE:
+              verbose = 1;
+              break;
             default:
               fprintf(stderr, "unknown option given\n%s\n", USAGE);
               return (1);
@@ -358,6 +367,10 @@ int main(int argc, char **argv)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         return (1);
       }
+      if (verbose) {
+        printf("Created auto-tune log file %s\n", autoTuneLogFile);
+        fflush(stdout);
+      }
     }
     bestResidual = DBL_MAX;
     bestDerivatives = maxDerivatives;
@@ -366,29 +379,43 @@ int main(int argc, char **argv)
     bggexpData[0].haveData = bggexpData[1].haveData = 0;
 
     memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
-    if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 0) ||
-        computeGGderiv(&fieldsOnPlanes, normalOutputFile, maxDerivatives, maxMultipoles, fundamental))
+    if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, skewOutputFile?1:0))
       return 1;
+    if (verbose) {
+      printf("Read input files\n");
+      fflush(stdout);
+    }
+    if (computeGGderiv(&fieldsOnPlanes, normalOutputFile, maxDerivatives, maxMultipoles, fundamental))
+      return 1;
+    if (verbose) {
+      printf("Computed normal GGE\n");
+      fflush(stdout);
+    }
     readBGGExpData(&bggexpData[0], normalOutputFile, "CnmS", 0);
-    freeFieldsOnPlanes(&fieldsOnPlanes);
 
     if (skewOutputFile) {
-      /* Have to read the data again because it is modified by computeGGderiv and computeGGcos */
+      /* Have to restore the data because it is modified by computeGGderiv and computeGGcos */
       if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1) ||
           computeGGcos(&fieldsOnPlanes, skewOutputFile, maxDerivatives, maxMultipoles, fundamental))
         return 1;
       readBGGExpData(&bggexpData[1], skewOutputFile, "CnmC", 1);
-      freeFieldsOnPlanes(&fieldsOnPlanes);
+      if (verbose) {
+        printf("Computed skew GGE\n");
+        fflush(stdout);
+      }
     }
 
-    /* Have to read the data again because it is modified by computeGGderiv and computeGGcos */
-    freeFieldsOnPlanes(&fieldsOnPlanes);
+    /* Have to restore the data because it is modified by computeGGderiv and computeGGcos */
     if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1))
       return 1;
 
     if (fieldMapFile) {
       /* read 3D map */
       readFieldMap(fieldMapFile, &fieldMap); 
+      if (verbose) {
+        printf("Read 3d field map from disk\n");
+        fflush(stdout);
+      }
       if (minDerivatives<1)
 	minDerivatives = 1;
       if (minMultipoles<1)
@@ -454,23 +481,36 @@ int main(int argc, char **argv)
     }
 
     if (fieldMapFile) {
-      if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 0) ||
+      if (verbose) {
+        printf("Finished auto tuning\n");
+        fflush(stdout);
+      }
+      if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, skewOutputFile?1:0) || 
           computeGGderiv(&fieldsOnPlanes, normalOutputFile, bestDerivatives, bestMultipoles, fundamental))
         return 1;
-      freeFieldsOnPlanes(&fieldsOnPlanes);
+      if (verbose) {
+        printf("Recovered best normal GGE result\n");
+        fflush(stdout);
+      }
       if (skewOutputFile) {
         if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1) ||
             computeGGcos(&fieldsOnPlanes, skewOutputFile, bestDerivatives, bestMultipoles, fundamental))
           return 1;
-        freeFieldsOnPlanes(&fieldsOnPlanes);
+        if (verbose) {
+          printf("Recovered best skew GGE result\n");
+          fflush(stdout);
+        }
       }
     }
 
     if (evaluationOutput) {
-      if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 0))
+      if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, skewOutputFile?1:0))
         return 1;
       evaluateGGEAndOutput(evaluationOutput, normalOutputFile, skewOutputFile, &fieldsOnPlanes);
-      freeFieldsOnPlanes(&fieldsOnPlanes);
+      if (verbose) {
+        printf("Wrote evaluation output to disk\n");
+        fflush(stdout);
+      }
     }
 
     if (autoTuneFlags&AUTOTUNE_LOG) {
@@ -488,6 +528,10 @@ int main(int argc, char **argv)
       if (SDDS_WritePage(&SDDS_autoTuneLog)!=1 || SDDS_Terminate(&SDDS_autoTuneLog)!=1) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         return (1);
+      }
+      if (verbose) {
+        printf("Wrote auto-tune log to disk\n");
+        fflush(stdout);
       }
     }
     
@@ -578,516 +622,546 @@ int ReadInputFiles
   int32_t tmpNx, tmpNy, tmpNfft;
   double tmpdx, tmpdy, tmpdz;
   double xmintop, xminbottom, yminleft, yminright, xleft, xright, ytop, ybottom, xmaxtop, ymaxleft;
-  
-  /* Read in By and possibly Bz from the top face */
-  if (SDDS_InitializeInput(&SDDSInput, topFile) != 1)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if ((SDDS_CheckColumn(&SDDSInput, "By", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (needBz && 
-       SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if (SDDS_ReadPage(&SDDSInput) != 1)
-    {
-      fprintf(stderr, "Unable to read SDDS page\n");
-      return (1);
-    }
-  rows = SDDS_RowCount(&SDDSInput);
-  cvalues[0] = SDDS_GetColumnInDoubles(&SDDSInput, "By");
-  if (cvalues[0] == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  cvalues[1] = NULL;
-  if (needBz) {
-    cvalues[1] = SDDS_GetColumnInDoubles(&SDDSInput, "Bz");
-    if (cvalues[1] == NULL)
+
+  if (!fieldsOnPlanes->cached) {
+    /* Read in By and possibly Bz from the top face */
+    if (SDDS_InitializeInput(&SDDSInput, topFile) != 1)
       {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         return (1);
       }
-  }
-  xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
-  if (xvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    if ((SDDS_CheckColumn(&SDDSInput, "By", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (needBz && 
+         SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if (SDDS_ReadPage(&SDDSInput) != 1)
+      {
+        fprintf(stderr, "Unable to read SDDS page\n");
       return (1);
-    }
-  yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
-  if (yvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
-  if (zvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if (SDDS_Terminate(&SDDSInput) != 1)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if ((zvalues[0] != zvalues[1]) || (xvalues[0] == xvalues[1])) {
-    fprintf(stderr, "Error: Sort the input file %s with sddssort -col=z -col=y -col=x\n", topFile);
-    return (1);
-  }
-  xmintop = xvalues[0];
-  xmaxtop = xvalues[rows-1];
-  ytop = yvalues[0];
-  fieldsOnPlanes->xMin = xmintop;
-  fieldsOnPlanes->xMax = xmaxtop;
-  find_min_max(&(fieldsOnPlanes->zMin), &(fieldsOnPlanes->zMax), zvalues, rows);
-  for (ix = 1; ix < rows; ix++)
-    {
-      if (zvalues[ix-1] != zvalues[ix])
+      }
+    rows = SDDS_RowCount(&SDDSInput);
+    cvalues[0] = SDDS_GetColumnInDoubles(&SDDSInput, "By");
+    if (cvalues[0] == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    cvalues[1] = NULL;
+    if (needBz) {
+      cvalues[1] = SDDS_GetColumnInDoubles(&SDDSInput, "Bz");
+      if (cvalues[1] == NULL)
         {
-          fieldsOnPlanes->Nx = ix;
-          fieldsOnPlanes->Nfft = rows / ix;
-          fieldsOnPlanes->dx = (xvalues[ix-1] - xvalues[0]) / (ix - 1);
-          fieldsOnPlanes->dz = (zvalues[rows-1] - zvalues[0]) / (fieldsOnPlanes->Nfft - 1);
-          break;
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
         }
     }
-  if (rows != fieldsOnPlanes->Nx * fieldsOnPlanes->Nfft)
-    {
-      fprintf(stderr, "Unexpected row count (y plus file): Nx = %ld, Nz = %ld, rows = %ld\n",
-              (long)fieldsOnPlanes->Nx, (long)fieldsOnPlanes->Nfft, (long)rows);
-      return (1);
-    }
-#ifdef DEBUG
-  fprintf(stderr, "Top file %s, Nx=%ld, Nfft=%ld, dx=%le, dz=%le\n",
-          topFile, (long)fieldsOnPlanes->Nx, (long)fieldsOnPlanes->Nfft, fieldsOnPlanes->dx, fieldsOnPlanes->dz);
-#endif
-
-  fieldsOnPlanes->ByTop = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[0]);
-  if (!needBz)
-    fieldsOnPlanes->BzTop = NULL;
-  else
-    fieldsOnPlanes->BzTop = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[1]);
-  free(cvalues[0]);
-  if (needBz)
-    free(cvalues[1]);
-  free(xvalues);
-  free(yvalues);
-  free(zvalues);
-  tmpNx = fieldsOnPlanes->Nx;
-  tmpNfft = fieldsOnPlanes->Nfft;
-  tmpdx = fieldsOnPlanes->dx;
-  tmpdz = fieldsOnPlanes->dz;
-
-  /* Read in By from the bottom face */
-  if (SDDS_InitializeInput(&SDDSInput, bottomFile) != 1)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if ((SDDS_CheckColumn(&SDDSInput, "By", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (needBz && 
-       SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if (SDDS_ReadPage(&SDDSInput) != 1)
-    {
-      fprintf(stderr, "Unable to read SDDS page\n");
-      return (1);
-    }
-  rows = SDDS_RowCount(&SDDSInput);
-  cvalues[0] = SDDS_GetColumnInDoubles(&SDDSInput, "By");
-  if (cvalues[0] == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  cvalues[1] = NULL;
-  if (needBz) {
-    cvalues[1] = SDDS_GetColumnInDoubles(&SDDSInput, "Bz");
-    if (cvalues[1] == NULL)
+    xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
+    if (xvalues == NULL)
       {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         return (1);
       }
-  }
-  xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
-  if (xvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
+    if (yvalues == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
+    if (zvalues == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if (SDDS_Terminate(&SDDSInput) != 1)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if ((zvalues[0] != zvalues[1]) || (xvalues[0] == xvalues[1])) {
+      fprintf(stderr, "Error: Sort the input file %s with sddssort -col=z -col=y -col=x\n", topFile);
       return (1);
     }
-  yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
-  if (yvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
+    xmintop = xvalues[0];
+    xmaxtop = xvalues[rows-1];
+    ytop = yvalues[0];
+    fieldsOnPlanes->xMin = xmintop;
+    fieldsOnPlanes->xMax = xmaxtop;
+    find_min_max(&(fieldsOnPlanes->zMin), &(fieldsOnPlanes->zMax), zvalues, rows);
+    for (ix = 1; ix < rows; ix++)
+      {
+        if (zvalues[ix-1] != zvalues[ix])
+          {
+            fieldsOnPlanes->Nx = ix;
+            fieldsOnPlanes->Nfft = rows / ix;
+            fieldsOnPlanes->dx = (xvalues[ix-1] - xvalues[0]) / (ix - 1);
+            fieldsOnPlanes->dz = (zvalues[rows-1] - zvalues[0]) / (fieldsOnPlanes->Nfft - 1);
+            break;
+          }
+      }
+    if (rows != fieldsOnPlanes->Nx * fieldsOnPlanes->Nfft)
+      {
+        fprintf(stderr, "Unexpected row count (y plus file): Nx = %ld, Nz = %ld, rows = %ld\n",
+                (long)fieldsOnPlanes->Nx, (long)fieldsOnPlanes->Nfft, (long)rows);
+        return (1);
+      }
+#ifdef DEBUG
+    fprintf(stderr, "Top file %s, Nx=%ld, Nfft=%ld, dx=%le, dz=%le\n",
+            topFile, (long)fieldsOnPlanes->Nx, (long)fieldsOnPlanes->Nfft, fieldsOnPlanes->dx, fieldsOnPlanes->dz);
+#endif
+
+    fieldsOnPlanes->ByTop = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[0]);
+    fieldsOnPlanes->ByTopSaved = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[0]);
+    if (!needBz)
+      fieldsOnPlanes->BzTop = fieldsOnPlanes->BzTopSaved = NULL;
+    else {
+      fieldsOnPlanes->BzTop = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[1]);
+      fieldsOnPlanes->BzTopSaved = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[1]);
     }
-  zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
-  if (zvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
+    free(cvalues[0]);
+    if (needBz)
+      free(cvalues[1]);
+    free(xvalues);
+    free(yvalues);
+    free(zvalues);
+    tmpNx = fieldsOnPlanes->Nx;
+    tmpNfft = fieldsOnPlanes->Nfft;
+    tmpdx = fieldsOnPlanes->dx;
+    tmpdz = fieldsOnPlanes->dz;
+
+
+    /* Read in By from the bottom face */
+    if (SDDS_InitializeInput(&SDDSInput, bottomFile) != 1)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if ((SDDS_CheckColumn(&SDDSInput, "By", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (needBz && 
+         SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if (SDDS_ReadPage(&SDDSInput) != 1)
+      {
+        fprintf(stderr, "Unable to read SDDS page\n");
+        return (1);
+      }
+    rows = SDDS_RowCount(&SDDSInput);
+    cvalues[0] = SDDS_GetColumnInDoubles(&SDDSInput, "By");
+    if (cvalues[0] == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    cvalues[1] = NULL;
+    if (needBz) {
+      cvalues[1] = SDDS_GetColumnInDoubles(&SDDSInput, "Bz");
+      if (cvalues[1] == NULL)
+        {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          return (1);
+        }
     }
-  if (SDDS_Terminate(&SDDSInput) != 1)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if ((zvalues[0] != zvalues[1]) || (xvalues[0] == xvalues[1])) {
+    xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
+    if (xvalues == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
+    if (yvalues == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
+    if (zvalues == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if (SDDS_Terminate(&SDDSInput) != 1)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if ((zvalues[0] != zvalues[1]) || (xvalues[0] == xvalues[1])) {
       fprintf(stderr, "Error: Sort the input %s with sddssort -col=z -col=y -col=x\n", bottomFile);
       return (1);
-  }
-  xminbottom = xvalues[0];
-  ybottom = yvalues[0];
-  for (ix = 1; ix < rows; ix++)
-    {
-      if (zvalues[ix-1] != zvalues[ix])
-        {
-          fieldsOnPlanes->Nx = ix;
-          fieldsOnPlanes->Nfft = rows / ix;
-          fieldsOnPlanes->dx = (xvalues[ix-1] - xvalues[0]) / (ix - 1);
-          fieldsOnPlanes->dz = (zvalues[rows-1] - zvalues[0]) / (fieldsOnPlanes->Nfft - 1);
-          break;
-        }
     }
-  if (rows != fieldsOnPlanes->Nx * fieldsOnPlanes->Nfft)
-    {
-      fprintf(stderr, "Unexpected row count (y minus file): Nx = %ld, Nz = %ld, rows = %ld\n",
-              (long) fieldsOnPlanes->Nx, (long) fieldsOnPlanes->Nfft, (long)rows);
-      return (1);
-    }
+    xminbottom = xvalues[0];
+    ybottom = yvalues[0];
+    for (ix = 1; ix < rows; ix++)
+      {
+        if (zvalues[ix-1] != zvalues[ix])
+          {
+            fieldsOnPlanes->Nx = ix;
+            fieldsOnPlanes->Nfft = rows / ix;
+            fieldsOnPlanes->dx = (xvalues[ix-1] - xvalues[0]) / (ix - 1);
+            fieldsOnPlanes->dz = (zvalues[rows-1] - zvalues[0]) / (fieldsOnPlanes->Nfft - 1);
+            break;
+          }
+      }
+    if (rows != fieldsOnPlanes->Nx * fieldsOnPlanes->Nfft)
+      {
+        fprintf(stderr, "Unexpected row count (y minus file): Nx = %ld, Nz = %ld, rows = %ld\n",
+                (long) fieldsOnPlanes->Nx, (long) fieldsOnPlanes->Nfft, (long)rows);
+        return (1);
+      }
 #ifdef DEBUG
-  fprintf(stderr, "Bottom file %s, Nx=%ld, Nfft=%ld, dx=%le, dz=%le\n",
-          bottomFile, (long)fieldsOnPlanes->Nx, (long)fieldsOnPlanes->Nfft, fieldsOnPlanes->dx, fieldsOnPlanes->dz);
+    fprintf(stderr, "Bottom file %s, Nx=%ld, Nfft=%ld, dx=%le, dz=%le\n",
+            bottomFile, (long)fieldsOnPlanes->Nx, (long)fieldsOnPlanes->Nfft, fieldsOnPlanes->dx, fieldsOnPlanes->dz);
 #endif
 
-  if (tmpNx != fieldsOnPlanes->Nx)
-    {
-      fprintf(stderr, "Nx values differ in the input files\n");
-      return (1);
-    }
-  if (tmpNfft != fieldsOnPlanes->Nfft)
-    {
-      fprintf(stderr, "Nfft values differ in the input files\n");
-      return (1);
-    }
-  if ((tmpdx + 1e-9 < fieldsOnPlanes->dx) || (tmpdx - 1e-9 > fieldsOnPlanes->dx))
-    {
-      fprintf(stderr, "dx values differ in the input files (%21.15le vs %21.15le)\n", tmpdx, fieldsOnPlanes->dx);
-      return (1);
-    }
-  if ((tmpdz + 1e-9 < fieldsOnPlanes->dz) || (tmpdz - 1e-9 > fieldsOnPlanes->dz))
-    {
-      fprintf(stderr, "dz values differ in the input files (%21.15le vs %21.15le)\n", tmpdz, fieldsOnPlanes->dz); 
-     return (1);
-    }
+    if (tmpNx != fieldsOnPlanes->Nx)
+      {
+        fprintf(stderr, "Nx values differ in the input files\n");
+        return (1);
+      }
+    if (tmpNfft != fieldsOnPlanes->Nfft)
+      {
+        fprintf(stderr, "Nfft values differ in the input files\n");
+        return (1);
+      }
+    if ((tmpdx + 1e-9 < fieldsOnPlanes->dx) || (tmpdx - 1e-9 > fieldsOnPlanes->dx))
+      {
+        fprintf(stderr, "dx values differ in the input files (%21.15le vs %21.15le)\n", tmpdx, fieldsOnPlanes->dx);
+        return (1);
+      }
+    if ((tmpdz + 1e-9 < fieldsOnPlanes->dz) || (tmpdz - 1e-9 > fieldsOnPlanes->dz))
+      {
+        fprintf(stderr, "dz values differ in the input files (%21.15le vs %21.15le)\n", tmpdz, fieldsOnPlanes->dz); 
+        return (1);
+      }
 
-  fieldsOnPlanes->ByBottom = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[0]);
-  if (!needBz)
-    fieldsOnPlanes->BzBottom = NULL;
-  else 
-    fieldsOnPlanes->BzBottom = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[1]);
-  free(cvalues[0]);
-  if (needBz)
-    free(cvalues[1]);
-  free(xvalues);
-  free(yvalues);
-  free(zvalues);
+    fieldsOnPlanes->ByBottom = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[0]);
+    fieldsOnPlanes->ByBottomSaved = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[0]);
+    if (!needBz)
+      fieldsOnPlanes->BzBottom = fieldsOnPlanes->BzBottomSaved = NULL;
+    else {
+      fieldsOnPlanes->BzBottom = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[1]);
+      fieldsOnPlanes->BzBottomSaved = createComplexArray(fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft, cvalues[1]);
+    }
+    free(cvalues[0]);
+    if (needBz)
+      free(cvalues[1]);
+    free(xvalues);
+    free(yvalues);
+    free(zvalues);
 
-  /* Read in Bx from the left face */
-  if (SDDS_InitializeInput(&SDDSInput, leftFile) != 1)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if ((SDDS_CheckColumn(&SDDSInput, "Bx", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (needBz && 
-       SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if (SDDS_ReadPage(&SDDSInput) != 1)
-    {
-      fprintf(stderr, "Unable to read SDDS page\n");
-      return (1);
-    }
-  rows = SDDS_RowCount(&SDDSInput);
-  cvalues[0] = SDDS_GetColumnInDoubles(&SDDSInput, "Bx");
-  if (cvalues[0] == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  cvalues[1] = NULL;
-  if (needBz) {
-    cvalues[1] = SDDS_GetColumnInDoubles(&SDDSInput, "Bz");
-    if (cvalues[1] == NULL)
+    /* Read in Bx from the left face */
+    if (SDDS_InitializeInput(&SDDSInput, leftFile) != 1)
       {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         return (1);
       }
-  }
-  xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
-  if (xvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
+    if ((SDDS_CheckColumn(&SDDSInput, "Bx", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (needBz && 
+         SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if (SDDS_ReadPage(&SDDSInput) != 1)
+      {
+        fprintf(stderr, "Unable to read SDDS page\n");
+        return (1);
+      }
+    rows = SDDS_RowCount(&SDDSInput);
+    cvalues[0] = SDDS_GetColumnInDoubles(&SDDSInput, "Bx");
+    if (cvalues[0] == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    cvalues[1] = NULL;
+    if (needBz) {
+      cvalues[1] = SDDS_GetColumnInDoubles(&SDDSInput, "Bz");
+      if (cvalues[1] == NULL)
+        {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          return (1);
+        }
     }
-  yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
-  if (yvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
-  if (zvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if (SDDS_Terminate(&SDDSInput) != 1)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if ((zvalues[0] != zvalues[1]) || (yvalues[0] == yvalues[1])) {
+    xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
+    if (xvalues == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
+    if (yvalues == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
+    if (zvalues == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if (SDDS_Terminate(&SDDSInput) != 1)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if ((zvalues[0] != zvalues[1]) || (yvalues[0] == yvalues[1])) {
       fprintf(stderr, "Error: Sort the input file %s with sddssort -col=z -col=y -col=x\n", leftFile);
       return (1);
-  }
-  yminleft = yvalues[0];
-  ymaxleft = yvalues[rows-1];
-  fieldsOnPlanes->yMin = yminleft;
-  fieldsOnPlanes->yMax = ymaxleft;
-  xleft = xvalues[0];
-  for (iy = 1; iy < rows; iy++)
-    {
-      if (zvalues[iy-1] != zvalues[iy])
-        {
-          fieldsOnPlanes->Ny = iy;
-          fieldsOnPlanes->Nfft = rows / iy;
-          fieldsOnPlanes->dy = (yvalues[iy-1] - yvalues[0]) / (iy - 1);
-          fieldsOnPlanes->dz = (zvalues[rows-1] - zvalues[0]) / (fieldsOnPlanes->Nfft - 1);
-          break;
-        }
     }
-  if (rows != fieldsOnPlanes->Ny * fieldsOnPlanes->Nfft)
-    {
-      fprintf(stderr, "Unexpected row count (x minus file): Ny = %ld, Nz = %ld, rows = %ld\n",
-              (long) fieldsOnPlanes->Ny, (long) fieldsOnPlanes->Nfft, (long) rows);
-      return (1);
-    }
+    yminleft = yvalues[0];
+    ymaxleft = yvalues[rows-1];
+    fieldsOnPlanes->yMin = yminleft;
+    fieldsOnPlanes->yMax = ymaxleft;
+    xleft = xvalues[0];
+    for (iy = 1; iy < rows; iy++)
+      {
+        if (zvalues[iy-1] != zvalues[iy])
+          {
+            fieldsOnPlanes->Ny = iy;
+            fieldsOnPlanes->Nfft = rows / iy;
+            fieldsOnPlanes->dy = (yvalues[iy-1] - yvalues[0]) / (iy - 1);
+            fieldsOnPlanes->dz = (zvalues[rows-1] - zvalues[0]) / (fieldsOnPlanes->Nfft - 1);
+            break;
+          }
+      }
+    if (rows != fieldsOnPlanes->Ny * fieldsOnPlanes->Nfft)
+      {
+        fprintf(stderr, "Unexpected row count (x minus file): Ny = %ld, Nz = %ld, rows = %ld\n",
+                (long) fieldsOnPlanes->Ny, (long) fieldsOnPlanes->Nfft, (long) rows);
+        return (1);
+      }
 
-  if (tmpNfft != fieldsOnPlanes->Nfft)
-    {
-      fprintf(stderr, "Nfft values differ in the input files\n");
-      return (1);
-    }
-  if ((tmpdz + 1e-9 < fieldsOnPlanes->dz) || (tmpdz - 1e-9 > fieldsOnPlanes->dz))
-    {
-      fprintf(stderr, "dz values differ in the input files\n");
-      return (1);
-    }
+    if (tmpNfft != fieldsOnPlanes->Nfft)
+      {
+        fprintf(stderr, "Nfft values differ in the input files\n");
+        return (1);
+      }
+    if ((tmpdz + 1e-9 < fieldsOnPlanes->dz) || (tmpdz - 1e-9 > fieldsOnPlanes->dz))
+      {
+        fprintf(stderr, "dz values differ in the input files\n");
+        return (1);
+      }
 #ifdef DEBUG
-  fprintf(stderr, "Left file %s, Ny=%ld, Nfft=%ld, dx=%le, dz=%le\n",
-          leftFile, (long)fieldsOnPlanes->Ny, (long)fieldsOnPlanes->Nfft, fieldsOnPlanes->dx, fieldsOnPlanes->dz);
+    fprintf(stderr, "Left file %s, Ny=%ld, Nfft=%ld, dx=%le, dz=%le\n",
+            leftFile, (long)fieldsOnPlanes->Ny, (long)fieldsOnPlanes->Nfft, fieldsOnPlanes->dx, fieldsOnPlanes->dz);
 #endif
 
-  fieldsOnPlanes->BxLeft = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[0]);
-  if (!needBz)
-    fieldsOnPlanes->BzLeft = NULL;
-  else 
-    fieldsOnPlanes->BzLeft = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[1]);
-  free(cvalues[0]);
-  if (needBz)
-    free(cvalues[1]);
-  free(xvalues);
-  free(yvalues);
-  free(zvalues);
-  tmpNy = fieldsOnPlanes->Ny;
-  tmpdy = fieldsOnPlanes->dy;
+    fieldsOnPlanes->BxLeft = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[0]);
+    fieldsOnPlanes->BxLeftSaved = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[0]);
+    if (!needBz)
+      fieldsOnPlanes->BzLeft = fieldsOnPlanes->BzLeftSaved = NULL;
+    else {
+      fieldsOnPlanes->BzLeft = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[1]);
+      fieldsOnPlanes->BzLeftSaved = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[1]);
+    }
+    free(cvalues[0]);
+    if (needBz)
+      free(cvalues[1]);
+    free(xvalues);
+    free(yvalues);
+    free(zvalues);
+    tmpNy = fieldsOnPlanes->Ny;
+    tmpdy = fieldsOnPlanes->dy;
 
-  /* Read in Bx from the right face */
-  if (SDDS_InitializeInput(&SDDSInput, rightFile) != 1)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if ((SDDS_CheckColumn(&SDDSInput, "Bx", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (needBz && 
-       SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
-      (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if (SDDS_ReadPage(&SDDSInput) != 1)
-    {
-      fprintf(stderr, "Unable to read SDDS page\n");
-      return (1);
-    }
-  rows = SDDS_RowCount(&SDDSInput);
-  cvalues[0] = SDDS_GetColumnInDoubles(&SDDSInput, "Bx");
-  if (cvalues[0] == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  cvalues[1] = NULL;
-  if (needBz) {
-    cvalues[1] = SDDS_GetColumnInDoubles(&SDDSInput, "Bz");
-    if (cvalues[1] == NULL)
+    /* Read in Bx from the right face */
+    if (SDDS_InitializeInput(&SDDSInput, rightFile) != 1)
       {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         return (1);
       }
-  }
-  xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
-  if (xvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
-  if (yvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
-  if (zvalues == NULL)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if (SDDS_Terminate(&SDDSInput) != 1)
-    {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return (1);
-    }
-  if ((zvalues[0] != zvalues[1]) || (yvalues[0] == yvalues[1])) {
-      fprintf(stderr, "Error: Sort the input file %s with sddssort -col=z -col=y -col=x\n", rightFile);
-      return (1);
-  }
-  yminright = yvalues[0];
-  xright = xvalues[0];
-  for (iy = 1; iy < rows; iy++)
-    {
-      if (zvalues[iy-1] != zvalues[iy])
+    if ((SDDS_CheckColumn(&SDDSInput, "Bx", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (needBz && 
+         SDDS_CheckColumn(&SDDSInput, "Bz", "T", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "x", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "y", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY) ||
+        (SDDS_CheckColumn(&SDDSInput, "z", "m", SDDS_ANY_NUMERIC_TYPE, stderr) != SDDS_CHECK_OKAY))
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if (SDDS_ReadPage(&SDDSInput) != 1)
+      {
+        fprintf(stderr, "Unable to read SDDS page\n");
+        return (1);
+      }
+    rows = SDDS_RowCount(&SDDSInput);
+    cvalues[0] = SDDS_GetColumnInDoubles(&SDDSInput, "Bx");
+    if (cvalues[0] == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    cvalues[1] = NULL;
+    if (needBz) {
+      cvalues[1] = SDDS_GetColumnInDoubles(&SDDSInput, "Bz");
+      if (cvalues[1] == NULL)
         {
-          fieldsOnPlanes->Ny = iy;
-          fieldsOnPlanes->Nfft = rows / iy;
-          fieldsOnPlanes->dy = (yvalues[iy-1] - yvalues[0]) / (iy - 1);
-          fieldsOnPlanes->dz = (zvalues[rows-1] - zvalues[0]) / (fieldsOnPlanes->Nfft - 1);
-          break;
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          return (1);
         }
     }
-  if (rows != fieldsOnPlanes->Ny * fieldsOnPlanes->Nfft)
-    {
-      fprintf(stderr, "Unexpected row count (x plus file): Ny = %ld, Nz = %ld, rows = %ld\n", 
-              (long) fieldsOnPlanes->Ny, (long) fieldsOnPlanes->Nfft, (long) rows);
+    xvalues = SDDS_GetColumnInDoubles(&SDDSInput, "x");
+    if (xvalues == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    yvalues = SDDS_GetColumnInDoubles(&SDDSInput, "y");
+    if (yvalues == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    zvalues = SDDS_GetColumnInDoubles(&SDDSInput, "z");
+    if (zvalues == NULL)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if (SDDS_Terminate(&SDDSInput) != 1)
+      {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return (1);
+      }
+    if ((zvalues[0] != zvalues[1]) || (yvalues[0] == yvalues[1])) {
+      fprintf(stderr, "Error: Sort the input file %s with sddssort -col=z -col=y -col=x\n", rightFile);
       return (1);
     }
+    yminright = yvalues[0];
+    xright = xvalues[0];
+    for (iy = 1; iy < rows; iy++)
+      {
+        if (zvalues[iy-1] != zvalues[iy])
+          {
+            fieldsOnPlanes->Ny = iy;
+            fieldsOnPlanes->Nfft = rows / iy;
+            fieldsOnPlanes->dy = (yvalues[iy-1] - yvalues[0]) / (iy - 1);
+            fieldsOnPlanes->dz = (zvalues[rows-1] - zvalues[0]) / (fieldsOnPlanes->Nfft - 1);
+            break;
+          }
+      }
+    if (rows != fieldsOnPlanes->Ny * fieldsOnPlanes->Nfft)
+      {
+        fprintf(stderr, "Unexpected row count (x plus file): Ny = %ld, Nz = %ld, rows = %ld\n", 
+                (long) fieldsOnPlanes->Ny, (long) fieldsOnPlanes->Nfft, (long) rows);
+        return (1);
+      }
 #ifdef DEBUG
-  fprintf(stderr, "Right file %s, Ny=%ld, Nfft=%ld, dx=%le, dz=%le\n",
-          rightFile, (long)fieldsOnPlanes->Ny, (long)fieldsOnPlanes->Nfft, fieldsOnPlanes->dx, fieldsOnPlanes->dz);
+    fprintf(stderr, "Right file %s, Ny=%ld, Nfft=%ld, dx=%le, dz=%le\n",
+            rightFile, (long)fieldsOnPlanes->Ny, (long)fieldsOnPlanes->Nfft, fieldsOnPlanes->dx, fieldsOnPlanes->dz);
 #endif
 
-  if (tmpNy != fieldsOnPlanes->Ny)
-    {
-      fprintf(stderr, "Ny values differ in the input files\n");
-      return (1);
-    }
-  if (tmpNfft != fieldsOnPlanes->Nfft)
-    {
-      fprintf(stderr, "Nfft values differ in the input files\n");
-      return (1);
-    }
-  if ((tmpdy + 1e-9 < fieldsOnPlanes->dy) || (tmpdy - 1e-9 > fieldsOnPlanes->dy))
-    {
-      fprintf(stderr, "dy values differ in the x input files (%21.15le vs %21.15le)\n", tmpdy, fieldsOnPlanes->dy);
-      return (1);
-    }
-  if ((tmpdz + 1e-9 < fieldsOnPlanes->dz) || (tmpdz - 1e-9 > fieldsOnPlanes->dz))
-    {
-      fprintf(stderr, "dz values differ in the x input files (%21.15le vs %21.15le)\n", tmpdz, fieldsOnPlanes->dz);
-      return (1);
-    }
+    if (tmpNy != fieldsOnPlanes->Ny)
+      {
+        fprintf(stderr, "Ny values differ in the input files\n");
+        return (1);
+      }
+    if (tmpNfft != fieldsOnPlanes->Nfft)
+      {
+        fprintf(stderr, "Nfft values differ in the input files\n");
+        return (1);
+      }
+    if ((tmpdy + 1e-9 < fieldsOnPlanes->dy) || (tmpdy - 1e-9 > fieldsOnPlanes->dy))
+      {
+        fprintf(stderr, "dy values differ in the x input files (%21.15le vs %21.15le)\n", tmpdy, fieldsOnPlanes->dy);
+        return (1);
+      }
+    if ((tmpdz + 1e-9 < fieldsOnPlanes->dz) || (tmpdz - 1e-9 > fieldsOnPlanes->dz))
+      {
+        fprintf(stderr, "dz values differ in the x input files (%21.15le vs %21.15le)\n", tmpdz, fieldsOnPlanes->dz);
+        return (1);
+      }
 
-  fieldsOnPlanes->BxRight = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[0]);
-  if (!needBz)
-    fieldsOnPlanes->BzRight = NULL;
-  else 
-    fieldsOnPlanes->BzRight = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[1]);
-  free(cvalues[0]);
-  if (needBz)
-    free(cvalues[1]);
-  free(xvalues);
-  free(yvalues);
-  free(zvalues);
+    fieldsOnPlanes->BxRight = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[0]);
+    fieldsOnPlanes->BxRightSaved = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[0]);
+    if (!needBz)
+      fieldsOnPlanes->BzRight = fieldsOnPlanes->BzRightSaved = NULL;
+    else {
+      fieldsOnPlanes->BzRight = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[1]);
+      fieldsOnPlanes->BzRightSaved = createComplexArray(fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft, cvalues[1]);
+    }
+    free(cvalues[0]);
+    if (needBz)
+      free(cvalues[1]);
+    free(xvalues);
+    free(yvalues);
+    free(zvalues);
 
-  if (xmintop != xminbottom)
-    {
-      fprintf(stderr, "Error: x range differs in yplus and yminus files\n");
-      return (1);
+    if (xmintop != xminbottom)
+      {
+        fprintf(stderr, "Error: x range differs in yplus and yminus files\n");
+        return (1);
     }
-  if (yminleft != yminright)
-    {
-      fprintf(stderr, "Error: y range differs in xminus and xplus files\n");
-      return (1);
-    }
-  if (xleft >= xright)
-    {
-      fprintf(stderr, "Error: x values in xminus file less than x values in xplus file\n");
-      return (1);
-    }
-  if (ytop <= ybottom)
-    {
-      fprintf(stderr, "Error: y values in yplus file less than x values in yminus file\n");
-      return (1);
-    }
-  if (xmintop != xleft)
-    {
-      fprintf(stderr, "Error: x values in xminus file don't match min x values in yplus and yminus files\n");
-      return (1);
-    }
-  if (yminleft != ybottom)
-    {
-      fprintf(stderr, "Error: y values in yminus file don't match min y values in xminus and xplus files\n");
-      return (1);
-    }
-  if (xmaxtop != xright)
-    {
-      fprintf(stderr, "Error: x values in xplus file don't match max x values in yplus and yminus files\n");
-      return (1);
-    }
-  if (ymaxleft != ytop)
-    {
-      fprintf(stderr, "Error: y values in yplus file don't match max y values in xminus and xplus files\n");
-      return (1);
-    }
-
-  fieldsOnPlanes->xCenter = (xleft + xright) * .5;
-  fieldsOnPlanes->yCenter = (ytop + ybottom) * .5;
+    if (yminleft != yminright)
+      {
+        fprintf(stderr, "Error: y range differs in xminus and xplus files\n");
+        return (1);
+      }
+    if (xleft >= xright)
+      {
+        fprintf(stderr, "Error: x values in xminus file less than x values in xplus file\n");
+        return (1);
+      }
+    if (ytop <= ybottom)
+      {
+        fprintf(stderr, "Error: y values in yplus file less than x values in yminus file\n");
+        return (1);
+      }
+    if (xmintop != xleft)
+      {
+        fprintf(stderr, "Error: x values in xminus file don't match min x values in yplus and yminus files\n");
+        return (1);
+      }
+    if (yminleft != ybottom)
+      {
+        fprintf(stderr, "Error: y values in yminus file don't match min y values in xminus and xplus files\n");
+        return (1);
+      }
+    if (xmaxtop != xright)
+      {
+        fprintf(stderr, "Error: x values in xplus file don't match max x values in yplus and yminus files\n");
+        return (1);
+      }
+    if (ymaxleft != ytop)
+      {
+        fprintf(stderr, "Error: y values in yplus file don't match max y values in xminus and xplus files\n");
+        return (1);
+      }
+    
+    fieldsOnPlanes->xCenter = (xleft + xright) * .5;
+    fieldsOnPlanes->yCenter = (ytop + ybottom) * .5;
+    
+    fieldsOnPlanes->cached = 1;
+  } else {
+    copyComplexArray(fieldsOnPlanes->ByTop, fieldsOnPlanes->ByTopSaved, fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft);
+    if (fieldsOnPlanes->BzTop)
+      copyComplexArray(fieldsOnPlanes->BzTop, fieldsOnPlanes->BzTopSaved, fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft);
+    copyComplexArray(fieldsOnPlanes->ByBottom, fieldsOnPlanes->ByBottomSaved, fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft);
+    if (fieldsOnPlanes->BzBottom)
+      copyComplexArray(fieldsOnPlanes->BzBottom, fieldsOnPlanes->BzBottomSaved, fieldsOnPlanes->Nx, fieldsOnPlanes->Nfft);
+    copyComplexArray(fieldsOnPlanes->BxLeft, fieldsOnPlanes->BxLeftSaved, fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft);
+    if (fieldsOnPlanes->BzLeft)
+      copyComplexArray(fieldsOnPlanes->BzLeft, fieldsOnPlanes->BzLeftSaved, fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft);
+    copyComplexArray(fieldsOnPlanes->BxRight, fieldsOnPlanes->BxRightSaved, fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft);
+    if (fieldsOnPlanes->BzRight)
+      copyComplexArray(fieldsOnPlanes->BzRight, fieldsOnPlanes->BzRightSaved, fieldsOnPlanes->Ny, fieldsOnPlanes->Nfft);
+  }
 
   return (0);
 }
@@ -2555,6 +2629,16 @@ unsigned long IntCeilingPowerOf2(unsigned long i)
     {
     }
   return x;
+}
+
+void copyComplexArray(COMPLEX **target, COMPLEX **source, long nxy, long nz)
+{
+  long ixy, iz;
+  for (iz=0; iz<nz; iz++)
+    for (ixy=0; ixy<nxy; ixy++) {
+      target[ixy][iz].re = source[ixy][iz].re;
+      target[ixy][iz].im = source[ixy][iz].im;
+    }
 }
 
 COMPLEX **createComplexArray(long nxy, long nz, double *value)
