@@ -104,7 +104,7 @@
 HDEPENDS_FILES =
 #CMPLR = ANSI
 Ocustom = -O3
-HOST_OPT = YES
+#HOST_OPT = NO
 #USR_LDFLAGS+= -g
 
 #RATIONAL = purify
@@ -135,7 +135,7 @@ SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param pop2param elegant2showe
 PROD_HOST = $(PRODOAG)
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
-		-DIEEE_MATH -DzLib -D_ISOC99_SOURCE -I../../../physics
+		-DIEEE_MATH -DzLib -D_ISOC99_SOURCE -I../../../physics -fopenmp
 USR_LDFLAGS_Linux += -fopenmp
 
 #Look for private version of GSL used here at APS

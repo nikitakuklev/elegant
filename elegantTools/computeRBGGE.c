@@ -7,6 +7,12 @@
 
 #define TWOPI 6.28318530717958647692528676656
 
+#if defined(linux) || (defined(_WIN32) && !defined(_MINGW))
+#  include <omp.h>
+#else
+#  define NOTHREADS 1
+#endif
+
 typedef struct COMPLEX
 {
   double re;
@@ -97,17 +103,18 @@ void freeFieldsOnPlanes(FIELDS_ON_PLANES *fop);
 #define SET_AUTO_TUNE 9
 #define SET_EVALUATE 10
 #define SET_VERBOSE 11
-#define N_OPTIONS 12
+#define SET_THREADS 12
+#define N_OPTIONS 13
 
 char *option[N_OPTIONS] = {
   "yminus", "yplus", "xminus", "xplus", "normal", "skew", "derivatives", "multipoles", "fundamental",
-  "autotune", "evaluate", "verbose",
+  "autotune", "evaluate", "verbose", "threads"
 };
 
 #define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
-             -normal=<output> [-skew=<output>] [-derivatives=<number>] [-multipoles=<number>] [-fundamental=<number>]\n\
-              [-evaluate=<filename>] [-verbose]\n\
-              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>][,minDerivatives=<number>][,minMultipoles=<number>]]\n\
+             -normal=<output> [-skew=<output>] [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]\n\
+              [-evaluate=<filename>] [-verbose] [-threads=<integer>]\n\
+              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>][,minDerivatives=<integer>][,minMultipoles=<integer>]]\n\
 -yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
 -yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
 -xminus      (x, y, z, Bx, By, Bz) map for negative-x plane.\n\
@@ -120,6 +127,7 @@ char *option[N_OPTIONS] = {
 -fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\
 -evaluate    Evaluate the GGE over the interior region, including the four boundaries.\n\
 -verbose     Print information while running.\n\
+-threads     Specify number of threads to use.\n\
 -autotune    Seeks to minimize the number of multipoles and derivatives to avoid using terms\n\
              that do not contribute to a good fit at the given level of significance. The user can\n\
              choose to minimize the maximum error (default), the rms error, or the mean absolute value\n\
@@ -137,6 +145,8 @@ Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Sol
 #define AUTOTUNE_LOG       0x0200UL
 #define AUTOTUNE_INCRONLY  0x0400UL
 char *modeOption[3] = {"rms", "maximum", "mav"};
+
+int threads = 1;
 
 int main(int argc, char **argv)
 {
@@ -316,6 +326,10 @@ int main(int argc, char **argv)
             case SET_VERBOSE:
               verbose = 1;
               break;
+            case SET_THREADS:
+              if (scanned[i_arg].n_items != 2 || sscanf(scanned[i_arg].list[1], "%d", &threads) != 1 || threads <= 0)
+                SDDS_Bomb("invalid -threads syntax: give an value greater than 0");
+              break;
             default:
               fprintf(stderr, "unknown option given\n%s\n", USAGE);
               return (1);
@@ -328,6 +342,10 @@ int main(int argc, char **argv)
           return (1);
         }
     }
+
+#if !defined(NOTHREADS)
+  omp_set_num_threads(threads);
+#endif
 
   if ((topFile == NULL) || (bottomFile == NULL) || (leftFile == NULL) || (rightFile == NULL))
     {
@@ -2885,11 +2903,8 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
                               long multipoles, long derivatives, double significance, double radiusLimit,
                               unsigned long flags, ALL_RESIDUALS *allResiduals)
 {
-  double B[3], Br, Bphi;
-  double x, y, z, r, phi, dz;
-  long ip, ns, iz, ig, m, im;
-  double residualTerm, residualSum, residualSum2, residualWorst, maxField, field;
-  long residualCount;
+  double *residualSum, *residualSum2, *residualWorst, *maxField;
+  long *residualCount, i;
 #ifdef DEBUG
   FILE *fpdeb;
 
@@ -2911,10 +2926,27 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
   spewBGGExpData(bggexpData);
 #endif
   
-  residualWorst = residualSum = residualSum2 = 0;
-  residualCount = 0;
-  maxField = -1;
-  for (ip=0; ip<fmap->n; ip++) {
+  residualWorst = calloc(threads, sizeof(*residualWorst));
+  residualSum = calloc(threads, sizeof(*residualSum));
+  residualSum2 = calloc(threads, sizeof(*residualSum2));
+  residualCount = calloc(threads, sizeof(*residualCount));
+  maxField = calloc(threads, sizeof(*maxField));
+
+#pragma omp parallel
+  {
+    double field;
+    double B[3], Br, Bphi, residualTerm;
+    double x, y, z, r, phi, dz;
+    long ip, ns, iz, ig, m, im;
+    int myid;
+    uint64_t ip0, ip1;
+    myid = omp_get_thread_num();
+    ip0 = myid*(fmap->n/threads);
+    if (myid==(threads-1))
+      ip1 = fmap->n - 1;
+    else
+      ip1 = (myid+1)*(fmap->n/threads)-1;
+    for (ip=ip0; ip<=ip1; ip++) {
     if (fmap->x[ip]>fieldsOnPlanes->xMax || fmap->x[ip]<fieldsOnPlanes->xMin ||
         fmap->y[ip]>fieldsOnPlanes->yMax || fmap->y[ip]<fieldsOnPlanes->yMin)
       continue;
@@ -2989,45 +3021,55 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
             B[0], B[1], B[2], fmap->Bx[ip], fmap->By[ip], fmap->Bz[ip]);
 #endif
     field = sqrt(sqr(B[0])+sqr(B[1])+sqr(B[2]));
-    if (field>maxField)
-      maxField = field;
-    if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst)
-      residualWorst = residualTerm;
-    residualCount ++;
-    residualSum += fabs(residualTerm);
-    residualSum2 += sqr(residualTerm);
+    if (field>maxField[myid])
+      maxField[myid] = field;
+    if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst[myid])
+      residualWorst[myid] = residualTerm;
+    residualCount[myid] ++;
+    residualSum[myid] += fabs(residualTerm);
+    residualSum2[myid] += sqr(residualTerm);
+  }
+#pragma omp barrier
+  }
+
+  for (i=1; i<threads; i++) {
+    residualWorst[0] = MAX(residualWorst[0], residualWorst[i]);
+    residualSum[0] += residualSum[i];
+    residualSum2[0] += residualSum2[i];
+    residualCount[0] += residualCount[i];
+    maxField[0] = MAX(maxField[0], maxField[i]);
   }
 
 #ifdef DEBUG
   fclose(fpdeb);
 #endif
 
-  allResiduals->max = residualWorst;
-  if (residualCount)
-    allResiduals->rms = sqrt(residualSum2/residualCount);
+  allResiduals->max = residualWorst[0];
+  if (residualCount[0])
+    allResiduals->rms = sqrt(residualSum2[0]/residualCount[0]);
   else 
     allResiduals->rms = DBL_MAX;
-  if (residualCount)
-    allResiduals->mad = residualSum/residualCount;
+  if (residualCount[0])
+    allResiduals->mad = residualSum[0]/residualCount[0];
   else
     allResiduals->mad = DBL_MAX;
 
   if (flags&AUTOTUNE_RMS) {
-    residualWorst = allResiduals->rms; 
+    residualWorst[0] = allResiduals->rms; 
   } else if (flags&AUTOTUNE_MAV) {
-    residualWorst = allResiduals->mad;
+    residualWorst[0] = allResiduals->mad;
   }
 
-  if (maxField>0) {
-    allResiduals->fracRms = allResiduals->rms/maxField;
-    allResiduals->fracMad = allResiduals->mad/maxField;
-    allResiduals->fracMax = allResiduals->max/maxField;
+  if (maxField[0]>0) {
+    allResiduals->fracRms = allResiduals->rms/maxField[0];
+    allResiduals->fracMad = allResiduals->mad/maxField[0];
+    allResiduals->fracMax = allResiduals->max/maxField[0];
   } else
     allResiduals->fracRms = 
       allResiduals->fracMad = 
       allResiduals->fracMax = -DBL_MAX;
   
-  return residualWorst>significance ? residualWorst : 0.0;
+  return residualWorst[0]>significance ? residualWorst[0] : 0.0;
 }
 
 int evaluateGGEAndOutput(char *outputFile, char *normalFile, char *skewFile, FIELDS_ON_PLANES *fieldsOnPlanes)
