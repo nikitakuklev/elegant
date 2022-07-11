@@ -1021,19 +1021,19 @@ long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, do
   long lost = 1;
   switch (code) {
   case OPEN_PLUS_X:
-    if (dx > 0 && fabs(dy) < ysize)
+    if (dx > 0 && (fabs(dy) < ysize || ysize<=0))
       lost = 0;
     break;
   case OPEN_MINUS_X:
-    if (dx < 0 && fabs(dy) < ysize)
+    if (dx < 0 && (fabs(dy) < ysize || ysize<=0))
       lost = 0;
     break;
   case OPEN_PLUS_Y:
-    if (dy > 0 && fabs(dx) < xsize)
+    if (dy > 0 && (fabs(dx) < xsize || xsize<=0))
       lost = 0;
     break;
   case OPEN_MINUS_Y:
-    if (dy < 0 && fabs(dx) < xsize)
+    if (dy < 0 && (fabs(dx) < xsize || xsize<=0))
       lost = 0;
     break;
   default:
