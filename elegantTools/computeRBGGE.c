@@ -1228,16 +1228,45 @@ int ReadInputFiles
   Nz = Nfft;
   
   dk = TWOPI / (dz * (double)Nfft);
-  for (ix = 0; ix < Nx; ix++)
-    {
-      FFT(ByTop[ix], -1, Nfft);
-      FFT(ByBottom[ix], -1, Nfft);
+#pragma omp parallel
+  {
+    int ix, ix0, ix1, myid, threadsToUse;
+    myid = omp_get_thread_num();
+    threadsToUse = threads>Nx ? Nx : threads;
+    if (myid<threadsToUse) {
+      ix0 = myid*(Nx/threadsToUse);
+      if (myid==(threadsToUse-1))
+        ix1 = Nx-1;
+      else
+        ix1 = (myid+1)*(Nx/threadsToUse)-1;
+      for (ix = ix0; ix <= ix1; ix++)
+        {
+          FFT(ByTop[ix], -1, Nfft);
+          FFT(ByBottom[ix], -1, Nfft);
+        }
     }
-  for (iy = 0; iy < Ny; iy++)
-    {
-      FFT(BxRight[iy], -1, Nfft);
-      FFT(BxLeft[iy], -1, Nfft);
+#pragma omp barrier
+  }
+
+#pragma omp parallel
+  {
+    int iy, iy0, iy1, myid, threadsToUse;
+    myid = omp_get_thread_num();
+    threadsToUse = threads>Ny ? Ny : threads;
+    if (myid<threadsToUse) {
+      iy0 = myid*(Ny/threadsToUse);
+      if (myid==(threadsToUse-1))
+        iy1 = Ny-1;
+      else
+        iy1 = (myid+1)*(Ny/threadsToUse)-1;
+      for (iy = iy0; iy <= iy1; iy++)
+        {
+          FFT(BxRight[iy], -1, Nfft);
+          FFT(BxLeft[iy], -1, Nfft);
+        }
     }
+#pragma omp barrier
+  }
 
 
   xMax = dx * 0.5 * (double)(Nx - 1);
