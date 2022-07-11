@@ -1191,7 +1191,6 @@ int ReadInputFiles
   COMPLEX **betaTop, **betaBottom, **betaRight, **betaLeft;
   COMPLEX **genGradr_k;
   COMPLEX **derivGG;
-  COMPLEX *Bint;
   COMPLEX genGradT, genGradB, genGradR, genGradL;
 
   double *lambda, *tau, *k, *x, *y;
@@ -1299,59 +1298,73 @@ int ReadInputFiles
       betaLeft[ik] = calloc(Ncoeff, sizeof(COMPLEX));
     }
 
-  Bint = calloc(Nx, sizeof(COMPLEX));
-  for (ik = 0; ik < Nfft; ik++)
-    {
-      for (ix = 0; ix < Nx; ix++)
-        {
-          Bint[ix].re = ByTop[ix][ik].re;
-          Bint[ix].im = ByTop[ix][ik].im;
-        }
-      betaTop[ik][0] = fourierCoeffIntegralTrap(Bint, x, lambda[0], dx, xMax, Nx);
-      betaTop[ik][0].re = 0.5 * betaTop[ik][0].re;
-      betaTop[ik][0].im = 0.5 * betaTop[ik][0].im;
-      for (n = 1; n < Ncoeff; n++)
-        betaTop[ik][n] = fourierCoeffIntegralLinInterp(Bint, x, lambda[n], dx, xMax, Nx);
+#pragma omp parallel 
+  {
+    int ik, ix, n, myid;
+    COMPLEX *Bint;
+    Bint = calloc(Nx, sizeof(COMPLEX));
+    myid = omp_get_thread_num();
+    for (ik = 0; ik < Nfft; ik++)
+      if (ik%threads==myid) {
+        for (ix = 0; ix < Nx; ix++)
+          {
+            Bint[ix].re = ByTop[ix][ik].re;
+            Bint[ix].im = ByTop[ix][ik].im;
+          }
+        betaTop[ik][0] = fourierCoeffIntegralTrap(Bint, x, lambda[0], dx, xMax, Nx);
+        betaTop[ik][0].re = 0.5 * betaTop[ik][0].re;
+        betaTop[ik][0].im = 0.5 * betaTop[ik][0].im;
+        for (n = 1; n < Ncoeff; n++)
+          betaTop[ik][n] = fourierCoeffIntegralLinInterp(Bint, x, lambda[n], dx, xMax, Nx);
+        
+        for (ix = 0; ix < Nx; ix++)
+          {
+            Bint[ix].re = -ByBottom[ix][ik].re;
+            Bint[ix].im = -ByBottom[ix][ik].im;
+          }
+        betaBottom[ik][0] = fourierCoeffIntegralTrap(Bint, x, lambda[0], dx, xMax, Nx);
+        betaBottom[ik][0].re = 0.5 * betaBottom[ik][0].re;
+        betaBottom[ik][0].im = 0.5 * betaBottom[ik][0].im;
+        for (n = 1; n < Ncoeff; n++)
+          betaBottom[ik][n] = fourierCoeffIntegralLinInterp(Bint, x, lambda[n], dx, xMax, Nx);
+      }
+#pragma omp barrier
+    free(Bint);
+  }
 
-      for (ix = 0; ix < Nx; ix++)
-        {
-          Bint[ix].re = -ByBottom[ix][ik].re;
-          Bint[ix].im = -ByBottom[ix][ik].im;
-        }
-      betaBottom[ik][0] = fourierCoeffIntegralTrap(Bint, x, lambda[0], dx, xMax, Nx);
-      betaBottom[ik][0].re = 0.5 * betaBottom[ik][0].re;
-      betaBottom[ik][0].im = 0.5 * betaBottom[ik][0].im;
-      for (n = 1; n < Ncoeff; n++)
-        betaBottom[ik][n] = fourierCoeffIntegralLinInterp(Bint, x, lambda[n], dx, xMax, Nx);
-    }
-  free(Bint);
-
-  Bint = calloc(Ny, sizeof(COMPLEX));
-  for (ik = 0; ik < Nfft; ik++)
-    {
-      for (iy = 0; iy < Ny; iy++)
-        {
-          Bint[iy].re = BxRight[iy][ik].re;
-          Bint[iy].im = BxRight[iy][ik].im;
-        }
-      betaRight[ik][0] = fourierCoeffIntegralSimp(Bint, y, tau[0], dy, yMax, Ny);
-      betaRight[ik][0].re = 0.5 * betaRight[ik][0].re;
-      betaRight[ik][0].im = 0.5 * betaRight[ik][0].im;
-      for (n = 1; n < Ncoeff; n++)
-        betaRight[ik][n] = fourierCoeffIntegralLinInterp(Bint, y, tau[n], dy, yMax, Ny);
-
-      for (iy = 0; iy < Ny; iy++)
-        {
-          Bint[iy].re = -BxLeft[iy][ik].re;
-          Bint[iy].im = -BxLeft[iy][ik].im;
-        }
-      betaLeft[ik][0] = fourierCoeffIntegralSimp(Bint, y, tau[0], dy, yMax, Ny);
-      betaLeft[ik][0].re = 0.5 * betaLeft[ik][0].re;
-      betaLeft[ik][0].im = 0.5 * betaLeft[ik][0].im;
-      for (n = 1; n < Ncoeff; n++)
-        betaLeft[ik][n] = fourierCoeffIntegralLinInterp(Bint, y, tau[n], dy, yMax, Ny);
-    }
-  free(Bint);
+#pragma omp parallel 
+  {
+    int ik, ix, n, myid;
+    COMPLEX *Bint;
+    Bint = calloc(Nx, sizeof(COMPLEX));
+    myid = omp_get_thread_num();
+    for (ik = 0; ik < Nfft; ik++)
+      if (ik%threads==myid) {
+        for (iy = 0; iy < Ny; iy++)
+          {
+            Bint[iy].re = BxRight[iy][ik].re;
+            Bint[iy].im = BxRight[iy][ik].im;
+          }
+        betaRight[ik][0] = fourierCoeffIntegralSimp(Bint, y, tau[0], dy, yMax, Ny);
+        betaRight[ik][0].re = 0.5 * betaRight[ik][0].re;
+        betaRight[ik][0].im = 0.5 * betaRight[ik][0].im;
+        for (n = 1; n < Ncoeff; n++)
+          betaRight[ik][n] = fourierCoeffIntegralLinInterp(Bint, y, tau[n], dy, yMax, Ny);
+        
+        for (iy = 0; iy < Ny; iy++)
+          {
+            Bint[iy].re = -BxLeft[iy][ik].re;
+            Bint[iy].im = -BxLeft[iy][ik].im;
+          }
+        betaLeft[ik][0] = fourierCoeffIntegralSimp(Bint, y, tau[0], dy, yMax, Ny);
+        betaLeft[ik][0].re = 0.5 * betaLeft[ik][0].re;
+        betaLeft[ik][0].im = 0.5 * betaLeft[ik][0].im;
+        for (n = 1; n < Ncoeff; n++)
+          betaLeft[ik][n] = fourierCoeffIntegralLinInterp(Bint, y, tau[n], dy, yMax, Ny);
+      }
+#pragma omp barrier
+    free(Bint);
+  }
 
   k = calloc(Nfft, sizeof(double));
   for (ik = 0; ik < Nfft / 2; ik++)
@@ -1378,16 +1391,24 @@ int ReadInputFiles
 
       genGradr_k[ir][ik].re = genGradT.re - genGradB.re + genGradR.re + genGradL.re;
       genGradr_k[ir][ik].im = genGradT.im - genGradB.im + genGradR.im + genGradL.im;
-      for (ik = 1; ik < Nfft; ik++)
-        {
-          genGradT = calcGGtopbottomA(betaTop[ik], k[ik], lambda, yMax, ir1, Ncoeff);
-          genGradB = calcGGtopbottomA(betaBottom[ik], k[ik], lambda, yMax, ir1, Ncoeff);
-          genGradR = calcGGrightA(betaRight[ik], k[ik], tau, xMax, ir1, Ncoeff);
-          genGradL = calcGGleftA(betaLeft[ik], k[ik], tau, xMax, ir1, Ncoeff);
-
-          genGradr_k[ir][ik].re = genGradT.re - genGradB.re + genGradR.re + genGradL.re;
-          genGradr_k[ir][ik].im = genGradT.im - genGradB.im + genGradR.im + genGradL.im;
-        }
+#pragma omp parallel
+      {
+        int ik, myid;
+        COMPLEX genGradT, genGradB, genGradR, genGradL;
+        myid = omp_get_thread_num();
+        for (ik = 1; ik < Nfft; ik++)
+          if (ik%threads==myid)
+            {
+              genGradT = calcGGtopbottomA(betaTop[ik], k[ik], lambda, yMax, ir1, Ncoeff);
+              genGradB = calcGGtopbottomA(betaBottom[ik], k[ik], lambda, yMax, ir1, Ncoeff);
+              genGradR = calcGGrightA(betaRight[ik], k[ik], tau, xMax, ir1, Ncoeff);
+              genGradL = calcGGleftA(betaLeft[ik], k[ik], tau, xMax, ir1, Ncoeff);
+              
+              genGradr_k[ir][ik].re = genGradT.re - genGradB.re + genGradR.re + genGradL.re;
+              genGradr_k[ir][ik].im = genGradT.im - genGradB.im + genGradR.im + genGradL.im;
+            }
+#pragma omp barrier
+      }
     }
 
   invNfft = 1.0 / (double)Nfft;
