@@ -1229,44 +1229,20 @@ int ReadInputFiles
   dk = TWOPI / (dz * (double)Nfft);
 #pragma omp parallel
   {
-    int ix, ix0, ix1, myid, threadsToUse;
+    int ix, iy, myid;
     myid = omp_get_thread_num();
-    threadsToUse = threads>Nx ? Nx : threads;
-    if (myid<threadsToUse) {
-      ix0 = myid*(Nx/threadsToUse);
-      if (myid==(threadsToUse-1))
-        ix1 = Nx-1;
-      else
-        ix1 = (myid+1)*(Nx/threadsToUse)-1;
-      for (ix = ix0; ix <= ix1; ix++)
-        {
-          FFT(ByTop[ix], -1, Nfft);
-          FFT(ByBottom[ix], -1, Nfft);
-        }
-    }
+    for (ix = 0; ix < Nx; ix++)
+      if (ix%threads==myid) {
+        FFT(ByTop[ix], -1, Nfft);
+        FFT(ByBottom[ix], -1, Nfft);
+      }
+    for (iy = 0; iy < Ny; iy++)
+      if (iy%threads==myid) {
+        FFT(BxRight[iy], -1, Nfft);
+        FFT(BxLeft[iy], -1, Nfft);
+      }
 #pragma omp barrier
   }
-
-#pragma omp parallel
-  {
-    int iy, iy0, iy1, myid, threadsToUse;
-    myid = omp_get_thread_num();
-    threadsToUse = threads>Ny ? Ny : threads;
-    if (myid<threadsToUse) {
-      iy0 = myid*(Ny/threadsToUse);
-      if (myid==(threadsToUse-1))
-        iy1 = Ny-1;
-      else
-        iy1 = (myid+1)*(Ny/threadsToUse)-1;
-      for (iy = iy0; iy <= iy1; iy++)
-        {
-          FFT(BxRight[iy], -1, Nfft);
-          FFT(BxLeft[iy], -1, Nfft);
-        }
-    }
-#pragma omp barrier
-  }
-
 
   xMax = dx * 0.5 * (double)(Nx - 1);
   yMax = dy * 0.5 * (double)(Ny - 1);
@@ -1608,16 +1584,22 @@ int computeGGcos
   Nz = Nfft;
 
   dk = TWOPI / (dz * (double)Nfft);
-  for (ix = 0; ix < Nx; ix++)
-    {
-      FFT(ByTop[ix], -1, Nfft);
-      FFT(ByBottom[ix], -1, Nfft);
-    }
-  for (iy = 0; iy < Ny; iy++)
-    {
-      FFT(BxRight[iy], -1, Nfft);
-      FFT(BxLeft[iy], -1, Nfft);
-    }
+#pragma omp parallel
+  {
+    int ix, iy, myid;
+    myid = omp_get_thread_num();
+    for (ix = 0; ix < Nx; ix++)
+      if (ix%threads==myid) {
+        FFT(ByTop[ix], -1, Nfft);
+        FFT(ByBottom[ix], -1, Nfft);
+      }
+    for (iy = 0; iy < Ny; iy++)
+      if (iy%threads==myid) {
+        FFT(BxRight[iy], -1, Nfft);
+        FFT(BxLeft[iy], -1, Nfft);
+      }
+#pragma omp barrier
+  }
 
   xMax = dx * 0.5 * (double)(Nx - 1);
   yMax = dy * 0.5 * (double)(Ny - 1);
@@ -1649,59 +1631,75 @@ int computeGGcos
       betaLeft[ik] = calloc(Ncoeff, sizeof(COMPLEX));
     }
 
-  Bint = calloc(Nx, sizeof(COMPLEX));
-  for (ik = 0; ik < Nfft; ik++)
-    {
-      for (ix = 0; ix < Nx; ix++)
-        {
-          Bint[ix].re = ByTop[ix][ik].re;
-          Bint[ix].im = ByTop[ix][ik].im;
-        }
-      betaTop[ik][0] = fourierCoeffIntegralTrap(Bint, x, lambda[0], dx, xMax, Nx);
-      betaTop[ik][0].re = 0.5 * betaTop[ik][0].re;
-      betaTop[ik][0].im = 0.5 * betaTop[ik][0].im;
-      for (n = 1; n < Ncoeff; n++)
-        betaTop[ik][n] = fourierCoeffIntegralLinInterp(Bint, x, lambda[n], dx, xMax, Nx);
+#pragma omp parallel
+  {
+    COMPLEX *Bint;
+    int ik, ix, n, myid;
 
-      for (ix = 0; ix < Nx; ix++)
-        {
-          Bint[ix].re = -ByBottom[ix][ik].re;
-          Bint[ix].im = -ByBottom[ix][ik].im;
-        }
-      betaBottom[ik][0] = fourierCoeffIntegralTrap(Bint, x, lambda[0], dx, xMax, Nx);
-      betaBottom[ik][0].re = 0.5 * betaBottom[ik][0].re;
-      betaBottom[ik][0].im = 0.5 * betaBottom[ik][0].im;
-      for (n = 1; n < Ncoeff; n++)
-        betaBottom[ik][n] = fourierCoeffIntegralLinInterp(Bint, x, lambda[n], dx, xMax, Nx);
-    }
+    Bint = calloc(Nx, sizeof(COMPLEX));
+    myid = omp_get_thread_num();
+    for (ik = 0; ik < Nfft; ik++)
+      if (ik%threads==myid) {
+        for (ix = 0; ix < Nx; ix++)
+          {
+            Bint[ix].re = ByTop[ix][ik].re;
+            Bint[ix].im = ByTop[ix][ik].im;
+          }
+        betaTop[ik][0] = fourierCoeffIntegralTrap(Bint, x, lambda[0], dx, xMax, Nx);
+        betaTop[ik][0].re = 0.5 * betaTop[ik][0].re;
+        betaTop[ik][0].im = 0.5 * betaTop[ik][0].im;
+        for (n = 1; n < Ncoeff; n++)
+          betaTop[ik][n] = fourierCoeffIntegralLinInterp(Bint, x, lambda[n], dx, xMax, Nx);
+
+        for (ix = 0; ix < Nx; ix++)
+          {
+            Bint[ix].re = -ByBottom[ix][ik].re;
+            Bint[ix].im = -ByBottom[ix][ik].im;
+          }
+        betaBottom[ik][0] = fourierCoeffIntegralTrap(Bint, x, lambda[0], dx, xMax, Nx);
+        betaBottom[ik][0].re = 0.5 * betaBottom[ik][0].re;
+        betaBottom[ik][0].im = 0.5 * betaBottom[ik][0].im;
+        for (n = 1; n < Ncoeff; n++)
+          betaBottom[ik][n] = fourierCoeffIntegralLinInterp(Bint, x, lambda[n], dx, xMax, Nx);
+      }
+#pragma omp barrier
   free(Bint);
+  }
 
-  Bint = calloc(Ny, sizeof(COMPLEX));
-  for (ik = 0; ik < Nfft; ik++)
-    {
-      for (iy = 0; iy < Ny; iy++)
-        {
-          Bint[iy].re = BxRight[iy][ik].re;
-          Bint[iy].im = BxRight[iy][ik].im;
-        }
-      betaRight[ik][0] = fourierCoeffIntegralTrap(Bint, y, tau[0], dy, yMax, Ny);
-      betaRight[ik][0].re = 0.5 * betaRight[ik][0].re;
-      betaRight[ik][0].im = 0.5 * betaRight[ik][0].im;
-      for (n = 1; n < Ncoeff; n++)
-        betaRight[ik][n] = fourierCoeffIntegralLinInterp(Bint, y, tau[n], dy, yMax, Ny);
+#pragma omp parallel
+  {
+    COMPLEX *Bint;
+    int ik, iy, n, myid;
 
-      for (iy = 0; iy < Ny; iy++)
-        {
-          Bint[iy].re = -BxLeft[iy][ik].re;
-          Bint[iy].im = -BxLeft[iy][ik].im;
-        }
-      betaLeft[ik][0] = fourierCoeffIntegralTrap(Bint, y, tau[0], dy, yMax, Ny);
-      betaLeft[ik][0].re = 0.5 * betaLeft[ik][0].re;
-      betaLeft[ik][0].im = 0.5 * betaLeft[ik][0].im;
-      for (n = 1; n < Ncoeff; n++)
-        betaLeft[ik][n] = fourierCoeffIntegralLinInterp(Bint, y, tau[n], dy, yMax, Ny);
-    }
-  free(Bint);
+    Bint = calloc(Ny, sizeof(COMPLEX));
+    myid = omp_get_thread_num();
+    for (ik = 0; ik < Nfft; ik++)
+      if (ik%threads==myid) {
+        for (iy = 0; iy < Ny; iy++)
+          {
+            Bint[iy].re = BxRight[iy][ik].re;
+            Bint[iy].im = BxRight[iy][ik].im;
+          }
+        betaRight[ik][0] = fourierCoeffIntegralTrap(Bint, y, tau[0], dy, yMax, Ny);
+        betaRight[ik][0].re = 0.5 * betaRight[ik][0].re;
+        betaRight[ik][0].im = 0.5 * betaRight[ik][0].im;
+        for (n = 1; n < Ncoeff; n++)
+          betaRight[ik][n] = fourierCoeffIntegralLinInterp(Bint, y, tau[n], dy, yMax, Ny);
+
+        for (iy = 0; iy < Ny; iy++)
+          {
+            Bint[iy].re = -BxLeft[iy][ik].re;
+            Bint[iy].im = -BxLeft[iy][ik].im;
+          }
+        betaLeft[ik][0] = fourierCoeffIntegralTrap(Bint, y, tau[0], dy, yMax, Ny);
+        betaLeft[ik][0].re = 0.5 * betaLeft[ik][0].re;
+        betaLeft[ik][0].im = 0.5 * betaLeft[ik][0].im;
+        for (n = 1; n < Ncoeff; n++)
+          betaLeft[ik][n] = fourierCoeffIntegralLinInterp(Bint, y, tau[n], dy, yMax, Ny);
+      }
+#pragma omp barrier
+    free(Bint);
+  }
 
   k = calloc(Nfft, sizeof(double));
   for (ik = 0; ik < Nfft / 2; ik++)
@@ -1730,16 +1728,23 @@ int computeGGcos
 
       genGradr_k[ir][ik].re = genGradT.re + genGradB.re + genGradR.re + genGradL.re;
       genGradr_k[ir][ik].im = genGradT.im + genGradB.im + genGradR.im + genGradL.im;
-      for (ik = 1; ik < Nfft; ik++)
-        {
-          genGradT = calcGGtopbottomB(betaTop[ik], k[ik], lambda, yMax, ir1, Ncoeff);
-          genGradB = calcGGtopbottomB(betaBottom[ik], k[ik], lambda, yMax, ir1, Ncoeff);
-          genGradR = calcGGrightB(betaRight[ik], k[ik], tau, xMax, ir1, Ncoeff);
-          genGradL = calcGGleftB(betaLeft[ik], k[ik], tau, xMax, ir1, Ncoeff);
-
-          genGradr_k[ir][ik].re = genGradT.re + genGradB.re + genGradR.re + genGradL.re;
-          genGradr_k[ir][ik].im = genGradT.im + genGradB.im + genGradR.im + genGradL.im;
-        }
+#pragma omp parallel
+      {
+        int ik, myid;
+        COMPLEX genGradT, genGradB, genGradR, genGradL;
+        myid = omp_get_thread_num();
+        for (ik = 1; ik < Nfft; ik++)
+          if (ik%threads==myid) {
+            genGradT = calcGGtopbottomB(betaTop[ik], k[ik], lambda, yMax, ir1, Ncoeff);
+            genGradB = calcGGtopbottomB(betaBottom[ik], k[ik], lambda, yMax, ir1, Ncoeff);
+            genGradR = calcGGrightB(betaRight[ik], k[ik], tau, xMax, ir1, Ncoeff);
+            genGradL = calcGGleftB(betaLeft[ik], k[ik], tau, xMax, ir1, Ncoeff);
+            
+            genGradr_k[ir][ik].re = genGradT.re + genGradB.re + genGradR.re + genGradL.re;
+            genGradr_k[ir][ik].im = genGradT.im + genGradB.im + genGradR.im + genGradL.im;
+          }
+#pragma omp barrier
+      }
     }
 
   for (ix = 0; ix < Nx; ix++)
