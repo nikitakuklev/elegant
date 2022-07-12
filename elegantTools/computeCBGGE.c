@@ -6,6 +6,12 @@
 
 #define TWOPI 6.28318530717958647692528676656
 
+#if defined(linux) || (defined(_WIN32) && !defined(_MINGW))
+#  include <omp.h>
+#else
+#  define NOTHREADS 1
+#endif
+
 typedef struct COMPLEX
 {
   double re;
@@ -71,14 +77,15 @@ int computeGGE(FIELDS_ON_BOUNDARY *fieldsOnBoundary, char *normalOutput, char *s
 #define SET_FUNDAMENTAL 5
 #define SET_AUTO_TUNE 6
 #define SET_EVALUATE 7
-#define N_OPTIONS 8
+#define SET_THREADS 8
+#define N_OPTIONS 9
 
 char *option[N_OPTIONS] = {
-  "input", "normal", "skew", "derivatives", "multipoles", "fundamental", "autotune", "evaluate",
+  "input", "normal", "skew", "derivatives", "multipoles", "fundamental", "autotune", "evaluate", "threads",
 };
 
 #define USAGE "computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<columnName>][,rho=<parameterName>][,Bz=<columnName>]\n\
-              -normal=<output> [-skew=<output>]\n\
+              -normal=<output> [-skew=<output>] [-threads=<integer>]\n\
               [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]\n\
               [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]\n\
               [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,increaseOnly][,verbose][,log=<filename>]]\n\
@@ -87,6 +94,7 @@ char *option[N_OPTIONS] = {
 -normal      Output file for normal-component generalized gradients.\n\
 -skew        Output file for skew-component generalized gradients. If the input data\n\
              has non-zero Bz on axis, this option is essential.\n\
+-threads     Number of threads to use for computations (default: 1).\n\
 -derivatives Number of derivatives vs z desired in output. Default: 7\n\
 -multipoles  Number of multipoles desired in output. Default: 8\n\
 -fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\
@@ -108,6 +116,8 @@ Circular-cylinder Boundary Generalized Gradient Expansion by Michael Borland, Ro
 #define AUTOTUNE_LOG       0x0400UL
 #define AUTOTUNE_INCRONLY  0x0800UL
 char *modeOption[3] = {"rms", "maximum", "mav"};
+
+int threads = 1;
 
 int main(int argc, char **argv)
 {
@@ -256,6 +266,10 @@ int main(int argc, char **argv)
         } else
           autoTuneFlags |= AUTOTUNE_MAXIMUM;
         break;
+      case SET_THREADS:
+        if (scanned[i_arg].n_items != 2 || sscanf(scanned[i_arg].list[1], "%d", &threads) != 1 || threads <= 0)
+          SDDS_Bomb("invalid -threads syntax: give an value greater than 0");
+        break;
       default:
         fprintf(stderr, "unknown option given\n%s\n", USAGE);
         return (1);
@@ -272,6 +286,10 @@ int main(int argc, char **argv)
     return (1);
   }
   
+#if !defined(NOTHREADS)
+  omp_set_num_threads(threads);
+#endif
+
   if (autoTuneFlags&AUTOTUNE_LOG) {
     if (SDDS_InitializeOutput(&SDDS_autoTuneLog, SDDS_BINARY, 1, NULL, "computeRBGGE autotune output", autoTuneLogFile)!=1 ||
         SDDS_DefineParameter(&SDDS_autoTuneLog, "OptimalMultipoles", "m$bopt$n", NULL, "Optimal number of multipoles", 
@@ -586,13 +604,21 @@ int computeGGE
 
   /* Take FFT of Brho values vs phi for each z plane */
   Brho = malloc(sizeof(*Brho)*Nz);
-  for (iz=0; iz<Nz; iz++) {
-    Brho[iz] = malloc(sizeof(**Brho)*Nphi);
-    for (iphi=0; iphi<Nphi; iphi++) {
-      Brho[iz][iphi].re = fieldsOnBoundary->Brho[iphi+iz*Nphi];
-      Brho[iz][iphi].im = 0;
+#pragma omp parallel
+  {
+    int iz, iphi, myid;
+    myid = omp_get_thread_num();
+    for (iz=0; iz<Nz; iz++) {
+      if (iz%threads==myid) {
+        Brho[iz] = malloc(sizeof(**Brho)*Nphi);
+        for (iphi=0; iphi<Nphi; iphi++) {
+          Brho[iz][iphi].re = fieldsOnBoundary->Brho[iphi+iz*Nphi];
+          Brho[iz][iphi].im = 0;
+        }
+        FFT(Brho[iz], -1, Nphi);
+      }
     }
-    FFT(Brho[iz], -1, Nphi);
+#pragma omp barrier
   }
 
   if (fieldsOnBoundary->Bz) {
@@ -609,13 +635,21 @@ int computeGGE
 
   /* Reorganize data to give array of FFT for each frequency as a function of z, then take FFT vs z */
   Bm = malloc(sizeof(*Bm)*Nphi);
-  for (iphi=0; iphi<Nphi; iphi++) {
-    Bm[iphi] = tmalloc(sizeof(**Bm)*Nz);
-    for (iz=0; iz<Nz; iz++) {
-      Bm[iphi][iz].re = Brho[iz][iphi].re;
-      Bm[iphi][iz].im = Brho[iz][iphi].im;
+#pragma omp parallel 
+  {
+    int iphi, iz, myid;
+    myid = omp_get_thread_num();
+    for (iphi=0; iphi<Nphi; iphi++) {
+      if (iphi%threads==myid) {
+        Bm[iphi] = tmalloc(sizeof(**Bm)*Nz);
+        for (iz=0; iz<Nz; iz++) {
+          Bm[iphi][iz].re = Brho[iz][iphi].re;
+          Bm[iphi][iz].im = Brho[iz][iphi].im;
+        }
+        FFT(Bm[iphi], -1, Nz);
+      }
     }
-    FFT(Bm[iphi], -1, Nz);
+#pragma omp barrier
   }
 
   if (Bz)
@@ -1013,92 +1047,115 @@ double evaluateGGEFit
  ALL_RESIDUALS *allResiduals
  )
 {
-  double Bz, Br, Bphi;
-  double r, phi, residual;
-  double residualWorst, residualSum, residualSum2, maxField, field;
-  long ns, ig, m, im;
-  long iphi, iz;
+  double *residualWorst, *residualSum, *residualSum2, *maxField;
+  double r;
+  int i;
 
-  residualWorst = residualSum = residualSum2 = 0;
-  maxField = -1;
   r = fieldsOnBoundary->rho;
-  for (iz=0; iz<fieldsOnBoundary->Nz; iz++) {
-    for (iphi=0; iphi<fieldsOnBoundary->Nphi; iphi++) {
-      phi = (TWOPI*iphi)/fieldsOnBoundary->Nphi;
-      
-      /* Compute fields */
-      Br = Bphi = Bz = 0;
-      for (ns=0; ns<2; ns++) {
-        /* ns=0 => normal, ns=1 => skew */
-        if (!bggexpData[ns].haveData)
-          continue;
+  residualWorst = calloc(threads, sizeof(*residualWorst));
+  residualSum = calloc(threads, sizeof(*residualSum));
+  residualSum2 = calloc(threads, sizeof(*residualSum2));
+  maxField = calloc(threads, sizeof(*maxField));
+
+#pragma omp parallel
+  {
+    long ns, ig, m, im;
+    long iphi, iz, myid;
+    double Br, Bphi, Bz, field;
+    double phi, residual;
+
+    myid = omp_get_thread_num();
+
+    residualWorst[myid] = residualSum[myid] = residualSum2[myid] = 0;
+    maxField[myid] = -1;
+
+    for (iz=0; iz<fieldsOnBoundary->Nz; iz++) {
+      if (iz%threads!=myid) continue;
+      for (iphi=0; iphi<fieldsOnBoundary->Nphi; iphi++) {
+        phi = (TWOPI*iphi)/fieldsOnBoundary->Nphi;
         
-        for (im=0; im<bggexpData[ns].nm && im<multipoles; im++) {
-          double mfact, term, sin_mphi, cos_mphi;
-          m = bggexpData[ns].m[im];
-          mfact = dfactorial(m);
-          sin_mphi = sin(m*phi);
-          cos_mphi = cos(m*phi);
-          if (ns==0) {
-            /* normal */
-            for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
-              term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-              Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
-              term *= bggexpData[ns].Cmn[im][ig][iz];
-              Br   += term*(2*ig+m)*sin_mphi;
-              Bphi += m*term*cos_mphi;
-            }
-          } else {
-            /* skew */
-            if (m==0) {
-              Bz += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
-              for (ig=1; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
-                term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-                Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
-                Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
-              }
-            } else {
+        /* Compute fields */
+        Br = Bphi = Bz = 0;
+        for (ns=0; ns<2; ns++) {
+          /* ns=0 => normal, ns=1 => skew */
+          if (!bggexpData[ns].haveData)
+            continue;
+          
+          for (im=0; im<bggexpData[ns].nm && im<multipoles; im++) {
+            double mfact, term, sin_mphi, cos_mphi;
+            m = bggexpData[ns].m[im];
+            mfact = dfactorial(m);
+            sin_mphi = sin(m*phi);
+            cos_mphi = cos(m*phi);
+            if (ns==0) {
+              /* normal */
               for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
                 term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-                Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
+                Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
                 term *= bggexpData[ns].Cmn[im][ig][iz];
-                Br   += term*(2*ig+m)*cos_mphi;
-                Bphi -= m*term*sin_mphi;
+                Br   += term*(2*ig+m)*sin_mphi;
+                Bphi += m*term*cos_mphi;
+              }
+            } else {
+              /* skew */
+              if (m==0) {
+                Bz += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
+                for (ig=1; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
+                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                  Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
+                  Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
+                }
+              } else {
+                for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
+                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                  Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
+                  term *= bggexpData[ns].Cmn[im][ig][iz];
+                  Br   += term*(2*ig+m)*cos_mphi;
+                  Bphi -= m*term*sin_mphi;
+                }
               }
             }
           }
         }
+        field = fabs(Br);
+        if (field>maxField[myid])
+          maxField[myid] = field;
+        residual = fabs(Br - fieldsOnBoundary->Brho[iz*fieldsOnBoundary->Nphi+iphi]);
+        if (residual>residualWorst[myid])
+          residualWorst[myid] = residual;
+        residualSum2[myid] += sqr(residual);
+        residualSum[myid] += residual;
       }
-      field = fabs(Br);
-      if (field>maxField)
-	maxField = field;
-      residual = fabs(Br - fieldsOnBoundary->Brho[iz*fieldsOnBoundary->Nphi+iphi]);
-      if (residual>residualWorst)
-        residualWorst = residual;
-      residualSum2 += sqr(residual);
-      residualSum += residual;
     }
+#pragma omp barrier
   }
-  
-  allResiduals->rms = sqrt(residualSum2/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi));
-  allResiduals->mad = residualSum/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi);
-  allResiduals->max = residualWorst;
-  if (maxField>0) {
-    allResiduals->fracRms = allResiduals->rms/maxField;
-    allResiduals->fracMad = allResiduals->mad/maxField;
-    allResiduals->fracMax = allResiduals->max/maxField;
+
+  for (i=1; i<threads; i++) {
+    residualWorst[0] = MAX(residualWorst[0], residualWorst[i]);
+    residualSum[0] += residualSum[i];
+    residualSum2[0] += residualSum2[i];
+    maxField[0] = MAX(maxField[0], maxField[i]);
+  }
+
+  allResiduals->rms = sqrt(residualSum2[0]/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi));
+  allResiduals->mad = residualSum[0]/(fieldsOnBoundary->Nz*fieldsOnBoundary->Nphi);
+  allResiduals->max = residualWorst[0];
+  if (maxField[0]>0) {
+    allResiduals->fracRms = allResiduals->rms/maxField[0];
+    allResiduals->fracMad = allResiduals->mad/maxField[0];
+    allResiduals->fracMax = allResiduals->max/maxField[0];
   } else
     allResiduals->fracRms = 
       allResiduals->fracMad = 
       allResiduals->fracMax = -DBL_MAX;
 
   if (flags&AUTOTUNE_RMS) {
-    residualWorst = allResiduals->rms;
+    residualWorst[0] = allResiduals->rms;
   } else if (flags&AUTOTUNE_MAV) {
-    residualWorst = allResiduals->mad;
+    residualWorst[0] = allResiduals->mad;
   }
 
-  return residualWorst>significance ? residualWorst : 0.0;
+  return residualWorst[0]>significance ? residualWorst[0] : 0.0;
 }
 
 int evaluateGGEAndOutput(char *outputFile, long nrho, long nphi,

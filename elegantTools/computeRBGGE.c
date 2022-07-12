@@ -127,7 +127,7 @@ char *option[N_OPTIONS] = {
 -fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\
 -evaluate    Evaluate the GGE over the interior region, including the four boundaries.\n\
 -verbose     Print information while running.\n\
--threads     Specify number of threads to use.\n\
+-threads     Specify number of threads to use for computations (default: 1).\n\
 -autotune    Seeks to minimize the number of multipoles and derivatives to avoid using terms\n\
              that do not contribute to a good fit at the given level of significance. The user can\n\
              choose to minimize the maximum error (default), the rms error, or the mean absolute value\n\
