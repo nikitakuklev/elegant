@@ -1524,7 +1524,6 @@ int computeGGcos
   COMPLEX **betaTop, **betaBottom, **betaRight, **betaLeft;
   COMPLEX **genGradr_k;
   COMPLEX **derivGG;
-  COMPLEX *Bint;
   COMPLEX genGradT, genGradB, genGradR, genGradL;
 
   double *lambda, *tau, *k, *x, *y;
@@ -1645,7 +1644,7 @@ int computeGGcos
           betaBottom[ik][n] = fourierCoeffIntegralLinInterp(Bint, x, lambda[n], dx, xMax, Nx);
       }
 #pragma omp barrier
-  free(Bint);
+    free(Bint);
   }
 
 #pragma omp parallel
@@ -1729,77 +1728,105 @@ int computeGGcos
       }
     }
 
-  for (ix = 0; ix < Nx; ix++)
-    {
-      FFT(BzTop[ix], -1, Nfft);
-      FFT(BzBottom[ix], -1, Nfft);
-    }
-  for (iy = 0; iy < Ny; iy++)
-    {
-      FFT(BzRight[iy], -1, Nfft);
-      FFT(BzLeft[iy], -1, Nfft);
-    }
+#pragma omp parallel 
+  {
+    int ix, iy, myid;
+    myid = omp_get_thread_num();
+    for (ix = 0; ix < Nx; ix++)
+      if (ix%threads==myid) {
+        FFT(BzTop[ix], -1, Nfft);
+        FFT(BzBottom[ix], -1, Nfft);
+      }
+    for (iy = 0; iy < Ny; iy++)
+      if (iy%threads==myid) {
+        FFT(BzRight[iy], -1, Nfft);
+        FFT(BzLeft[iy], -1, Nfft);
+      }
+#pragma omp barrier
+  }
 
-  /* calculate Fourier coefficients associated with Bz to get C_0 */
-  Bint = calloc(Nx, sizeof(COMPLEX));
-  for (ik = 0; ik < Nfft; ik++)
-    {
-      for (ix = 0; ix < Nx; ix++)
-        {
-          Bint[ix].re = BzTop[ix][ik].re;
-          Bint[ix].im = BzTop[ix][ik].im;
-        }
-      betaTop[ik][0].re = 0.0;
-      betaTop[ik][0].im = 0.0;
-      for (n = 1; n < Ncoeff; n++)
-        betaTop[ik][n] = fourierCoeffIntegralLinInterpSkew(Bint, x, lambda[n], dx, xMax, Nx);
+#pragma omp parallel
+  {
+    /* calculate Fourier coefficients associated with Bz to get C_0 */
+    int ik, ix, n, myid;
+    COMPLEX *Bint;
+    myid = omp_get_thread_num();
+    Bint = calloc(Nx, sizeof(COMPLEX));
+    for (ik = 0; ik < Nfft; ik++)
+      if (ik%threads==myid) {
+        for (ix = 0; ix < Nx; ix++)
+          {
+            Bint[ix].re = BzTop[ix][ik].re;
+            Bint[ix].im = BzTop[ix][ik].im;
+          }
+        betaTop[ik][0].re = 0.0;
+        betaTop[ik][0].im = 0.0;
+        for (n = 1; n < Ncoeff; n++)
+          betaTop[ik][n] = fourierCoeffIntegralLinInterpSkew(Bint, x, lambda[n], dx, xMax, Nx);
+        
+        for (ix = 0; ix < Nx; ix++)
+          {
+            Bint[ix].re = BzBottom[ix][ik].re;
+            Bint[ix].im = BzBottom[ix][ik].im;
+          }
+        betaBottom[ik][0].re = 0.0;
+        betaBottom[ik][0].im = 0.0;
+        for (n = 1; n < Ncoeff; n++)
+          betaBottom[ik][n] = fourierCoeffIntegralLinInterpSkew(Bint, x, lambda[n], dx, xMax, Nx);
+      }
+#pragma omp barrier
+    free(Bint);
+  }
 
-      for (ix = 0; ix < Nx; ix++)
-        {
-          Bint[ix].re = BzBottom[ix][ik].re;
-          Bint[ix].im = BzBottom[ix][ik].im;
-        }
-      betaBottom[ik][0].re = 0.0;
-      betaBottom[ik][0].im = 0.0;
-      for (n = 1; n < Ncoeff; n++)
-        betaBottom[ik][n] = fourierCoeffIntegralLinInterpSkew(Bint, x, lambda[n], dx, xMax, Nx);
-    }
-  free(Bint);
-
-  Bint = calloc(Ny, sizeof(COMPLEX));
-  for (ik = 0; ik < Nfft; ik++)
-    {
-      for (iy = 0; iy < Ny; iy++)
-        {
-          Bint[iy].re = BzRight[iy][ik].re;
-          Bint[iy].im = BzRight[iy][ik].im;
-        }
-      betaRight[ik][0].re = 0.0;
-      betaRight[ik][0].im = 0.0;
-      for (n = 1; n < Ncoeff; n++)
-        betaRight[ik][n] = fourierCoeffIntegralLinInterpSkew(Bint, y, tau[n], dy, yMax, Ny);
-
-      for (iy = 0; iy < Ny; iy++)
-        {
-          Bint[iy].re = BzLeft[iy][ik].re;
-          Bint[iy].im = BzLeft[iy][ik].im;
-        }
-      betaLeft[ik][0].re = 0.0;
-      betaLeft[ik][0].im = 0.0;
-      for (n = 1; n < Ncoeff; n++)
-        betaLeft[ik][n] = fourierCoeffIntegralLinInterpSkew(Bint, y, tau[n], dy, yMax, Ny);
-    }
-  free(Bint);
-
-  for (ik = 0; ik < Nfft; ik++)
-    {
-      genGradT = calcGGallSidesBz(betaTop[ik], k[ik], lambda, yMax, Ncoeff);
-      genGradB = calcGGallSidesBz(betaBottom[ik], k[ik], lambda, yMax, Ncoeff);
-      genGradR = calcGGallSidesBz(betaRight[ik], k[ik], tau, xMax, Ncoeff);
-      genGradL = calcGGallSidesBz(betaLeft[ik], k[ik], tau, xMax, Ncoeff);
-      genGradr_k[0][ik].re = genGradT.re + genGradB.re + genGradR.re + genGradL.re;
-      genGradr_k[0][ik].im = genGradT.im + genGradB.im + genGradR.im + genGradL.im;
-    }
+#pragma omp parallel
+  {
+    /* calculate Fourier coefficients associated with Bz to get C_0 */
+    int ik, iy, n, myid;
+    COMPLEX *Bint;
+    myid = omp_get_thread_num();
+    Bint = calloc(Ny, sizeof(COMPLEX));
+    for (ik = 0; ik < Nfft; ik++)
+      if (ik%threads==myid) {
+        for (iy = 0; iy < Ny; iy++)
+          {
+            Bint[iy].re = BzRight[iy][ik].re;
+            Bint[iy].im = BzRight[iy][ik].im;
+          }
+        betaRight[ik][0].re = 0.0;
+        betaRight[ik][0].im = 0.0;
+        for (n = 1; n < Ncoeff; n++)
+          betaRight[ik][n] = fourierCoeffIntegralLinInterpSkew(Bint, y, tau[n], dy, yMax, Ny);
+        
+        for (iy = 0; iy < Ny; iy++)
+          {
+            Bint[iy].re = BzLeft[iy][ik].re;
+            Bint[iy].im = BzLeft[iy][ik].im;
+          }
+        betaLeft[ik][0].re = 0.0;
+        betaLeft[ik][0].im = 0.0;
+        for (n = 1; n < Ncoeff; n++)
+          betaLeft[ik][n] = fourierCoeffIntegralLinInterpSkew(Bint, y, tau[n], dy, yMax, Ny);
+      }
+    free(Bint);
+#pragma omp barrier
+  }
+  
+#pragma omp parallel
+  {
+    int ik, myid;
+    COMPLEX genGradT, genGradB, genGradR, genGradL;
+    myid = omp_get_thread_num();
+    for (ik = 0; ik < Nfft; ik++)
+      if (ik%threads==myid) {
+        genGradT = calcGGallSidesBz(betaTop[ik], k[ik], lambda, yMax, Ncoeff);
+        genGradB = calcGGallSidesBz(betaBottom[ik], k[ik], lambda, yMax, Ncoeff);
+        genGradR = calcGGallSidesBz(betaRight[ik], k[ik], tau, xMax, Ncoeff);
+        genGradL = calcGGallSidesBz(betaLeft[ik], k[ik], tau, xMax, Ncoeff);
+        genGradr_k[0][ik].re = genGradT.re + genGradB.re + genGradR.re + genGradL.re;
+        genGradr_k[0][ik].im = genGradT.im + genGradB.im + genGradR.im + genGradL.im;
+      }
+#pragma omp barrier
+  }
 
   invNfft = 1.0 / (double)Nfft;
   derivGG = calloc(Nderiv, sizeof(COMPLEX *));
