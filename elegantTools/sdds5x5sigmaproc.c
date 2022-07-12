@@ -427,13 +427,13 @@ int main(
       do {
         for (iConfig=0; iConfig<nConfigs; iConfig++) {
           if (nErrorSets>2) {
-            S11e[iConfig] = S11[iConfig] + gauss_rn_lim(0.0, S11StDev[iConfig], 2, random_1);
-            S13e[iConfig] = S13[iConfig] + gauss_rn_lim(0.0, S13StDev[iConfig], 2, random_1);
-            S33e[iConfig] = S33[iConfig] + gauss_rn_lim(0.0, S33StDev[iConfig], 2, random_1);
+            S11e[iConfig] = S11[iConfig] + gauss_rn_lim(0.0, S11StDev[iConfig], 2, random_1) - sqr(x_resol);
+            S13e[iConfig] = S13[iConfig] + gauss_rn_lim(0.0, S13StDev[iConfig], 2, random_1) - SIGN(S13[iConfig])*x_resol*y_resol;
+            S33e[iConfig] = S33[iConfig] + gauss_rn_lim(0.0, S33StDev[iConfig], 2, random_1) - sqr(y_resol);
           } else {
-            S11e[iConfig] = S11[iConfig];
-            S13e[iConfig] = S13[iConfig];
-            S33e[iConfig] = S33[iConfig];
+            S11e[iConfig] = S11[iConfig] - sqr(x_resol);
+            S13e[iConfig] = S13[iConfig] - SIGN(S13[iConfig])*x_resol*y_resol;
+            S33e[iConfig] = S33[iConfig] - sqr(y_resol);
           }
         }
 
