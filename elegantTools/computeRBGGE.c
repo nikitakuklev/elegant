@@ -347,6 +347,8 @@ int main(int argc, char **argv)
   omp_set_num_threads(threads);
 #endif
 
+  init_stats();
+
   if ((topFile == NULL) || (bottomFile == NULL) || (leftFile == NULL) || (rightFile == NULL))
     {
       fprintf(stderr, "%s\n", USAGE);
@@ -385,10 +387,8 @@ int main(int argc, char **argv)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         return (1);
       }
-      if (verbose) {
-        printf("Created auto-tune log file %s\n", autoTuneLogFile);
-        fflush(stdout);
-      }
+      if (verbose)
+        report_stats(stdout, "Created auto-tune log file.");
     }
     bestResidual = DBL_MAX;
     bestDerivatives = maxDerivatives;
@@ -399,16 +399,12 @@ int main(int argc, char **argv)
     memset(&fieldsOnPlanes, 0, sizeof(fieldsOnPlanes));
     if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, skewOutputFile?1:0))
       return 1;
-    if (verbose) {
-      printf("Read input files\n");
-      fflush(stdout);
-    }
+    if (verbose)
+      report_stats(stdout, "Read input files");
     if (computeGGderiv(&fieldsOnPlanes, normalOutputFile, maxDerivatives, maxMultipoles, fundamental))
       return 1;
-    if (verbose) {
-      printf("Computed normal GGE\n");
-      fflush(stdout);
-    }
+    if (verbose)
+      report_stats(stdout, "Computed normal GGE");
     readBGGExpData(&bggexpData[0], normalOutputFile, "CnmS", 0);
 
     if (skewOutputFile) {
@@ -417,10 +413,8 @@ int main(int argc, char **argv)
           computeGGcos(&fieldsOnPlanes, skewOutputFile, maxDerivatives, maxMultipoles, fundamental))
         return 1;
       readBGGExpData(&bggexpData[1], skewOutputFile, "CnmC", 1);
-      if (verbose) {
-        printf("Computed skew GGE\n");
-        fflush(stdout);
-      }
+      if (verbose)
+        report_stats(stdout, "Computed skew GGE");
     }
 
     /* Have to restore the data because it is modified by computeGGderiv and computeGGcos */
@@ -430,10 +424,8 @@ int main(int argc, char **argv)
     if (fieldMapFile) {
       /* read 3D map */
       readFieldMap(fieldMapFile, &fieldMap); 
-      if (verbose) {
-        printf("Read 3d field map from disk\n");
-        fflush(stdout);
-      }
+      if (verbose)
+        report_stats(stdout, "Read 3d field map from disk");
       if (minDerivatives<1)
 	minDerivatives = 1;
       if (minMultipoles<1)
@@ -499,25 +491,19 @@ int main(int argc, char **argv)
     }
 
     if (fieldMapFile) {
-      if (verbose) {
-        printf("Finished auto tuning\n");
-        fflush(stdout);
-      }
+      if (verbose)
+        report_stats(stdout, "Finished auto tuning");
       if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, skewOutputFile?1:0) || 
           computeGGderiv(&fieldsOnPlanes, normalOutputFile, bestDerivatives, bestMultipoles, fundamental))
         return 1;
-      if (verbose) {
-        printf("Recovered best normal GGE result\n");
-        fflush(stdout);
-      }
+      if (verbose) 
+        report_stats(stdout, "Saved best normal GGE result");
       if (skewOutputFile) {
         if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1) ||
             computeGGcos(&fieldsOnPlanes, skewOutputFile, bestDerivatives, bestMultipoles, fundamental))
           return 1;
-        if (verbose) {
-          printf("Recovered best skew GGE result\n");
-          fflush(stdout);
-        }
+        if (verbose)
+          report_stats(stdout, "Saved best skew GGE result");
       }
     }
 
@@ -525,10 +511,8 @@ int main(int argc, char **argv)
       if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, skewOutputFile?1:0))
         return 1;
       evaluateGGEAndOutput(evaluationOutput, normalOutputFile, skewOutputFile, &fieldsOnPlanes);
-      if (verbose) {
-        printf("Wrote evaluation output to disk\n");
-        fflush(stdout);
-      }
+      if (verbose)
+        report_stats(stdout, "Wrote evaluation output to disk");
     }
 
     if (autoTuneFlags&AUTOTUNE_LOG) {
@@ -547,10 +531,8 @@ int main(int argc, char **argv)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         return (1);
       }
-      if (verbose) {
-        printf("Wrote auto-tune log to disk\n");
-        fflush(stdout);
-      }
+      if (verbose)
+        report_stats(stdout, "Wrote auto-tune log to disk");
     }
     
     return (0);
@@ -2994,96 +2976,92 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
     double x, y, z, r, phi, dz;
     long ip, ns, iz, ig, m, im;
     int myid;
-    uint64_t ip0, ip1;
     myid = omp_get_thread_num();
-    ip0 = myid*(fmap->n/threads);
-    if (myid==(threads-1))
-      ip1 = fmap->n - 1;
-    else
-      ip1 = (myid+1)*(fmap->n/threads)-1;
-    for (ip=ip0; ip<=ip1; ip++) {
-    if (fmap->x[ip]>fieldsOnPlanes->xMax || fmap->x[ip]<fieldsOnPlanes->xMin ||
-        fmap->y[ip]>fieldsOnPlanes->yMax || fmap->y[ip]<fieldsOnPlanes->yMin)
-      continue;
-    if (radiusLimit>0) {
-      r = sqrt(sqr(fmap->x[ip])+sqr(fmap->y[ip]));
-      if (r>radiusLimit)
-        continue;
-    }
-    /* Compute fields */
-    Br = Bphi = B[0] = B[1] = B[2] = 0;
-    r = phi = dz = 0;
-    iz = 0;
-    for (ns=0; ns<2; ns++) {
-      /* ns=0 => normal, ns=1 => skew */
-      if (!bggexpData[ns].haveData)
-        continue;
-      x = fmap->x[ip] - bggexpData[ns].xCenter;
-      y = fmap->y[ip] - bggexpData[ns].yCenter;
-      z = fmap->z[ip];
-      dz = (bggexpData[ns].zMax-bggexpData[ns].zMin)/(bggexpData[ns].nz-1);
-      iz = (z-bggexpData[ns].zMin)/dz + 0.5;
-      if (fabs(iz*dz+bggexpData[ns].zMin-z)>1e-3*dz || iz<0 || iz>=bggexpData[ns].nz) {
-        fprintf(stderr, "evaluation points in the 3d field map need to be at the same z planes as the input data\n");
-        fprintf(stderr, "no match for z=%15.8le, dz=%15.8le, zMin=%15.8le, iz=%ld\n", z, dz, bggexpData[ns].zMin, iz);
-        exit(1);
-      }
-        
-      r = sqrt(sqr(x)+sqr(y));
-      phi = atan2(y, x);
-      
-      for (im=0; im<bggexpData[ns].nm && im<multipoles; im++) {
-        double mfact, term, sin_mphi, cos_mphi;
-        m = bggexpData[ns].m[im];
-        mfact = dfactorial(m);
-        sin_mphi = sin(m*phi);
-        cos_mphi = cos(m*phi);
-        if (ns==0) {
-         /* normal */
-          for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
-            term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-            B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
-            term *= bggexpData[ns].Cmn[im][ig][iz];
-            Br   += term*(2*ig+m)*sin_mphi;
-            Bphi += m*term*cos_mphi;
+    for (ip=0; ip<fmap->n; ip++) {
+      if (ip%threads==myid) {
+        if (fmap->x[ip]>fieldsOnPlanes->xMax || fmap->x[ip]<fieldsOnPlanes->xMin ||
+            fmap->y[ip]>fieldsOnPlanes->yMax || fmap->y[ip]<fieldsOnPlanes->yMin)
+          continue;
+        if (radiusLimit>0) {
+          r = sqrt(sqr(fmap->x[ip])+sqr(fmap->y[ip]));
+          if (r>radiusLimit)
+            continue;
+        }
+        /* Compute fields */
+        Br = Bphi = B[0] = B[1] = B[2] = 0;
+        r = phi = dz = 0;
+        iz = 0;
+        for (ns=0; ns<2; ns++) {
+          /* ns=0 => normal, ns=1 => skew */
+          if (!bggexpData[ns].haveData)
+            continue;
+          x = fmap->x[ip] - bggexpData[ns].xCenter;
+          y = fmap->y[ip] - bggexpData[ns].yCenter;
+          z = fmap->z[ip];
+          dz = (bggexpData[ns].zMax-bggexpData[ns].zMin)/(bggexpData[ns].nz-1);
+          iz = (z-bggexpData[ns].zMin)/dz + 0.5;
+          if (fabs(iz*dz+bggexpData[ns].zMin-z)>1e-3*dz || iz<0 || iz>=bggexpData[ns].nz) {
+            fprintf(stderr, "evaluation points in the 3d field map need to be at the same z planes as the input data\n");
+            fprintf(stderr, "no match for z=%15.8le, dz=%15.8le, zMin=%15.8le, iz=%ld\n", z, dz, bggexpData[ns].zMin, iz);
+            exit(1);
           }
-        } else {
-          /* skew */
-          if (m==0) {
-            B[2] += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
-            for (ig=1; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
-              term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-              B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
-              Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
-            }
-          } else {
-            for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
-              term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
-              B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
-              term *= bggexpData[ns].Cmn[im][ig][iz];
-              Br   += term*(2*ig+m)*cos_mphi;
-              Bphi -= m*term*sin_mphi;
+          
+          r = sqrt(sqr(x)+sqr(y));
+          phi = atan2(y, x);
+          
+          for (im=0; im<bggexpData[ns].nm && im<multipoles; im++) {
+            double mfact, term, sin_mphi, cos_mphi;
+            m = bggexpData[ns].m[im];
+            mfact = dfactorial(m);
+            sin_mphi = sin(m*phi);
+            cos_mphi = cos(m*phi);
+            if (ns==0) {
+              /* normal */
+              for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
+                term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
+                term *= bggexpData[ns].Cmn[im][ig][iz];
+                Br   += term*(2*ig+m)*sin_mphi;
+                Bphi += m*term*cos_mphi;
+              }
+            } else {
+              /* skew */
+              if (m==0) {
+                B[2] += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
+                for (ig=1; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
+                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                  B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
+                  Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
+                }
+              } else {
+                for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
+                  term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+                  B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
+                  term *= bggexpData[ns].Cmn[im][ig][iz];
+                  Br   += term*(2*ig+m)*cos_mphi;
+                  Bphi -= m*term*sin_mphi;
+                }
+              }
             }
           }
         }
+        B[0] = Br*cos(phi) - Bphi*sin(phi);
+        B[1] = Br*sin(phi) + Bphi*cos(phi);
+#ifdef DEBUG
+        fprintf(fpdeb, "%le %le %le %le %le %le %le %le %le\n",
+                fmap->x[ip], fmap->y[ip], iz*dz+bggexpData[0].zMin,
+                B[0], B[1], B[2], fmap->Bx[ip], fmap->By[ip], fmap->Bz[ip]);
+#endif
+        field = sqrt(sqr(B[0])+sqr(B[1])+sqr(B[2]));
+        if (field>maxField[myid])
+          maxField[myid] = field;
+        if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst[myid])
+          residualWorst[myid] = residualTerm;
+        residualCount[myid] ++;
+        residualSum[myid] += fabs(residualTerm);
+        residualSum2[myid] += sqr(residualTerm);
       }
     }
-    B[0] = Br*cos(phi) - Bphi*sin(phi);
-    B[1] = Br*sin(phi) + Bphi*cos(phi);
-#ifdef DEBUG
-    fprintf(fpdeb, "%le %le %le %le %le %le %le %le %le\n",
-            fmap->x[ip], fmap->y[ip], iz*dz+bggexpData[0].zMin,
-            B[0], B[1], B[2], fmap->Bx[ip], fmap->By[ip], fmap->Bz[ip]);
-#endif
-    field = sqrt(sqr(B[0])+sqr(B[1])+sqr(B[2]));
-    if (field>maxField[myid])
-      maxField[myid] = field;
-    if ((residualTerm = sqrt(sqr(B[0]-fmap->Bx[ip]) + sqr(B[1]-fmap->By[ip]) + sqr(B[2]-fmap->Bz[ip])))>residualWorst[myid])
-      residualWorst[myid] = residualTerm;
-    residualCount[myid] ++;
-    residualSum[myid] += fabs(residualTerm);
-    residualSum2[myid] += sqr(residualTerm);
-  }
 #pragma omp barrier
   }
 
