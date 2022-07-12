@@ -1310,7 +1310,7 @@ int ReadInputFiles
 
 #pragma omp parallel 
   {
-    int ik, ix, n, myid;
+    int ik, iy, n, myid;
     COMPLEX *Bint;
     Bint = calloc(Nx, sizeof(COMPLEX));
     myid = omp_get_thread_num();
