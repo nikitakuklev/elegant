@@ -1520,7 +1520,7 @@ long do_tracking(
               break;
             case T_SPEEDBUMP:
               if (!(flags & TEST_PARTICLES && !(flags & TEST_PARTICLE_LOSSES))) {
-                nLeft = track_through_speedbump(coord, (SPEEDBUMP *)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
+                nLeft = track_through_speedbump(coord, (SPEEDBUMP *)eptr->p_elem, nToTrack, accepted, last_z, *P_central, eptr);
               } else {
                 exactDrift(coord, nToTrack, ((SPEEDBUMP *)eptr->p_elem)->length);
               }

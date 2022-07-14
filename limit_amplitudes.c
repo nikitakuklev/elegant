@@ -1194,7 +1194,7 @@ long imposeApertureData(
 }
 
 long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, double **accepted, double z,
-                             double Po) {
+                             double Po, ELEMENT_LIST *eptr) {
   double *ini, radius, xiHit, yiHit;
   long iplane, ip, idir, hit, phit;
   long dsign[2] = {1, -1};
@@ -1328,6 +1328,14 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
       initial[np - 1][iplane == 0 ? 2 : 0] += xiHit * initial[np - 1][iplane == 0 ? 3 : 1];
       initial[np - 1][4] = z + xiHit;
       initial[np - 1][5] = Po * (1 + initial[np - 1][5]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[np-1], eptr,
+                                        z + xiHit, 0, 0);
+        initial[np-1][globalLossCoordOffset + 0] = X;
+        initial[np-1][globalLossCoordOffset + 1] = Z;
+        initial[np-1][globalLossCoordOffset + 2] = theta;
+      }
       --ip;
       --np;
     }
