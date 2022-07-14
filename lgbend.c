@@ -353,7 +353,7 @@ long track_through_lgbend(
                               iSegment == (nSegments - 1) ? iFinalSlice : 0,
                               length, NULL, NULL, NULL,
                               &apertureData, &dzLoss, sigmaDelta2, &lastRho1, tilt,
-                              dZOffset)) {
+                              dZOffset, eptr)) {
         swapParticles(particle[i_part], particle[i_top]);
         if (accepted)
           swapParticles(accepted[i_part], accepted[i_top]);

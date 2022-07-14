@@ -4684,7 +4684,7 @@ int integrate_kick_KnL(double *coord, double dx, double dy,
                        double drift,
                        MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edge1MultData, MULTIPOLE_DATA *edge2MultData, 
                        MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2, double *lastRho1, double refTilt,
-                       double ZOffset);
+                       double ZOffset, ELEMENT_LIST *eptr);
 
 long track_through_lgbend(double **particle, long n_part, ELEMENT_LIST *eptr, LGBEND *lgbend, double Po,
                           double **accepted, double z_start, double *sigmaDelta2, char *rootname,
