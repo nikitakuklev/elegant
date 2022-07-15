@@ -76,20 +76,21 @@
 #define SET_LIMIT_MODE 5
 #define SET_ENERGY_SPREAD 6
 #define SET_PIPE 7
-#define N_OPTIONS 8
+#define SET_SCALE 8
+#define N_OPTIONS 9
 
 char *option[N_OPTIONS] = {
     "nerrorsets", "seed", "verbosity",
     "deviationlimit", "resolution", "limitmode", "energyspread",
-    "pipe", 
+    "pipe", "scale",
     } ;
 
 #define USAGE "sddsemitproc\n\
  [<inputfile>] [<outputfile>] [-pipe=[input][,output]]\n\
  [-nErrorSets=<number> [-seed=<integer>]]\n\
  [-resolution=<xResolutionm>,<yResolutionm>] [-energySpread=<fractionalValue>]\n\
- [-seed=integer] [-verbosity=level]\n\n\
-Program by Michael Borland. (This is version 2, August 2020)"
+ [-scale=<xFactor>,<yFactor>] [-seed=integer] [-verbosity=level]\n\n\
+Program by Michael Borland. (This is version 4, July 2022.)"
 
 static char *additional_help[] = {
 USAGE,
@@ -111,6 +112,8 @@ USAGE,
 "-deviationLimit is used to define what \"too far\" from the fit means.",
 "-resolution allows specification of the measurement resolution,",
 "    which is subtracted in quadrature from the sigma.",
+"-scale allows scaling the measured beam sizes by the given factors,",
+"    which may help identify calibration errors.",
 "-energySpread allows fixing the value of the fractional energy spread,",
 "    which may help get better results.",
 NULL
@@ -167,7 +170,7 @@ int main(
   SCANNED_ARG *scanned;
   long i_arg, i, j, iConfig, iSet, nConfigs;
   char *input, *output;
-  double x_resol, y_resol;
+  double x_resol, y_resol, x_scale, y_scale;
   double deviationLimit=0;
   long verbosity;
   unsigned long pipeFlags;
@@ -189,7 +192,8 @@ int main(
   x_resol = y_resol = 0;
   verbosity = 0;
   pipeFlags = 0;
-  
+  x_scale = y_scale = 1;
+
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (scanned[i_arg].arg_type==OPTION) {
       switch (match_string(scanned[i_arg].list[0], option,
@@ -231,6 +235,13 @@ int main(
             !sscanf(scanned[i_arg].list[1], "%lf", &energySpread) ||
             energySpread<=0)
           bomb("invalid -energySpread syntax", USAGE);
+        break;
+      case SET_SCALE:
+        if (scanned[i_arg].n_items!=3 ||
+            !sscanf(scanned[i_arg].list[1], "%lf", &x_scale) ||
+            !sscanf(scanned[i_arg].list[2], "%lf", &y_scale) ||
+            x_scale<=0 || y_scale<=0)
+          bomb("invalid -scale syntax", USAGE);
         break;
       case SET_PIPE:
 	if (!processPipeOption(scanned[i_arg].list+1, scanned[i_arg].n_items-1, &pipeFlags))
@@ -386,6 +397,21 @@ int main(
     
     if (!SDDS_StartPage(&SDDSout, nConfigs) || !SDDS_CopyColumns(&SDDSout, &SDDSin)) 
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
+    if (x_scale!=1 || y_scale!=1) {
+      long i;
+      for (i=0; i<nConfigs; i++) {
+        S11[i] *= sqr(x_scale);
+        S33[i] *= sqr(y_scale);
+        S13[i] *= x_scale*y_scale;
+        if (S11StDev) 
+          S11StDev[i] *= sqr(x_scale);
+        if (S33StDev) 
+          S33StDev[i] *= sqr(y_scale);
+        if (S13StDev)
+          S13StDev[i] *= x_scale*y_scale;
+      }
+    }
 
     for (i=0; i<5; i++)
       for (j=0; j<5; j++)
