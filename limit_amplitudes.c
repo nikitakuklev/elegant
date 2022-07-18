@@ -1331,7 +1331,7 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
       if (globalLossCoordOffset > 0) {
         double X, Y, Z, theta;
         convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[np-1], eptr,
-                                        z + xiHit, 0, 0);
+                                        xiHit, 0, 0);
         initial[np-1][globalLossCoordOffset + 0] = X;
         initial[np-1][globalLossCoordOffset + 1] = Z;
         initial[np-1][globalLossCoordOffset + 2] = theta;
