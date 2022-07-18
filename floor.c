@@ -1053,7 +1053,7 @@ void convertLocalCoordinatesToGlobal(
 #if USE_MPI
       dup2(fd, fileno(stdout));
 #endif
-      printf("Problem Converting to global for particle %ld:\nZ1 = %21.15le, X1 = %21.15le, dZ = %21.15le, dX = %21.15le, theta1 = %21.15le\n -> Z = %21.15le, X = %21.15le\n",
+      printf("Problem (1) converting to global for particle %ld:\nZ1 = %21.15le, X1 = %21.15le, dZ = %21.15le, dX = %21.15le, theta1 = %21.15le\n -> Z = %21.15le, X = %21.15le\n",
              (long)coord[6], Z1, X1, dZ, dX, theta1, *Z, *X);
       printf("Beg pos: %21.15le, End pos: %21.15le\n", eptr->beg_pos, eptr->end_pos);
       exit(1);
@@ -1080,7 +1080,7 @@ void convertLocalCoordinatesToGlobal(
 #if USE_MPI
       dup2(fd, fileno(stdout));
 #endif
-      printf("Problem Converting to global for particle %ld:\nZ1 = %21.15le, X1 = %21.15le, dZ = %21.15le, dX = %21.15le, theta1 = %21.15le\n -> Z = %21.15le, X = %21.15le\n",
+      printf("Problem (2) converting to global for particle %ld:\nZ1 = %21.15le, X1 = %21.15le, dZ = %21.15le, dX = %21.15le, theta1 = %21.15le\n -> Z = %21.15le, X = %21.15le\n",
              (long)coord[6], Z1, X1, dZ, dX, theta1, *Z, *X);
       printf("Beg pos: %21.15le, End pos: %21.15le\n", eptr->beg_pos, eptr->end_pos);
       exit(1);
@@ -1163,7 +1163,7 @@ void convertLocalCoordinatesToGlobal(
 #if USE_MPI
         dup2(fd, fileno(stdout));
 #endif
-        printf("Problem Converting to global for particle %ld:\nZ1 = %21.15le, X1 = %21.15le, dZ = %21.15le, dX = %21.15le, theta1 = %21.15le\n -> Z = %21.15le, X = %21.15le\n",
+        printf("Problem (3) converting to global for particle %ld:\nZ1 = %21.15le, X1 = %21.15le, dZ = %21.15le, dX = %21.15le, theta1 = %21.15le\n -> Z = %21.15le, X = %21.15le\n",
                (long)coord[6], Z1, X1, dZ, dX, theta1, *Z, *X);
         printf("Beg pos: %21.15le, End pos: %21.15le\n", eptr->beg_pos, eptr->end_pos);
         exit(1);
