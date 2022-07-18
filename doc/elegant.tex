@@ -45,7 +45,11 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 \begin{itemize}
 \item The open-side feature of the \verb|MAXAMP| element behaved incorrectly when the dimension in one
   plane was not set, as reported by Z. Duan (IHEP). 
+\item When using \verb|moments_output| computations for a beamline that contained \verb|SBEN| elements,
+  a less accurate model was used compared to the same computation with \verb|CSBEND| elements.
+  V. Sajaev (ANL) helped find this bug.
 \end{itemize}
+
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}

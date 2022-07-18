@@ -1669,6 +1669,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     switch (eptr->type) {
     case T_CSBEND:
       if (slice == 0) {
+        static short printed = 0;
         memcpy(&csbend, (CSBEND *)eptr->p_elem, sizeof(CSBEND));
         csbend.isr = 0;
         csbend.nSlices = nSlices;
@@ -1683,6 +1684,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
           track_through_csbend(coord, 1, &csbend, 0, run->p_central, NULL, 0.0,
                                NULL, run->rootname, NULL, NULL, NULL, -1);
           free_czarray_2d((void **)coord, 1, totalPropertiesPerParticle);
+        }
+        if (!printed) {
+          print_elem(stdout, &elem);
+          printed = 1;
         }
       }
       break;
@@ -1709,6 +1714,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       break;
     case T_SBEN:
       if (slice == 0) {
+        static short printed  = 0;
         elem.type = T_CSBEND;
         elem.p_elem = (void *)&csbend;
         sbend = (BEND *)eptr->p_elem;
@@ -1743,6 +1749,11 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         csbend.e2Index = sbend->e2Index;
         csbend.integration_order = 6;
         csbend.nSlices = nSlices;
+        csbend.nonlinear = 1;
+        if (!printed) {
+          print_elem(stdout, &elem);
+          printed = 1;
+        }
       }
       break;
     case T_CSRCSBEND:
