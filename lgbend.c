@@ -106,7 +106,7 @@ long track_through_lgbend(
     iFinalSlice = 0; /* integrate the full magnet */
   if (iFinalSlice > 0 && iPart >= 0)
     bombTracking("Programming error: partial integration mode and one-step mode invoked together for LGBEND.");
-  if (iFinalSlice > 0 && lgbend->optimized != 1)
+  if (iFinalSlice > 0 && lgbend->optimized != 1 && lgbend->optimizeFse)
     bombTracking("Programming error: partial integration mode invoked for unoptimized LGBEND.");
 
   if (N_LGBEND_FRINGE_INT != 8)

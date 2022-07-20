@@ -2977,6 +2977,13 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, ELEMEN
     radIntegrals->RI[4] += I5;
   } else if (elem->type == T_LGBEND) {
     double startingCoord[6] = {0, 0, 0, 0, 0, 0};
+    LGBEND *lgbend;
+    lgbend = (LGBEND *)elem->p_elem;
+    if (lgbend->optimized!=1 && lgbend->optimizeFse) {
+      double **oneParticle;
+      oneParticle = (double **)czarray_2d(sizeof(**oneParticle), 1, totalPropertiesPerParticle);
+      track_through_lgbend(oneParticle, 1, elem, lgbend, pCentral, NULL, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+    }
     if (elem->pred && elem->pred->matrix && elem->pred->matrix->C)
       memcpy(&startingCoord[0], elem->pred->matrix->C, sizeof(startingCoord[0]) * 6);
     addLgbendRadiationIntegrals((LGBEND *)elem->p_elem, startingCoord, pCentral, eta0, etap0, beta0, alpha0, &I1, &I2, &I3, &I4, &I5, elem);
