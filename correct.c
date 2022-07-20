@@ -271,12 +271,16 @@ void correction_setup(
 
   _correct->CMFx->remove_smallest_SVs = remove_smallest_SVs[0];
   _correct->CMFx->auto_limit_SVs = auto_limit_SVs[0];
+  _correct->CMFx->Tikhonov_n = Tikhonov_n[0];
+  _correct->CMFx->Tikhonov_relative_alpha = Tikhonov_relative_alpha[0];
   _correct->CMFx->keep_largest_SVs = keep_largest_SVs[0];
   if ((_correct->CMFx->minimum_SV_ratio = minimum_SV_ratio[0]) >= 1)
     bombElegant("minimum_SV_ratio should be less than 1 to be meaningful", NULL);
 
   _correct->CMFy->remove_smallest_SVs = remove_smallest_SVs[1];
   _correct->CMFy->auto_limit_SVs = auto_limit_SVs[1];
+  _correct->CMFy->Tikhonov_n = Tikhonov_n[1];
+  _correct->CMFy->Tikhonov_relative_alpha = Tikhonov_relative_alpha[1];
   _correct->CMFy->keep_largest_SVs = keep_largest_SVs[1];
   if ((_correct->CMFy->minimum_SV_ratio = minimum_SV_ratio[1]) >= 1)
     bombElegant("minimum_SV_ratio should be less than 1 to be meaningful", NULL);
@@ -1387,7 +1391,8 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   }
 #endif
 
-  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0) {
+  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0 &&
+      CM->Tikhonov_relative_alpha<=0 && CM->Tikhonov_n<0) {
     if (coord == 0)
       printWarning("Trajectory correction may be unstable (consider use of SV controls).", "More correctors than monitors for x plane.");
     else
@@ -1573,7 +1578,8 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     }
 
     CM->T = matrix_invert(CM->C, CM->equalW ? NULL : CM->weight, (int32_t)CM->keep_largest_SVs, (int32_t)CM->remove_smallest_SVs,
-                          CM->minimum_SV_ratio, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
+                          CM->minimum_SV_ratio, CM->Tikhonov_relative_alpha, CM->Tikhonov_n, 
+                          0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
     matrix_scmul(CM->T, -1);
 
     if (!(flags & COMPUTE_RESPONSE_SILENT)) {
@@ -1628,7 +1634,8 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     tracking_flags = TEST_PARTICLES + TEST_PARTICLE_LOSSES;
   }
 
-  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0) {
+  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0 &&
+      CM->Tikhonov_relative_alpha<=0 && CM->Tikhonov_n<0) {
     if (coord == 0)
       printWarning("More correctors than monitors for x plane.", "Correction may be unstable (consider use of SV controls).");
     else
@@ -2450,7 +2457,8 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   fputc('\n', stdout);
 #endif
 
-  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0) {
+  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0 &&
+      CM->Tikhonov_relative_alpha<=0 && CM->Tikhonov_n<0) {
     if (coord == 0)
       printWarning("Orbit correction may be unstable (consider use of SV controls).", "More correctors than monitors for x plane.");
     else
@@ -2586,7 +2594,8 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
       printf("Removing %ld smallest singular values to prevent instability\n", (long)CM->remove_smallest_SVs);
     }
     CM->T = matrix_invert(CM->C, CM->equalW ? NULL : CM->weight, (int32_t)CM->keep_largest_SVs, (int32_t)CM->remove_smallest_SVs,
-                          CM->minimum_SV_ratio, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
+                          CM->minimum_SV_ratio, CM->Tikhonov_relative_alpha, CM->Tikhonov_n,
+                          0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
     matrix_scmul(CM->T, -1);
 
     if (!(flags & COMPUTE_RESPONSE_SILENT)) {
@@ -2762,7 +2771,8 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
       printf("Removing %ld smallest singular values to prevent instability\n", (long)CM->remove_smallest_SVs);
     }
     CM->T = matrix_invert(CM->C, CM->equalW ? NULL : CM->weight, (int32_t)CM->keep_largest_SVs, (int32_t)CM->remove_smallest_SVs,
-                          CM->minimum_SV_ratio, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
+                          CM->minimum_SV_ratio, CM->Tikhonov_relative_alpha, CM->Tikhonov_n,
+                          0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
     matrix_scmul(CM->T, -1);
 
     if (!(flags & COMPUTE_RESPONSE_SILENT)) {
@@ -2820,7 +2830,8 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
       clorb[0].centroid[i] = 0;
   }
 
-  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0) {
+  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0 &&
+      CM->Tikhonov_relative_alpha<=0 && CM->Tikhonov_n<0) {
     if (coord == 0)
       printWarning("Orbit correction may be unstable (consider use of SV controls).", "More correctors than monitors for x plane.");
     else
@@ -3557,7 +3568,8 @@ int remove_pegged_corrector(CORMON_DATA *CMA, CORMON_DATA *CM, STEERING_LIST *SL
     printf("Removing %ld smallest singular values to prevent instability\n", (long)CMA->remove_smallest_SVs);
   }
   CMA->T = matrix_invert(CMA->C, CMA->equalW ? NULL : CMA->weight, (int32_t)CMA->keep_largest_SVs, (int32_t)CMA->remove_smallest_SVs,
-                         CMA->minimum_SV_ratio, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
+                         CMA->minimum_SV_ratio, CM->Tikhonov_relative_alpha, CM->Tikhonov_n,
+                         0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
   printf("Inverted matrix with %ld (of %ld) correctors active, condition number = %le\n", (long)CMA->ncor, (long)CM->ncor, conditionNumber);
   matrix_scmul(CMA->T, -1);
   return 0;
@@ -3635,7 +3647,8 @@ void compute_coupled_trajcor_matrices(
   }
 #endif
 
-  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0)
+  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0 &&
+      CM->Tikhonov_relative_alpha<=0 && CM->Tikhonov_n<0)
     printWarning("Coupled trajectory correction may be unstable (consider use of SV controls).",
                  "More correctors than monitors.");
   if (CM->ncor == 0) {
@@ -3775,7 +3788,8 @@ void compute_coupled_trajcor_matrices(
     }
 
     CM->T = matrix_invert(CM->C, CM->equalW ? NULL : CM->weight, (int32_t)CM->keep_largest_SVs, (int32_t)CM->remove_smallest_SVs,
-                          CM->minimum_SV_ratio, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
+                          CM->minimum_SV_ratio, CM->Tikhonov_relative_alpha, CM->Tikhonov_n,
+                          0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
     matrix_scmul(CM->T, -1);
 
     if (!(flags & COMPUTE_RESPONSE_SILENT)) {
@@ -3831,7 +3845,8 @@ long global_coupled_trajcor(CORMON_DATA *CM, STEERING_LIST *SL, TRAJECTORY **tra
     fflush(stdout);
   }
 
-  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0) {
+  if (CM->nmon < CM->ncor && CM->minimum_SV_ratio == 0 && CM->keep_largest_SVs == 0 && CM->remove_smallest_SVs == 0 &&
+      CM->Tikhonov_relative_alpha<=0 && CM->Tikhonov_n<0) {
     printWarning("Coupled trajectory correction may be unstable (consider use of SV controls).",
                  "More correctors than monitors.");
   }

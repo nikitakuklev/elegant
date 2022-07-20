@@ -104,11 +104,12 @@ extern  void matrix_scmul(MAT *mat1, double scalar);
 
 /*invert routine*/
 extern  MAT *matrix_invert(MAT *A, double *weight, int32_t largestSValue, int32_t smallestSValue, double minRatio,
-                   int32_t deleteVectors, int32_t *deleteVector, char **deletedVector,
-                   VEC **S_Vec, int32_t *sValues,
-                   VEC **S_Vec_used, int32_t *usedSValues,
-                   MAT **U_matrix, MAT **Vt_matrix,
-                   double *conditionNum);
+                           double tikhonovAlpha, int32_t tikhonovN,
+                           int32_t deleteVectors, int32_t *deleteVector, char **deletedVector,
+                           VEC **S_Vec, int32_t *sValues,
+                           VEC **S_Vec_used, int32_t *usedSValues,
+                           MAT **U_matrix, MAT **Vt_matrix,
+                           double *conditionNum);
 
 /*generate identity matrix*/
 MAT *matrix_identity(int32_t m, int32_t n);

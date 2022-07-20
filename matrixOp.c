@@ -394,12 +394,27 @@ MAT *matrix_mult(MAT *mat1, MAT *mat2) {
   return new_mat;
 }
 
-MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smallestSValue, double minRatio,
-                   int32_t deleteVectors, int32_t *deleteVector, char **deletedVector,
-                   VEC **S_Vec, int32_t *sValues,
-                   VEC **S_Vec_used, int32_t *usedSValues,
-                   MAT **U_matrix, MAT **Vt_matrix,
-                   double *conditionNum) {
+MAT *matrix_invert
+(
+ MAT *Ain,               /* input matrix */
+ double *weight,         /* weights for each SV */
+ int32_t largestSValue,  /* number of largest SVs to keep */
+ int32_t smallestSValue, /* number of smallest SVs to discard */
+ double minRatio,        /* keep small SVs if SV/Max(SV)>minRatio */
+ double tikhonovRelativeAlpha,   /* Tikhonov alpha parameter */
+ int32_t tikhonovN,      /* set Tikhonov alpha parameter to the nth SV */
+ int32_t deleteVectors,  /* 0/1 if caller supplying list of SVs to delete */
+ int32_t *deleteVector,  /* indices of vectors to delete */
+ char **deletedVector,   /* list of deleted vectors as a string */
+ VEC **S_Vec,            /* return of all singular values */
+ int32_t *sValues,       /* return of number of SVs */
+ VEC **S_Vec_used,       /* return of all SVs used */
+ int32_t *usedSValues,   /* return of number of SVs used */
+ MAT **U_matrix,         /* return of U matrix */
+ MAT **Vt_matrix,        /* return of transpose of V */
+ double *conditionNum    /* return of condition number (max(SV)/min(SV)) */
+ )
+{
   MAT *Inv = NULL;
   MAT *A;
 #if defined(CLAPACK) || defined(LAPACK) || defined(SUNPERF) || defined(ESSL) || defined(MKL)
@@ -551,13 +566,41 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
   free(work);
 #  endif
 
+  NSVUsed = 1;
+  for (i=0; i<n; i++) {
+    if ((SValueUsed->ve[i] = SValue->ve[i])!=0)
+      InvSValue->ve[i] = 1/SValue->ve[i];
+    else
+      InvSValue->ve[i] = 0;
+  }
+
+  /* Apply Tikhonov regularization if requested */
+  if (tikhonovRelativeAlpha>0 || (tikhonovN>=0 && tikhonovN<n)) {
+    double tikhonovAlpha;
+    if (tikhonovRelativeAlpha>0) {
+      double maxSV;
+      maxSV = 0;
+      for (i=0; i<n; i++) 
+        if (SValue->ve[i]>maxSV)
+          maxSV = SValue->ve[i];
+      tikhonovAlpha = maxSV*tikhonovRelativeAlpha;
+    } else
+      tikhonovAlpha = SValue->ve[tikhonovN];
+    if (tikhonovAlpha>0) {
+      for (i=0; i<n; i++) {
+        if (SValue->ve[i]) {
+          InvSValue->ve[i] = SValue->ve[i]/(sqr(SValue->ve[i]) + sqr(tikhonovAlpha));
+          SValueUsed->ve[i] = 1/InvSValue->ve[i];
+        }
+      }
+    }
+  }
+
   max = 0;
   min = HUGE;
-  InvSValue->ve[0] = 1 / SValue->ve[0];
-  SValueUsed->ve[0] = SValue->ve[0];
   max = MAX(SValueUsed->ve[0], max);
   min = MIN(SValueUsed->ve[0], min);
-  NSVUsed = 1;
+
   /*
     1) first remove SVs that are exactly zero
     2) remove SV according to ratio option
@@ -566,9 +609,9 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
     */
 
   for (i = 1; i < n; i++) {
-    if (!SValue->ve[i]) {
+    if (!SValueUsed->ve[i]) {
       InvSValue->ve[i] = 0;
-    } else if ((SValue->ve[i] / SValue->ve[0]) < minRatio) {
+    } else if ((SValueUsed->ve[i] / SValueUsed->ve[0]) < minRatio) {
       InvSValue->ve[i] = 0;
       SValueUsed->ve[i] = 0;
     } else if (largestSValue && i >= largestSValue) {
@@ -578,13 +621,12 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
       InvSValue->ve[i] = 0;
       SValueUsed->ve[i] = 0;
     } else {
-      InvSValue->ve[i] = 1 / SValue->ve[i];
-      SValueUsed->ve[i] = SValue->ve[i];
       max = MAX(SValueUsed->ve[i], max);
       min = MIN(SValueUsed->ve[i], min);
       NSVUsed++;
     }
   }
+
   /*4) remove SV of user-selected vectors -
     delete vector given in the -deleteVectors option
     by setting the inverse singular values to 0*/
@@ -922,7 +964,7 @@ int lsf2dPolyUnweighted(
    * K = A*Y 
    */
   Xc = matrix_copy(X);
-  A = matrix_invert(X, NULL, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, condition);
+  A = matrix_invert(X, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, condition);
   K = matrix_mult(A, Y);
 
   for (i = 0; i < nOrders; i++)
