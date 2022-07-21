@@ -1021,9 +1021,15 @@ void convertLocalCoordinatesToGlobal(
   }
 
   if (eptr->pred) {
-    Z1 = eptr->pred->floorCoord[2];
-    X1 = eptr->pred->floorCoord[0];
-    theta1 = -eptr->pred->floorAngle[0];
+    if (mode==GLOBAL_LOCAL_MODE_DZPM) {
+      Z1 = eptr->floorCoord[2];
+      X1 = eptr->floorCoord[0];
+      theta1 = -eptr->floorAngle[0];
+    } else {
+      Z1 = eptr->pred->floorCoord[2];
+      X1 = eptr->pred->floorCoord[0];
+      theta1 = -eptr->pred->floorAngle[0];
+    }
   } else {
     Z1 = Z0;
     X1 = X0;
@@ -1118,6 +1124,7 @@ void convertLocalCoordinatesToGlobal(
           bombElegant("programming error for local-to-global coordinates (1)---seek help from developers", NULL);
         break;
       case GLOBAL_LOCAL_MODE_DZ:
+      case GLOBAL_LOCAL_MODE_DZPM:
         dtheta = angle * dz / length;
         break;
       default:
@@ -1147,6 +1154,7 @@ void convertLocalCoordinatesToGlobal(
           bombElegant("programming error for local-to-global coordinates (3)---seek help from developers", NULL);
         break;
       case GLOBAL_LOCAL_MODE_DZ:
+      case GLOBAL_LOCAL_MODE_DZPM:
         /* someone provides the dz value for us */
         dZ = dz;
         break;
@@ -1159,7 +1167,8 @@ void convertLocalCoordinatesToGlobal(
       *X = X1 + dX * cos(theta1) - dZ * sin(theta1);
       *Y = coord[2];
       *thetaX = -theta1 + atan(coord[1]);
-      if (eptr->end_pos > eptr->beg_pos && (dZ < -1e-6 || (dZ - (eptr->end_pos - eptr->beg_pos)) > 1e-6)) {
+      if (eptr->end_pos > eptr->beg_pos && (dZ < -1e-6 || (dZ - (eptr->end_pos - eptr->beg_pos)) > 1e-6) &&
+          mode!=GLOBAL_LOCAL_MODE_DZPM) {
 #if USE_MPI
         dup2(fd, fileno(stdout));
 #endif

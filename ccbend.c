@@ -395,7 +395,7 @@ long track_through_ccbend(
     dy = -ccbend->dx * sin(tilt) + ccbend->dy * cos(tilt);
   }
 
-  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, NULL, z_start + length / 2);
+  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, NULL, z_start + length / 2, eptr);
 
   if (iPart <= 0) {
     /*
@@ -1032,7 +1032,7 @@ void verticalRbendFringe(
     double intK0, intK2, intK4, intK5, intK6, intK7, intI0, intI1;
     double invRhoPlus, invRhoMinus, K1plus, K1minus;
     double tant, sect, sect3, sint, temp;
-    double focX0, focXd, focY0, focYd, invP;
+    double focX0, /* focXd, */ focY0, focYd, invP;
     double dispX, kickPx, expT;
 
     long i;
@@ -1069,7 +1069,7 @@ void verticalRbendFringe(
     sect = 1.0 / cos(alpha);
     sect3 = sect * sect * sect;
     focX0 = -tant * intK5 - 0.5 * intI0 * (2.0 - tant * tant);
-    focXd = sect3 * intK7;
+    /* focXd = sect3 * intK7; */
     focY0 = -tant * (invRhoPlus - invRhoMinus) + tant * sect * sect * intK5 + 0.5 * intI0 * (2.0 + tant * tant);
     focYd = sect3 * ((1.0 + sint * sint) * intK2 - intK7);
     for (i = 0; i < n_part; i++) {

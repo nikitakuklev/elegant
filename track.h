@@ -4225,16 +4225,18 @@ extern ELEMENT_LIST *rm_element(ELEMENT_LIST *elem);
 extern ELEMENT_LIST *replace_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1); 
 
 /* prototypes for limit_amplitudes4.c: */
-extern long rectangular_collimator(double **initial, RCOL *rcol, long np, double **accepted, double z, double P_central);
+extern long rectangular_collimator(double **initial, RCOL *rcol, long np, double **accepted, double z, double P_central,
+                                     ELEMENT_LIST *eptr);
 extern long limit_amplitudes(double **coord, double xmax, double ymax, long np, double **accepted, double z, double P_central,
-                                   long extrapolate_z, long openCode);
-extern long elliptical_collimator(double **initial, ECOL *ecol, long np, double **accepted, double z, double P_central);
+                             long extrapolate_z, long openCode, ELEMENT_LIST *eptr);
+extern long elliptical_collimator(double **initial, ECOL *ecol, long np, double **accepted, double z, double P_central,
+                                    ELEMENT_LIST *eptr);
 extern long elimit_amplitudes(double **coord, double xmax, double ymax, long np, double **accepted, double z,
-    double P_central, long extrapolate_z, long openCode, long exponent, long yexponent);
+                              double P_central, long extrapolate_z, long openCode, long exponent, long yexponent, ELEMENT_LIST *eptr);
 extern long remove_outlier_particles(double **initial, CLEAN *clean, long np, 
 				     double **accepted, double z, double Po);  
 extern long beam_scraper(double **initial, SCRAPER *scraper, long np, double **accepted, double z,
-    double P_central);
+                         double P_central, ELEMENT_LIST *eptr);
 unsigned long interpretScraperDirection(char *insertFrom, long oldDir);
 extern long track_through_pfilter(double **initial, PFILTER *pfilter, long np, 
                                   double **accepted, double z, double Po);
@@ -4244,22 +4246,22 @@ extern long determineOpenSideCode(char *openSide);
 long interpolateApertureData(double z, APERTURE_DATA *apData,
                              double *xCenter, double *yCenter, double *xSize, double *ySize);
 long imposeApertureData(double **coord, long np, double **accepted,
-                        double z, double Po, APERTURE_DATA *apData);
+                        double z, double Po, APERTURE_DATA *apData, ELEMENT_LIST *eptr);
 void resetApertureData(APERTURE_DATA *apData);
 long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, double **accepted, double z,
                              double Po, ELEMENT_LIST *eptr);
 int pointIsInsideContour(double x0, double y0, double *x, double *y, int64_t n, double *center, double theta);
 long trackThroughApContour(double **initial, APCONTOUR *apcontour, long np, double **accepted, double z,
-                           double Po);
+                           double Po, ELEMENT_LIST *eptr);
 long imposeApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
-                     double Po);
-long checkApContour(double x, double y, APCONTOUR *apcontour);
+                     double Po, ELEMENT_LIST *eptr);
+long checkApContour(double x, double y, APCONTOUR *apcontour, ELEMENT_LIST *eptr);
 long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, double **accepted, double z,
-                           double Po);
+                             double Po, ELEMENT_LIST *eptr);
 long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np, double **accepted, double zStartElem,
-                                   double Po);
+                                   double Po, ELEMENT_LIST *eptr);
 long trackThroughTaperApRectangular(double **initial, TAPERAPR *taperApR, long np, double **accepted, double zStartElem,
-                                   double Po);
+                                    double Po, ELEMENT_LIST *eptr);
 double linear_interpolation(double *y, double *t, long n, double t0, long i);
 long find_nearby_array_entry(double *entry, long n, double key);
  
@@ -4354,9 +4356,10 @@ typedef struct {
   short openSide;
   APCONTOUR *apContour;
   APERTURE_DATA *localAperture;
+  ELEMENT_LIST *eptr;
 } MULT_APERTURE_DATA;
 extern void setupMultApertureData(MULT_APERTURE_DATA *apertureData, double reverseTilt, APCONTOUR *apContour, MAXAMP *maxamp, 
-                                  APERTURE_DATA *apFileData, APERTURE_DATA *localApFileData, double zPosition);
+                                  APERTURE_DATA *apFileData, APERTURE_DATA *localApFileData, double zPosition, ELEMENT_LIST *eptr);
 extern long checkMultAperture(double x, double y, double sLocal, MULT_APERTURE_DATA *apData);
 extern int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta);
 extern int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta);
@@ -4658,11 +4661,11 @@ void addCorrectorRadiationKick(double **coord, long np, ELEMENT_LIST *elem, long
 			       long disableISR);
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, double Po, double **accepted,
                              double z_start, double z_end, CHARGE *charge, char *rootname, MAXAMP *maxamp, 
-                             APCONTOUR *apContour, APERTURE_DATA *apFileData);
+                             APCONTOUR *apContour, APERTURE_DATA *apFileData, ELEMENT_LIST *eptr);
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
                           double z_start, double *sigmaDelta2, char *rootname, MAXAMP *maxamp, 
-                          APCONTOUR *apContour, APERTURE_DATA *apFileData, long iSlice);
-void csbend_update_fse_adjustment(CSBEND *csbend);
+                          APCONTOUR *apContour, APERTURE_DATA *apFileData, long iSlice, ELEMENT_LIST *eptr);
+void csbend_update_fse_adjustment(CSBEND *csbend, ELEMENT_LIST *eptr);
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, 
 			    double revolutionLength, CHARGE *charge, char *rootname);
@@ -4704,6 +4707,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
 #define GLOBAL_LOCAL_MODE_DZ  1
 #define GLOBAL_LOCAL_MODE_SEG 2
 #define GLOBAL_LOCAL_MODE_END 3
+#define GLOBAL_LOCAL_MODE_DZPM  4
 void convertLocalCoordinatesToGlobal(double *Z, double *X, double *Y, double *thetaX, short mode,
                                      double *coord, ELEMENT_LIST *eptr, double dZ,
                                      long segment, long nSegments);

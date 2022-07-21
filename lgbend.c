@@ -281,7 +281,8 @@ long track_through_lgbend(
     }
 
     setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, lgbend->localApertureData,
-                          z_start + lgbend->segment[iSegment].arcLengthStart + lgbend->segment[iSegment].arcLength / 2);
+                          z_start + lgbend->segment[iSegment].arcLengthStart + lgbend->segment[iSegment].arcLength / 2,
+                          eptr);
 
 #ifdef DEBUG
     if (lgbend->optimized != -1 && iPart >= 0)

@@ -31,7 +31,7 @@ long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, do
 
 long rectangular_collimator(
   double **initial, RCOL *rcol, long np, double **accepted, double z,
-  double Po) {
+  double Po, ELEMENT_LIST *eptr) {
   double length, *ini;
   long ip, itop, is_out, lost, openCode;
   double xsize, ysize;
@@ -88,6 +88,14 @@ long rectangular_collimator(
       swapParticles(initial[ip], initial[itop]);
       if (accepted)
         swapParticles(accepted[ip], accepted[itop]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[itop], eptr,
+                                        0.0, 0, 0);
+        initial[itop][globalLossCoordOffset + 0] = X;
+        initial[itop][globalLossCoordOffset + 1] = Z;
+        initial[itop][globalLossCoordOffset + 2] = theta;
+      }
       initial[itop][4] = z; /* record position of particle loss */
       initial[itop][5] = Po * (1 + initial[itop][5]);
       --itop;
@@ -119,12 +127,21 @@ long rectangular_collimator(
       ini[2] = y1;
       ini[5] = Po * (1 + ini[5]);
       swapParticles(initial[ip], initial[itop]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[itop], eptr,
+                                        length, 0, 0);
+        initial[itop][globalLossCoordOffset + 0] = X;
+        initial[itop][globalLossCoordOffset + 1] = Z;
+        initial[itop][globalLossCoordOffset + 2] = theta;
+      }
       if (accepted)
         swapParticles(accepted[ip], accepted[itop]);
       --itop;
       --ip;
       --np;
     } else if ((is_out && !rcol->invert) || (!is_out && rcol->invert)) {
+      double dz = 0;
       if (!openCode) {
         zx = zy = DBL_MAX;
         if (is_out & 1 && ini[1] != 0)
@@ -134,10 +151,12 @@ long rectangular_collimator(
         if (zx < zy) {
           ini[0] += ini[1] * zx;
           ini[2] += ini[3] * zx;
+          dz = zx;
           ini[4] = z + zx;
         } else {
           ini[0] += ini[1] * zy;
           ini[2] += ini[3] * zy;
+          dz = zy;
           ini[4] = z + zy;
         }
       }
@@ -145,6 +164,14 @@ long rectangular_collimator(
       swapParticles(initial[ip], initial[itop]);
       if (accepted)
         swapParticles(accepted[ip], accepted[itop]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[itop], eptr,
+                                        dz, 0, 0);
+        initial[itop][globalLossCoordOffset + 0] = X;
+        initial[itop][globalLossCoordOffset + 1] = Z;
+        initial[itop][globalLossCoordOffset + 2] = theta;
+      }
       --itop;
       --ip;
       --np;
@@ -165,7 +192,7 @@ long rectangular_collimator(
 
 long limit_amplitudes(
   double **coord, double xmax, double ymax, long np, double **accepted,
-  double z, double Po, long extrapolate_z, long openCode) {
+  double z, double Po, long extrapolate_z, long openCode, ELEMENT_LIST *eptr) {
   long ip, itop, is_out;
   double *part;
   double dz, dzx, dzy;
@@ -218,12 +245,20 @@ long limit_amplitudes(
         dz = -dzy;
       if (dz == -DBL_MAX)
         dz = 0;
-      part[0] += dz * part[1];
-      part[2] += dz * part[3];
     }
     if (is_out) {
       if (ip != itop)
         swapParticles(coord[ip], coord[itop]);
+      coord[itop][0] += dz * coord[itop][1];
+      coord[itop][2] += dz * coord[itop][3];
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZPM, coord[itop], eptr,
+                                        dz, 0, 0);
+        coord[itop][globalLossCoordOffset + 0] = X;
+        coord[itop][globalLossCoordOffset + 1] = Z;
+        coord[itop][globalLossCoordOffset + 2] = theta;
+      }
       coord[itop][4] = z + dz; /* record position of loss */
       coord[itop][5] = Po * (1 + coord[itop][5]);
       if (accepted)
@@ -289,7 +324,7 @@ long removeInvalidParticles(
 
 long elliptical_collimator(
   double **initial, ECOL *ecol, long np, double **accepted, double z,
-  double Po) {
+  double Po, ELEMENT_LIST *eptr) {
   double length, *ini;
   long ip, itop, lost, openCode;
   double a2, b2;
@@ -345,7 +380,7 @@ long elliptical_collimator(
       rcol.dy = ecol->dy;
       rcol.invert = ecol->invert;
       rcol.openSide = ecol->openSide;
-      return rectangular_collimator(initial, &rcol, np, accepted, z, Po);
+      return rectangular_collimator(initial, &rcol, np, accepted, z, Po, eptr);
     }
     exactDrift(initial, np, ecol->length);
     return (np);
@@ -367,6 +402,14 @@ long elliptical_collimator(
       lost = !lost;
     if (lost) {
       swapParticles(initial[ip], initial[itop]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[itop], eptr,
+                                        0.0, 0, 0);
+        initial[itop][globalLossCoordOffset + 0] = X;
+        initial[itop][globalLossCoordOffset + 1] = Z;
+        initial[itop][globalLossCoordOffset + 2] = theta;
+      }
       initial[itop][4] = z;
       initial[itop][5] = sqrt(sqr(Po * (1 + initial[itop][5])) + 1);
       if (accepted)
@@ -397,6 +440,14 @@ long elliptical_collimator(
       lost = !lost;
     if (lost) {
       swapParticles(initial[ip], initial[itop]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[itop], eptr,
+                                        length, 0, 0);
+        initial[itop][globalLossCoordOffset + 0] = X;
+        initial[itop][globalLossCoordOffset + 1] = Z;
+        initial[itop][globalLossCoordOffset + 2] = theta;
+      }
       initial[itop][4] = z + length;
       initial[itop][5] = sqrt(sqr(Po * (1 + initial[itop][5])) + 1);
       if (accepted)
@@ -429,7 +480,9 @@ long elimit_amplitudes(
   long extrapolate_z,
   long openCode,
   long exponent,
-  long yexponent) {
+  long yexponent,
+  ELEMENT_LIST *eptr
+) {
   long ip, itop, lost;
   double *part;
   double a2, b2, c1, c2, c0, dz, det;
@@ -470,7 +523,7 @@ long elimit_amplitudes(
   if (xmax <= 0 || ymax <= 0) {
     /* At least one of the dimensions is non-positive and therefore ignored */
     if (xmax > 0 || ymax > 0)
-      return limit_amplitudes(coord, xmax, ymax, np, accepted, z, Po, extrapolate_z, openCode);
+      return limit_amplitudes(coord, xmax, ymax, np, accepted, z, Po, extrapolate_z, openCode, eptr);
     return (np);
   }
 
@@ -482,6 +535,14 @@ long elimit_amplitudes(
     part = coord[ip];
     if (isinf(part[0]) || isinf(part[2]) || isnan(part[0]) || isnan(part[2])) {
       swapParticles(coord[ip], coord[itop]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_END, coord[itop], eptr,
+                                        0, 0, 0);
+        coord[itop][globalLossCoordOffset + 0] = X;
+        coord[itop][globalLossCoordOffset + 1] = Z;
+        coord[itop][globalLossCoordOffset + 2] = theta;
+      }
       coord[itop][4] = z;
       coord[itop][5] = sqrt(sqr(Po * (1 + coord[itop][5])) + 1);
       if (accepted)
@@ -515,6 +576,14 @@ long elimit_amplitudes(
         }
       }
       swapParticles(coord[ip], coord[itop]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZPM, coord[itop], eptr,
+                                        dz, 0, 0);
+        coord[itop][globalLossCoordOffset + 0] = X;
+        coord[itop][globalLossCoordOffset + 1] = Z;
+        coord[itop][globalLossCoordOffset + 2] = theta;
+      }
       coord[itop][4] = z + dz;
       coord[itop][5] = sqrt(sqr(Po * (1 + coord[itop][5])) + 1);
       if (accepted)
@@ -532,7 +601,7 @@ long elimit_amplitudes(
 
 long beam_scraper(
   double **initial, SCRAPER *scraper, long np, double **accepted, double z,
-  double Po) {
+  double Po, ELEMENT_LIST *eptr) {
   double length, *ini;
   long do_x, do_y, ip, idir, hit;
   long dsign[2] = {1, -1};
@@ -645,7 +714,7 @@ long beam_scraper(
     rcol.dy = scraper->dy;
     rcol.invert = 0;
     rcol.openSide = NULL;
-    return rectangular_collimator(initial, &rcol, np, accepted, z, Po);
+    return rectangular_collimator(initial, &rcol, np, accepted, z, Po, eptr);
   }
 
   /* come here for idealized on-sided scraper that just absorbs particles */
@@ -658,10 +727,18 @@ long beam_scraper(
       if ((do_x && dsign[idir] * (ini[0] - scraper->dx) > dsign[idir] * scraper->position) ||
           (do_y && dsign[idir] * (ini[2] - scraper->dy) > dsign[idir] * scraper->position)) {
         swapParticles(initial[ip], initial[np - 1]);
-        if (accepted)
-          swapParticles(accepted[ip], accepted[np - 1]);
+        if (globalLossCoordOffset > 0) {
+          double X, Y, Z, theta;
+          convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[np-1], eptr,
+                                          0.0, 0, 0);
+          initial[np-1][globalLossCoordOffset + 0] = X;
+          initial[np-1][globalLossCoordOffset + 1] = Z;
+          initial[np-1][globalLossCoordOffset + 2] = theta;
+        }
         initial[np - 1][4] = z; /* record position of particle loss */
         initial[np - 1][5] = Po * (1 + initial[np - 1][5]);
+        if (accepted)
+          swapParticles(accepted[ip], accepted[np - 1]);
         --ip;
         --np;
         hit = 1;
@@ -699,6 +776,14 @@ long beam_scraper(
         ini[2] -= ini[3] * dz;
         ini[5] = Po * (1 + ini[5]);
         swapParticles(initial[ip], initial[np - 1]);
+        if (globalLossCoordOffset > 0) {
+          double X, Y, Z, theta;
+          convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[np-1], eptr,
+                                          dz, 0, 0);
+          initial[np-1][globalLossCoordOffset + 0] = X;
+          initial[np-1][globalLossCoordOffset + 1] = Z;
+          initial[np-1][globalLossCoordOffset + 2] = theta;
+        }
         if (accepted)
           swapParticles(accepted[ip], accepted[np - 1]);
         --ip;
@@ -1120,7 +1205,7 @@ long interpolateApertureData(double sz, APERTURE_DATA *apData,
 
 long imposeApertureData(
   double **initial, long np, double **accepted,
-  double z, double Po, APERTURE_DATA *apData) {
+  double z, double Po, APERTURE_DATA *apData, ELEMENT_LIST *eptr) {
   long ip, itop, lost;
   double *ini;
   double xSize, ySize;
@@ -1322,12 +1407,6 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
       ini[4] += speedbump->length * sqrt(1 + sqr(ini[1]) + sqr(ini[3]));
     } else {
       swapParticles(initial[ip], initial[np - 1]);
-      if (accepted)
-        swapParticles(accepted[ip], accepted[np - 1]);
-      initial[np - 1][iplane == 0 ? 0 : 2] = yiHit;
-      initial[np - 1][iplane == 0 ? 2 : 0] += xiHit * initial[np - 1][iplane == 0 ? 3 : 1];
-      initial[np - 1][4] = z + xiHit;
-      initial[np - 1][5] = Po * (1 + initial[np - 1][5]);
       if (globalLossCoordOffset > 0) {
         double X, Y, Z, theta;
         convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[np-1], eptr,
@@ -1336,6 +1415,12 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
         initial[np-1][globalLossCoordOffset + 1] = Z;
         initial[np-1][globalLossCoordOffset + 2] = theta;
       }
+      initial[np - 1][iplane == 0 ? 0 : 2] = yiHit;
+      initial[np - 1][iplane == 0 ? 2 : 0] += xiHit * initial[np - 1][iplane == 0 ? 3 : 1];
+      initial[np - 1][4] = z + xiHit;
+      initial[np - 1][5] = Po * (1 + initial[np - 1][5]);
+      if (accepted)
+        swapParticles(accepted[ip], accepted[np - 1]);
       --ip;
       --np;
     }
@@ -1345,7 +1430,7 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
 }
 
 long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
-                           double Po) {
+                           double Po, ELEMENT_LIST *eptr) {
   long ip, i_top;
   double z0, z1, zLost;
   short lost0, lost1, lost2;
@@ -1446,6 +1531,14 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
       coord[ip][4] = z + zLost;
       coord[ip][5] = Po * (1 + coord[ip][5]);
       swapParticles(coord[ip], coord[i_top]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, coord[i_top], eptr,
+                                        zLost, 0, 0);
+        coord[i_top][globalLossCoordOffset + 0] = X;
+        coord[i_top][globalLossCoordOffset + 1] = Z;
+        coord[i_top][globalLossCoordOffset + 2] = theta;
+      }
       if (accepted)
         swapParticles(accepted[ip], accepted[i_top]);
       --i_top;
@@ -1473,14 +1566,14 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
  */
 
 long imposeApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
-                     double Po) {
+                     double Po, ELEMENT_LIST *eptr) {
   APCONTOUR apc;
   memcpy(&apc, apcontour, sizeof(apc));
   apc.length = 0;
-  return trackThroughApContour(coord, &apc, np, accepted, z, Po);
+  return trackThroughApContour(coord, &apc, np, accepted, z, Po, eptr);
 }
 
-long checkApContour(double x, double y, APCONTOUR *apcontour) {
+long checkApContour(double x, double y, APCONTOUR *apcontour, ELEMENT_LIST *eptr) {
   APCONTOUR apc;
   static double **coord = NULL;
 
@@ -1492,11 +1585,11 @@ long checkApContour(double x, double y, APCONTOUR *apcontour) {
   coord[0][2] = y;
   memcpy(&apc, apcontour, sizeof(apc));
   apc.length = 0;
-  return trackThroughApContour(coord, &apc, 1, NULL, 0, 1);
+  return trackThroughApContour(coord, &apc, 1, NULL, 0, 1, eptr);
 }
 
 long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, double **accepted, double z,
-                             double Po) {
+                             double Po, ELEMENT_LIST *eptr) {
   long ip, itop, isLost;
   double *coord, determinant, rho, rho2, r, rStart, rStart2, r2Limit, dz, dx, dy;
   double x, y, xp, yp;
@@ -1538,6 +1631,14 @@ long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, doub
       coord[0] += dz * xp;
       coord[2] += dz * yp;
       swapParticles(initial[ip], initial[itop]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[itop], eptr,
+                                        dz, 0, 0);
+        initial[itop][globalLossCoordOffset + 0] = X;
+        initial[itop][globalLossCoordOffset + 1] = Z;
+        initial[itop][globalLossCoordOffset + 2] = theta;
+      }
       if (accepted)
         swapParticles(accepted[ip], accepted[itop]);
       initial[itop][4] = z + dz;
@@ -1573,7 +1674,7 @@ int insideTaperedEllipse(double x0, double xp, double y0, double yp, double z,
 }
 
 long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np, double **accepted, double zStartElem,
-                                   double Po) {
+                                   double Po, ELEMENT_LIST *eptr) {
   long ip, itop, isLost0, isLost1, isLost2;
   double z0, z1, x0, y0, xp, yp, zLost, dadz, dbdz;
   double *coord;
@@ -1633,6 +1734,14 @@ long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np
       coord[0] += zLost * xp;
       coord[2] += zLost * yp;
       swapParticles(initial[ip], initial[itop]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[itop], eptr,
+                                        zLost, 0, 0);
+        initial[itop][globalLossCoordOffset + 0] = X;
+        initial[itop][globalLossCoordOffset + 1] = Z;
+        initial[itop][globalLossCoordOffset + 2] = theta;
+      }
       if (accepted)
         swapParticles(accepted[ip], accepted[itop]);
       initial[itop][4] = zStartElem + zLost;
@@ -1652,7 +1761,7 @@ long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np
 }
 
 long trackThroughTaperApRectangular(double **initial, TAPERAPR *taperApR, long np, double **accepted, double zStartElem,
-                                    double Po) {
+                                    double Po, ELEMENT_LIST *eptr) {
   long ip, itop, isLost;
   double *coord;
   double x0, y0, xp, yp, zLost, zLost0;
@@ -1746,6 +1855,14 @@ long trackThroughTaperApRectangular(double **initial, TAPERAPR *taperApR, long n
       coord[0] += zLost * xp;
       coord[2] += zLost * yp;
       swapParticles(initial[ip], initial[itop]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, initial[itop], eptr,
+                                        zLost, 0, 0);
+        initial[itop][globalLossCoordOffset + 0] = X;
+        initial[itop][globalLossCoordOffset + 1] = Z;
+        initial[itop][globalLossCoordOffset + 2] = theta;
+      }
       if (accepted)
         swapParticles(accepted[ip], accepted[itop]);
       initial[itop][4] = zStartElem + zLost;

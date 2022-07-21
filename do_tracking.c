@@ -454,15 +454,26 @@ long do_tracking(
 #else
   if (isMaster) { /* As the particles have not been distributed, only master needs to do these computation */
 #endif
+    if (run->concat_order && beamline->flags & BEAMLINE_CONCAT_DONE &&
+        !(flags & TEST_PARTICLES)) {
+      if (beamline->ecat_recirc && (i_pass || flags & BEGIN_AT_RECIRC))
+        eptr = beamline->ecat_recirc;
+      else
+        eptr = beamline->ecat;
+      isConcat = 1;
+    } else if (beamline->elem_recirc && (i_pass || flags & BEGIN_AT_RECIRC))
+      eptr = beamline->elem_recirc;
+    else
+      eptr = beamline->elem;
     if (check_nan) {
       nLeft = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nToTrack, accepted, z, *P_central, 0,
-                               0);
+                               0, eptr);
       if (nLeft != nToTrack)
         recordLostParticles(beam, coord, nLeft, nToTrack, 0);
       nToTrack = nLeft;
     }
     if (run->apertureData.initialized) {
-      nLeft = imposeApertureData(coord, nToTrack, accepted, 0.0, *P_central, &(run->apertureData));
+      nLeft = imposeApertureData(coord, nToTrack, accepted, 0.0, *P_central, &(run->apertureData), eptr);
       if (nLeft != nToTrack)
         recordLostParticles(beam, coord, nLeft, nToTrack, 0);
       nToTrack = nLeft;
@@ -1414,14 +1425,14 @@ long do_tracking(
               if (flags & TEST_PARTICLES && !(flags & TEST_PARTICLE_LOSSES))
                 drift_beam(coord, nToTrack, ((RCOL *)eptr->p_elem)->length, run->default_order);
               else {
-                nLeft = rectangular_collimator(coord, (RCOL *)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
+                nLeft = rectangular_collimator(coord, (RCOL *)eptr->p_elem, nToTrack, accepted, last_z, *P_central, eptr);
               }
               break;
             case T_ECOL:
               if (flags & TEST_PARTICLES && !(flags & TEST_PARTICLE_LOSSES))
                 drift_beam(coord, nToTrack, ((ECOL *)eptr->p_elem)->length, run->default_order);
               else
-                nLeft = elliptical_collimator(coord, (ECOL *)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
+                nLeft = elliptical_collimator(coord, (ECOL *)eptr->p_elem, nToTrack, accepted, last_z, *P_central, eptr);
               /* printf("After ECOL: nLeft = %ld, nToTrack = %ld\n", nLeft, nToTrack); */
               break;
             case T_APCONTOUR:
@@ -1432,7 +1443,7 @@ long do_tracking(
                 if (flags & TEST_PARTICLES && !(flags & TEST_PARTICLE_LOSSES))
                   drift_beam(coord, nToTrack, ((APCONTOUR *)eptr->p_elem)->length, run->default_order);
                 else
-                  nLeft = trackThroughApContour(coord, apcontour, nToTrack, accepted, last_z, *P_central);
+                  nLeft = trackThroughApContour(coord, apcontour, nToTrack, accepted, last_z, *P_central, eptr);
                 if (!apcontour->sticky)
                   apcontour = NULL;
               }
@@ -1442,7 +1453,7 @@ long do_tracking(
               if (flags & TEST_PARTICLES && !(flags & TEST_PARTICLE_LOSSES))
                 drift_beam(coord, nToTrack, ((TAPERAPC *)eptr->p_elem)->length, run->default_order);
               else {
-                nLeft = trackThroughTaperApCirc(coord, (TAPERAPC *)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
+                nLeft = trackThroughTaperApCirc(coord, (TAPERAPC *)eptr->p_elem, nToTrack, accepted, last_z, *P_central, eptr);
                 if (taperapc->sticky) {
                   maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
                   maxamp->x_max = maxamp->y_max = x_max = y_max = taperapc->r[taperapc->e2Index];
@@ -1458,7 +1469,7 @@ long do_tracking(
               if (flags & TEST_PARTICLES && !(flags & TEST_PARTICLE_LOSSES))
                 drift_beam(coord, nToTrack, taperape->length, run->default_order);
               else {
-                nLeft = trackThroughTaperApElliptical(coord, taperape, nToTrack, accepted, last_z, *P_central);
+                nLeft = trackThroughTaperApElliptical(coord, taperape, nToTrack, accepted, last_z, *P_central, eptr);
                 if (taperape->sticky) {
                   maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
                   maxamp->x_max = x_max = taperape->a[taperape->e2Index];
@@ -1476,7 +1487,7 @@ long do_tracking(
               if (flags & TEST_PARTICLES && !(flags & TEST_PARTICLE_LOSSES))
                 drift_beam(coord, nToTrack, taperapr->length, run->default_order);
               else {
-                nLeft = trackThroughTaperApRectangular(coord, taperapr, nToTrack, accepted, last_z, *P_central);
+                nLeft = trackThroughTaperApRectangular(coord, taperapr, nToTrack, accepted, last_z, *P_central, eptr);
                 if (taperapr->sticky) {
                   maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
                   maxamp->x_max = x_max = taperapr->xmax[taperapr->e2Index];
@@ -1513,7 +1524,7 @@ long do_tracking(
                 }
 #endif
 
-                nLeft = beam_scraper(coord, (SCRAPER *)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
+                nLeft = beam_scraper(coord, (SCRAPER *)eptr->p_elem, nToTrack, accepted, last_z, *P_central, eptr);
               } else {
                 exactDrift(coord, nToTrack, ((SCRAPER *)eptr->p_elem)->length);
               }
@@ -1905,7 +1916,7 @@ long do_tracking(
 
               nLeft = track_through_csbend(coord, nToTrack, (CSBEND *)eptr->p_elem, 0.0,
                                            *P_central, accepted, last_z, NULL, run->rootname, maxamp, apcontour,
-                                           &(run->apertureData), -1);
+                                           &(run->apertureData), -1, eptr);
               if (flags & TEST_PARTICLES)
                 ((CSBEND *)eptr->p_elem)->isr = saveISR;
               break;
@@ -1939,7 +1950,7 @@ long do_tracking(
               }
               nLeft = track_through_csbendCSR(coord, nToTrack, (CSRCSBEND *)eptr->p_elem, 0.0,
                                               *P_central, accepted, last_z, z, charge, run->rootname,
-                                              maxamp, apcontour, &(run->apertureData));
+                                              maxamp, apcontour, &(run->apertureData), eptr);
               if (flags & TEST_PARTICLES)
                 ((CSRCSBEND *)eptr->p_elem)->isr = saveISR;
               break;
@@ -2143,11 +2154,12 @@ long do_tracking(
               break;
             case T_CORGPIPE:
               nLeft = elimit_amplitudes(coord, ((CORGPIPE *)eptr->p_elem)->radius, ((CORGPIPE *)eptr->p_elem)->radius,
-                                        nToTrack, accepted, z - ((CORGPIPE *)eptr->p_elem)->length, *P_central, 0, 0, 2, 2);
+                                        nToTrack, accepted, z - ((CORGPIPE *)eptr->p_elem)->length, *P_central, 0, 0, 2, 2,
+                                        eptr);
               track_through_corgpipe(coord, nLeft, (CORGPIPE *)eptr->p_elem, P_central, run, i_pass,
                                      charge);
               nLeft = elimit_amplitudes(coord, ((CORGPIPE *)eptr->p_elem)->radius, ((CORGPIPE *)eptr->p_elem)->radius,
-                                        nLeft, accepted, z, *P_central, 1, 0, 2, 2);
+                                        nLeft, accepted, z, *P_central, 1, 0, 2, 2, eptr);
               break;
             case T_LRWAKE:
               track_through_lrwake(coord, nToTrack, (LRWAKE *)eptr->p_elem, P_central, run, i_pass, charge);
@@ -2420,17 +2432,17 @@ long do_tracking(
               if (!elliptical)
                 nLeft = limit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central,
                                          eptr->type == T_DRIF || eptr->type == T_STRAY,
-                                         maxampOpenCode);
+                                         maxampOpenCode, eptr);
               else
                 nLeft = elimit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central,
                                           eptr->type == T_DRIF || eptr->type == T_STRAY,
-                                          maxampOpenCode, maxampExponent, maxampYExponent);
+                                          maxampOpenCode, maxampExponent, maxampYExponent, eptr);
             }
             if (run->apertureData.initialized)
               nLeft = imposeApertureData(coord, nLeft, accepted, z, *P_central,
-                                         &(run->apertureData));
+                                         &(run->apertureData), eptr);
             if (apcontour)
-              nLeft = imposeApContour(coord, apcontour, nLeft, accepted, z, *P_central);
+              nLeft = imposeApContour(coord, apcontour, nLeft, accepted, z, *P_central, eptr);
           }
         }
 #ifdef DEBUG_CRASH
@@ -2584,7 +2596,7 @@ long do_tracking(
       fflush(stdout);
 #endif
       if ((!USE_MPI || !notSinglePart) || (USE_MPI && active)) {
-        nLeft = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nLeft, accepted, z, *P_central, 0, 0);
+        nLeft = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nLeft, accepted, z, *P_central, 0, 0, eptr);
 #ifndef HAVE_GPU /* Obstructions are not implemented in GPU code */
         nLeft = filterParticlesWithObstructions(coord, nLeft, accepted, z, *P_central);
 #endif

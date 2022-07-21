@@ -740,7 +740,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ltmp2 = ((CSBEND *)eptr->p_elem)->synch_rad;
     ((CSBEND *)eptr->p_elem)->isr = ((CSBEND *)eptr->p_elem)->synch_rad = 0;
     track_through_csbend(coord, n_track, (CSBEND *)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
-                         NULL, NULL, NULL, NULL, NULL, -1);
+                         NULL, NULL, NULL, NULL, NULL, -1, eptr);
     ((CSBEND *)eptr->p_elem)->isr = ltmp1;
     ((CSBEND *)eptr->p_elem)->synch_rad = ltmp2;
     break;
@@ -1178,7 +1178,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       ltmp2 = ((CSBEND *)eptr->p_elem)->synch_rad;
       ((CSBEND *)eptr->p_elem)->isr = ((CSBEND *)eptr->p_elem)->synch_rad = 0;
       n_left = track_through_csbend(finalCoord + my_offset, my_nTrack, (CSBEND *)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
-                                    NULL, NULL, NULL, NULL, NULL, -1);
+                                    NULL, NULL, NULL, NULL, NULL, -1, eptr);
       ((CSBEND *)eptr->p_elem)->isr = ltmp1;
       ((CSBEND *)eptr->p_elem)->synch_rad = ltmp2;
       break;
@@ -1682,7 +1682,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
           double **coord;
           coord = (double **)czarray_2d(sizeof(**coord), 1, totalPropertiesPerParticle);
           track_through_csbend(coord, 1, &csbend, 0, run->p_central, NULL, 0.0,
-                               NULL, run->rootname, NULL, NULL, NULL, -1);
+                               NULL, run->rootname, NULL, NULL, NULL, -1, &elem);
           free_czarray_2d((void **)coord, 1, totalPropertiesPerParticle);
         }
         if (!printed) {
@@ -2161,7 +2161,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   case T_CSBEND:
     csbend = (CSBEND *)elem->p_elem;
     track_through_csbend(coord, n_track, csbend, 0, run->p_central, NULL, elem->end_pos - csbend->length,
-                         &sigmaDelta2, run->rootname, NULL, NULL, NULL, iSlice);
+                         &sigmaDelta2, run->rootname, NULL, NULL, NULL, iSlice, elem);
     break;
   case T_CCBEND:
     ccbend = (CCBEND *)elem->p_elem;

@@ -49,9 +49,9 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
 double pickNormalizedPhotonEnergy(double RN);
 
 long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long i, double rho0, double p0,
-                           double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order);
+                           double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order, ELEMENT_LIST *eptr);
 long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long i, double rho0, double p0,
-                                    double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order);
+                                    double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order, ELEMENT_LIST *eptr);
 void convertFromCSBendCoords(double **part, long np, double rho0,
                              double cos_ttilt, double sin_ttilt, long ctMode);
 void convertToCSBendCoords(double **part, long np, double rho0,
@@ -593,12 +593,13 @@ void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlin
 
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
                           double z_start, double *sigmaDelta2, char *rootname, MAXAMP *maxamp,
-                          APCONTOUR *apContour, APERTURE_DATA *apFileData,
+                          APCONTOUR *apContour, APERTURE_DATA *apFileData, 
                           /* If iSlice non-negative, we do one step. The caller is responsible 
                            * for handling the coordinates appropriately outside this routine. 
                            * The element must have been previously optimized to determine FSE and X offsets.
                            */
-                          long iSlice) {
+                          long iSlice,
+                          ELEMENT_LIST *eptr) {
   double h;
   long i_part, i_top, particle_lost, j;
   double rho, s, Fx, Fy;
@@ -690,7 +691,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       /* This forces us into the next branch on the next call to this routine */
       csbend0.refTrajectoryChangeSet = 1;
       setTrackingContext("csbend0", 0, T_CSBEND, "none", NULL);
-      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apContour, apFileData, -1);
+      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apContour, apFileData, -1, eptr);
       csbend->refTrajectoryChangeSet = 2; /* indicates that reference trajectory has been determined */
 
       csbend->refLength = csbend->length;
@@ -817,7 +818,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     rho0 = csbend->length / angle;
   }
 
-  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, NULL, z_start + csbend->length / 2);
+  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, NULL, z_start + csbend->length / 2, eptr);
 
   if (fabs(rho0) > 1e6) {
     if (csbend->k2 != 0)
@@ -1090,10 +1091,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     if (csbend->expandHamiltonian)
       particle_lost = !integrate_csbend_ordn_expanded(Qf, Qi, sigmaDelta2, csbend->length, csbend->nSlices, iSlice, rho0, Po, &dz_lost,
-                                                      &apertureData, csbend->integration_order);
+                                                      &apertureData, csbend->integration_order, eptr);
     else
       particle_lost = !integrate_csbend_ordn(Qf, Qi, sigmaDelta2, csbend->length, csbend->nSlices, iSlice, rho0, Po, &dz_lost,
-                                             &apertureData, csbend->integration_order);
+                                             &apertureData, csbend->integration_order, eptr);
 
     if (iSlice < 0 || iSlice == (csbend->nSlices - 1) || particle_lost) {
       if (csbend->fseCorrection == 1)
@@ -1318,7 +1319,8 @@ long integrate_csbend_ordn(
   double p0,                  /* central momentum */
   double *dz_lost,            /* return of loss position */
   MULT_APERTURE_DATA *apData, /* aperture data */
-  short integration_order     /* 2, 4, or 6 */
+  short integration_order,    /* 2, 4, or 6 */
+  ELEMENT_LIST *eptr
 ) {
   long i;
   double factor, f, phi, ds, dsh, dist;
@@ -1410,14 +1412,22 @@ long integrate_csbend_ordn(
   *dz_lost = 0; /* we'll accumulate this value even if the particle isn't lost */
   for (i = 0; i < n; i++) {
     long j;
-    if ((apData && !checkMultAperture(X, Y, i*s, apData)) ||
-        insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
-      /*
-      printf("Lost particle %ld on obstruction: segment %ld/%ld, Z=%le\n",
-             (long)Qf[6], i, n, Qf[globalLossCoordOffset+1]);
-      */
+    if (apData && !checkMultAperture(X, Y, i*s, apData)) {
+      if (globalLossCoordOffset > 0) {
+        double Xg, Yg, Zg, theta;
+        double part[7];
+        part[0] = Qf[0];
+        part[2] = Qf[2];
+        part[1] = part[3] = part[4] = part[5] = part[6] = 0; /* don't use these values */
+        convertLocalCoordinatesToGlobal(&Zg, &Xg, &Yg, &theta, GLOBAL_LOCAL_MODE_SEG, part, eptr, 0.0, i, n);
+        Qf[globalLossCoordOffset + 0] = Xg;
+        Qf[globalLossCoordOffset + 1] = Zg;
+        Qf[globalLossCoordOffset + 2] = theta;
+      }
       return 0;
     }
+    if (insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n))
+      return 0;
     for (j = 0; j < nSubsteps; j++) {
       /* do drift */
       dsh = s * driftFrac[j];
@@ -1441,9 +1451,6 @@ long integrate_csbend_ordn(
       *dz_lost += dsh;
       f = cos_phi / cosi;
       X = rho0 * (f - 1) + f * X;
-      if (apData && !checkMultAperture(X, Y, i*s, apData)) {
-        return 0;
-      }
 
       if (kickFrac[j] == 0)
         break;
@@ -1465,6 +1472,7 @@ long integrate_csbend_ordn(
                          distributionBasedRadiation, includeOpeningAngle,
                          meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
       }
+
     }
 
     if (refTrajectoryMode == RECORD_TRAJECTORY) {
@@ -1497,22 +1505,31 @@ long integrate_csbend_ordn(
     if (iSlice >= 0)
       break;
   }
-  if ((apData && !checkMultAperture(X, Y, i*s, apData)) ||
-      insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n)) {
-    /*
-    printf("Lost particle %ld on obstruction: segment %ld/%ld, Z=%le\n",
-           (long)Qf[6], i, n, Qf[globalLossCoordOffset+1]);
-    */
-    *dz_lost = n * s;
+
+  *dz_lost = n * s;
+  if (apData && !checkMultAperture(X, Y, i*s, apData)) {
+    if (globalLossCoordOffset > 0) {
+      double Xg, Yg, Zg, theta;
+      double part[7];
+      part[0] = Qf[0];
+      part[2] = Qf[2];
+      part[1] = part[3] = part[4] = part[5] = part[6] = 0; /* don't use these values */
+      convertLocalCoordinatesToGlobal(&Zg, &Xg, &Yg, &theta, GLOBAL_LOCAL_MODE_SEG, part, eptr, 0.0, i, n);
+      Qf[globalLossCoordOffset + 0] = Xg;
+      Qf[globalLossCoordOffset + 1] = Zg;
+      Qf[globalLossCoordOffset + 2] = theta;
+    }
     return 0;
   }
+  if (insideObstruction(Qf, GLOBAL_LOCAL_MODE_SEG, 0.0, i, n))
+    return 0;
 
   Qf[4] += dist;
   return 1;
 }
 
 long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long iSlice, double rho0, double p0,
-                                    double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order)
+                                    double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order, ELEMENT_LIST *eptr)
 /* The Hamiltonian in this case is approximated as
  * H = Hd + Hf, where Hd is the drift part and Hf is the field part.
  * Hd = Hd1 + Hd2 + Hd1, where
@@ -1681,7 +1698,7 @@ void readWakeFilterFile(long *values, double **freq, double **real, double **ima
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error,
                              double Po, double **accepted, double z_start, double z_end,
                              CHARGE *charge, char *rootname, MAXAMP *maxamp, APCONTOUR *apContour,
-                             APERTURE_DATA *apFileData) {
+                             APERTURE_DATA *apFileData, ELEMENT_LIST *eptr) {
   double h, n, he1, he2;
   static long csrWarning = 0;
   static double *beta0 = NULL, *ctHist = NULL, *ctHistDeriv = NULL;
@@ -1884,7 +1901,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     rho0 = csbend->length / angle;
   }
 
-  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, NULL, z_start + csbend->length / 2);
+  setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, NULL, z_start + csbend->length / 2, eptr);
 
   if (rho0 > 1e6) {
     printWarningForTracking("CSRCSBEND has radius > 1e6 but non-zero K1.",
@@ -2184,7 +2201,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             Qi[5] = DP;
             convertToDipoleCanonicalCoordinates(Qi, 0);
 
-            particleLost = !integrate_csbend_ordn(Qf, Qi, NULL, csbend->length / csbend->nSlices, 1, -1, rho0, Po, &dz_lost, &apertureData, csbend->integration_order);
+            particleLost = !integrate_csbend_ordn(Qf, Qi, NULL, csbend->length / csbend->nSlices, 1, -1, rho0, Po, 
+                                                  &dz_lost, &apertureData, csbend->integration_order, eptr);
 
             /* retrieve coordinates from arrays */
             convertFromDipoleCanonicalCoordinates(Qf, 0);
@@ -5349,6 +5367,7 @@ void logPhoton(double Ep, double x, double xp, double y, double yp, double theta
 }
 
 static CSBEND csbendWorking;
+static ELEMENT_LIST  *eptrWorking;
 static long optimizationEvaluations;
 static double **optParticle = NULL;
 
@@ -5359,7 +5378,7 @@ double csbend_fse_adjustment_penalty(double *value, long *invalid) {
 
   csbendWorking.fseCorrectionValue = *value;
   optimizationEvaluations++;
-  if (!track_through_csbend(optParticle, 1, &csbendWorking, 0, 1e3, NULL, 0.0, NULL, NULL, NULL, NULL, NULL, -1)) {
+  if (!track_through_csbend(optParticle, 1, &csbendWorking, 0, 1e3, NULL, 0.0, NULL, NULL, NULL, NULL, NULL, -1, eptrWorking)) {
     *invalid = 1;
     return 0.0;
   }
@@ -5369,7 +5388,7 @@ double csbend_fse_adjustment_penalty(double *value, long *invalid) {
 
 static long FSEOptimizationCount = 0;
 
-void csbend_update_fse_adjustment(CSBEND *csbend) {
+void csbend_update_fse_adjustment(CSBEND *csbend, ELEMENT_LIST *eptr) {
   double fseUser = 0, fse = 0, stepSize = 1e-3, lowerLimit = -1, upperLimit = 1, acc;
   short disable = 0;
   if (csbend->fseCorrection &&
@@ -5382,6 +5401,7 @@ void csbend_update_fse_adjustment(CSBEND *csbend) {
     memcpy(&csbendWorking, csbend, sizeof(csbendWorking));
     csbendWorking.dx = csbendWorking.dy = csbendWorking.dz = csbendWorking.etilt = csbendWorking.tilt = 0;
     csbendWorking.isr = csbendWorking.synch_rad = csbendWorking.fseCorrectionPathError = 0;
+    eptrWorking = eptr;
     optimizationEvaluations = 0;
     if (simplexMin(&acc, &fse, &stepSize, &lowerLimit, &upperLimit, &disable, 1,
                    fabs(1e-14 * csbend->angle), fabs(1e-16 * csbend->angle),

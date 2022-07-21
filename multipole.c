@@ -1053,7 +1053,7 @@ long multipole_tracking2(
   if (multData)
     multipoleKicksDone += (i_top + 1) * n_kicks * multData->orders;
 
-  setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, NULL, z_start + drift / 2);
+  setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, NULL, z_start + drift / 2, elem);
 
   if (iSlice <= 0) {
     if (malignMethod != 0) {
@@ -1109,6 +1109,14 @@ long multipole_tracking2(
                                        &apertureData, &dzLoss, sigmaDelta2,
                                        elem->type == T_KQUAD ? kquad->radial : 0, tilt)) {
       swapParticles(particle[i_part], particle[i_top]);
+      if (globalLossCoordOffset > 0) {
+        double X, Y, Z, theta;
+        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, particle[i_top], elem,
+                                        dzLoss, 0, 0);
+        particle[i_top][globalLossCoordOffset + 0] = X;
+        particle[i_top][globalLossCoordOffset + 1] = Z;
+        particle[i_top][globalLossCoordOffset + 2] = theta;
+      }
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
       particle[i_top][4] = z_start + dzLoss;
@@ -1729,7 +1737,8 @@ void setupMultApertureData
  MAXAMP *maxamp, 
  APERTURE_DATA *apFileData,      /* global aperture data vs s, from aperture_data command */
  APERTURE_DATA *localApFileData, /* local aperture data vs s (s=0 is start of element), from element definition */
- double zPosition                /* arc length of reference location */
+ double zPosition,                /* arc length of reference location */
+ ELEMENT_LIST *eptr
  ) {
   double x_max, y_max;
 
@@ -1738,7 +1747,8 @@ void setupMultApertureData
   apertureData->reverseTilt = reverseTilt;
   apertureData->reverseTiltCS[0] = cos(reverseTilt);
   apertureData->reverseTiltCS[1] = sin(reverseTilt);
-
+  apertureData->eptr = eptr;
+  
   /* zPosition=_start+drift/2 */
   apertureData->xCen = apertureData->yCen = 0;
   x_max = y_max = apertureData->xMax = apertureData->yMax = 0;
@@ -1811,19 +1821,18 @@ long checkMultAperture(double xInput, double yInput, double zLocal, MULT_APERTUR
           evaluateLostWithOpenSides(apData->openSide, x, y, apData->xMax, apData->yMax))
         return 0;
     }
-    return 1;
+  } else {
+    /* Elliptical or super-elliptical */
+    xa = x / apData->xMax;
+    yb = y / apData->yMax;
+    if ((ipow(xa, apData->xExponent) + ipow(yb, apData->yExponent)) >= 1) {
+      if (apData->openSide == 0 ||
+          evaluateLostWithOpenSides(apData->openSide, x, y, apData->xMax, apData->yMax))
+        return 0;
+    }
   }
 
-  /* Elliptical or super-elliptical */
-  xa = x / apData->xMax;
-  yb = y / apData->yMax;
-  if ((ipow(xa, apData->xExponent) + ipow(yb, apData->yExponent)) >= 1) {
-    if (apData->openSide == 0 ||
-        evaluateLostWithOpenSides(apData->openSide, x, y, apData->xMax, apData->yMax))
-      return 0;
-  }
-
-  if (apData->apContour && !checkApContour(x, y, apData->apContour))
+  if (apData->apContour && !checkApContour(x, y, apData->apContour, apData->eptr))
     return 0;
 
   return 1;
