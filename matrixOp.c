@@ -964,7 +964,7 @@ int lsf2dPolyUnweighted(
    * K = A*Y 
    */
   Xc = matrix_copy(X);
-  A = matrix_invert(X, NULL, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, condition);
+  A = matrix_invert(X, NULL, 0, 0, 0, 0, -1, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, condition);
   K = matrix_mult(A, Y);
 
   for (i = 0; i < nOrders; i++)
