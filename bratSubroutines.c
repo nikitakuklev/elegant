@@ -481,6 +481,9 @@ void BRAT_report_function(double result, double *param, long pass,
     printf("    dX       = %.15e\n", param[1]);
     printf("    dZ       = %.15e\n", param[2]);
     printf("    yaw      = %.15e\n", param[3]);
+    if (length2dMapList > 1) {
+      printf(" parameter   = %.15e\n", param[4]);
+    }
   }
 }
 
