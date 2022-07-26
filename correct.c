@@ -285,8 +285,8 @@ void correction_setup(
   if ((_correct->CMFy->minimum_SV_ratio = minimum_SV_ratio[1]) >= 1)
     bombElegant("minimum_SV_ratio should be less than 1 to be meaningful", NULL);
 
-  _correct->CMFx->remove_pegged = remove_pegged[0];
-  _correct->CMFy->remove_pegged = remove_pegged[1];
+  _correct->CMFx->remove_pegged = _correct->method==THREAD_CORRECTION?0:remove_pegged[0];
+  _correct->CMFy->remove_pegged = _correct->method==THREAD_CORRECTION?0:remove_pegged[1];
 
   if (verbose)
     fputs("finding correctors/monitors and/or computing correction matrices\n", stdout);
@@ -2026,7 +2026,7 @@ long thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     particle = (double **)czarray_2d(sizeof(**particle), beam->n_to_track, totalPropertiesPerParticle);
   }
   tracking_flags = TEST_PARTICLES + TEST_PARTICLE_LOSSES;
-  nElems = beamline->n_elems + 1;
+  nElems = beamline->n_elems;
   done = 0;
 
   nScan = CM->default_threading_divisor + 1.5;
@@ -2068,13 +2068,15 @@ long thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     if (iteration == n_iterations)
       break;
 
-    if (n_left != n_part) {
+    if (n_left == 0) {
       for (iElem = iBest = 0; iElem < nElems; iElem++)
         if (traj[iElem].n_part == 0)
           break;
-      iBest = iElem;
+      if ((iBest = iElem)>=nElems)
+        iBest = nElems-1;
       if (verbose > 1) {
-        printf("Beam reaches element %ld at s=%le m\n", iElem, traj[iElem].elem->end_pos);
+        printf("Beam reaches element %s#%ld at s=%le m\n", traj[iBest].elem->name, traj[iBest].elem->occurence, 
+               traj[iBest].elem->end_pos);
         fflush(stdout);
       }
       /* Find the first corrector upstream of the loss point */
@@ -2146,7 +2148,7 @@ long thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
                                    (BEAM_SUMS **)NULL, (long *)NULL,
                                    traj = traject[1], run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
               /* Determine if this is better than the previous best */
-              if (n_left != n_part) {
+              if (n_left == 0) {
                 for (iElem = 0; iElem < nElems; iElem++) {
                   if (traj[iElem].n_part == 0)
                     break;
@@ -2182,7 +2184,7 @@ long thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
           }
           if (verbose && bestValue != origValue) {
             if (traj[iBest].elem) {
-              printf("Beam now reaches element %ld at s=%le m\n", iBest, traj[iBest].elem->end_pos);
+              printf("Beam now reaches element %ld at s=%le m (%ld left)\n", iBest, traj[iBest].elem->end_pos, n_left);
               fflush(stdout);
             }
           }
@@ -2196,6 +2198,11 @@ long thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
         CM->kick[iteration + 1][i_corr] = *((double *)(corr->p_elem + kick_offset)) * CM->kick_coef[i_corr];
       }
     } else {
+      /* beam reaches end */
+      if (verbose) {
+        printf("Beam reached end of beamline\n");
+        fflush(stdout);
+      }
       for (i_corr = 0; i_corr < CM->ncor; i_corr++) {
         corr = CM->ucorr[i_corr];
         sl_index = CM->sl_index[i_corr];          /* steering list index of this corrector */
@@ -3508,6 +3515,9 @@ int remove_pegged_corrector(CORMON_DATA *CMA, CORMON_DATA *CM, STEERING_LIST *SL
   long ic0, ic1, im;
   double conditionNumber;
 
+  if (!CM->remove_pegged)
+    return 0;
+
   if (newly_pegged) {
     for (ic0 = 0; ic0 < CM->ncor; ic0++) {
       if (CM->ucorr[ic0] == newly_pegged) {
@@ -3603,6 +3613,9 @@ long preemptivelyFindPeggedCorrectors(
   ELEMENT_LIST *corr;
 
   nNewPegged = 0;
+  if (!CM->remove_pegged)
+    return 0;
+
   for (i_corr = 0; i_corr < CM->ncor; i_corr++) {
     corr = CM->ucorr[i_corr];
     sl_index = CM->sl_index[i_corr];
