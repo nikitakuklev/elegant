@@ -4218,7 +4218,9 @@ be accessed using the symbols \verb|couplingIntegral| and
     dnux/dAxAy}, {\tt dnuy/dAx2}, {\tt dnuy/dAy2}, {\tt dnuy/dAxAy},
   {\tt nuxTswaLower}, {\tt nuxTswaUpper}, {\tt nuyTswaLower}, and {\tt
     nuyTswaUpper}.
-
+  \item If {\tt HMON}, {\tt VMON}, or {\tt MONI} elements are in the
+    beamline, the symbol {\tt sMaxTransmittedMonitor} records the
+    $s$ position of the last monitor that sees at least one particle.
 \end{itemize}
 
 If the \verb|floor_coordinates| command was given, one may use
