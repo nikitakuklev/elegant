@@ -185,6 +185,8 @@ long do_tracking(
   TAPERAPR *taperapr = NULL;
   APCONTOUR *apcontour = NULL;
   ELEMENT_LIST *eptr, *eptrPred, *eptrCLMatrix = NULL;
+  double sMaxTransmittedMonitor; /* maximum s coordinate of transmitted particles at MONI, HMON, or VMON */
+  static int sMaxTransmittedMonitorMemory = -1;
   long nToTrack;     /* number of particles being tracked */
   long nLeft;        /* number of those that are left after a tracking routine returns */
   long nLost = 0;    /* accumulated number lost */
@@ -449,6 +451,7 @@ long do_tracking(
   if (finalCharge)
     *finalCharge = 0;
 
+  i_pass = passOffset;
 #if SDDS_MPI_IO
   if (isSlave || (!notSinglePart) || partOnMaster) {
 #else
@@ -479,6 +482,11 @@ long do_tracking(
       nToTrack = nLeft;
     }
   }
+
+  sMaxTransmittedMonitor = 0;
+  if (sMaxTransmittedMonitorMemory==-1)
+    sMaxTransmittedMonitorMemory = rpn_create_mem("sMaxTransmittedMonitor", 0);
+  rpn_store(sMaxTransmittedMonitor, NULL, sMaxTransmittedMonitorMemory);
 
   for (i_pass = passOffset; i_pass < n_passes + passOffset; i_pass++) {
 #ifdef DEBUG_CRASH
@@ -1252,6 +1260,20 @@ long do_tracking(
                 break;
               default:
                 break;
+              }
+              if (IS_MONITOR(eptr->type) && eptr->end_pos>sMaxTransmittedMonitor) {
+#if USE_MPI
+                long nToTrackTotal = nToTrack;
+                if (beam) {
+                  if (!partOnMaster && notSinglePart)
+                    MPI_Allreduce(&nToTrack, &nToTrackTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+                }
+                if (nToTrackTotal>0)
+                  rpn_store(sMaxTransmittedMonitor=eptr->end_pos, NULL, sMaxTransmittedMonitorMemory);
+#else
+                if (nToTrack>0)
+                  rpn_store(sMaxTransmittedMonitor=eptr->end_pos, NULL, sMaxTransmittedMonitorMemory);
+#endif
               }
             }
             /* Only the slave CPUs will track */

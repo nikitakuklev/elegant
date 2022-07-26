@@ -1462,7 +1462,9 @@ typedef struct {
 extern PARAMETER hmon_param[N_HMON_PARAMS] ;
 extern PARAMETER vmon_param[N_VMON_PARAMS] ;
 extern PARAMETER moni_param[N_MONI_PARAMS] ;
-   
+
+#define IS_MONITOR(type) ((type)==T_MONI || (type)==T_HMON || (type)==T_VMON)
+
 typedef struct {
     double length, dx, dy, weight, tilt, calibration, setpoint;
     short order;

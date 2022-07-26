@@ -53,7 +53,8 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None
+\item The \verb|correct| command had a bug related to threaded and one-to-one trajectory correction if
+  removal of pegged correctors was not invoked.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -70,6 +71,9 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 \begin{itemize}
 \item The \verb|correct| command (orbit and trajectory correction) now supports Tikhonov regularization of the
   singular value spectrum in creating the inverse matrices, following some ideas of V. Sajaev (ANL).
+\item The \verb|optimization_term| command now recognizes two new quantities: \verb|sMaxTransmitted| and 
+  \verb|sMaxTransmittedMonitor|, giving the maximum $s$ coordinate to which particles are transmitted to
+  any point or to a monitor, respectively. This can be used for threading of beam through a transport line.
 \end{itemize}
 
 \subsection{Other Changes}
