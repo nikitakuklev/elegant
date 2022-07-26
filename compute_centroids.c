@@ -536,6 +536,9 @@ void accumulate_beam_sums1(
   double errorCen[7], errorSig[28];
 #  endif
 
+  if (!coord)
+    n_part = 0;
+
 #  ifdef HAVE_GPU
   if (getElementOnGpu()) {
 #    ifdef GPU_VERIFY
