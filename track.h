@@ -689,7 +689,9 @@ typedef struct {
 #define OPTIM_METHOD_GENETIC    6
 #define OPTIM_METHOD_HYBSIMPLEX 7
 #define OPTIM_METHOD_SWARM      8
-#define N_OPTIM_METHODS         9
+#define OPTIM_METHOD_1DSCANS    9
+#define OPTIM_METHOD_RCDS      10
+#define N_OPTIM_METHODS        11
 
 
   /* The definitions of PGA_CROSSOVER_ONEPT, PGA_CROSSOVER_TWOPT, PGA_CROSSOVER_UNIFORM can be found at pgapack.h */
@@ -718,7 +720,7 @@ typedef struct {
     long restart_worst_terms;
     long matrix_order, *TijkMem, *UijklMem;
     double simplexDivisor, simplexPassRangeFactor;
-    double random_factor;
+    double random_factor, rcdsStepFactor;
     long includeSimplex1dScans, startFromSimplexVertex1;
     /* For parallel optimization only */
     long n_iterations;            /* The maximal number of iterations allowed */

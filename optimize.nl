@@ -10,7 +10,7 @@ static char *optimize_mode[N_OPTIM_MODES] = {
     } ;
 
 static char *optimize_method[N_OPTIM_METHODS] = {
-    "simplex", "grid", "sample", "powell", "randomsample", "randomwalk", "genetic", "hybridsimplex", "swarm"
+    "simplex", "grid", "sample", "powell", "randomsample", "randomwalk", "genetic", "hybridsimplex", "swarm", "1dscans", "rcds",
     } ;
 
       
@@ -64,6 +64,7 @@ static char *crossover_type[N_CROSSOVER_TYPES] = {
     long start_from_simplex_vertex1 = 0;
     long restart_random_numbers = 0;
     double random_factor = 1.0;		
+    double rcds_step_factor = 0.1;
     long n_iterations = 10000;
     long max_no_change = 1000;
     long population_size = 100;

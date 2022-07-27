@@ -74,6 +74,7 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
 \item The \verb|optimization_term| command now recognizes two new quantities: \verb|sMaxTransmitted| and 
   \verb|sMaxTransmittedMonitor|, giving the maximum $s$ coordinate to which particles are transmitted to
   any point or to a monitor, respectively. This can be used for threading of beam through a transport line.
+\item Added 1d-scan and RCDS \cite{Huang-RCDS} methods to the \verb|optimize| command.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -4138,6 +4139,7 @@ variables and covariable may be accessed via names like \verb|<element-name>.<pa
     long balance_terms = 0;
     double simplex_divisor = 3;
     double simplex_pass_range_factor = 1;
+    double rcds_step_factor = 0.1;
     long include_simplex_1d_scans = 1;
     long start_from_simplex_vertex1 = 0;
     long restart_random_numbers = 0;
@@ -4262,7 +4264,9 @@ and not-equal functions, which have the names {\tt segt}, {\tt selt}, and
 \end{itemize}
 \item \verb|mode| --- May be either ``minimize'' or ``maximize''.
 
-\item \verb|method| --- May be one of ``simplex'', ``grid'', ``powell'', ``randomwalk'', ``randomsample'', or ``sample''.  Recommended methods are ``simplex'' and ``randomwalk''. The latter is very useful when the lattice is unstable or nearly so.
+\item \verb|method| --- May be one of ``simplex'', ``grid'', ``powell'', ``randomwalk'', ``randomsample'', ``1dscans'',
+  ``rcds'', and ``sample''.  Recommended methods are ``simplex'', ``rcds'' \cite{Huang-RCDS}, and ``randomwalk''. The
+  latter is very useful when the lattice is unstable or nearly so.
 
 \item \verb|tolerance| --- The convergence criterion for the optimization, with a negative value indicating
 a fractional criterion.
@@ -4341,6 +4345,9 @@ a significant difference in the optimization speed.
 
 \item \verb|start_from_simplex_vertex1| --- If nonzero, optimizer uses the initial simplex vertex as the
  starting point for each new 1d scan.  Otherwise, it uses the result of the previous scan.
+
+\item \verb|rcds_step_factor| --- Gives the step sizes as a fraction of the range of each variable.
+  If non-zero, overrides the step sizes given in the \verb|optimization_variable| commands.
 
 \item \verb|restart_random_numbers| --- If nonzero, the random number generators used by {\tt elegant} are
  reset for each evaluation of the optimization function.  This is valuable if one is optimizing tracking
@@ -11051,5 +11058,8 @@ Y.-P. Sun and C.-Y. Yao, ``Tracking With Space Harmonics in ELEGANT Code,'' Proc
 \bibitem{Borland-LS356}
   M. Borland, ``Symplectic integration  in {\tt elegant},'' ANL/APS/LS-356, Rev. 1, Dec. 2021.
 \end{thebibliography}
+
+\bibitem{Huang-RCDS}
+ X. Huang, ``An algorithm for online optimization of accelerators,'' NMI A 726, 77-83, 2013.
 
 \end{document}

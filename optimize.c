@@ -152,6 +152,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
   optimization_data->simplexDivisor = simplex_divisor;
   optimization_data->includeSimplex1dScans = include_simplex_1d_scans;
   optimization_data->startFromSimplexVertex1 = start_from_simplex_vertex1;
+  optimization_data->rcdsStepFactor = rcds_step_factor;
   if ((optimization_data->restart_worst_term_factor = restart_worst_term_factor) <= 0)
     bombElegant("restart_worst_term_factor <= 0", NULL);
   if ((optimization_data->restart_worst_terms = restart_worst_terms) <= 0)
@@ -1271,6 +1272,54 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       printf("End of simplex method case\n");
       fflush(stdout);
 #endif
+      break;
+    case OPTIM_METHOD_1DSCANS:
+      fputs("Starting 1d scan optimization.\n", stdout);
+      if (OneDScanOptimize(&result, variables->varied_quan_value, variables->step,
+                           variables->lower_limit, variables->upper_limit, NULL,
+                           variables->n_variables, optimization_data->target,
+                           optimization_data->tolerance, optimization_function, optimization_report_ptr,
+                           optimization_data->n_evaluations, optimization_data->n_passes, 1,
+                           0)<0) {
+        if (result > optimization_data->tolerance) {
+          if (!optimization_data->soft_failure)
+            bombElegant("optimization unsuccessful--aborting", NULL);
+          else
+            printWarning("optimize: 1D scan optimization unsuccessful.", "Continuing.");
+        } else
+          printWarning("optimize: Maximum number of passes reached in 1d scan optimization", NULL);
+      }
+      if (optimization_data->fp_log && optimization_data->verbose > 1)
+        optimization_report(result, variables->varied_quan_value, optimization_data->n_restarts + 1 - startsLeft, n_evaluations_made, variables->n_variables);
+      if (simplexMinAbort(0) || result < optimization_data->target)
+        stopOptimization = 1;
+      break;
+    case OPTIM_METHOD_RCDS:
+      {
+      double *start;
+      start = tmalloc(sizeof(*start)*variables->n_variables);
+      memcpy(start, variables->varied_quan_value, sizeof(*start)*variables->n_variables);
+      fputs("Starting RCDS optimization.\n", stdout);
+      if (rcdsMin(&result, variables->varied_quan_value, start, variables->step,
+                  variables->lower_limit, variables->upper_limit, NULL,
+                  variables->n_variables, optimization_data->target,
+                  optimization_data->tolerance, optimization_function, optimization_report_ptr,
+                  optimization_data->n_evaluations, optimization_data->n_passes, 
+                  0.0, optimization_data->rcdsStepFactor, 0)<0) {
+        if (result > optimization_data->tolerance) {
+          if (!optimization_data->soft_failure)
+            bombElegant("optimization unsuccessful--aborting", NULL);
+          else
+            printWarning("optimize: RCDS optimization unsuccessful.", "Continuing.");
+        } else
+          printWarning("optimize: Maximum number of passes reached in RCDS optimization", NULL);
+      }
+      if (optimization_data->fp_log && optimization_data->verbose > 1)
+        optimization_report(result, variables->varied_quan_value, optimization_data->n_restarts + 1 - startsLeft, n_evaluations_made, variables->n_variables);
+      if (rcdsMinAbort(0) || result < optimization_data->target)
+        stopOptimization = 1;
+      free(start);
+      }
       break;
     case OPTIM_METHOD_POWELL:
       fputs("Starting Powell optimization.\n", stdout);
