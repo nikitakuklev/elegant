@@ -1474,7 +1474,7 @@ typedef struct {
     short coFitpoint;
     short storeTurnByTurn;
     unsigned short initialized; /* 0x01: CO, 0x02: TBT */
-    long coMemoryNumber[2], tbtMemoryNumber;
+    long coMemoryNumber[2], tbtMemoryNumber[2];
     } HMON;
 typedef struct {
     double length, dx, dy, weight, tilt, calibration, setpoint;
@@ -1483,7 +1483,7 @@ typedef struct {
     short coFitpoint;
     short storeTurnByTurn;
     unsigned short initialized; /* 0x01: CO, 0x02: TBT */
-    long coMemoryNumber[2], tbtMemoryNumber;
+    long coMemoryNumber[2], tbtMemoryNumber[2];
     } VMON;
 typedef struct {
     double length, dx, dy, weight, tilt, xcalibration, ycalibration, xsetpoint, ysetpoint;

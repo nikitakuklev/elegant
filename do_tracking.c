@@ -3935,6 +3935,7 @@ void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po) {
   MONI *moni;
   HMON *hmon;
   VMON *vmon;
+  long n;
   /*
   long npTotal;
   */
@@ -3955,6 +3956,7 @@ void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po) {
 
   x = sums->centroid[0];
   y = sums->centroid[2];
+  n = sums->n_part;
   freeBeamSums(sums, 1);
 
   switch (eptr->type) {
@@ -3965,28 +3967,37 @@ void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po) {
       moni->tbtMemoryNumber[0] = rpn_create_mem(s, 0);
       snprintf(s, 1000, "%s#%ld.y", eptr->name, eptr->occurence);
       moni->tbtMemoryNumber[1] = rpn_create_mem(s, 0);
+      snprintf(s, 1000, "%s#%ld.n", eptr->name, eptr->occurence);
+      moni->tbtMemoryNumber[2] = rpn_create_mem(s, 0);
       moni->initialized |= 2;
     }
     rpn_store(computeMonitorReading(eptr, 0, x, y, 0), NULL, moni->tbtMemoryNumber[0]);
     rpn_store(computeMonitorReading(eptr, 1, x, y, 0), NULL, moni->tbtMemoryNumber[1]);
+    rpn_store(n, NULL, moni->tbtMemoryNumber[2]);
     break;
   case T_HMON:
     hmon = (HMON *)(eptr->p_elem);
     if (!(hmon->initialized & 2)) {
       snprintf(s, 1000, "%s#%ld.x", eptr->name, eptr->occurence);
-      hmon->tbtMemoryNumber = rpn_create_mem(s, 0);
+      hmon->tbtMemoryNumber[0] = rpn_create_mem(s, 0);
+      snprintf(s, 1000, "%s#%ld.n", eptr->name, eptr->occurence);
+      hmon->tbtMemoryNumber[1] = rpn_create_mem(s, 0);
       hmon->initialized |= 2;
     }
-    rpn_store(computeMonitorReading(eptr, 0, x, y, 0), NULL, hmon->tbtMemoryNumber);
+    rpn_store(computeMonitorReading(eptr, 0, x, y, 0), NULL, hmon->tbtMemoryNumber[0]);
+    rpn_store(n, NULL, hmon->tbtMemoryNumber[1]);
     break;
   case T_VMON:
     vmon = (VMON *)(eptr->p_elem);
     if (!(vmon->initialized & 2)) {
       snprintf(s, 1000, "%s#%ld.x", eptr->name, eptr->occurence);
-      vmon->tbtMemoryNumber = rpn_create_mem(s, 0);
+      vmon->tbtMemoryNumber[0] = rpn_create_mem(s, 0);
+      snprintf(s, 1000, "%s#%ld.n", eptr->name, eptr->occurence);
+      vmon->tbtMemoryNumber[1] = rpn_create_mem(s, 0);
       vmon->initialized |= 2;
     }
-    rpn_store(computeMonitorReading(eptr, 1, x, y, 0), NULL, vmon->tbtMemoryNumber);
+    rpn_store(computeMonitorReading(eptr, 1, x, y, 0), NULL, vmon->tbtMemoryNumber[0]);
+    rpn_store(n, NULL, vmon->tbtMemoryNumber[1]);
     break;
   }
 }
