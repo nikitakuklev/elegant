@@ -186,6 +186,15 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
     InitializeCWiggler(cwiggler, tContext.elementName);
   }
 
+  if (cwiggler->stepsPerPeriod%4!=0) {
+    char buffer[100];
+    long spp;
+    spp = cwiggler->stepsPerPeriod;
+    cwiggler->stepsPerPeriod = (cwiggler->stepsPerPeriod/4+1)*4;
+    snprintf(buffer, 100, "Changed from %ld to %ld\n", spp, cwiggler->stepsPerPeriod);
+    printWarningForTracking("CWIGGLER STEPS_PER_PERIOD must be 4*integer", buffer);
+  }
+
   GWigInit(&Wig, cwiggler->length, cwiggler->length / cwiggler->periods,
            cwiggler->BMax, cwiggler->ByMax, cwiggler->BxMax,
            cwiggler->tgu ? cwiggler->tguGradient : 0,
