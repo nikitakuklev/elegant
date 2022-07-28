@@ -1,0 +1,3 @@
+#!/bin/bash
+
+\rm run.bpmcen run.cen run.erl run.traj

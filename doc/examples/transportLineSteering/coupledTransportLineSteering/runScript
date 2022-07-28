@@ -1,0 +1,9 @@
+#!/bin/bash
+
+elegant run.ele 
+
+sddsplot -graph=line,vary -split=page -group=page -sep=4 \
+    -col=s,[xy] run.traj -match=param,Stage=uncorrected -legend=edit="i/uncor. /" \
+    -col=s,[xy] run.traj -match=param,Stage=corrected -legend=edit="i/cor. /" 
+
+

@@ -1,0 +1,15 @@
+Example of coupled trajectory correction.
+M. Borland, ANL, 2022/7/27
+
+runScript
+        Run simulation and display result
+
+run.ele
+        Command file
+lattice.lte
+        Lattice file
+
+cleanUp
+        Clean up simulation outputs
+
+

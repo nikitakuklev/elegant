@@ -1,0 +1,35 @@
+&run_setup
+        lattice = lattice.lte
+        p_central_mev = 1e3
+        centroid = %s.cen
+        bpm_centroid = %s.bpmcen
+&end
+
+&run_control
+        n_steps = 10
+&end
+
+&error_control
+        error_log = %s.erl
+&end
+
+!! Create large error in x trajectory that gets coupled into y
+&error_element name=Q[12], item=DX, amplitude=100e-6, bind = 0 &end
+
+!! Define steering correctors as operating in coupled mode (plane=c)
+&steering_element name=HC, item=KICK, plane=c &end
+&steering_element name=VC, item=KICK, plane=c &end
+
+&correct
+        !! method is coupled global trajectory correction
+        mode = trajectory
+        method = coupled
+        n_iterations = 5
+        n_xy_cycles = 2
+        correction_fraction[0] = 2*0.5,
+        trajectory_output = %s.traj
+&end
+
+&bunched_beam &end
+
+&track &end

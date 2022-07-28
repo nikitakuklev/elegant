@@ -1,0 +1,16 @@
+Q1: QUAD,K1=1,L=0.25
+D1: DRIFT,L=0.5
+Q2: QUAD,K1=-1,L=0.25
+HC: HKICK
+VC: VKICK
+! In coupled trajectory correction, must use only HMON and VMON, not MONI!
+HM: HMON
+VM: VMON
+MON: LINE=(HM,VM)
+Q1T: QUAD,K1=1,L=0.25,TILT="pi 4 /"
+Q2T: QUAD,K1=-1,L=0.25,TILT="pi 4 /"
+CELL: line=(D1,Q1,MON,HC,2*D1,Q2,MON,VC,D1)
+CELLT: line=(D1,Q1T,MON,HC,2*D1,Q2T,MON,VC,D1)
+BL: line=(5*CELL,CELLT,5*CELL)
+
+
