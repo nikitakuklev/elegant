@@ -2480,7 +2480,8 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
     *F2 *= bmapxyz->BFactor[1];
     *F0 *= bmapxyz->BFactor[2];
 
-    if (fabs(z - bmapxyz->fieldLength / 2) < bmapxyz->length / 2) {
+    if (fabs(z - bmapxyz->fieldLength / 2) < bmapxyz->length / 2 &&
+        (bmapxyz->xInsideLimit[0]>=bmapxyz->xInsideLimit[1] || (x>=bmapxyz->xInsideLimit[0] && x<=bmapxyz->xInsideLimit[1]))) {
       *F0 += bmapxyz->BInside[2]; /* z */
       *F1 += bmapxyz->BInside[0]; /* x */
       *F2 += bmapxyz->BInside[1]; /* y */

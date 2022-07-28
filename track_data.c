@@ -3433,6 +3433,8 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
   {"BXINSIDE", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.BInside[0]), NULL, 0.0, 0, "Constant Bx field to add inside the hard-edge boundaries."},
   {"BYINSIDE", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.BInside[1]), NULL, 0.0, 0, "Constant By field to add inside the hard-edge boundaries."},
   {"BZINSIDE", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.BInside[2]), NULL, 0.0, 0, "Constant Bz field to add inside the hard-edge boundaries."},
+  {"BINSIDE_XMIN", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.xInsideLimit[0]), NULL, 0.0, 0, "Minimum x value at which BInside is applied."},
+  {"BINSIDE_XMAX", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.xInsideLimit[1]), NULL, 0.0, 0, "Maximum x value at which BInside is applied."},
   {"ACCURACY", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
   {"METHOD", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
   {"FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z) and either (Bx, By, Bz) or (Fx, Fy, Fz)"},
