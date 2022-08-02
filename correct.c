@@ -383,7 +383,7 @@ void correction_setup(
   } else {
     /* Coupled global trajectory correction */
     if (_correct->SLy.n_corr_types != 0)
-      bombElegant("For coupled correction, use plane='h' in all steering_elements commands", NULL);
+      bombElegant("For coupled correction, use plane='c' in all steering_elements commands", NULL);
     /* coupled correction uses the SLx and CMx structures only */
     if (_correct->SLx.n_corr_types == 0) {
       long found = 0;
