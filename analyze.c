@@ -1608,7 +1608,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     nSlices = ((CWIGGLER *)eptr->p_elem)->periods * ((CWIGGLER *)eptr->p_elem)->stepsPerPeriod;
     break;
   case T_WIGGLER:
-    nSlices *= (((WIGGLER *)eptr->p_elem)->poles / 2);
+    nSlices0 *= 4;
+    nSlices = nSlices0*(((WIGGLER *)eptr->p_elem)->poles)/2;
     break;
   case T_CCBEND:
     nSlices = fabs(((CCBEND *)eptr->p_elem)->angle / 0.005) + 1;
