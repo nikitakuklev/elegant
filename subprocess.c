@@ -63,27 +63,27 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run) {
     strcat(buffer, ptr0);
     printf("%s\n", buffer);
     fflush(stdout);
-    executeCshCommand(buffer);
+    executeCshCommand(buffer, run->rootname);
   }
 
   log_exit("run_subprocess");
 }
 
-void executeCshCommand(char *cmd) {
+void executeCshCommand(char *cmd, char *rootname) {
   FILE *fp;
-  char *filename;
-  char cmd2[1000];
+  char cmd2[16384];
+  char filename[16384];
 
 #if defined(CONDOR_COMPILE)
   _condor_ckpt_disable();
 #endif
 
-  filename = tmpname(NULL);
+  snprintf(filename, 16384, "%s-%s.csh", rootname, tmpname(NULL));
   fp = fopen(filename, "w");
   fprintf(fp, "set nonomatch\n");
   fprintf(fp, "%s\n", cmd);
   fclose(fp);
-  sprintf(cmd2, "csh %s\n", filename);
+  snprintf(cmd2, 16384, "csh %s\n", filename);
   system(cmd2);
   remove(filename);
 

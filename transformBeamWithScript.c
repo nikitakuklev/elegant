@@ -264,7 +264,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
 
   /* run the script */
   if (script->useCsh)
-    executeCshCommand(cmdBuffer1);
+    executeCshCommand(cmdBuffer1, mainRootname);
   else
     system(cmdBuffer1);
 
@@ -632,7 +632,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
   if (isMaster) /* This will be done on the master */
   {
     if (script->useCsh)
-      executeCshCommand(cmdBuffer1);
+      executeCshCommand(cmdBuffer1, mainRootname);
     else
       system(cmdBuffer1);
   }
@@ -865,31 +865,42 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
         SDDS_SetError("Unable to read Charge parameter from script output file");
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
       }
+      if (totalCharge!=charge->charge && script->verbosity>1) 
+	printf("Charge changed from %21.15e to %21.15e\n", charge->charge, totalCharge);
       charge->charge = totalCharge;
       charge->macroParticleCharge = 0;
       if (!notSinglePart) {
         if (npNew)
           charge->macroParticleCharge = totalCharge / npNew;
-      } else if (npNewTotal)
+	if (script->verbosity>3) 
+	  printf("Macro particle charge was %21.15e, now %21.15e, npNew = %ld, total charge = %21.15e\n",
+		 oldMacroParticleCharge, charge->macroParticleCharge, npNew, charge->charge);
+      } else if (npNewTotal) {
         charge->macroParticleCharge = totalCharge / npNewTotal;
+	if (script->verbosity>3)
+	  printf("Macro particle charge was %21.15e, now %21.15e, npNewTotal = %ld, total charge = %21.15e\n",
+		 oldMacroParticleCharge, charge->macroParticleCharge, npNewTotal, charge->charge);
+      }
       if (oldMacroParticleCharge != 0 && fabs((charge->macroParticleCharge - oldMacroParticleCharge) / oldMacroParticleCharge) > 1e-8) {
         printWarningForTracking("Macro-particle charge changed after SCRIPT element.",
                                 "This may indicate a problem with the script.");
       }
     }
-  }
-  if (script->verbosity > 3) {
-    printf("Charge value (optionally) set\n");
-    fflush(stdout);
+    if (script->verbosity > 3) {
+      printf("Charge value (optionally) set\n");
+      fflush(stdout);
+    }
   }
 
   if (charge && notSinglePart) {
-    MPI_Bcast(&(charge->charge), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&charge->macroParticleCharge, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-  }
-  if (script->verbosity > 3) {
-    printf("Charge value broadcast\n");
-    fflush(stdout);
+    if (MPI_Bcast(&(charge->charge), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+	MPI_Bcast(&charge->macroParticleCharge, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD)!=MPI_SUCCESS)
+      bombElegant("MPI failed broadcasting charge data", NULL);
+    if (script->verbosity > 3) {
+      printf("Charge value broadcast (charge = %21.15e, mpCharge = %21.15e)\n",
+	     charge->charge, charge->macroParticleCharge);
+      fflush(stdout);
+    }
   }
 
   if (script->rpnParameters) {

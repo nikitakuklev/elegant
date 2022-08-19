@@ -4810,8 +4810,7 @@ extern void convert_to_xorbit(char *outputfile, LINE_LIST *beamline, long flip_k
 extern void finishLatticeParametersFile(void);
 extern long memoryUsage();
 
-
-void executeCshCommand(char *cmd);
+void executeCshCommand(char *cmd, char *rootname);
 extern void doSubprocessCommand(char *command);
 void run_subprocess(NAMELIST_TEXT *nltext, RUN *run);
 void setSearchPath(char *path);
