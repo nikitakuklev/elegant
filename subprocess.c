@@ -78,7 +78,10 @@ void executeCshCommand(char *cmd, char *rootname) {
   _condor_ckpt_disable();
 #endif
 
-  snprintf(filename, 16384, "%s-%s.csh", rootname, tmpname(NULL));
+  if (rootname && strlen(rootname)) 
+    snprintf(filename, 16384, "%s-%s.csh", rootname, tmpname(NULL));
+  else
+    snprintf(filename, 16384, "%s.csh", tmpname(NULL));
   fp = fopen(filename, "w");
   fprintf(fp, "set nonomatch\n");
   fprintf(fp, "%s\n", cmd);
