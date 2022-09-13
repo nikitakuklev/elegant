@@ -1188,7 +1188,7 @@ typedef struct {
 /* maximum slope and coordinate allowed for particles in certain routines
  * (for KSBENDs, KQUADs, KSEXTs, CSBENDs, and MULT elements)
  */
-#define SLOPE_LIMIT 1.0L
+#define SLOPE_LIMIT 1.5L
 #define COORD_LIMIT 10.0L
 
 #define IS_DOUBLE 1
@@ -1569,6 +1569,8 @@ typedef struct {
   long *twiss_mem;       /* betax, alphax, NUx, etax, etaxp, betay, ... */
   long *centroid_mem;    /* (x, xp, y, yp, s, dp, Pcen, n) from tracking */
   long *sigma_mem;       /* (x, xp, y, yp, s, dp) from tracking */
+  long *min_mem;         /* (x, xp, y, yp, s, dp) from tracking */
+  long *max_mem;         /* (x, xp, y, yp, s, dp) from tracking */
   long *sij_mem;         /* <xi*xj> for 6>=j>i>=1 from tracking */
   long *emit_mem;        /* (x, y, z, cx, cy) from tracking */
   long *betaBeam_mem;    /* (x, y) from tracking */

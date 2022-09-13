@@ -1670,7 +1670,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     switch (eptr->type) {
     case T_CSBEND:
       if (slice == 0) {
-        static short printed = 0;
+        static short printed = 1;
         memcpy(&csbend, (CSBEND *)eptr->p_elem, sizeof(CSBEND));
         csbend.isr = 0;
         csbend.nSlices = nSlices;
@@ -1715,7 +1715,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       break;
     case T_SBEN:
       if (slice == 0) {
-        static short printed  = 0;
+        static short printed  = 1;
         elem.type = T_CSBEND;
         elem.p_elem = (void *)&csbend;
         sbend = (BEND *)eptr->p_elem;
