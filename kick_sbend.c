@@ -397,7 +397,7 @@ void kick_sbend_derivs(
   y = Q[2];
   yp = dQds[2] = Q[3];
 
-  if (FABS(xp) > SLOPE_LIMIT || FABS(yp) > SLOPE_LIMIT || FABS(x) > COORD_LIMIT || FABS(y) > COORD_LIMIT) {
+  if (FABS(xp) > slopeLimit || FABS(yp) > slopeLimit || FABS(x) > coordLimit || FABS(y) > coordLimit) {
     particle_lost = 1;
     s_lost = s0;
     dQds[0] = dQds[1] = dQds[2] = dQds[3] = dQds[4] = dQds[5] = 0;

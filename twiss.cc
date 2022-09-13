@@ -2593,7 +2593,7 @@ double find_acceptance(
         acceptance = tmp;
       }
     } else
-      aperture = COORD_LIMIT;
+      aperture = coordLimit;
 
     if (plane)
       elem->twiss->apy = aperture;
@@ -5315,7 +5315,7 @@ void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double positio
 
 long determineScraperAperture(long plane, unsigned long direction, double position,
                               double offset, double centroid, double *apertureRet) {
-  double a1 = COORD_LIMIT, a2 = -COORD_LIMIT;
+  double a1 = coordLimit, a2 = -coordLimit;
   unsigned long flagPlus, flagMinus, flags;
   double aperture;
   long aperture_set = 0;

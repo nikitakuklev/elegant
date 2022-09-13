@@ -442,8 +442,8 @@ long fmultipole_tracking(
     yp = coord[3];
 
     if (is_lost || isnan(x) || isnan(y) || isnan(xp) || isnan(yp) ||
-        FABS(x) > COORD_LIMIT || FABS(y) > COORD_LIMIT ||
-        FABS(xp) > SLOPE_LIMIT || FABS(yp) > SLOPE_LIMIT) {
+        FABS(x) > coordLimit || FABS(y) > coordLimit ||
+        FABS(xp) > slopeLimit || FABS(yp) > slopeLimit) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
@@ -586,8 +586,8 @@ long multipole_tracking(
       continue;
     }
 #endif
-    if (FABS(x) > COORD_LIMIT || FABS(y) > COORD_LIMIT ||
-        FABS(xp) > SLOPE_LIMIT || FABS(yp) > SLOPE_LIMIT) {
+    if (FABS(x) > coordLimit || FABS(y) > coordLimit ||
+        FABS(xp) > slopeLimit || FABS(yp) > slopeLimit) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
@@ -673,8 +673,8 @@ long multipole_tracking(
       continue;
     }
 #endif
-    if (FABS(x) > COORD_LIMIT || FABS(y) > COORD_LIMIT ||
-        FABS(xp) > SLOPE_LIMIT || FABS(yp) > SLOPE_LIMIT || is_lost) {
+    if (FABS(x) > coordLimit || FABS(y) > coordLimit ||
+        FABS(xp) > slopeLimit || FABS(yp) > slopeLimit || is_lost) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
@@ -1261,8 +1261,8 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
     return 0;
   }
 #endif
-  if (FABS(x) > COORD_LIMIT || FABS(y) > COORD_LIMIT ||
-      FABS(xp) > SLOPE_LIMIT || FABS(yp) > SLOPE_LIMIT) {
+  if (FABS(x) > coordLimit || FABS(y) > coordLimit ||
+      FABS(xp) > slopeLimit || FABS(yp) > slopeLimit) {
     return 0;
   }
 
@@ -1453,8 +1453,8 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
     return 0;
   }
 #endif
-  if (FABS(x) > COORD_LIMIT || FABS(y) > COORD_LIMIT ||
-      FABS(xp) > SLOPE_LIMIT || FABS(yp) > SLOPE_LIMIT) {
+  if (FABS(x) > coordLimit || FABS(y) > coordLimit ||
+      FABS(xp) > slopeLimit || FABS(yp) > slopeLimit) {
     return 0;
   }
   return 1;

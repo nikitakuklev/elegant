@@ -660,8 +660,8 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
     return 0;
   }
 #endif
-  if (fabs(x) > COORD_LIMIT || fabs(y) > COORD_LIMIT ||
-      fabs(xp) > SLOPE_LIMIT || fabs(yp) > SLOPE_LIMIT) {
+  if (fabs(x) > coordLimit || fabs(y) > coordLimit ||
+      fabs(xp) > slopeLimit || fabs(yp) > slopeLimit) {
     return 0;
   }
 
@@ -933,8 +933,8 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
     return 0;
   }
 #endif
-  if (fabs(x) > COORD_LIMIT || fabs(y) > COORD_LIMIT ||
-      fabs(xp) > SLOPE_LIMIT || fabs(yp) > SLOPE_LIMIT) {
+  if (fabs(x) > coordLimit || fabs(y) > coordLimit ||
+      fabs(xp) > slopeLimit || fabs(yp) > slopeLimit) {
     return 0;
   }
   return 1;

@@ -116,6 +116,7 @@ extern long trackingMatrixPoints;
 extern double trackingMatrixStepSize[6];
 extern long warningCountLimit;
 extern short misalignmentMethod;
+extern double slopeLimit, coordLimit;
 
 /* flag used to identify which processor is allowed to write to a file */
 extern long writePermitted;
@@ -1188,7 +1189,7 @@ typedef struct {
 /* maximum slope and coordinate allowed for particles in certain routines
  * (for KSBENDs, KQUADs, KSEXTs, CSBENDs, and MULT elements)
  */
-#define SLOPE_LIMIT 1.5L
+#define SLOPE_LIMIT 1.0L
 #define COORD_LIMIT 10.0L
 
 #define IS_DOUBLE 1

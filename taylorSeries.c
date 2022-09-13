@@ -221,8 +221,8 @@ long polynomialSeries_tracking(
       continue;
     }
 #endif
-    if (FABS(x) > COORD_LIMIT || FABS(y) > COORD_LIMIT ||
-        FABS(xp) > SLOPE_LIMIT || FABS(yp) > SLOPE_LIMIT) {
+    if (FABS(x) > coordLimit || FABS(y) > coordLimit ||
+        FABS(xp) > slopeLimit || FABS(yp) > slopeLimit) {
       SWAP_PTR(particle[i_part], particle[i_top]);
       if (accepted)
         SWAP_PTR(accepted[i_part], accepted[i_top]);

@@ -47,6 +47,8 @@ short misalignmentMethod = 0;
 #if USE_MPI
 short mpiAbort = 0;
 #endif
+double slopeLimit = SLOPE_LIMIT;
+double coordLimit = COORD_LIMIT;
 
 long trajectoryTracking = 0;
 

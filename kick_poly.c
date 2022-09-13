@@ -97,8 +97,8 @@ long polynomial_kicks(
       continue;
     }
 #endif
-    if (FABS(x) > COORD_LIMIT || FABS(y) > COORD_LIMIT ||
-        FABS(xp) > SLOPE_LIMIT || FABS(yp) > SLOPE_LIMIT) {
+    if (FABS(x) > coordLimit || FABS(y) > coordLimit ||
+        FABS(xp) > slopeLimit || FABS(yp) > slopeLimit) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
@@ -248,8 +248,8 @@ long polynomial_hamiltonian(
     xp = cos_tilt * coord[1] + sin_tilt * coord[3];
     yp = -sin_tilt * coord[1] + cos_tilt * coord[3];
 
-    if (FABS(x) > COORD_LIMIT || FABS(y) > COORD_LIMIT ||
-        FABS(xp) > SLOPE_LIMIT || FABS(yp) > SLOPE_LIMIT) {
+    if (FABS(x) > coordLimit || FABS(y) > coordLimit ||
+        FABS(xp) > slopeLimit || FABS(yp) > slopeLimit) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
