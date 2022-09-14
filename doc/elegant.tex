@@ -35,9 +35,9 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2022.0}
+\section{Highlights of What's New in Version 2022.1}
 
-Here is a summary of what's changed since release 2021.4.  Historical change logs are collected in Section
+Here is a summary of what's changed since release 2022.0.  Historical change logs are collected in Section
 \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
@@ -52,7 +52,6 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
   steps per half period was odd. This was reported by forum user Skamarokha. It was fixed by forcing
   \verb|STEPS_PER_PERIOD| to be $4n$, where $n$ is an integer.
 \end{itemize}
-
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
@@ -81,6 +80,8 @@ Here is a summary of what's changed since release 2021.4.  Historical change log
   \verb|sMaxTransmittedMonitor|, giving the maximum $s$ coordinate to which particles are transmitted to
   any point or to a monitor, respectively. This can be used for threading of beam through a transport line.
 \item Added 1d-scan and RCDS \cite{Huang-RCDS} methods to the \verb|optimize| command.
+\item Added the \verb|slope_limit| and \verb|coord_limit| parameters to the \verb|global_settings| command.
+  These allow controlling the limiting values for particle motion, beyond which particles are considered lost.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -2682,6 +2683,9 @@ programs such as TRACY and MAD \cite{BuesingPC}.
     double tracking_matrix_points = 9;
     double tracking_matrix_step_size[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
     long warning_limit = 10;
+    short malign_method = 0;
+    double slope_limit = 1.0;
+    double coord_limit = 10.0;
 &end
 \end{verbatim}
 
@@ -2751,6 +2755,15 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   Set to 0 to see no detailed warnings, only the summary; this is not recommended.
   Set to -1 to see all detailed warnings; this is suggested for debugging only, since it may create large log files
   and reduce performance.
+\item \verb|malign_method| --- Allows globally setting the default misalignment method. Three values are recognized.  A
+  value of \verb|0| indicates the original misalignment method that is entrance-centered and includes three position
+  offsets and roll (\verb|TILT|). A value of \verb|1| indicates the new method \cite{Venturini2021} in entrance-centered
+  mode; this includes the possibility of pitch and yaw errors on elements that support it.  A value of \verb|2|
+  indicates the new method in body-centered mode; this includes the possibility of pitch and yaw errors on elements that
+  support it.
+\item \verb|slope_limit|, \verb|coord_limit| --- By default, \verb|elegant| limits the maximum slopes ($x^\prime$ and
+  $y^\prime$) and coordinates ($x$ and $y$) in order to avoid potential overflows and unreasonable values. These
+  parameters allow users to change those limits.
 \end{itemize}
 
 
