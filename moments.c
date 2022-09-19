@@ -106,6 +106,113 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 
 static double savedFinalMoments[6][6];
 static double savedFinalCentroid[6];
+static SDDS_DATASET SDDSmatrix;
+static short matrixOutputInitialized = 0;
+
+void setUpMomentsMatrixOutput(RUN *run, char *outputFilename) 
+{
+  char buffer[1024], t[1024];
+  long i, j;
+  static char *unit[6] = {"m", "rad", "m", "rad", "m", "1"};
+#if USE_MPI
+  if (myid==0) {
+#endif
+  if (!SDDS_InitializeOutputElegant(&SDDSmatrix, SDDS_BINARY, 0, "transfer and diffusion matrix from moments calculation",
+                                    NULL, outputFilename)) 
+    bombElegant("problem setting up output file for transfer and diffusion matrix", NULL);
+
+    for (i = 0; i < 6; i++) {
+      sprintf(buffer, "&column name=C%ld, symbol=\"C$b%ld$n\", type=double ", i + 1, i + 1);
+      if (SDDS_StringIsBlank(unit[i]))
+        strcpy_ss(t, " &end");
+      else
+        sprintf(t, "units=%s &end", unit[i]);
+      strcat(buffer, t);
+      if (!SDDS_ProcessColumnString(&SDDSmatrix, buffer, 0)) {
+        SDDS_SetError("Problem defining SDDS matrix output Rij columns (setUpMomentsMatrixOutput)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
+      }
+    }
+    for (i = 0; i < 6; i++) {
+      for (j = 0; j < 6; j++) {
+        sprintf(buffer, "&column name=R%ld%ld, symbol=\"R$b%ld%ld$n\", type=double ", i + 1, j + 1, i + 1, j + 1);
+        if (i == j)
+          strcpy_ss(t, " &end");
+        else
+          sprintf(t, "units=%s/%s &end", unit[i], unit[j]);
+        strcat(buffer, t);
+        if (!SDDS_ProcessColumnString(&SDDSmatrix, buffer, 0)) {
+          SDDS_SetError("Problem defining SDDS matrix output Rij columns (setUpMatrixOutput)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
+        }
+      }
+    }
+    for (i=0; i<6; i++) {
+      for (j=0; j<6; j++) {
+        sprintf(buffer, "&column name=D%ld%ld, symbol=\"D$b%ld%ld$n\", type=double ", i + 1, j + 1, i + 1, j + 1);
+        if (i == j)
+          strcpy_ss(t, " &end");
+        else
+          sprintf(t, "units=%s/%s &end", unit[i], unit[j]);
+        strcat(buffer, t);
+        if (!SDDS_ProcessColumnString(&SDDSmatrix, buffer, 0)) {
+          SDDS_SetError("Problem defining SDDS matrix output Dij columns (setUpMatrixOutput)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
+        }
+      }
+    }
+    if (!SDDS_WriteLayout(&SDDSmatrix)) {
+      SDDS_SetError("Problem writing SDDS layout (setUpMatrixOutput)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
+    }
+    matrixOutputInitialized = 1;
+#if USE_MPI
+  }
+#endif
+}
+
+void outputMomentsMatrices(VMATRIX *M, double *D) 
+{
+  long i, j, index;
+#if USE_MPI
+  if (myid==0) {
+#endif
+    if (!SDDS_StartPage(&SDDSmatrix, 1))
+      bombElegant("problem starting page in output file for transfer and diffusion matrix", NULL);
+    index = 0;
+    for (i = 0; i < 6; i++) {
+      if (!SDDS_SetRowValues(&SDDSmatrix, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0,
+                             index++, M->C[i], -1)) {
+        SDDS_SetError("Problem setting SDDS matrix output Ci columns (outputMomentsMatrices)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
+      }
+    }
+    for (i = 0; i < 6; i++) {
+      for (j = 0; j < 6; j++) {
+        if (!SDDS_SetRowValues(&SDDSmatrix, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0,
+                               index++, M->R[i][j], -1)) {
+          SDDS_SetError("Problem setting SDDS matrix output Rij columns (outputMomentsMatrices)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
+        }
+      }
+    }
+    for (i=0; i<6; i++) {
+      for (j=0; j<6; j++) {
+        if (!SDDS_SetRowValues(&SDDSmatrix, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0,
+                               index++, D[sigmaIndex3[i][j]], -1)) {
+          SDDS_SetError("Problem setting SDDS matrix output Sij columns (outputMomentsMatrices)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
+        }
+      }
+    }
+    if (!SDDS_WritePage(&SDDSmatrix)) {
+      SDDS_SetError("Problem writing SDDS matrix output (outputMomentsMatrices)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
+    }
+#if USE_MPI
+  }
+#endif
+}
 
 void dumpBeamMoments(
   LINE_LIST *beamline,
@@ -243,11 +350,13 @@ void setupMomentsOutput(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
 
 #if USE_MPI
   if (!writePermitted)
-    filename = NULL;
+    filename = matrix_output = NULL;
 #endif
 
   if (filename)
     filename = compose_filename(filename, run->rootname);
+  if (matrix_output)
+    matrix_output = compose_filename(matrix_output, run->rootname);
   *doMomentsOutput = output_at_each_step;
   trackingBasedDiffusionMatrixParticles = tracking_based_diffusion_matrix_particles;
 
@@ -274,6 +383,9 @@ void setupMomentsOutput(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   } else
     SDDSMomentsInitialized = 0;
   momentsInitialized = 1;
+  if (matrix_output) 
+    setUpMomentsMatrixOutput(run, matrix_output);
+    
 }
 
 void finishMomentsOutput(void) {
@@ -282,7 +394,13 @@ void finishMomentsOutput(void) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
   }
   SDDSMomentsInitialized = momentsCount = momentsInitialized = 0;
+  if (matrixOutputInitialized && !SDDS_Terminate(&SDDSmatrix)) {
+    SDDS_SetError("Problem terminating SDDS output (finishMomentsOutput)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
+  }
+  matrixOutputInitialized = 0;
 }
+
 
 long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long tune_corrected, long writeToFile) {
   ELEMENT_LIST *eptr, *elast;
@@ -367,6 +485,9 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
       for (j = 0; j < 6; j++)
         printf("%13.6e%c", beamline->elast->accumD[sigmaIndex3[i][j]], j == 5 ? '\n' : ' ');
   }
+
+  if (matrixOutputInitialized)
+    outputMomentsMatrices(beamline->Mld, beamline->elast->accumD);
 
   if (equilibrium) {
     /* Compute equilibrium moments */

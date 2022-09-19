@@ -3003,7 +3003,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext) {
   memcpy(trackingMatrixStepSize, tracking_matrix_step_size, sizeof(*trackingMatrixStepSize) * 6);
   parallelTrackingBasedMatrices = parallel_tracking_based_matrices;
   slopeLimit = slope_limit;
-  coord_limit = coord_limit;
+  coordLimit = coord_limit;
 #if SDDS_MPI_IO
   SDDS_MPI_SetWriteKludgeUsleep(usleep_mpi_io_kludge);
   SDDS_MPI_SetFileSync(mpi_io_force_file_sync);

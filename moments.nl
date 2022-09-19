@@ -7,6 +7,7 @@
 
 #namelist moments_output
     STRING filename = NULL;
+    STRING matrix_output = NULL;
     long output_at_each_step = 0;
     long output_before_tune_correction = 0;
     long final_values_only = 0;
