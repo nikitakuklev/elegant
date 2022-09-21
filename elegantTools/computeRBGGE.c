@@ -80,11 +80,13 @@ typedef struct {
 
 void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment, short skew);
 void freeBGGExpData(BGGEXP_DATA *bggexpData);
-int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
-int computeGGcos(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental);
+int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental,
+                   long varyDerivatives);
+int computeGGcos(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental,
+                   long varyDerivatives);
 double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_ON_PLANES *fieldsOnPlanes, 
                               long multipoles, long derivatives, double significance, double radiusLimit,
-                              unsigned long flags, ALL_RESIDUALS *allResiduals);
+                              unsigned long flags, long varyDerivatives, ALL_RESIDUALS *allResiduals);
 int ReadInputFiles(FIELDS_ON_PLANES *fieldsOnPlanes, 
                    char *topFile, char *bottomFile, char *leftFile, char *rightFile, long needBz);
 void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData);
@@ -104,16 +106,17 @@ void freeFieldsOnPlanes(FIELDS_ON_PLANES *fop);
 #define SET_EVALUATE 10
 #define SET_VERBOSE 11
 #define SET_THREADS 12
-#define N_OPTIONS 13
+#define SET_VARY_DERIVATIVES 13
+#define N_OPTIONS 14
 
 char *option[N_OPTIONS] = {
   "yminus", "yplus", "xminus", "xplus", "normal", "skew", "derivatives", "multipoles", "fundamental",
-  "autotune", "evaluate", "verbose", "threads"
+  "autotune", "evaluate", "verbose", "threads", "varyderivatives"
 };
 
 #define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
              -normal=<output> [-skew=<output>] [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]\n\
-              [-evaluate=<filename>] [-verbose] [-threads=<integer>]\n\
+              [-varyDerivatives] [-evaluate=<filename>] [-verbose] [-threads=<integer>] \n\
               [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>][,minDerivatives=<integer>][,minMultipoles=<integer>]]\n\
 -yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
 -yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
@@ -125,6 +128,10 @@ char *option[N_OPTIONS] = {
 -derivatives Number of derivatives vs z desired in output. Default: 7\n\
 -multipoles  Number of multipoles desired in output. Default: 8\n\
 -fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\
+-varyDerivatives\n\
+             If given, the number of derivatives used varies with multipole order so as to\n\
+             maintain an approximately consistent maximum transverse order.\n\
+             Recommended to try if GGE does not fit data well.\n\
 -evaluate    Evaluate the GGE over the interior region, including the four boundaries.\n\
 -verbose     Print information while running.\n\
 -threads     Specify number of threads to use for computations (default: 1).\n\
@@ -134,7 +141,8 @@ char *option[N_OPTIONS] = {
              error. If 'increaseOnly' is given, the optimization method scans toward increasing values\n\
              of the number of multipoles and derivatives relative to the previous best; this is often much\n\
              faster.\n\n\
-Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Soliday, and Michael Borland."
+Rectangular Boundary Generalized Gradient Expansion by Ryan Lindberg, Robert Soliday, and Michael Borland.\n\
+(" __DATE__ " " __TIME__ ", SVN revision: " SVN_VERSION ")\n"
 
 #define AUTOTUNE_VERBOSE   0x0001UL
 #define AUTOTUNE_RMS       0x0002UL
@@ -169,7 +177,7 @@ int main(int argc, char **argv)
   BGGEXP_DATA bggexpData[2];
   SDDS_DATASET SDDS_autoTuneLog;
   char *autoTuneLogFile = NULL;
-  long iAutoTuneLog=0, verbose=0;
+  long iAutoTuneLog=0, verbose=0, varyDerivatives=0;
   ALL_RESIDUALS allResiduals;
 
 #ifdef DEBUG
@@ -326,6 +334,9 @@ int main(int argc, char **argv)
             case SET_VERBOSE:
               verbose = 1;
               break;
+            case SET_VARY_DERIVATIVES:
+              varyDerivatives = 1;
+              break;
             case SET_THREADS:
               if (scanned[i_arg].n_items != 2 || sscanf(scanned[i_arg].list[1], "%d", &threads) != 1 || threads <= 0)
                 SDDS_Bomb("invalid -threads syntax: give an value greater than 0");
@@ -401,7 +412,7 @@ int main(int argc, char **argv)
       return 1;
     if (verbose)
       report_stats(stdout, "Read input files");
-    if (computeGGderiv(&fieldsOnPlanes, normalOutputFile, maxDerivatives, maxMultipoles, fundamental))
+    if (computeGGderiv(&fieldsOnPlanes, normalOutputFile, maxDerivatives, maxMultipoles, fundamental, varyDerivatives))
       return 1;
     if (verbose)
       report_stats(stdout, "Computed normal GGE");
@@ -410,7 +421,7 @@ int main(int argc, char **argv)
     if (skewOutputFile) {
       /* Have to restore the data because it is modified by computeGGderiv and computeGGcos */
       if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1) ||
-          computeGGcos(&fieldsOnPlanes, skewOutputFile, maxDerivatives, maxMultipoles, fundamental))
+          computeGGcos(&fieldsOnPlanes, skewOutputFile, maxDerivatives, maxMultipoles, fundamental, varyDerivatives))
         return 1;
       readBGGExpData(&bggexpData[1], skewOutputFile, "CnmC", 1);
       if (verbose)
@@ -454,7 +465,7 @@ int main(int argc, char **argv)
           if ((residual = evaluateGGEForFieldMap(&fieldMap, &bggexpData[0], &fieldsOnPlanes,
                                                  multipoles, derivatives,
                                                  autoTuneSignificance, autoTuneRadiusLimit,
-                                                 autoTuneFlags, &allResiduals))<bestResidual) {
+                                                 autoTuneFlags, varyDerivatives, &allResiduals))<bestResidual) {
             bestResidual = residual;
             bestMultipoles = multipoles;
             bestDerivatives = derivatives;
@@ -494,13 +505,13 @@ int main(int argc, char **argv)
       if (verbose)
         report_stats(stdout, "Finished auto tuning");
       if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, skewOutputFile?1:0) || 
-          computeGGderiv(&fieldsOnPlanes, normalOutputFile, bestDerivatives, bestMultipoles, fundamental))
+          computeGGderiv(&fieldsOnPlanes, normalOutputFile, bestDerivatives, bestMultipoles, fundamental, varyDerivatives))
         return 1;
       if (verbose) 
         report_stats(stdout, "Saved best normal GGE result");
       if (skewOutputFile) {
         if (ReadInputFiles(&fieldsOnPlanes, topFile, bottomFile, leftFile, rightFile, 1) ||
-            computeGGcos(&fieldsOnPlanes, skewOutputFile, bestDerivatives, bestMultipoles, fundamental))
+            computeGGcos(&fieldsOnPlanes, skewOutputFile, bestDerivatives, bestMultipoles, fundamental, varyDerivatives))
           return 1;
         if (verbose)
           report_stats(stdout, "Saved best skew GGE result");
@@ -1166,7 +1177,8 @@ int ReadInputFiles
   return (0);
 }
 
- int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental)
+int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, 
+                   long fundamental, long varyDerivatives)
 {
   COMPLEX **ByTop, **ByBottom, **BxRight, **BxLeft;
 
@@ -1430,20 +1442,27 @@ int ReadInputFiles
     }
   for (ir = 0; ir < Ngrad; ir++)
     {
+      long NderivLimited;
+      NderivLimited = Nderiv;
+      if (varyDerivatives) {
+        long m;
+        m = (int32_t)(fundamental?fundamental*(2*ir+1):ir+1);
+        NderivLimited = (derivatives - m/2)*2 - 1;
+      }
       /* Take derivatives */
       for (ik = 0; ik < Nfft; ik++)
         {
           derivGG[0][ik].re = -k[ik] * genGradr_k[ir][ik].im;
           derivGG[0][ik].im = k[ik] * genGradr_k[ir][ik].re;
         }
-      for (n = 1; n < Nderiv; n++)
+      for (n = 1; n < NderivLimited; n++)
         for (ik = 0; ik < Nfft; ik++)
           {
             derivGG[n][ik].re = -k[ik] * derivGG[n - 1][ik].im;
             derivGG[n][ik].im = k[ik] * derivGG[n - 1][ik].re;
           }
       FFT(genGradr_k[ir], 1, Nfft);
-      for (n = 0; n < Nderiv; n++)
+      for (n = 0; n < NderivLimited; n++)
         FFT(derivGG[n], 1, Nfft);
       if (SDDS_StartPage(&SDDSOutput, Nz) != 1)
         {
@@ -1475,8 +1494,8 @@ int ReadInputFiles
             {
               sprintf(name, "CnmS%" PRId32, n);
                if (SDDS_SetRowValues(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, ik,
-                                    name, derivGG[n-1][ik].re * invNfft,
-                                    NULL) != 1)
+                                     name, n>=NderivLimited?0.0:derivGG[n-1][ik].re * invNfft,
+                                     NULL) != 1)
                 {
                   SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                   return (1);
@@ -1486,8 +1505,8 @@ int ReadInputFiles
             {
               sprintf(name, "dCnmS%" PRId32 "/dz", n);
                if (SDDS_SetRowValues(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, ik,
-                                    name, derivGG[n][ik].re * invNfft,
-                                    NULL) != 1)
+                                     name, n>=NderivLimited?0.0:derivGG[n][ik].re * invNfft,
+                                     NULL) != 1)
                 {
                   SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                   return (1);
@@ -1515,7 +1534,8 @@ int computeGGcos
  char *outputFile, 
  long derivatives, 
  long multipoles,
- long fundamental
+ long fundamental,
+ long varyDerivatives
 )
 {
   COMPLEX **ByTop, **ByBottom, **BxRight, **BxLeft;
@@ -1891,6 +1911,13 @@ int computeGGcos
     }
   for (ir = 0; ir < Ngrad; ir++)
     {
+      long NderivLimited;
+      NderivLimited = Nderiv;
+      if (varyDerivatives) {
+        long m;
+        m = (int32_t)(fundamental?fundamental*(2*ir+1):ir+1);
+        NderivLimited = (derivatives - m/2)*2 - 1;
+      }
       /* Take derivatives */
       if (ir == 0)
         for (ik = 0; ik < Nfft; ik++)
@@ -1906,14 +1933,14 @@ int computeGGcos
             derivGG[0][ik].re = -k[ik] * genGradr_k[ir][ik].im;
             derivGG[0][ik].im = k[ik] * genGradr_k[ir][ik].re;
           }
-      for (n = 1; n < Nderiv; n++)
+      for (n = 1; n < NderivLimited; n++)
         for (ik = 0; ik < Nfft; ik++)
           {
             derivGG[n][ik].re = -k[ik] * derivGG[n - 1][ik].im;
             derivGG[n][ik].im = k[ik] * derivGG[n - 1][ik].re;
           }
       FFT(genGradr_k[ir], 1, Nfft);
-      for (n = 0; n < Nderiv; n++)
+      for (n = 0; n < NderivLimited; n++)
         FFT(derivGG[n], 1, Nfft);
 
       if (SDDS_StartPage(&SDDSOutput, Nz) != 1)
@@ -1960,18 +1987,18 @@ int computeGGcos
             {
               sprintf(name, "CnmC%" PRId32, n);
               if (SDDS_SetRowValues(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, ik,
-                                    name, derivGG[n-1][ik].re * invNfft,
+                                    name, n>=NderivLimited?0.0:derivGG[n-1][ik].re * invNfft,
                                     NULL) != 1)
                 {
                   SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                   return (1);
                 }
             }
-          for (n = 0; n < Nderiv; n+=2)
+          for (n = 0; n < NderivLimited; n+=2)
             {
               sprintf(name, "dCnmC%" PRId32 "/dz", n);
               if (SDDS_SetRowValues(&SDDSOutput, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, ik,
-                                    name, derivGG[n][ik].re * invNfft,
+                                    name, n>=NderivLimited?0.0:derivGG[n][ik].re * invNfft,
                                     NULL) != 1)
                 {
                   SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -2965,7 +2992,7 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
 
 double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_ON_PLANES *fieldsOnPlanes, 
                               long multipoles, long derivatives, double significance, double radiusLimit,
-                              unsigned long flags, ALL_RESIDUALS *allResiduals)
+                              unsigned long flags, long varyDerivatives, ALL_RESIDUALS *allResiduals)
 {
   double *residualSum, *residualSum2, *residualWorst, *maxField;
   long *residualCount, i;
@@ -3038,13 +3065,17 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
           
           for (im=0; im<bggexpData[ns].nm && im<multipoles; im++) {
             double mfact, term, sin_mphi, cos_mphi;
+            long ndLimit;
             m = bggexpData[ns].m[im];
             mfact = dfactorial(m);
             sin_mphi = sin(m*phi);
             cos_mphi = cos(m*phi);
+            ndLimit = MIN(bggexpData[ns].nGradients, derivatives);
+            if (varyDerivatives)
+              ndLimit -= m/2;
             if (ns==0) {
               /* normal */
-              for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
+              for (ig=0; ig<ndLimit;  ig++) {
                 term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
                 B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
                 term *= bggexpData[ns].Cmn[im][ig][iz];
@@ -3055,13 +3086,13 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
               /* skew */
               if (m==0) {
                 B[2] += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
-                for (ig=1; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
+                for (ig=1; ig<ndLimit;  ig++) {
                   term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
                   B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
                   Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
                 }
               } else {
-                for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
+                for (ig=0; ig<ndLimit;  ig++) {
                   term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
                   B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
                   term *= bggexpData[ns].Cmn[im][ig][iz];
@@ -3184,13 +3215,15 @@ int evaluateGGEAndOutput(char *outputFile, char *normalFile, char *skewFile, FIE
           
           for (im=0; im<bggexpData[ns].nm; im++) {
             double mfact, term, sin_mphi, cos_mphi;
+            long ndLimit;
             m = bggexpData[ns].m[im];
             mfact = dfactorial(m);
             sin_mphi = sin(m*phi);
             cos_mphi = cos(m*phi);
+            ndLimit = bggexpData[ns].nGradients;
             if (ns==0) {
               /* normal */
-              for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
+              for (ig=0; ig<ndLimit; ig++) {
                 term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
                 B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
                 term *= bggexpData[ns].Cmn[im][ig][iz];
@@ -3201,13 +3234,13 @@ int evaluateGGEAndOutput(char *outputFile, char *normalFile, char *skewFile, FIE
               /* skew */
               if (m==0) {
                 B[2] += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
-                for (ig=1; ig<bggexpData[ns].nGradients; ig++) {
+                for (ig=1; ig<ndLimit; ig++) {
                   term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
                   B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
                   Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
                 }
               } else {
-                for (ig=0; ig<bggexpData[ns].nGradients; ig++) {
+                for (ig=0; ig<ndLimit; ig++) {
                   term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
                   B[2] += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
                   term *= bggexpData[ns].Cmn[im][ig][iz];

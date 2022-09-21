@@ -63,11 +63,12 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
 void freeBGGExpData(BGGEXP_DATA *bggexpData);
 double evaluateGGEFit(FIELDS_ON_BOUNDARY *fob, BGGEXP_DATA *bggexpData,
                       long derivatives, long multipoles, double significance, unsigned long flags,
-                      ALL_RESIDUALS *allResiduals);
+                      long varyDerivatives, ALL_RESIDUALS *allResiduals);
 void readFieldMap(char *fieldMapFile, FIELD_MAP *fmData);
-int evaluateGGEAndOutput(char *outputFile, long nrho, long nphi, char *normalFile, char *skewFile, FIELDS_ON_BOUNDARY *fob);
+int evaluateGGEAndOutput(char *outputFile, long nrho, long nphi, char *normalFile, char *skewFile, 
+                         FIELDS_ON_BOUNDARY *fob);
 int computeGGE(FIELDS_ON_BOUNDARY *fieldsOnBoundary, char *normalOutput, char *skewOutput, 
-               long derivatives, long multipoles, long fundamental);
+               long derivatives, long multipoles, long fundamental, long varyDerivatives);
 
 #define SET_INPUTFILE 0
 #define SET_NORMAL 1
@@ -78,16 +79,18 @@ int computeGGE(FIELDS_ON_BOUNDARY *fieldsOnBoundary, char *normalOutput, char *s
 #define SET_AUTO_TUNE 6
 #define SET_EVALUATE 7
 #define SET_THREADS 8
-#define N_OPTIONS 9
+#define SET_VARY_DERIVATIVES 9
+#define N_OPTIONS 10
 
 char *option[N_OPTIONS] = {
   "input", "normal", "skew", "derivatives", "multipoles", "fundamental", "autotune", "evaluate", "threads",
+  "varyderivatives"
 };
 
 #define USAGE "computeCBGGE -input=<filename>[,z=<columnName>][,phi=<columnName>][,Brho=<columnName>][,rho=<parameterName>][,Bz=<columnName>]\n\
               -normal=<output> [-skew=<output>] [-threads=<integer>]\n\
               [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]\n\
-              [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]\n\
+              [-varyDerivatives] [-evaluate=<filename>[,nrho=<integer>][,nphi=<integer>]\n \
               [-autotune=[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,increaseOnly][,verbose][,log=<filename>]]\n\
 -input       Single-page file giving (z, phi, Brho) on circular cylinder of radius rho.\n\
              If solenoidal fields are desired, file can also include Bz, but column must be named with Bz qualifier.\n\
@@ -98,6 +101,10 @@ char *option[N_OPTIONS] = {
 -derivatives Number of derivatives vs z desired in output. Default: 7\n\
 -multipoles  Number of multipoles desired in output. Default: 8\n\
 -fundamental Fundamental multipole of sequence. 0=none (default), 1=dipole, 2=quadrupole, etc.\n\
+-varyDerivatives\n\
+             If given, the number of derivatives used varies with multipole order so as to\n\
+             maintain an approximately consistent maximum transverse order.\n\
+             Recommended to try if GGE does not fit data well.\n\
 -evaluate    Evaluate the GGE over the interior region, including the boundary, using the specified\n\
              number of radial and angular samples. Defaults to the nrho=1 and same angles as in input.\n\
 -autotune    Seeks to minimize the number of multipoles and derivatives to avoid using terms\n\
@@ -138,7 +145,7 @@ int main(int argc, char **argv)
   BGGEXP_DATA bggexpData[2];
   SDDS_DATASET SDDS_autoTuneLog;
   char *autoTuneLogFile = NULL;
-  long iAutoTuneLog=0;
+  long iAutoTuneLog=0, varyDerivatives=0;
   ALL_RESIDUALS allResiduals;
   long minMultipoles;
 
@@ -270,6 +277,9 @@ int main(int argc, char **argv)
         if (scanned[i_arg].n_items != 2 || sscanf(scanned[i_arg].list[1], "%d", &threads) != 1 || threads <= 0)
           SDDS_Bomb("invalid -threads syntax: give an value greater than 0");
         break;
+      case SET_VARY_DERIVATIVES:
+        varyDerivatives = 1;
+        break;
       default:
         fprintf(stderr, "unknown option given\n%s\n", USAGE);
         return (1);
@@ -322,7 +332,7 @@ int main(int argc, char **argv)
   if (ReadInputFile(&fieldsOnBoundary, inputFile, zName, phiName, BrhoName, BzName, rhoName))
     SDDS_Bomb("unable to read input file");
 
-  if (computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, maxDerivatives, maxMultipoles, fundamental)) 
+  if (computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, maxDerivatives, maxMultipoles, fundamental, varyDerivatives)) 
     return 1;
 
   bggexpData[0].haveData = bggexpData[1].haveData = 0;
@@ -354,7 +364,7 @@ int main(int argc, char **argv)
         double residual;
         if ((residual = evaluateGGEFit(&fieldsOnBoundary, &bggexpData[0], 
                                        derivatives, multipoles,
-                                       autoTuneSignificance, autoTuneFlags, &allResiduals))<bestResidual) {
+                                       autoTuneSignificance, autoTuneFlags, varyDerivatives, &allResiduals))<bestResidual) {
           bestResidual = residual;
           bestMultipoles = multipoles;
           bestDerivatives = derivatives;
@@ -391,7 +401,7 @@ int main(int argc, char **argv)
   freeBGGExpData(&bggexpData[1]);
 
   if (autoTuneFlags&AUTOTUNE_ACTIVE && !(autoTuneFlags&AUTOTUNE_EVALONLY) && 
-      computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, bestDerivatives, bestMultipoles, fundamental))
+      computeGGE(&fieldsOnBoundary, normalOutputFile, skewOutputFile, bestDerivatives, bestMultipoles, fundamental, varyDerivatives))
     return 1;
   
   if (autoTuneFlags&AUTOTUNE_LOG) {
@@ -568,7 +578,8 @@ int computeGGE
  char *skewOutput, 
  long derivatives, 
  long multipoles, 
- long fundamental
+ long fundamental,
+ long varyDerivatives
 )
 {
   COMPLEX **Brho, *Bz, **Bm, *c1;
@@ -696,6 +707,10 @@ int computeGGE
 #endif
 
     if (m>=0) {
+      long nLimit;
+      nLimit = 2*derivatives;
+      if (varyDerivatives)
+        nLimit = 2*(derivatives-m/2);
       for (n = 0; n < 2*derivatives; n+=2)  {
         for (ik=0; ik<Nz; ik++) {
           double factor;
@@ -707,14 +722,14 @@ int computeGGE
         for (iz=0; iz<Nz; iz++) {
           if (normalOutput && 
               !SDDS_SetRowValues(&SDDSnormal, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
-                                 offsetN, c1[iz].re,
+                                 offsetN, n>nLimit?0.0:c1[iz].re,
                                  -1)) {
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             return (1);
           }
           if (skewOutput && 
               !SDDS_SetRowValues(&SDDSskew, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
-                                 offsetS, c1[iz].im,
+                                 offsetS, n>nLimit?0.0:c1[iz].im,
                                  -1)) {
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             return (1);
@@ -744,14 +759,14 @@ int computeGGE
         for (iz=0; iz<Nz; iz++) {
           if (normalOutput &&
               !SDDS_SetRowValues(&SDDSnormal, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
-                                 offsetN, c1[iz].re,
+                                 offsetN, n>nLimit?0.0:c1[iz].re,
                                  -1)) {
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             return (1);
           }
           if (skewOutput &&
               !SDDS_SetRowValues(&SDDSskew, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
-                                 offsetS, c1[iz].im,
+                                 offsetS, n>nLimit?0.0:c1[iz].im,
                                  -1)) {
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             return (1);
@@ -1044,6 +1059,7 @@ double evaluateGGEFit
  long multipoles,
  double significance, 
  unsigned long flags,
+ long varyDerivatives,
  ALL_RESIDUALS *allResiduals
  )
 {
@@ -1083,13 +1099,17 @@ double evaluateGGEFit
           
           for (im=0; im<bggexpData[ns].nm && im<multipoles; im++) {
             double mfact, term, sin_mphi, cos_mphi;
+            long ndLimit;
             m = bggexpData[ns].m[im];
+            ndLimit = MIN(bggexpData[ns].nGradients, derivatives);
+            if (varyDerivatives)
+              ndLimit -= m/2;
             mfact = dfactorial(m);
             sin_mphi = sin(m*phi);
             cos_mphi = cos(m*phi);
             if (ns==0) {
               /* normal */
-              for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
+              for (ig=0; ig<ndLimit; ig++) {
                 term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
                 Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*sin_mphi;
                 term *= bggexpData[ns].Cmn[im][ig][iz];
@@ -1100,13 +1120,13 @@ double evaluateGGEFit
               /* skew */
               if (m==0) {
                 Bz += bggexpData[ns].dCmn_dz[im][0][iz];  // on-axis Bz from m=ig=0 term
-                for (ig=1; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
+                for (ig=1; ig<ndLimit; ig++) {
                   term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
                   Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r;
                   Br   += term*(2*ig+m)*bggexpData[ns].Cmn[im][ig][iz];
                 }
               } else {
-                for (ig=0; ig<bggexpData[ns].nGradients && ig<derivatives; ig++) {
+                for (ig=0; ig<ndLimit; ig++) {
                   term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
                   Bz += term*bggexpData[ns].dCmn_dz[im][ig][iz]*r*cos_mphi;
                   term *= bggexpData[ns].Cmn[im][ig][iz];
