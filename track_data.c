@@ -2110,7 +2110,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
   {"RS", "Ohm", IS_DOUBLE, 0, (long)((char *)&rfmode_example.Rs), NULL, 0.0, 0, "shunt impedance (Rs=Ra/2)"},
   {"Q", "", IS_DOUBLE, 0, (long)((char *)&rfmode_example.Q), NULL, 0.0, 1, "cavity Q"},
   {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&rfmode_example.freq), NULL, 0.0, 0, "Resonant frequency of the cavity mode"},
-  {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&rfmode_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
+  {"CHARGE", "C", IS_DOUBLE, PARAM_IS_DEPRECATED, (long)((char *)&rfmode_example.charge), NULL, 0.0, 0, "Deprecated---use CHARGE element)"},
   {"INITIAL_V", "V", IS_DOUBLE, 0, (long)((char *)&rfmode_example.initial_V), NULL, 0.0, 0, "initial beam-loading voltage"},
   {"INITIAL_PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&rfmode_example.initial_phase), NULL, 0.0, 0, "initial beam-loading phase"},
   {"INITIAL_T", "S", IS_DOUBLE, 0, (long)((char *)&rfmode_example.initial_t), NULL, 0.0, 0, "time at which INITIAL_V and INITIAL_PHASE held"},
@@ -2191,7 +2191,7 @@ PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
   {"RS", "Ohm/m", IS_DOUBLE, 0, (long)((char *)&trfmode_example.Rs), NULL, 0.0, 0, "shunt impedance (Rs=Ra/2)"},
   {"Q", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.Q), NULL, 0.0, 1, "cavity Q"},
   {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&trfmode_example.freq), NULL, 0.0, 0, "frequency"},
-  {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&trfmode_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
+  {"CHARGE", "C", IS_DOUBLE, PARAM_IS_DEPRECATED, (long)((char *)&trfmode_example.charge), NULL, 0.0, 0, "Deprecated---use CHARGE element"},
   {"BETA", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.beta), NULL, 0.0, 0, "normalized load impedance"},
   {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&trfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
   {"N_BINS", "", IS_LONG, 0, (long)((char *)&trfmode_example.n_bins), NULL, 0.0, 20, "number of bins for current histogram"},
@@ -2239,7 +2239,7 @@ PARAMETER ftrfmode_param[N_FTRFMODE_PARAMS] = {
 ZLONGIT zlongit_example;
 /* ZLONGIT physical parameters */
 PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
-  {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&zlongit_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
+  {"CHARGE", "C", IS_DOUBLE, PARAM_IS_DEPRECATED, (long)((char *)&zlongit_example.charge), NULL, 0.0, 0, "Deprecated---use CHARGE element"},
   {"BROAD_BAND", "", IS_LONG, 0, (long)((char *)&zlongit_example.broad_band), NULL, 0.0, 0, "broad-band impedance?"},
   {"RA", "Ohm", IS_DOUBLE, 0, (long)((char *)&zlongit_example.Ra), NULL, 0.0, 0, "shunt impedance, Ra=V^2/P"},
   {"RS", "Ohm", IS_DOUBLE, 0, (long)((char *)&zlongit_example.Rs), NULL, 0.0, 0, "shunt impedance (Rs=Ra/2)"},
@@ -2321,7 +2321,7 @@ PARAMETER bmapxy_param[N_BMAPXY_PARAMS] = {
 
 ZTRANSVERSE ztransverse_example;
 PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
-  {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
+  {"CHARGE", "C", IS_DOUBLE, PARAM_IS_DEPRECATED, (long)((char *)&ztransverse_example.charge), NULL, 0.0, 0, "Deprecated---use CHARGE element"},
   {"BROAD_BAND", "", IS_LONG, 0, (long)((char *)&ztransverse_example.broad_band), NULL, 0.0, 0, "broad-band impedance?"},
   {"RS", "Ohm/m", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.Rs), NULL, 0.0, 0, "shunt impedance (Rs=Ra/2=V^2/(2*P))"},
   {"Q", "", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.Q), NULL, 0.0, 1, "cavity Q"},
@@ -2383,7 +2383,7 @@ PARAMETER wake_param[N_WAKE_PARAMS] = {
   {"INPUTFILE", "", IS_STRING, 0, (long)((char *)&wake_example.inputFile), NULL, 0.0, 0, "name of file giving Green function"},
   {"TCOLUMN", "", IS_STRING, 0, (long)((char *)&wake_example.tColumn), NULL, 0.0, 0, "column in INPUTFILE containing time data"},
   {"WCOLUMN", "", IS_STRING, 0, (long)((char *)&wake_example.WColumn), NULL, 0.0, 0, "column in INPUTFILE containing Green function"},
-  {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&wake_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
+  {"CHARGE", "C", IS_DOUBLE, PARAM_IS_DEPRECATED, (long)((char *)&wake_example.charge), NULL, 0.0, 0, "Deprecated---use CHARGE element"},
   {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&wake_example.factor), NULL, 1.0, 0, "factor by which to multiply wake"},
   {"N_BINS", "", IS_LONG, 0, (long)((char *)&wake_example.n_bins), NULL, 0.0, 0, "number of bins for current histogram"},
   {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&wake_example.interpolate), NULL, 0.0, 0, "interpolate wake?"},
@@ -2444,7 +2444,7 @@ PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
   {"TCOLUMN", "", IS_STRING, 0, (long)((char *)&trwake_example.tColumn), NULL, 0.0, 0, "column in INPUTFILE containing time data"},
   {"WXCOLUMN", "", IS_STRING, 0, (long)((char *)&trwake_example.WxColumn), NULL, 0.0, 0, "column in INPUTFILE containing x Green function"},
   {"WYCOLUMN", "", IS_STRING, 0, (long)((char *)&trwake_example.WyColumn), NULL, 0.0, 0, "column in INPUTFILE containing y Green function"},
-  {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&trwake_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
+  {"CHARGE", "C", IS_DOUBLE, PARAM_IS_DEPRECATED, (long)((char *)&trwake_example.charge), NULL, 0.0, 0, "Deprecated---use CHARGE element"},
   {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&trwake_example.factor), NULL, 1.0, 0, "factor by which to multiply both wakes"},
   {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&trwake_example.xfactor), NULL, 1.0, 0, "factor by which to multiply x wake"},
   {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&trwake_example.yfactor), NULL, 1.0, 0, "factor by which to multiply y wake"},

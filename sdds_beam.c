@@ -709,13 +709,13 @@ long new_sdds_beam(
 
   if (beam->id_slots_per_bunch) {
     char buffer[10];
-#if DEBUG
+    #if DEBUG
     char *ptr;
     long maxID = -LONG_MAX, minID = LONG_MAX;
     long maxBunch = -LONG_MAX, minBunch = LONG_MAX;
-    printf("Assigning bunch IDs to particles (%ld PIDs per slot)\n", beam->id_slots_per_bunch);
+    #endif
+    printf("Assigning bunch IDs to particles (%ld PIDs per slot)\n", (long)beam->id_slots_per_bunch);
     fflush(stdout);
-#endif
 #if !USE_MPI
     htab *hashTable;
     hashTable = hcreate(12);
@@ -723,13 +723,13 @@ long new_sdds_beam(
     for (i = 0; i < beam->n_particle; i++) {
       beam->particle[i][bunchIndex] = (beam->particle[i][particleIDIndex] - 1) / beam->id_slots_per_bunch;
 #if DEBUG
-      if (beam->particle[i][particleIDIndex] > maxID)
+      if (((long)beam->particle[i][particleIDIndex]) > maxID)
         maxID = beam->particle[i][particleIDIndex];
-      if (beam->particle[i][particleIDIndex] < minID)
+      if (((long)beam->particle[i][particleIDIndex]) < minID)
         minID = beam->particle[i][particleIDIndex];
-      if (beam->particle[i][bunchIndex] > maxBunch)
+      if (((long)beam->particle[i][bunchIndex]) > maxBunch)
         maxBunch = beam->particle[i][bunchIndex];
-      if (beam->particle[i][bunchIndex] < minBunch)
+      if (((long)beam->particle[i][bunchIndex]) < minBunch)
         minBunch = beam->particle[i][bunchIndex];
 #endif
 #if !USE_MPI
@@ -741,8 +741,7 @@ long new_sdds_beam(
     printf("%d bunches present\n", (int)hcount(hashTable));
 #endif
 #if DEBUG
-    printf("id:[%ld, %ld], b:[%ld, %ld]\n", (long)hcount(hashTable), minID, maxID,
-           minBunch, maxBunch);
+    printf("id:[%ld, %ld], b:[%ld, %ld]\n", minID, maxID, minBunch, maxBunch);
     hfirst(hashTable);
     while (ptr = (char *)hkey(hashTable)) {
       printf("%s\n", ptr);
