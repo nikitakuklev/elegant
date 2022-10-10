@@ -945,7 +945,7 @@ long do_tracking(
 #endif
         accumulate_beam_sums(*sums_vs_z + i_sums, coord, nToTrack, *P_central,
                              charge ? charge->macroParticleCharge : 0.0,
-                             NULL, 0.0, 0.0, 0, 0, 0);
+                             NULL, 0.0, 0.0, -1, -1, 0);
         (*sums_vs_z)[i_sums].z = z;
         /*
         if (run->backtrack && i_sums==0)
@@ -2780,7 +2780,7 @@ long do_tracking(
 #endif
           accumulate_beam_sums(*sums_vs_z + i_sums, coord, nToTrack, *P_central,
                                charge ? charge->macroParticleCharge : 0.0,
-                               NULL, 0.0, 0.0, 0, 0, 0);
+                               NULL, 0.0, 0.0, -1, -1, 0);
 #ifdef DEBUG_BEAM_SUMS
           printMessageAndTime(stdout, "Done accumulating beam sums\n");
 #endif
@@ -2873,7 +2873,7 @@ long do_tracking(
 #endif
       accumulate_beam_sums(*sums_vs_z + i_sums, coord, nToTrack, *P_central,
                            charge ? charge->macroParticleCharge : 0.0,
-                           NULL, 0.0, 0.0, 0, 0, 0);
+                           NULL, 0.0, 0.0, -1, -1, 0);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
       printMessageAndTime(stdout, "Done accumulating beam sums\n");
@@ -3045,7 +3045,7 @@ long do_tracking(
 #endif
       accumulate_beam_sums(*sums_vs_z + i_sums, coord, nToTrack, *P_central,
                            charge ? charge->macroParticleCharge : 0.0,
-                           NULL, 0.0, 0.0, 0, 0, 0);
+                           NULL, 0.0, 0.0, -1, -1, 0);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
       printMessageAndTime(stdout, "Done accumulating beam sums\n");
@@ -3064,7 +3064,7 @@ long do_tracking(
 #endif
       accumulate_beam_sums(*sums_vs_z + i_sums, coord, nToTrack, *P_central,
                            charge ? charge->macroParticleCharge : 0.0,
-                           NULL, 0.0, 0.0, 0, 0, 0);
+                           NULL, 0.0, 0.0, -1, -1, 0);
 #if defined(BEAM_SUMS_DEBUG)
       printMessageAndTime(stdout, "Done accumulating beam sums\n");
       printf("beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n",
@@ -3836,7 +3836,7 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
 
   sums = allocateBeamSums(0, 1);
   zero_beam_sums(sums, 1);
-  accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
+  accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, -1, -1, 0);
 #if USE_MPI
   if (parallelStatus == trueParallel && partOnMaster && notSinglePart)
     MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
@@ -3956,7 +3956,7 @@ void storeBPMReading(ELEMENT_LIST *eptr, double **coord, long np, double Po) {
 
   sums = allocateBeamSums(0, 1);
   zero_beam_sums(sums, 1);
-  accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
+  accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, -1, -1, 0);
   /*
 #if USE_MPI
   if (parallelStatus==trueParallel && partOnMaster && notSinglePart)
@@ -5178,7 +5178,7 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
 
   sums = allocateBeamSums(0, 1);
   zero_beam_sums(sums, 1);
-  accumulate_beam_sums(sums, coord, np, pCentral, 0, NULL, 0.0, 0.0, 0, 0, 0);
+  accumulate_beam_sums(sums, coord, np, pCentral, 0, NULL, 0.0, 0.0, -1, -1, 0);
   pAverage = pCentral * (1 + sums->centroid[5]);
 
   for (i = 0; i < 2; i++) {

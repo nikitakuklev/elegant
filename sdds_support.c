@@ -1056,7 +1056,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 
   /* time centroid and sigma */
   for (i = npCount = p_sum = gamma_sum = sum = error_sum = 0; i < particles; i++) {
-    if (watch->startPID == watch->endPID || (particle[i][6] >= watch->startPID && particle[i][6] <= watch->endPID)) {
+    if ((watch->startPID<0 && watch->endPID<0) || (particle[i][6] >= watch->startPID && particle[i][6] <= watch->endPID)) {
       p = Po * (1 + particle[i][5]);
       p_sum += p;
       gamma_sum += sqrt(sqr(p) + 1);
@@ -1390,7 +1390,8 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
     }
   }
   for (ipart = 0; ipart < particles; ipart++) {
-    if (histogram->startPID >= histogram->endPID || (particle[ipart][6] >= histogram->startPID && particle[ipart][6] <= histogram->endPID)) {
+    if ((histogram->startPID<0 && histogram->endPID<0) || 
+        (particle[ipart][6] >= histogram->startPID && particle[ipart][6] <= histogram->endPID)) {
       chosen[ipart] = 1;
       nChosen++;
     } else

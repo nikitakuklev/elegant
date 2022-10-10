@@ -344,7 +344,7 @@ void accumulate_beam_sums(
 
   if (n_part) {
     for (i_part = npCount = 0; i_part < n_part; i_part++) {
-      if ((startPID >= endPID || (coord[i_part][6] >= startPID && coord[i_part][6] <= endPID)) &&
+      if (((startPID<0 && endPID<0) || (coord[i_part][6] >= startPID && coord[i_part][6] <= endPID)) &&
           (tMin >= tMax || (timeCoord[i_part] >= tMin && timeCoord[i_part] <= tMax))) {
         chosen[i_part] = 1;
         npCount++;
@@ -596,7 +596,7 @@ void accumulate_beam_sums1(
   if (!sums->n_part)
     sums->p0 = p_central;
   for (i_part = npCount = 0; i_part < n_part; i_part++) {
-    if ((startPID >= endPID || (coord[i_part][6] >= startPID && coord[i_part][6] <= endPID)) &&
+    if (((startPID<0 && endPID<0) || (coord[i_part][6] >= startPID && coord[i_part][6] <= endPID)) &&
         (tMin >= tMax || (timeCoord[i_part] >= tMin && timeCoord[i_part] <= tMax))) {
       chosen[i_part] = 1;
       npCount++;
