@@ -1963,20 +1963,42 @@ void bmapxyz_coord_transform(double *q, double *coord, void *field, long which_e
 
 void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
   SDDS_DATASET SDDSin;
-  long nx, ny, imap;
+  long i, nx, ny, imap;
   BMAPXYZ_DATA *data;
+  short symmetryCode[3];
+  static char *symmetryType[3] = {"none", "even", "odd"};
+
+  for (i=0; i<3; i++) { /* x, y, z */
+    if (!bmapxyz->magnetSymmetry[i] || !strlen(bmapxyz->magnetSymmetry[i])) {
+      symmetryCode[i] = 0;
+    } else {
+      if ((symmetryCode[i] = match_string(bmapxyz->magnetSymmetry[i], symmetryType, 3, 0))<0) {
+        fprintf(stderr, "Error: unknown %c symmetry for BMXYZ: %s\n",
+                i==0?'x':(i==1?'y':'z'), bmapxyz->magnetSymmetry[i]);
+        exit(1);
+      }
+    }
+  }
 
   for (imap = 0; imap < nStoredBmapxyzData; imap++) {
     if (strcmp(bmapxyz->filename, storedBmapxyzData[imap].filename) == 0)
       break;
   }
   if (imap < nStoredBmapxyzData) {
+    for (i=0; i<3; i++) { /* x, y, z */
+      if (symmetryCode[i]!=storedBmapxyzData[imap].data->magnetSymmetry[i]) {
+        fprintf(stderr, "Error: symmetry code inconsistent for two BMXYZ elements using data from file %s\n",
+                bmapxyz->filename);
+        exit(1);
+      }
+    }
     bmapxyz->data = storedBmapxyzData[imap].data;
     bmapxyz->fieldLength = storedBmapxyzData[imap].fieldLength;
     bmapxyz->singlePrecision = storedBmapxyzData[imap].singlePrecision;
     return;
   }
 
+  
   /*
   if (!fexists(bmapxyz->filename)) {
     printf("file %s not found for BMAPXYZ element\n", bmapxyz->filename);
@@ -1985,10 +2007,15 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
   }
   */
 
+  
   storedBmapxyzData = SDDS_Realloc(storedBmapxyzData, sizeof(*storedBmapxyzData) * (nStoredBmapxyzData + 1));
   bmapxyz->data = data = storedBmapxyzData[imap].data = (BMAPXYZ_DATA *)tmalloc(sizeof(*data));
   nStoredBmapxyzData++;
   cp_str(&(storedBmapxyzData[imap].filename), bmapxyz->filename);
+
+  for (i=0; i<3; i++) { /* x, y, z */
+    storedBmapxyzData[imap].data->magnetSymmetry[i] = symmetryCode[i];
+  }
 
   printf("Reading BMXYZ field data from file %s\n", bmapxyz->filename);
   if (!bmapxyz->singlePrecision) {
@@ -2232,6 +2259,8 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     }
   } else {
     bmapxyz->fieldLength = data->zmax - data->zmin;
+    if (symmetryCode[2])
+      bmapxyz->fieldLength *= 2;
     printf("Set LFIELD for %s to %21.15e\n", bmapxyz->filename, bmapxyz->fieldLength);
   }
   storedBmapxyzData[imap].fieldLength = bmapxyz->fieldLength;
@@ -2364,6 +2393,44 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
   double fx, fy, fz;
   double Finterp1[2][2], Finterp2[2];
   double Freturn[3];
+  double symmetryFactor[3] = {1, 1, 1}; /* Bx, By, Bz */
+
+  if (bmapxyz->data->magnetSymmetry[0] && x<0) {
+    /* x */
+    x = fabs(x);
+    if (bmapxyz->data->magnetSymmetry[0]==2) {
+      /* odd symmetry */
+      symmetryFactor[1] *= -1;
+      symmetryFactor[2] *= -1;
+    } else {
+      symmetryFactor[0] *= -1;
+    }
+  }
+  if (bmapxyz->data->magnetSymmetry[1] && y<0) {
+    /* y */
+    y = fabs(y);
+    if (bmapxyz->data->magnetSymmetry[1]==2) {
+      /* odd symmetry */
+      symmetryFactor[0] *= -1;
+      symmetryFactor[2] *= -1;
+    } else {
+      symmetryFactor[1] *= -1;
+    }
+  }
+  if (bmapxyz->data->magnetSymmetry[2]) {
+    /* z */
+    if (z<bmapxyz->fieldLength/2) {
+      z = fabs(z-bmapxyz->fieldLength/2);
+      if (bmapxyz->data->magnetSymmetry[2]==2) {
+        /* odd symmetry */
+        symmetryFactor[0] *= -1;
+        symmetryFactor[1] *= -1;
+      } else {
+        symmetryFactor[2] *= -1;
+      }
+    } else
+      z -= bmapxyz->fieldLength/2;
+  }
 
   ix = (x - bmapxyz->data->xmin) / bmapxyz->data->dx;
   iy = (y - bmapxyz->data->ymin) / bmapxyz->data->dy;
@@ -2514,6 +2581,11 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
             *F1, *F2,*F0, bmapxyz->strength);
     */
   }
+
+  /* note that array order is (x, y, z) while (F1=Bx, F2=By, F0=Bz) */
+  *F1 *= symmetryFactor[0];
+  *F2 *= symmetryFactor[1];
+  *F0 *= symmetryFactor[2];
 
   return 1;
 }
