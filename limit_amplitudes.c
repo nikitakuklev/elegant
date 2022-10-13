@@ -1431,120 +1431,178 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
 
 long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
                            double Po, ELEMENT_LIST *eptr) {
-  long ip, i_top;
+  long ip, i_top, ic;
   double z0, z1, zLost;
   short lost0, lost1, lost2;
   int lossCode;
-  double *x, *y;
 
   if (!apcontour->initialized) {
     SDDS_DATASET SDDSin;
+    long readCode;
     SDDSin.parallel_io = 0;
     if (apcontour->x)
       free(apcontour->x);
     if (apcontour->y)
       free(apcontour->y);
     apcontour->x = apcontour->y = NULL;
-    apcontour->nPoints = 0;
+    apcontour->nPoints = NULL;
+    apcontour->nContours = 0;
     if (!apcontour->filename || !strlen(apcontour->filename))
       bombElegantVA("Error: No filename given for APCONTOUR\n", apcontour->filename);
     if (!apcontour->xColumn || !strlen(apcontour->xColumn))
       bombElegantVA("Error: No XCOLUMN given for APCONTOUR\n", apcontour->xColumn);
     if (!apcontour->yColumn || !strlen(apcontour->yColumn))
       bombElegantVA("Error: No YCOLUMN given for APCONTOUR\n", apcontour->yColumn);
-    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, apcontour->filename) ||
-        SDDS_ReadPage(&SDDSin) != 1 ||
-        (apcontour->nPoints = SDDS_RowCount(&SDDSin)) < 0 ||
-        apcontour->nPoints < 3)
-      bombElegantVA("Error: APCONTOUR file %s is unreadable, or has insufficient data (<3 points)\n", apcontour->filename);
-    if (SDDS_CheckColumn(&SDDSin, apcontour->xColumn, "m", SDDS_ANY_FLOATING_TYPE, stdout) != SDDS_CHECK_OK)
-      bombElegantVA("Error: problem with x column (%s) for APCONTOUR file %s---check existence, units, and type\n",
-                    apcontour->xColumn, apcontour->filename);
-    if (SDDS_CheckColumn(&SDDSin, apcontour->yColumn, "m", SDDS_ANY_FLOATING_TYPE, stdout) != SDDS_CHECK_OK)
-      bombElegantVA("Error: problem with y column (%s) for APCONTOUR file %s---check existence, units, and type\n",
-                    apcontour->yColumn, apcontour->filename);
-    if (!(apcontour->x = SDDS_GetColumnInDoubles(&SDDSin, apcontour->xColumn)) ||
-        !(apcontour->y = SDDS_GetColumnInDoubles(&SDDSin, apcontour->yColumn)))
-      bombElegantVA("Error: failed to get x or y data from APCONTOUR file %s\n", apcontour->filename);
+    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, apcontour->filename))
+      bombElegantVA("Error: APCONTOUR file %s is unreadable\n", apcontour->filename);
+    while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
+      if (readCode==1) {
+        if (SDDS_CheckColumn(&SDDSin, apcontour->xColumn, "m", SDDS_ANY_FLOATING_TYPE, stdout) != SDDS_CHECK_OK)
+          bombElegantVA("Error: problem with x column (%s) for APCONTOUR file %s---check existence, units, and type\n",
+                        apcontour->xColumn, apcontour->filename);
+        if (SDDS_CheckColumn(&SDDSin, apcontour->yColumn, "m", SDDS_ANY_FLOATING_TYPE, stdout) != SDDS_CHECK_OK)
+          bombElegantVA("Error: problem with y column (%s) for APCONTOUR file %s---check existence, units, and type\n",
+                        apcontour->yColumn, apcontour->filename);
+        if ((apcontour->hasLogic = SDDS_GetParameterIndex(&SDDSin, "Logic")>=0)) {
+          if (SDDS_CheckParameter(&SDDSin, "Logic", NULL, SDDS_STRING, stdout) != SDDS_CHECK_OK)
+            bombElegantVA("Error: parameter \"Logic\" in APCONTOUR file %s must have string type\n", apcontour->filename);
+        }
+      }
+      apcontour->x = SDDS_Realloc(apcontour->x, sizeof(*(apcontour->x))*(apcontour->nContours+1));
+      apcontour->y = SDDS_Realloc(apcontour->y, sizeof(*(apcontour->y))*(apcontour->nContours+1));
+      apcontour->logic = SDDS_Realloc(apcontour->logic, sizeof(*(apcontour->logic))*(apcontour->nContours+1)); 
+      if (!apcontour->hasLogic)
+        apcontour->logic[apcontour->nContours] = NULL;
+      else if (!SDDS_GetParameter(&SDDSin, "Logic", &apcontour->logic[apcontour->nContours]))
+        bombElegantVA("Error: problem getting parameter \"Logic\" from APCONTOUR file %s\n", apcontour->filename);
+      apcontour->nPoints = SDDS_Realloc(apcontour->nPoints, sizeof(*(apcontour->nPoints))*(apcontour->nContours+1));
+      if ((apcontour->nPoints[apcontour->nContours] = SDDS_RowCount(&SDDSin)) < 3) 
+        bombElegantVA("Error: APCONTOUR file %s page %d has too few points\n", apcontour->filename, readCode);
+      if (!(apcontour->x[apcontour->nContours] = SDDS_GetColumnInDoubles(&SDDSin, apcontour->xColumn)) ||
+          !(apcontour->y[apcontour->nContours] = SDDS_GetColumnInDoubles(&SDDSin, apcontour->yColumn)))
+        bombElegantVA("Error: failed to get x or y data from APCONTOUR file %s\n", apcontour->filename);
+      if (apcontour->x[apcontour->nContours][0] != apcontour->x[apcontour->nContours][apcontour->nPoints[apcontour->nContours]-1] ||
+          apcontour->y[apcontour->nContours][0] != apcontour->y[apcontour->nContours][apcontour->nPoints[apcontour->nContours]-1])
+        bombElegantVA("Error: contour provided in file %s for APCONTOUR is not a closed shape\n", apcontour->filename);
+      apcontour->nContours += 1;
+    }
     SDDS_Terminate(&SDDSin);
-    if (apcontour->resolution <= 0 && apcontour->length > 0)
-      bombElegant("Error: APCONTOUR has RESOLUTION<=0 and L>0", NULL);
-    if (apcontour->x[0] != apcontour->x[apcontour->nPoints - 1] ||
-        apcontour->y[0] != apcontour->y[apcontour->nPoints - 1])
-      bombElegantVA("Error: contour provided in file %s for APCONTOUR is not a closed shape\n", apcontour->filename);
     printf("Read aperture contour data from file %s\n", apcontour->filename);
     fflush(stdout);
     apcontour->initialized = 1;
   }
 
+  if (apcontour->nContours>1 && apcontour->length>0)
+    bombElegantVA("Error: APCONTOUR using file %s has multipole contours and L>0, which is not supported at present\n",
+                  apcontour->filename);
+  if (apcontour->nContours==1 && apcontour->hasLogic)
+    bombElegantVA("Error: APCONTOUR using file %s has only one contour but also has Logic parameter, which is not supported at present\n",
+                  apcontour->filename);
+  if (apcontour->resolution <= 0 && apcontour->length > 0)
+    bombElegantVA("Error: APCONTOUR using file %s has RESOLUTION<=0 and L>0", apcontour->filename);
+  
   /* misalignments */
   if (apcontour->dx || apcontour->dy || apcontour->dz)
     offsetBeamCoordinatesForMisalignment(coord, np, apcontour->dx, apcontour->dy, apcontour->dz);
   if (apcontour->tilt)
     rotateBeamCoordinatesForMisalignment(coord, np, apcontour->tilt);
 
-  if (apcontour->xFactor != 1 || apcontour->yFactor != 1) {
-    long j;
-    x = tmalloc(sizeof(*x) * apcontour->nPoints);
-    y = tmalloc(sizeof(*y) * apcontour->nPoints);
-    for (j = 0; j < apcontour->nPoints; j++) {
-      x[j] = apcontour->x[j] * apcontour->xFactor;
-      y[j] = apcontour->y[j] * apcontour->yFactor;
+  if (apcontour->nContours>1) {
+    int32_t logicValue;
+    i_top = np - 1;
+    lossCode = apcontour->invert ? 1 : 0;
+    for (ip = 0; ip <= i_top; ip++) {
+      push_log(!lossCode);
+      for (ic=0; ic<apcontour->nContours; ic++) {
+        if (pointIsInsideContour(coord[ip][0]/apcontour->xFactor,
+                                 coord[ip][2]/apcontour->yFactor,
+                                 apcontour->x[ic], apcontour->y[ic], apcontour->nPoints[ic], NULL, 0.0) == lossCode) {
+          push_log(0); /* 0 = remove */
+        } else
+          push_log(1); /* 1 = keep */
+        if (apcontour->hasLogic && apcontour->logic[ic]) {
+          if (strlen(apcontour->logic[ic]))
+            rpn(apcontour->logic[ic]);
+        } else {
+          if (apcontour->invert)
+            log_or();
+          else
+            log_and();
+        }
+      }
+      pop_log(&logicValue);
+      rpn_clear();
+      if (!logicValue) {
+        coord[ip][4] = z;
+        coord[ip][5] = Po * (1 + coord[ip][5]);
+        swapParticles(coord[ip], coord[i_top]);
+        if (globalLossCoordOffset > 0) {
+          double X, Y, Z, theta;
+          convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, coord[i_top], eptr,
+                                          0.0, 0, 0);
+          coord[i_top][globalLossCoordOffset + 0] = X;
+          coord[i_top][globalLossCoordOffset + 1] = Z;
+          coord[i_top][globalLossCoordOffset + 2] = theta;
+        }
+        if (accepted)
+          swapParticles(accepted[ip], accepted[i_top]);
+        --i_top;
+        --ip;
+      } else
+        exactDrift(coord + ip, 1, apcontour->length);
     }
   } else {
-    x = apcontour->x;
-    y = apcontour->y;
-  }
-
-  lossCode = 0;
-  if (apcontour->invert)
-    lossCode = 1;
-  i_top = np - 1;
-  for (ip = 0; ip <= i_top; ip++) {
-    z0 = zLost = 0;
-    z1 = apcontour->length;
-    lost0 = lost1 = 0;
-    if (pointIsInsideContour(coord[ip][0] + coord[ip][1] * z0,
-                             coord[ip][2] + coord[ip][3] * z0,
-                             x, y, apcontour->nPoints, NULL, 0.0) == lossCode) {
-      lost0 = 1;
-    } else if (apcontour->length > 0) {
-      if (pointIsInsideContour(coord[ip][0] + coord[ip][1] * z1,
-                               coord[ip][2] + coord[ip][3] * z1,
-                               x, y, apcontour->nPoints, NULL, 0.0) == lossCode) {
-        lost1 = 1;
-        while ((z1 - z0) > apcontour->resolution) {
+    /* single contour, more capable algorithm */
+    lossCode = 0;
+    if (apcontour->invert)
+      lossCode = 1;
+    i_top = np - 1;
+    for (ip = 0; ip <= i_top; ip++) {
+      z0 = zLost = 0;
+      z1 = apcontour->length;
+      lost0 = lost1 = 0;
+      if (pointIsInsideContour((coord[ip][0] + coord[ip][1] * z0)/apcontour->xFactor,
+                               (coord[ip][2] + coord[ip][3] * z0)/apcontour->yFactor,
+                               apcontour->x[0], apcontour->y[0], apcontour->nPoints[0], NULL, 0.0) == lossCode) {
+        lost0 = 1;
+      } else if (apcontour->length > 0) {
+        if (pointIsInsideContour((coord[ip][0] + coord[ip][1] * z1)/apcontour->xFactor,
+                                 (coord[ip][2] + coord[ip][3] * z1)/apcontour->yFactor,
+                                 apcontour->x[0], apcontour->y[0], apcontour->nPoints[0], NULL, 0.0) == lossCode) {
+          lost1 = 1;
+          while ((z1 - z0) > apcontour->resolution) {
+            zLost = (z0 + z1) / 2;
+            lost2 = pointIsInsideContour((coord[ip][0] + coord[ip][1] * zLost)/apcontour->xFactor,
+                                         (coord[ip][2] + coord[ip][3] * zLost)/apcontour->yFactor,
+                                         apcontour->x[0], apcontour->y[0], apcontour->nPoints[0], NULL, 0.0) == lossCode;
+            if (lost2 == lost1)
+              z1 = zLost;
+            else if (lost2 == lost0)
+              z0 = zLost;
+          }
           zLost = (z0 + z1) / 2;
-          lost2 = pointIsInsideContour(coord[ip][0] + coord[ip][1] * zLost,
-                                       coord[ip][2] + coord[ip][3] * zLost,
-                                       x, y, apcontour->nPoints, NULL, 0.0) == lossCode;
-          if (lost2 == lost1)
-            z1 = zLost;
-          else if (lost2 == lost0)
-            z0 = zLost;
         }
-        zLost = (z0 + z1) / 2;
       }
+      if (lost0 + lost1) {
+        exactDrift(coord + ip, 1, zLost);
+        coord[ip][4] = z + zLost;
+        coord[ip][5] = Po * (1 + coord[ip][5]);
+        swapParticles(coord[ip], coord[i_top]);
+        if (globalLossCoordOffset > 0) {
+          double X, Y, Z, theta;
+          convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, coord[i_top], eptr,
+                                          zLost, 0, 0);
+          coord[i_top][globalLossCoordOffset + 0] = X;
+          coord[i_top][globalLossCoordOffset + 1] = Z;
+          coord[i_top][globalLossCoordOffset + 2] = theta;
+        }
+        if (accepted)
+          swapParticles(accepted[ip], accepted[i_top]);
+        --i_top;
+        --ip;
+      } else
+        exactDrift(coord + ip, 1, apcontour->length);
     }
-    if (lost0 + lost1) {
-      exactDrift(coord + ip, 1, zLost);
-      coord[ip][4] = z + zLost;
-      coord[ip][5] = Po * (1 + coord[ip][5]);
-      swapParticles(coord[ip], coord[i_top]);
-      if (globalLossCoordOffset > 0) {
-        double X, Y, Z, theta;
-        convertLocalCoordinatesToGlobal(&Z, &X, &Y, &theta, GLOBAL_LOCAL_MODE_DZ, coord[i_top], eptr,
-                                        zLost, 0, 0);
-        coord[i_top][globalLossCoordOffset + 0] = X;
-        coord[i_top][globalLossCoordOffset + 1] = Z;
-        coord[i_top][globalLossCoordOffset + 2] = theta;
-      }
-      if (accepted)
-        swapParticles(accepted[ip], accepted[i_top]);
-      --i_top;
-      --ip;
-    } else
-      exactDrift(coord + ip, 1, apcontour->length);
   }
 
   /* misalignments */
@@ -1552,11 +1610,6 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
     rotateBeamCoordinatesForMisalignment(coord, np, -apcontour->tilt);
   if (apcontour->dx || apcontour->dy || apcontour->dz)
     offsetBeamCoordinatesForMisalignment(coord, np, -apcontour->dx, -apcontour->dy, -apcontour->dz);
-
-  if (x != apcontour->x)
-    free(x);
-  if (y != apcontour->y)
-    free(y);
 
   return i_top + 1;
 }

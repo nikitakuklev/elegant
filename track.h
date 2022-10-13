@@ -3535,9 +3535,10 @@ typedef struct {
   char *xColumn;          /* name of column containing x data */
   char *yColumn;          /* name of column containing y data */
   /* these are set by the program when the file is read */
-  short initialized;
-  double *x, *y;
-  long nPoints;
+  short initialized, hasLogic;
+  double **x, **y;
+  char **logic;
+  long nContours, *nPoints;
 } APCONTOUR;
 
 /* aperture from section of right circular cylinder */
