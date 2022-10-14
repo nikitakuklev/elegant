@@ -254,6 +254,8 @@ static long n_invalid_particles = 0;
 static double lostParticleCoordinate[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static long isLost = 0;
 
+static MULT_APERTURE_DATA apertureData;
+
 void lorentz_report(void) {
   if (n_lorentz_calls) {
     printf("\nStatistics for numerical integrations by lorentz() module:\n");
@@ -275,13 +277,21 @@ long lorentz(
   void *field,
   long field_type,
   double P_central,
-  double **accepted) {
+  double **accepted,
+  MAXAMP *maxamp0, 
+  APCONTOUR *apcontour0,
+  APERTURE_DATA *apData0
+             ) {
   double *coord;
   long i_part, i_top;
+  TRACKING_CONTEXT context;
 
   if (!n_part)
     return (0);
 
+  getTrackingContext(&context);
+  setupMultApertureData(&apertureData, 0.0, apcontour0, maxamp0, apData0, NULL, context.zStart, context.element);
+  
   log_entry("lorentz");
 
   n_lorentz_calls++;
@@ -1813,6 +1823,7 @@ void bmapxyz_deriv_function(double *qp, double *q, double s) {
   z = q[0];
   x = q[1];
   y = q[2];
+
   if (isnan(x) || isnan(y) || isinf(x) || isinf(y)) {
     for (ix = 0; ix < 7; ix++)
       qp[ix] = 0;
@@ -1823,19 +1834,24 @@ void bmapxyz_deriv_function(double *qp, double *q, double s) {
   }
   if (!isLost) {
     double zOffset, dzHardEdge;
+    double xp, yp;
     zOffset = (bmapxyz->fieldLength - bmapxyz->length) / 2;
-    if ((dzHardEdge = z - zOffset) >= 0 && dzHardEdge <= bmapxyz->length) {
-      double xp, yp;
+    if (!checkMultAperture(x, y, z, &apertureData))
+      isLost = 1;
+    else if ((dzHardEdge = z - zOffset) >= 0 && dzHardEdge <= bmapxyz->length) {
       xp = q[4] / q[3];
       yp = q[5] / q[3];
       if (insideObstruction_xyz(x, xp, y, yp, lastParticleID, lostParticleCoordinate + 9,
-                                bmapxyz->tilt, GLOBAL_LOCAL_MODE_DZ, dzHardEdge, 0, 0)) {
-        /*static FILE *fp; */
-        TRACKING_CONTEXT tcontext;
-        getTrackingContext(&tcontext);
-        /* 
-          if (!fp) {
-#if USE_MPI
+                                bmapxyz->tilt, GLOBAL_LOCAL_MODE_DZ, dzHardEdge, 0, 0))
+        isLost = 1;
+    }
+    if (isLost) {
+      /*static FILE *fp; */
+      TRACKING_CONTEXT tcontext;
+      getTrackingContext(&tcontext);
+      /* 
+         if (!fp) {
+         #if USE_MPI
             char buffer[256];
             sprintf(buffer, "lorentz.los-%03d", myid);
             fp = fopen_e(buffer, "w", 0);
@@ -1853,11 +1869,10 @@ void bmapxyz_deriv_function(double *qp, double *q, double s) {
           fprintf(fp, "%s %le %le %le %le %le %ld\n", 
                   tcontext.elementName, tcontext.zStart+dzHardEdge, dzHardEdge, q[6], x, q[4], lastParticleID);
           */
-        for (ix = 0; ix < 8; ix++)
-          lostParticleCoordinate[ix] = q[ix];
-        lostParticleCoordinate[ix] = tcontext.zStart + dzHardEdge;
-        isLost = 1;
-      }
+      for (ix = 0; ix < 8; ix++)
+        lostParticleCoordinate[ix] = q[ix];
+      lostParticleCoordinate[ix] = tcontext.zStart + dzHardEdge;
+      isLost = 1;
     }
   }
 

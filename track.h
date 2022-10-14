@@ -4551,7 +4551,8 @@ extern long trace_mode;
 extern long particleID;
 
 /* prototypes for lorentz.c */
-long  lorentz(double **part, long n_part, void *field, long field_type, double P_central, double **accepted);
+long lorentz(double **part, long n_part, void *field, long field_type, double P_central, double **accepted, 
+             MAXAMP *maxamp, APCONTOUR *apcontour, APERTURE_DATA *apData);
 void lorentz_report(void);
 
 /* prototypes for kick_poly.c */

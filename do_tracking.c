@@ -2062,16 +2062,17 @@ long do_tracking(
             case T_TSCATTER:
               break;
             case T_NIBEND:
-              nLeft = lorentz(coord, nToTrack, (NIBEND *)eptr->p_elem, T_NIBEND, *P_central, accepted);
+              nLeft = lorentz(coord, nToTrack, (NIBEND *)eptr->p_elem, T_NIBEND, *P_central, accepted, NULL, NULL, NULL);
               break;
             case T_NISEPT:
-              nLeft = lorentz(coord, nToTrack, (NISEPT *)eptr->p_elem, T_NISEPT, *P_central, accepted);
+              nLeft = lorentz(coord, nToTrack, (NISEPT *)eptr->p_elem, T_NISEPT, *P_central, accepted, NULL, NULL, NULL);
               break;
             case T_BMAPXY:
-              nLeft = lorentz(coord, nToTrack, (BMAPXY *)eptr->p_elem, T_BMAPXY, *P_central, accepted);
+              nLeft = lorentz(coord, nToTrack, (BMAPXY *)eptr->p_elem, T_BMAPXY, *P_central, accepted, NULL, NULL, NULL);
               break;
             case T_BMAPXYZ:
-              nLeft = lorentz(coord, nToTrack, (BMAPXYZ *)eptr->p_elem, T_BMAPXYZ, *P_central, accepted);
+              nLeft = lorentz(coord, nToTrack, (BMAPXYZ *)eptr->p_elem, T_BMAPXYZ, *P_central, accepted, 
+                              maxamp, apcontour, &(run->apertureData));
               break;
             case T_BRAT:
               nLeft = trackBRAT(coord, nToTrack, (BRAT *)eptr->p_elem, *P_central, accepted);

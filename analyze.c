@@ -1224,13 +1224,15 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     case T_BMAPXY:
       printf("Computing tracking-based matrix for BMAPXY %s#%ld\n", eptr->name, eptr->occurence);
       fflush(stdout);
-      n_left = lorentz(finalCoord + my_offset, my_nTrack, (BMAPXY *)eptr->p_elem, T_BMAPXY, run->p_central, NULL);
+      n_left = lorentz(finalCoord + my_offset, my_nTrack, (BMAPXY *)eptr->p_elem, T_BMAPXY, run->p_central, NULL,
+                       NULL, NULL, NULL);
       break;
     case T_BMAPXYZ:
       printf("Computing tracking-based matrix for BMXYZ %s#%ld\n", eptr->name, eptr->occurence);
       fflush(stdout);
       ltmp1 = ((BMAPXYZ *)eptr->p_elem)->synchRad;
-      n_left = lorentz(finalCoord + my_offset, my_nTrack, (BMAPXYZ *)eptr->p_elem, T_BMAPXYZ, run->p_central, NULL);
+      n_left = lorentz(finalCoord + my_offset, my_nTrack, (BMAPXYZ *)eptr->p_elem, T_BMAPXYZ, run->p_central, NULL,
+                       NULL, NULL, NULL);
       ((BMAPXYZ *)eptr->p_elem)->synchRad = ltmp1;
       break;
     case T_APPLE:
