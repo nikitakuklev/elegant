@@ -1482,7 +1482,7 @@ void initializeApContour(APCONTOUR *apcontour)
       apcontour->nContours += 1;
     }
     SDDS_Terminate(&SDDSin);
-    printf("Read aperture contour data from file %s\n", apcontour->filename);
+    printf("Read %ld aperture contours from file %s\n", apcontour->nContours, apcontour->filename);
     fflush(stdout);
     apcontour->initialized = 1;
   }
