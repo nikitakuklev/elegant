@@ -3451,6 +3451,8 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
   {"XY_GRID_EXCESS", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.xyGridExcess), NULL, 0.0, 0, "Number of rows or columns to add in each dimension to the minimum."},
   {"SINGLE_PRECISION", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.singlePrecision), NULL, 0.0, 0, "If nonzero, store field data in single precision to reduce memory requirements."},
   {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char *)&bmapxyz_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output inside element. Use for debugging only in serial version."},
+  {"ZMIN_APCONTOUR", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.zMinApContour), NULL, -DBL_MAX/2, 0, "Minimum z value at which APCONTOUR apertures are applied."},
+  {"ZMAX_APCONTOUR", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.zMaxApContour), NULL, DBL_MAX/2, 0, "Maximum z value at which APCONTOUR apertures are applied."},
 };
 
 BRAT brat_example;
@@ -3690,6 +3692,7 @@ PARAMETER apcontour_param[N_APCONTOUR_PARAMS] = {
   {"INVERT", "", IS_SHORT, 0, (long)((char *)&apcontour_example.invert), NULL, 0.0, 0, "if non-zero, contour defines an obstruction rather than an aperture"},
   {"STICKY", "", IS_SHORT, 0, (long)((char *)&apcontour_example.sticky), NULL, 0.0, 0, "if non-zero, effect persists in downstream elements until canceled or replaced"},
   {"CANCEL", "", IS_SHORT, 0, (long)((char *)&apcontour_example.cancel), NULL, 0.0, 0, "if non-zero, sole effect is to cancel previous sticky APCONTOUR"},
+  {"HOLD_OFF", "", IS_SHORT, 0, (long)((char *)&apcontour_example.holdOff), NULL, 0.0, 0, "if non-zero and STICKY=1, then effect only seen in the next element downstream"},
   {"FILENAME", "", IS_STRING, 0, (long)((char *)&apcontour_example.filename), NULL, 0.0, 0, "name of file containing contour data"},
   {"XCOLUMN", "", IS_STRING, 0, (long)((char *)&apcontour_example.xColumn), NULL, 0.0, 0, "name of column containing x data"},
   {"YCOLUMN", "", IS_STRING, 0, (long)((char *)&apcontour_example.yColumn), NULL, 0.0, 0, "name of containing y data"},

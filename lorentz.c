@@ -1834,17 +1834,28 @@ void bmapxyz_deriv_function(double *qp, double *q, double s) {
   }
   if (!isLost) {
     double zOffset, dzHardEdge;
-    double xp, yp;
+    double xp, yp, zs;
+    APCONTOUR *apc;
     zOffset = (bmapxyz->fieldLength - bmapxyz->length) / 2;
-    if (!checkMultAperture(x, y, z, &apertureData))
+    apc = apertureData.apContour;
+    if (bmapxyz->data->magnetSymmetry[2])
+      /* the field map starts from z=0 instead of z=-fieldLength/2 */
+      zs = z - bmapxyz->fieldLength/2 + bmapxyz->data->zmin; 
+    else
+      zs = z + bmapxyz->data->zmin;
+    if (zs<bmapxyz->zMinApContour || zs>bmapxyz->zMaxApContour)
+      apertureData.apContour = NULL;
+    if (!checkMultAperture(x, y, z, &apertureData)) {
       isLost = 1;
-    else if ((dzHardEdge = z - zOffset) >= 0 && dzHardEdge <= bmapxyz->length) {
+      dzHardEdge = z - zOffset;
+    } else if ((dzHardEdge = z - zOffset) >= 0 && dzHardEdge <= bmapxyz->length) {
       xp = q[4] / q[3];
       yp = q[5] / q[3];
       if (insideObstruction_xyz(x, xp, y, yp, lastParticleID, lostParticleCoordinate + 9,
                                 bmapxyz->tilt, GLOBAL_LOCAL_MODE_DZ, dzHardEdge, 0, 0))
         isLost = 1;
     }
+    apertureData.apContour = apc;
     if (isLost) {
       /*static FILE *fp; */
       TRACKING_CONTEXT tcontext;

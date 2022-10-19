@@ -1141,7 +1141,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 15
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
-#define N_BMAPXYZ_PARAMS 30
+#define N_BMAPXYZ_PARAMS 32
 #define N_BRAT_PARAMS 31
 #define N_BGGEXP_PARAMS 35
 #define N_BRANCH_PARAMS 7
@@ -1151,7 +1151,7 @@ extern char *entity_text[N_TYPES];
 #define N_CCBEND_PARAMS 68
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS 19
-#define N_APCONTOUR_PARAMS 14
+#define N_APCONTOUR_PARAMS 15
 #define N_TAPERAPC_PARAMS 6
 #define N_TAPERAPE_PARAMS 12
 #define N_TAPERAPR_PARAMS 9
@@ -3074,6 +3074,7 @@ typedef struct {
   char *magnetSymmetry[3];
   short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridExcess, singlePrecision;
   char *particleOutputFile;
+  double zMinApContour, zMaxApContour;
   /* internal variables */
   BMAPXYZ_DATA *data; 
   SDDS_DATASET *SDDSpo;
@@ -3531,6 +3532,7 @@ typedef struct {
   short invert;           /* If non-zero, the shape is an obstruction not an aperture */
   short sticky;           /* If non-zero, the shape is applied until canceled by another APCONTOUR element */
   short cancel;           /* If non-zero, cancel previous APCONTOUR. Valid even without other parameters */
+  short holdOff;          /* If non-zero, applied only in the downstream elements (assuming sticky=1) */
   char *filename;         /* filename for generalized gradients vs z */
   char *xColumn;          /* name of column containing x data */
   char *yColumn;          /* name of column containing y data */
@@ -4262,6 +4264,7 @@ void resetApertureData(APERTURE_DATA *apData);
 long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, double **accepted, double z,
                              double Po, ELEMENT_LIST *eptr);
 int pointIsInsideContour(double x0, double y0, double *x, double *y, int64_t n, double *center, double theta);
+void initializeApContour(APCONTOUR *apcontour);
 long trackThroughApContour(double **initial, APCONTOUR *apcontour, long np, double **accepted, double z,
                            double Po, ELEMENT_LIST *eptr);
 long imposeApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,

@@ -1459,10 +1459,12 @@ long do_tracking(
               break;
             case T_APCONTOUR:
               apcontour = (APCONTOUR *)eptr->p_elem;
-              if (apcontour->cancel)
+              if (!(apcontour->initialized))
+                initializeApContour(apcontour);
+              if (apcontour->cancel || (apcontour->holdOff && !apcontour->sticky))
                 apcontour = NULL;
               else {
-                if (flags & TEST_PARTICLES && !(flags & TEST_PARTICLE_LOSSES))
+                if ((flags & TEST_PARTICLES && !(flags & TEST_PARTICLE_LOSSES)) || apcontour->holdOff)
                   drift_beam(coord, nToTrack, ((APCONTOUR *)eptr->p_elem)->length, run->default_order);
                 else
                   nLeft = trackThroughApContour(coord, apcontour, nToTrack, accepted, last_z, *P_central, eptr);
@@ -2464,7 +2466,7 @@ long do_tracking(
             if (run->apertureData.initialized)
               nLeft = imposeApertureData(coord, nLeft, accepted, z, *P_central,
                                          &(run->apertureData), eptr);
-            if (apcontour)
+            if (apcontour && !(eptr->type==T_APCONTOUR && apcontour->holdOff)) 
               nLeft = imposeApContour(coord, apcontour, nLeft, accepted, z, *P_central, eptr);
           }
         }

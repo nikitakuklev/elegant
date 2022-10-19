@@ -1429,13 +1429,8 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
   return (np);
 }
 
-long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
-                           double Po, ELEMENT_LIST *eptr) {
-  long ip, i_top, ic;
-  double z0, z1, zLost;
-  short lost0, lost1, lost2;
-  int lossCode;
-
+void initializeApContour(APCONTOUR *apcontour)
+{
   if (!apcontour->initialized) {
     SDDS_DATASET SDDSin;
     long readCode;
@@ -1491,7 +1486,18 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
     fflush(stdout);
     apcontour->initialized = 1;
   }
+}
 
+long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
+                           double Po, ELEMENT_LIST *eptr) {
+  long ip, i_top, ic;
+  double z0, z1, zLost;
+  short lost0, lost1, lost2;
+  int lossCode;
+
+  if (!(apcontour->initialized))
+    initializeApContour(apcontour);
+  
   if (apcontour->nContours>1 && apcontour->length>0)
     bombElegantVA("Error: APCONTOUR using file %s has multipole contours and L>0, which is not supported at present\n",
                   apcontour->filename);
