@@ -290,7 +290,14 @@ long lorentz(
     return (0);
 
   getTrackingContext(&context);
-  setupMultApertureData(&apertureData, 0.0, apcontour0, maxamp0, apData0, NULL, context.zStart, context.element);
+  if (field_type==T_BMAPXYZ) {
+    BMAPXYZ *bmxyz;
+    bmxyz = (BMAPXYZ *)field;
+    if (bmxyz->apContourElement && strlen(bmxyz->apContourElement))
+      setupMultApertureData(&apertureData, 0.0, &bmxyz->apContour, maxamp0, apData0, NULL, context.zStart, context.element);
+    else
+      setupMultApertureData(&apertureData, 0.0, apcontour0, maxamp0, apData0, NULL, context.zStart, context.element);
+  }
   
   log_entry("lorentz");
 

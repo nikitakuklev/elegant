@@ -3451,6 +3451,7 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
   {"XY_GRID_EXCESS", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.xyGridExcess), NULL, 0.0, 0, "Number of rows or columns to add in each dimension to the minimum."},
   {"SINGLE_PRECISION", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.singlePrecision), NULL, 0.0, 0, "If nonzero, store field data in single precision to reduce memory requirements."},
   {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char *)&bmapxyz_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output inside element. Use for debugging only in serial version."},
+  {"APCONTOUR", NULL, IS_STRING, 0, (long)((char *)&bmapxyz_example.apContourElement), NULL, 0.0, 0, "name of element defining aperture contour inside the field map region."},
   {"ZMIN_APCONTOUR", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.zMinApContour), NULL, -DBL_MAX/2, 0, "Minimum z value at which APCONTOUR apertures are applied."},
   {"ZMAX_APCONTOUR", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.zMaxApContour), NULL, DBL_MAX/2, 0, "Maximum z value at which APCONTOUR apertures are applied."},
 };

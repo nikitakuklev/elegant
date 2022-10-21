@@ -1429,64 +1429,6 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
   return (np);
 }
 
-void initializeApContour(APCONTOUR *apcontour)
-{
-  if (!apcontour->initialized) {
-    SDDS_DATASET SDDSin;
-    long readCode;
-    SDDSin.parallel_io = 0;
-    if (apcontour->x)
-      free(apcontour->x);
-    if (apcontour->y)
-      free(apcontour->y);
-    apcontour->x = apcontour->y = NULL;
-    apcontour->nPoints = NULL;
-    apcontour->nContours = 0;
-    if (!apcontour->filename || !strlen(apcontour->filename))
-      bombElegantVA("Error: No filename given for APCONTOUR\n", apcontour->filename);
-    if (!apcontour->xColumn || !strlen(apcontour->xColumn))
-      bombElegantVA("Error: No XCOLUMN given for APCONTOUR\n", apcontour->xColumn);
-    if (!apcontour->yColumn || !strlen(apcontour->yColumn))
-      bombElegantVA("Error: No YCOLUMN given for APCONTOUR\n", apcontour->yColumn);
-    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, apcontour->filename))
-      bombElegantVA("Error: APCONTOUR file %s is unreadable\n", apcontour->filename);
-    while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
-      if (readCode==1) {
-        if (SDDS_CheckColumn(&SDDSin, apcontour->xColumn, "m", SDDS_ANY_FLOATING_TYPE, stdout) != SDDS_CHECK_OK)
-          bombElegantVA("Error: problem with x column (%s) for APCONTOUR file %s---check existence, units, and type\n",
-                        apcontour->xColumn, apcontour->filename);
-        if (SDDS_CheckColumn(&SDDSin, apcontour->yColumn, "m", SDDS_ANY_FLOATING_TYPE, stdout) != SDDS_CHECK_OK)
-          bombElegantVA("Error: problem with y column (%s) for APCONTOUR file %s---check existence, units, and type\n",
-                        apcontour->yColumn, apcontour->filename);
-        if ((apcontour->hasLogic = SDDS_GetParameterIndex(&SDDSin, "Logic")>=0)) {
-          if (SDDS_CheckParameter(&SDDSin, "Logic", NULL, SDDS_STRING, stdout) != SDDS_CHECK_OK)
-            bombElegantVA("Error: parameter \"Logic\" in APCONTOUR file %s must have string type\n", apcontour->filename);
-        }
-      }
-      apcontour->x = SDDS_Realloc(apcontour->x, sizeof(*(apcontour->x))*(apcontour->nContours+1));
-      apcontour->y = SDDS_Realloc(apcontour->y, sizeof(*(apcontour->y))*(apcontour->nContours+1));
-      apcontour->logic = SDDS_Realloc(apcontour->logic, sizeof(*(apcontour->logic))*(apcontour->nContours+1)); 
-      if (!apcontour->hasLogic)
-        apcontour->logic[apcontour->nContours] = NULL;
-      else if (!SDDS_GetParameter(&SDDSin, "Logic", &apcontour->logic[apcontour->nContours]))
-        bombElegantVA("Error: problem getting parameter \"Logic\" from APCONTOUR file %s\n", apcontour->filename);
-      apcontour->nPoints = SDDS_Realloc(apcontour->nPoints, sizeof(*(apcontour->nPoints))*(apcontour->nContours+1));
-      if ((apcontour->nPoints[apcontour->nContours] = SDDS_RowCount(&SDDSin)) < 3) 
-        bombElegantVA("Error: APCONTOUR file %s page %d has too few points\n", apcontour->filename, readCode);
-      if (!(apcontour->x[apcontour->nContours] = SDDS_GetColumnInDoubles(&SDDSin, apcontour->xColumn)) ||
-          !(apcontour->y[apcontour->nContours] = SDDS_GetColumnInDoubles(&SDDSin, apcontour->yColumn)))
-        bombElegantVA("Error: failed to get x or y data from APCONTOUR file %s\n", apcontour->filename);
-      if (apcontour->x[apcontour->nContours][0] != apcontour->x[apcontour->nContours][apcontour->nPoints[apcontour->nContours]-1] ||
-          apcontour->y[apcontour->nContours][0] != apcontour->y[apcontour->nContours][apcontour->nPoints[apcontour->nContours]-1])
-        bombElegantVA("Error: contour provided in file %s for APCONTOUR is not a closed shape\n", apcontour->filename);
-      apcontour->nContours += 1;
-    }
-    SDDS_Terminate(&SDDSin);
-    printf("Read %ld aperture contours from file %s\n", apcontour->nContours, apcontour->filename);
-    fflush(stdout);
-    apcontour->initialized = 1;
-  }
-}
 
 long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
                            double Po, ELEMENT_LIST *eptr) {

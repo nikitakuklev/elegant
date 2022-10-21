@@ -1141,7 +1141,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 15
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
-#define N_BMAPXYZ_PARAMS 32
+#define N_BMAPXYZ_PARAMS 33
 #define N_BRAT_PARAMS 31
 #define N_BGGEXP_PARAMS 35
 #define N_BRANCH_PARAMS 7
@@ -3051,6 +3051,29 @@ typedef struct {
   long rpnMem[2];
 } BMAPXY;
 
+/* aperture from a file giving (x, y) */
+extern PARAMETER apcontour_param[N_APCONTOUR_PARAMS];
+
+typedef struct {
+  double length;
+  double tilt;            /* roll angle */
+  double dx, dy, dz;      /* misalignments */
+  double resolution;
+  double xFactor, yFactor; /* multiply x and y data by these factors */
+  short invert;           /* If non-zero, the shape is an obstruction not an aperture */
+  short sticky;           /* If non-zero, the shape is applied until canceled by another APCONTOUR element */
+  short cancel;           /* If non-zero, cancel previous APCONTOUR. Valid even without other parameters */
+  short holdOff;          /* If non-zero, applied only in the downstream elements (assuming sticky=1) */
+  char *filename;         /* filename for generalized gradients vs z */
+  char *xColumn;          /* name of column containing x data */
+  char *yColumn;          /* name of column containing y data */
+  /* these are set by the program when the file is read */
+  short initialized, hasLogic;
+  double **x, **y;
+  char **logic;
+  long nContours, *nPoints;
+} APCONTOUR;
+
 extern PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS];
 
 typedef struct {
@@ -3073,13 +3096,14 @@ typedef struct {
   char *method, *filename;
   char *magnetSymmetry[3];
   short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridExcess, singlePrecision;
-  char *particleOutputFile;
+  char *particleOutputFile, *apContourElement;
   double zMinApContour, zMaxApContour;
   /* internal variables */
   BMAPXYZ_DATA *data; 
   SDDS_DATASET *SDDSpo;
   long poIndex[11];
   long poRow, poRows;
+  APCONTOUR apContour;
 } BMAPXYZ;
 
 extern PARAMETER brat_param[N_BRAT_PARAMS];
@@ -3519,29 +3543,6 @@ typedef struct {
   /* Internal parameters --- See SCRAPER element for the direction codes */
   unsigned long direction;
 } SPEEDBUMP;
-
-/* aperture from a file giving (x, y) */
-extern PARAMETER apcontour_param[N_APCONTOUR_PARAMS];
-
-typedef struct {
-  double length;
-  double tilt;            /* roll angle */
-  double dx, dy, dz;      /* misalignments */
-  double resolution;
-  double xFactor, yFactor; /* multiply x and y data by these factors */
-  short invert;           /* If non-zero, the shape is an obstruction not an aperture */
-  short sticky;           /* If non-zero, the shape is applied until canceled by another APCONTOUR element */
-  short cancel;           /* If non-zero, cancel previous APCONTOUR. Valid even without other parameters */
-  short holdOff;          /* If non-zero, applied only in the downstream elements (assuming sticky=1) */
-  char *filename;         /* filename for generalized gradients vs z */
-  char *xColumn;          /* name of column containing x data */
-  char *yColumn;          /* name of column containing y data */
-  /* these are set by the program when the file is read */
-  short initialized, hasLogic;
-  double **x, **y;
-  char **logic;
-  long nContours, *nPoints;
-} APCONTOUR;
 
 /* aperture from section of right circular cylinder */
 extern PARAMETER taperapc_param[N_TAPERAPC_PARAMS];
@@ -4287,6 +4288,7 @@ void bend_edge_kicks(double *x, double *xp, double *y, double *yp, double rho, d
 
 /* prototypes for mad_parse4.c: */
 extern long is_simple(char *s);
+extern void copy_p_elem(char *target, char *source, long type);
 extern void fill_line(LINE_LIST *line, long nl, ELEMENT_LIST *elem, long ne, char *s);
 extern ELEMENT_LIST *expand_line(ELEMENT_LIST *leptr, LINE_LIST *lptr,
     char *s, LINE_LIST *line, long nl, ELEMENT_LIST *elem, long ne, char *part_of);

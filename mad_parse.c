@@ -23,7 +23,6 @@
 #include <memory.h>
 
 long is_simple(char *s);
-void copy_p_elem(char *target, char *source, long type);
 void setEdgeIndices(ELEMENT_LIST *e1);
 void swapEdgeIndices(ELEMENT_LIST *e1);
 
