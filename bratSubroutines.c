@@ -325,7 +325,6 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   xyExtrapolate = brat->xyExtrapolate;
   singlePrecision = brat3dData[brat->dataIndex].singlePrecision;
   ySymmetryCodeGlobal = brat3dData[brat->dataIndex].ySymmetryCode;
-  printf("ySymmetryCodeGlobal = %hd\n", ySymmetryCodeGlobal);
 
   zStart = zi - dz;
   z_outer = MAX(fabs(zi), fabs(zf));
