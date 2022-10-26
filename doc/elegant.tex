@@ -51,6 +51,8 @@ Here is a summary of what's changed since release 2022.0.  Historical change log
 \item The pole-factor parameters of \verb|CWIGGLER| gave strange results when the number of integration
   steps per half period was odd. This was reported by forum user Skamarokha. It was fixed by forcing
   \verb|STEPS_PER_PERIOD| to be $4n$, where $n$ is an integer.
+\item The \verb|START_PID| and \verb|END_PID| parameters of  \verb|WATCH| did not permit selecting a 
+  single particle. This issue was identified with the help of C. Li (DESY).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
