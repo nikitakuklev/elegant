@@ -59,6 +59,7 @@ static double BSignOnTrajectory = 0;
 static char *interpolationParameterUnits = NULL;
 static double xfWeight = 1, xfpWeight = 1;
 static double dxDzFactor;
+static short ySymmetryCodeGlobal=0; /* 0 = none, 1 = odd, 2 = even */
 
 #define BRAT_INTERP_EXTRAPOLATE 0x001UL
 #define BRAT_INTERP_PERMISSIVE 0x002UL
@@ -144,6 +145,7 @@ typedef struct {
   char *filename;
   long nx, ny, nz;
   short singlePrecision, additionalMap;
+  short ySymmetryCode; /* 0 = none, 1 = odd, 2 = even */
   /* used if singlePrecision=0 */
   double *Bx, *By, *Bz;
   double *BxAdditional, *ByAdditional, *BzAdditional;
@@ -280,6 +282,10 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       bombElegantVA("BRAT main (%s) and additional (%s) files have different z grid spacing.\n",
                     brat3dData[brat->dataIndex].filename,
                     brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].ySymmetryCode != brat3dData[brat->dataIndexAdditional].ySymmetryCode)
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different y symmetry.\n",
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
   }
 
   BxNorm = brat3dData[brat->dataIndex].Bx;
@@ -318,6 +324,8 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   xyGridExcess = brat->xyGridExcess;
   xyExtrapolate = brat->xyExtrapolate;
   singlePrecision = brat3dData[brat->dataIndex].singlePrecision;
+  ySymmetryCodeGlobal = brat3dData[brat->dataIndex].ySymmetryCode;
+  printf("ySymmetryCodeGlobal = %hd\n", ySymmetryCodeGlobal);
 
   zStart = zi - dz;
   z_outer = MAX(fabs(zi), fabs(zf));
@@ -1409,10 +1417,10 @@ void BRAT_B_field_permuted(
   Q[0] = Qp[2];
   Q[1] = Qp[0];
   Q[2] = Qp[1];
-  BRAT_B_field(F, Q);
-  Fp[0] = F[1];
-  Fp[1] = F[2];
-  Fp[2] = F[0];
+  BRAT_B_field(F, Q); 
+  Fp[0] = F[1]; /* Bx */
+  Fp[1] = F[2]; /* By */
+  Fp[2] = F[0]; /* Bz */
 }
 
 void BRAT_B_field(double *F, double *Qg) {
@@ -1423,6 +1431,15 @@ void BRAT_B_field(double *F, double *Qg) {
 #endif
   double x, y, z, derivSign = 1;
   double Q[3];
+  short BxSymmetryFactor = 1, BySymmetryFactor = 1;
+
+  if (ySymmetryCodeGlobal==1) {
+    /* odd magnet symmetry w.r.t. y, e.g., a normal quad */
+    BxSymmetryFactor = -1;
+  } else if (ySymmetryCodeGlobal==2) { 
+    /* even magnet symmetry w.r.t. y, e.g., a skew quad */
+    BySymmetryFactor = -1;
+ }
 
   memcpy(Q, Qg, 3 * sizeof(*Q));
   if (idealMode) {
@@ -1511,6 +1528,8 @@ void BRAT_B_field(double *F, double *Qg) {
 
   x = Q[1] - dXOffset + dZOffset * dxDzFactor;
   y = Q[2] - dYOffset;
+  if (y<0 && ySymmetryCodeGlobal)
+    y *= -1;
   z -= dZOffset;
 
   F[0] = F[1] = F[2] = 0;
@@ -1801,6 +1820,9 @@ void BRAT_B_field(double *F, double *Qg) {
 
   for (j = 0; j < 3; j++)
     F[j] *= fieldSign * (1 + fse);
+
+  F[1] *= BxSymmetryFactor;
+  F[2] *= BySymmetryFactor;
 
 #ifdef DEBUG
   fprintf(stderr, "F[0] = %e, F[1] = %e, F[2] = %e, FSE = %e\n", F[0], F[1], F[2], fse);
@@ -2284,6 +2306,7 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
   long nx, ny, nz;
   SDDS_DATASET SDDS_table;
   double Bmin, Bmax;
+  short ySymmetryCode = 0;
 
   /* See if we've read this file already---should use a hash table */
   for (i = 0; i < nBrat3dData; i++) {
@@ -2348,10 +2371,6 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
         !(Bzd = SDDS_GetColumnInDoubles(&SDDS_table, "Bz"))) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
-    if (!SDDS_Terminate(&SDDS_table))
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
-    printf("Finished reading data from file\n");
-    fflush(stdout);
 
     /* It is assumed that the data is ordered so that x changes fastest.
      * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
@@ -2448,7 +2467,6 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
     brat3dData[nBrat3dData].zf = zf;
     brat3dData[nBrat3dData].dz = dz;
     brat3dData[nBrat3dData].nz = nz;
-
     brat3dData[nBrat3dData].singlePrecision = 0;
   } else {
     /* single-precision data */
@@ -2496,10 +2514,6 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
         !(Bzd = SDDS_GetColumnInFloats(&SDDS_table, "Bz"))) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
-    if (!SDDS_Terminate(&SDDS_table))
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
-    printf("Finished reading data from file\n");
-    fflush(stdout);
 
     /* It is assumed that the data is ordered so that x changes fastest.
      * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
@@ -2596,9 +2610,25 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
     brat3dData[nBrat3dData].zf = zf;
     brat3dData[nBrat3dData].dz = dz;
     brat3dData[nBrat3dData].nz = nz;
-
     brat3dData[nBrat3dData].singlePrecision = 1;
   }
+
+  if (SDDS_GetParameterIndex(&SDDS_table, "ySymmetry")>=0) {
+    char *symmetry[3] = {"none", "odd", "even"};
+    char *ySymmetry = NULL;
+    if (SDDS_CheckParameter(&SDDS_table, "ySymmetry", NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK  ||
+	!SDDS_GetParameter(&SDDS_table, "ySymmetry", (void*)&ySymmetry)) 
+      bombElegantVA("Problem with \"ySymmetry\" parameter in BRAT file %s: not string type \n", filename);
+    if ((ySymmetryCode = match_string(ySymmetry, symmetry, 3, 0))<0)
+      bombElegantVA("Problem with \"ySymmetry\" parameter in BRAT file %s: value %s not recognized\n", filename, ySymmetry);
+    printf("Recognized y-plane magnet symmetry of %s\n", symmetry[ySymmetryCode]);
+  }
+  brat3dData[nBrat3dData].ySymmetryCode = ySymmetryCode;
+  if (!SDDS_Terminate(&SDDS_table))
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
+  printf("Finished reading data from file\n");
+  fflush(stdout);
+
   cp_str(&brat3dData[nBrat3dData].filename, filename);
   if (additionalFile)
     brat->dataIndexAdditional = nBrat3dData;
