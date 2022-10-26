@@ -37,13 +37,18 @@ By default, the \verb|BMXYZ| element should be supplied with the full 3D field m
 To allow saving memory and reducing the file to load data, partial magnetic field maps can be 
 loaded as well, but the user must specify the symmetry of the magnet to ensure that the fields are
 modeled correctly in the full volume.
-This is done using the parameters \verb|X_SYMMETRY|, \verb|Y_SYMMETRY|, and \verb|Z_SYMMETRY|, which
-must have one of three values: \verb|none| (default), \verb|even|, and \verb|odd|.  
+This is done using three optional parameters in the input file, \verb|xSymmetry|, \verb|ySymmetry|, and \verb|zSymmetry|.
+If present, these must have one of three \verb|none| (default), \verb|even|, and \verb|odd|.  
 
-For example, a quadrupole magnet with field values provided for $x\geq 0$, $y\geq 0$, $z\geq 0$ would have
-\verb|X_SYMMETRY=odd|, \verb|Y_SYMMETRY=odd|, and \verb|Z_SYMMETRY=even|.  A left/right symmetric dipole or sextupole
-magnet specified in the same region would have \verb|X_SYMMETRY=even|, \verb|Y_SYMMETRY=odd|, and
+For example, a normal quadrupole magnet would have
+\verb|xSymmetry=odd|, \verb|ySymmetry=odd|, and \verb|zSymmetry=even|.  A left/right symmetric dipole or sextupole
+would have \verb|xSymmetry=even|, \verb|ySymmetry=odd|,
 \verb|Z_SYMMETRY=even|.  A normal octupole would have the same symmetry codes as a normal quadrupole.
+Note that when using these symmetries, the user is not required to limit the field map to, say, 
+\verb|x\geq 0|, verb|y\geq 0|, and \verb|z\geq 0|, though doing so saves the most memory.
+If possible, it is recommended to provide the fields over \verb|x\geq -2\Delta x|, \verb|y\geq -2\Delta y|, 
+and \verb|z\geq 0|, so that the transverse interpolation as a few points on both sides of the origin.
+This will ensure better results near the origin.
 
 Internally, {\tt elegant} stores only the partial field map. When field values are required outside this region, the
 declared symmetries are used to map the coordinates to the covered region and change signs of the various field

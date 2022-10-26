@@ -38,6 +38,23 @@ If matrices are not of particular interest, significant time savings can be real
 \verb|USE_SBEND_MATRIX=1|. Of course, any matrix-based results (e.g., twiss parameters) are then
 dubious at best.
 
+{\bf Symmetry}
+
+By default, the \verb|BRAT| element should be supplied with the full 3D field map of the magnet.
+To allow saving memory and reducing the file to load data, partial magnetic field maps can be 
+loaded as well, but the user must specify the symmetry of the magnet to ensure that the fields are
+modeled correctly in the full volume.
+This is done using the \verb|ySymmetry| parameter in the input file, which may have one of three
+values: \verb|none| (default), \verb|even|, and \verb|odd|.  
+A normal (upright) multipole magnet would have
+\verb|ySymmetry=odd|, while a skew multipole would have \verb|ySymmetry=even|.
+
+Note that when using these symmetries, the user is not required to limit the field map to
+verb|y\geq 0|, though doing so saves the most memory.
+If possible, it is recommended to provide the fields over \verb|y\geq -2\Delta y|,
+so that the transverse interpolation as a few points on both sides of $y=0$.
+This will ensure better results near the origin.
+
 {\bf Integration methods}
 
 The original (and default) integration method is Bulirsch-Stoer integration of the Lorentz force equation.
