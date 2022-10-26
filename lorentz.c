@@ -1998,40 +1998,20 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
   SDDS_DATASET SDDSin;
   long i, nx, ny, imap;
   BMAPXYZ_DATA *data;
-  short symmetryCode[3];
-  static char *symmetryType[3] = {"none", "even", "odd"};
-
-  for (i=0; i<3; i++) { /* x, y, z */
-    if (!bmapxyz->magnetSymmetry[i] || !strlen(bmapxyz->magnetSymmetry[i])) {
-      symmetryCode[i] = 0;
-    } else {
-      if ((symmetryCode[i] = match_string(bmapxyz->magnetSymmetry[i], symmetryType, 3, 0))<0) {
-        fprintf(stderr, "Error: unknown %c symmetry for BMXYZ: %s\n",
-                i==0?'x':(i==1?'y':'z'), bmapxyz->magnetSymmetry[i]);
-        exit(1);
-      }
-    }
-  }
+  static char *symmetryType[3] = {"none", "odd", "even"};
 
   for (imap = 0; imap < nStoredBmapxyzData; imap++) {
     if (strcmp(bmapxyz->filename, storedBmapxyzData[imap].filename) == 0)
       break;
   }
   if (imap < nStoredBmapxyzData) {
-    for (i=0; i<3; i++) { /* x, y, z */
-      if (symmetryCode[i]!=storedBmapxyzData[imap].data->magnetSymmetry[i]) {
-        fprintf(stderr, "Error: symmetry code inconsistent for two BMXYZ elements using data from file %s\n",
-                bmapxyz->filename);
-        exit(1);
-      }
-    }
     bmapxyz->data = storedBmapxyzData[imap].data;
     bmapxyz->fieldLength = storedBmapxyzData[imap].fieldLength;
     bmapxyz->singlePrecision = storedBmapxyzData[imap].singlePrecision;
     return;
   }
 
-  
+
   /*
   if (!fexists(bmapxyz->filename)) {
     printf("file %s not found for BMAPXYZ element\n", bmapxyz->filename);
@@ -2045,10 +2025,6 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
   bmapxyz->data = data = storedBmapxyzData[imap].data = (BMAPXYZ_DATA *)tmalloc(sizeof(*data));
   nStoredBmapxyzData++;
   cp_str(&(storedBmapxyzData[imap].filename), bmapxyz->filename);
-
-  for (i=0; i<3; i++) { /* x, y, z */
-    storedBmapxyzData[imap].data->magnetSymmetry[i] = symmetryCode[i];
-  }
 
   printf("Reading BMXYZ field data from file %s\n", bmapxyz->filename);
   if (!bmapxyz->singlePrecision) {
@@ -2095,7 +2071,6 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
       fflush(stdout);
       exitElegant(1);
     }
-    SDDS_Terminate(&SDDSin);
 
     /* It is assumed that the data is ordered so that x changes fastest.
      * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
@@ -2211,7 +2186,6 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
       fflush(stdout);
       exitElegant(1);
     }
-    SDDS_Terminate(&SDDSin);
 
     /* It is assumed that the data is ordered so that x changes fastest.
      * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
@@ -2284,6 +2258,27 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     data->Fz1 = Fz;
   }
 
+  for (i=0; i<3; i++) { /* x, y, z */
+    char *parameterName[3] = {"xSymmetry", "ySymmetry", "zSymmetry"};
+    char *symmetryString;
+    bmapxyz->data->magnetSymmetry[i] = 0;
+    if (SDDS_GetParameterIndex(&SDDSin, parameterName[i])>=0) {
+      if (SDDS_CheckParameter(&SDDSin, parameterName[i], NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK)
+        bombElegantVA("Error: parameter %s in BMXYZ file %s does not have string type\n",
+                      parameterName[i], bmapxyz->filename);
+      if (!SDDS_GetParameter(&SDDSin, parameterName[i], (void*)&symmetryString)) 
+        bombElegantVA("Problem with %s parameter in BRAT file %s: not string type \n", parameterName[i], bmapxyz->filename);
+      if ((bmapxyz->data->magnetSymmetry[i] = match_string(symmetryString, symmetryType, 3, 0))<0)
+	bombElegantVA("Problem with %s parameter in BRAT file %s: value %s not recognized\n",
+                      parameterName[i], bmapxyz->filename, symmetryString);
+      printf("Recognized magnet %c symmetry of %s\n",
+             parameterName[i][0], symmetryType[bmapxyz->data->magnetSymmetry[i]]);
+      free(symmetryString);
+    }
+  }
+
+  SDDS_Terminate(&SDDSin);
+
   if (bmapxyz->fieldLength > 0) {
     if (fabs(bmapxyz->fieldLength - (data->zmax - data->zmin)) / bmapxyz->fieldLength > 1e-7) {
       fprintf(stderr, "Error: Mismatch of LFIELD (%21.15e) and data from file %s (range %21.15le)\n",
@@ -2292,7 +2287,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     }
   } else {
     bmapxyz->fieldLength = data->zmax - data->zmin;
-    if (symmetryCode[2])
+    if (bmapxyz->data->magnetSymmetry[2])
       bmapxyz->fieldLength *= 2;
     printf("Set LFIELD for %s to %21.15e\n", bmapxyz->filename, bmapxyz->fieldLength);
   }
@@ -2431,7 +2426,7 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
   if (bmapxyz->data->magnetSymmetry[0] && x<0) {
     /* x */
     x = fabs(x);
-    if (bmapxyz->data->magnetSymmetry[0]==2) {
+    if (bmapxyz->data->magnetSymmetry[0]==1) {
       /* odd symmetry */
       symmetryFactor[1] *= -1;
       symmetryFactor[2] *= -1;
@@ -2442,7 +2437,7 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
   if (bmapxyz->data->magnetSymmetry[1] && y<0) {
     /* y */
     y = fabs(y);
-    if (bmapxyz->data->magnetSymmetry[1]==2) {
+    if (bmapxyz->data->magnetSymmetry[1]==1) {
       /* odd symmetry */
       symmetryFactor[0] *= -1;
       symmetryFactor[2] *= -1;
@@ -2454,7 +2449,7 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
     /* z */
     if (z<bmapxyz->fieldLength/2) {
       z = fabs(z-bmapxyz->fieldLength/2);
-      if (bmapxyz->data->magnetSymmetry[2]==2) {
+      if (bmapxyz->data->magnetSymmetry[2]==1) {
         /* odd symmetry */
         symmetryFactor[0] *= -1;
         symmetryFactor[1] *= -1;
