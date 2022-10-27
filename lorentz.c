@@ -2280,10 +2280,18 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
   SDDS_Terminate(&SDDSin);
 
   if (bmapxyz->fieldLength > 0) {
-    if (fabs(bmapxyz->fieldLength - (data->zmax - data->zmin)) / bmapxyz->fieldLength > 1e-7) {
-      fprintf(stderr, "Error: Mismatch of LFIELD (%21.15e) and data from file %s (range %21.15le)\n",
-              bmapxyz->fieldLength, bmapxyz->filename, data->zmax - data->zmin);
-      exit(1);
+    if (!bmapxyz->data->magnetSymmetry[2]) {
+      if (fabs(bmapxyz->fieldLength - (data->zmax - data->zmin)) / bmapxyz->fieldLength > 1e-7) {
+	fprintf(stderr, "Error: Mismatch of LFIELD (%21.15e) and data from file %s (range %21.15le)\n",
+		bmapxyz->fieldLength, bmapxyz->filename, data->zmax - data->zmin);
+	exit(1);
+      }
+    } else {
+      if (fabs(bmapxyz->fieldLength - 2*data->zmax) / bmapxyz->fieldLength > 1e-7) {
+	fprintf(stderr, "Error: Mismatch of LFIELD (%21.15e) and data from file %s (range %21.15le)\n",
+		bmapxyz->fieldLength, bmapxyz->filename, data->zmax - data->zmin);
+	exit(1);
+      }
     }
   } else {
     bmapxyz->fieldLength = data->zmax - data->zmin;

@@ -60,6 +60,7 @@ static char *interpolationParameterUnits = NULL;
 static double xfWeight = 1, xfpWeight = 1;
 static double dxDzFactor;
 static short ySymmetryCodeGlobal=0; /* 0 = none, 1 = odd, 2 = even */
+static short zSymmetryCodeGlobal=0; /* 0 = none, 1 = odd, 2 = even */
 
 #define BRAT_INTERP_EXTRAPOLATE 0x001UL
 #define BRAT_INTERP_PERMISSIVE 0x002UL
@@ -146,6 +147,7 @@ typedef struct {
   long nx, ny, nz;
   short singlePrecision, additionalMap;
   short ySymmetryCode; /* 0 = none, 1 = odd, 2 = even */
+  short zSymmetryCode; /* 0 = none, 1 = odd, 2 = even */
   /* used if singlePrecision=0 */
   double *Bx, *By, *Bz;
   double *BxAdditional, *ByAdditional, *BzAdditional;
@@ -197,6 +199,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
           !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bz", "m", SDDS_FLOAT) ||
           !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "particleID", NULL, SDDS_ULONG64) ||
           !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "ySymmetryCode", NULL, SDDS_SHORT) ||
+          !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "zSymmetryCode", NULL, SDDS_SHORT) ||
           !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "XLoss", "m", SDDS_FLOAT) ||
           !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "yLoss", "m", SDDS_FLOAT) ||
           !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "ZLoss", "m", SDDS_FLOAT) ||
@@ -287,6 +290,10 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       bombElegantVA("BRAT main (%s) and additional (%s) files have different y symmetry.\n",
                     brat3dData[brat->dataIndex].filename,
                     brat3dData[brat->dataIndexAdditional].filename);
+    if (brat3dData[brat->dataIndex].zSymmetryCode != brat3dData[brat->dataIndexAdditional].zSymmetryCode)
+      bombElegantVA("BRAT main (%s) and additional (%s) files have different z symmetry.\n",
+                    brat3dData[brat->dataIndex].filename,
+                    brat3dData[brat->dataIndexAdditional].filename);
   }
 
   BxNorm = brat3dData[brat->dataIndex].Bx;
@@ -326,8 +333,14 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   xyExtrapolate = brat->xyExtrapolate;
   singlePrecision = brat3dData[brat->dataIndex].singlePrecision;
   ySymmetryCodeGlobal = brat3dData[brat->dataIndex].ySymmetryCode;
+  zSymmetryCodeGlobal = brat3dData[brat->dataIndex].zSymmetryCode;
 
-  zStart = zi - dz;
+  if (brat3dData[brat->dataIndex].zSymmetryCode) {
+    zi = 0;
+    zStart = -zf - dz;
+  }  else {
+    zStart = zi - dz;
+  }
   z_outer = MAX(fabs(zi), fabs(zf));
 
   fieldMapDimension = 3;
@@ -401,8 +414,8 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE,
                               "particleID",
                               (uint64_t)part[iOut][particleIDIndex],
-                              "ySymmetryCode",
-                              ySymmetryCodeGlobal,
+                              "ySymmetryCode", ySymmetryCodeGlobal,
+                              "zSymmetryCode", zSymmetryCodeGlobal,
                               "XLoss", (float)lossCoordinates[0],
                               "yLoss", (float)lossCoordinates[3],
                               "ZLoss", (float)lossCoordinates[1],
@@ -1433,7 +1446,7 @@ void BRAT_B_field(double *F, double *Qg) {
 #endif
   double x, y, z, derivSign = 1;
   double Q[3];
-  short BxSymmetryFactor = 1, BySymmetryFactor = 1;
+  short symmetryFactor[3] = {1, 1, 1}; /* Bz, Bx, By */
 
   memcpy(Q, Qg, 3 * sizeof(*Q));
   if (idealMode) {
@@ -1525,14 +1538,27 @@ void BRAT_B_field(double *F, double *Qg) {
   if (y<0 && ySymmetryCodeGlobal) {
     if (ySymmetryCodeGlobal==1) {
       /* odd magnet symmetry w.r.t. y, e.g., a normal quad */
-      BxSymmetryFactor = -1;
+      symmetryFactor[1] *= -1; /* Bx */
+      symmetryFactor[0] *= -1; /* Bz */
     } else if (ySymmetryCodeGlobal==2) { 
       /* even magnet symmetry w.r.t. y, e.g., a skew quad */
-      BySymmetryFactor = -1;
+      symmetryFactor[2] *= -1; /* By */
     }
     y *= -1;
   }
+
   z -= dZOffset;
+  if (z<0 && zSymmetryCodeGlobal) {
+    if (zSymmetryCodeGlobal==1) {
+      /* odd magnet symmetry w.r.t. z */
+      symmetryFactor[1] *= -1; /* Bx */
+      symmetryFactor[2] *= -1; /* By */
+    } else if (zSymmetryCodeGlobal==2) { 
+      /* even magnet symmetry w.r.t. z */
+      symmetryFactor[0] *= -1; /* Bz */
+    }
+    z *= -1;
+  }
 
   F[0] = F[1] = F[2] = 0;
 
@@ -1817,14 +1843,11 @@ void BRAT_B_field(double *F, double *Qg) {
     F[1] = Freturn[1];
     F[2] = Freturn[2];
     if (z >= zNomEntry && z <= zNomExit && deltaByInside)
-      F[2] += deltaByInside*BySymmetryFactor; /* undoes factor for this component of By */
+      F[2] += deltaByInside*symmetryFactor[2]; /* undoes factor for this component of By */
   }
 
   for (j = 0; j < 3; j++)
-    F[j] *= fieldSign * (1 + fse);
-
-  F[1] *= BxSymmetryFactor;
-  F[2] *= BySymmetryFactor;
+    F[j] *= fieldSign * (1 + fse)*symmetryFactor[j];
 
 #ifdef DEBUG
   fprintf(stderr, "F[0] = %e, F[1] = %e, F[2] = %e, FSE = %e\n", F[0], F[1], F[2], fse);
@@ -2309,6 +2332,7 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
   SDDS_DATASET SDDS_table;
   double Bmin, Bmax;
   short ySymmetryCode = 0;
+  short zSymmetryCode = 0;
 
   /* See if we've read this file already---should use a hash table */
   for (i = 0; i < nBrat3dData; i++) {
@@ -2625,7 +2649,18 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
       bombElegantVA("Problem with \"ySymmetry\" parameter in BRAT file %s: value %s not recognized\n", filename, ySymmetry);
     printf("Recognized y-plane magnet symmetry of %s\n", symmetry[ySymmetryCode]);
   }
+  if (SDDS_GetParameterIndex(&SDDS_table, "zSymmetry")>=0) {
+    char *symmetry[3] = {"none", "odd", "even"};
+    char *zSymmetry = NULL;
+    if (SDDS_CheckParameter(&SDDS_table, "zSymmetry", NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK  ||
+	!SDDS_GetParameter(&SDDS_table, "zSymmetry", (void*)&zSymmetry)) 
+      bombElegantVA("Problem with \"zSymmetry\" parameter in BRAT file %s: not string type \n", filename);
+    if ((zSymmetryCode = match_string(zSymmetry, symmetry, 3, 0))<0)
+      bombElegantVA("Problem with \"zSymmetry\" parameter in BRAT file %s: value %s not recognized\n", filename, zSymmetry);
+    printf("Recognized y-plane magnet symmetry of %s\n", symmetry[zSymmetryCode]);
+  }
   brat3dData[nBrat3dData].ySymmetryCode = ySymmetryCode;
+  brat3dData[nBrat3dData].zSymmetryCode = zSymmetryCode;
   if (!SDDS_Terminate(&SDDS_table))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
   printf("Finished reading data from file\n");
