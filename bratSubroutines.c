@@ -196,6 +196,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
           !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "By", "T", SDDS_FLOAT) ||
           !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bz", "m", SDDS_FLOAT) ||
           !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "particleID", NULL, SDDS_ULONG64) ||
+          !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "ySymmetryCode", NULL, SDDS_SHORT) ||
           !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "XLoss", "m", SDDS_FLOAT) ||
           !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "yLoss", "m", SDDS_FLOAT) ||
           !SDDS_DefineSimpleParameter(brat->SDDSparticleOutput, "ZLoss", "m", SDDS_FLOAT) ||
@@ -400,6 +401,8 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE,
                               "particleID",
                               (uint64_t)part[iOut][particleIDIndex],
+                              "ySymmetryCode",
+                              ySymmetryCodeGlobal,
                               "XLoss", (float)lossCoordinates[0],
                               "yLoss", (float)lossCoordinates[3],
                               "ZLoss", (float)lossCoordinates[1],
@@ -1432,14 +1435,6 @@ void BRAT_B_field(double *F, double *Qg) {
   double Q[3];
   short BxSymmetryFactor = 1, BySymmetryFactor = 1;
 
-  if (ySymmetryCodeGlobal==1) {
-    /* odd magnet symmetry w.r.t. y, e.g., a normal quad */
-    BxSymmetryFactor = -1;
-  } else if (ySymmetryCodeGlobal==2) { 
-    /* even magnet symmetry w.r.t. y, e.g., a skew quad */
-    BySymmetryFactor = -1;
- }
-
   memcpy(Q, Qg, 3 * sizeof(*Q));
   if (idealMode) {
     double Lx;
@@ -1527,8 +1522,16 @@ void BRAT_B_field(double *F, double *Qg) {
 
   x = Q[1] - dXOffset + dZOffset * dxDzFactor;
   y = Q[2] - dYOffset;
-  if (y<0 && ySymmetryCodeGlobal)
+  if (y<0 && ySymmetryCodeGlobal) {
+    if (ySymmetryCodeGlobal==1) {
+      /* odd magnet symmetry w.r.t. y, e.g., a normal quad */
+      BxSymmetryFactor = -1;
+    } else if (ySymmetryCodeGlobal==2) { 
+      /* even magnet symmetry w.r.t. y, e.g., a skew quad */
+      BySymmetryFactor = -1;
+    }
     y *= -1;
+  }
   z -= dZOffset;
 
   F[0] = F[1] = F[2] = 0;
@@ -1814,7 +1817,7 @@ void BRAT_B_field(double *F, double *Qg) {
     F[1] = Freturn[1];
     F[2] = Freturn[2];
     if (z >= zNomEntry && z <= zNomExit && deltaByInside)
-      F[2] += deltaByInside;
+      F[2] += deltaByInside*BySymmetryFactor; /* undoes factor for this component of By */
   }
 
   for (j = 0; j < 3; j++)
