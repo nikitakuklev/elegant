@@ -2027,8 +2027,11 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
   cp_str(&(storedBmapxyzData[imap].filename), bmapxyz->filename);
 
   printf("Reading BMXYZ field data from file %s\n", bmapxyz->filename);
+  fflush(stdout);
   if (!bmapxyz->singlePrecision) {
     double *x = NULL, *y = NULL, *z = NULL, *Fx = NULL, *Fy = NULL, *Fz = NULL;
+    printf("Data from file %s will be stored in double precision\n", bmapxyz->filename);
+    fflush(stdout);
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxyz->filename) ||
         SDDS_ReadPage(&SDDSin) <= 0 ||
         !(x = SDDS_GetColumnInDoubles(&SDDSin, "x")) || !(y = SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
@@ -2036,6 +2039,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
     printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
+    fflush(stdout);
     if (!check_sdds_column(&SDDSin, "x", "m") ||
         !check_sdds_column(&SDDSin, "y", "m") ||
         !check_sdds_column(&SDDSin, "z", "m")) {
@@ -2125,6 +2129,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
            data->xmin, data->xmax,
            data->ymin, data->ymax,
            data->zmin, data->zmax);
+    fflush(stdout);
     if (data->zmin < 0) {
       if (bmapxyz->injectAtZero) {
         printWarningForTracking("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero.",
@@ -2144,6 +2149,8 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
   } else {
     /* single precision */
     float *x = NULL, *y = NULL, *z = NULL, *Fx = NULL, *Fy = NULL, *Fz = NULL;
+    printf("Data from file %s will be stored in single precision\n", bmapxyz->filename);
+    fflush(stdout);
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxyz->filename) ||
         SDDS_ReadPage(&SDDSin) <= 0 ||
         !(x = SDDS_GetColumnInFloats(&SDDSin, "x")) || !(y = SDDS_GetColumnInFloats(&SDDSin, "y")) ||
@@ -2151,6 +2158,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
     printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
+    fflush(stdout);
     if (!check_sdds_column(&SDDSin, "x", "m") ||
         !check_sdds_column(&SDDSin, "y", "m") ||
         !check_sdds_column(&SDDSin, "z", "m")) {
@@ -2240,6 +2248,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
            data->xmin, data->xmax,
            data->ymin, data->ymax,
            data->zmin, data->zmax);
+    fflush(stdout);
     if (data->zmin < 0) {
       if (bmapxyz->injectAtZero) {
         printWarningForTracking("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero.",
@@ -2298,6 +2307,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     if (bmapxyz->data->magnetSymmetry[2])
       bmapxyz->fieldLength *= 2;
     printf("Set LFIELD for %s to %21.15e\n", bmapxyz->filename, bmapxyz->fieldLength);
+    fflush(stdout);
   }
   storedBmapxyzData[imap].fieldLength = bmapxyz->fieldLength;
   storedBmapxyzData[imap].singlePrecision = bmapxyz->singlePrecision;
