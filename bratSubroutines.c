@@ -1058,6 +1058,11 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
   double xc;
 #endif
 
+#if USE_MPI
+  if (myid==1)
+    dup2(fd, fileno(stdout));
+#endif
+  
   printf("Reading BRAT field data from %s\n", input);
   fflush(stdout);
 
@@ -1420,6 +1425,16 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
            Bmin, Bmax);
   }
 
+#if USE_MPI
+  if (myid==1) {
+#if defined(_WIN32)
+    freopen("NUL", "w", stdout);
+#else
+    freopen("/dev/null", "w", stdout);
+#endif
+  }
+#endif
+  
   return Bmax;
 }
 

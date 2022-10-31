@@ -1141,7 +1141,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 15
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
-#define N_BMAPXYZ_PARAMS 30
+#define N_BMAPXYZ_PARAMS 31
 #define N_BRAT_PARAMS 31
 #define N_BGGEXP_PARAMS 35
 #define N_BRANCH_PARAMS 7
@@ -3094,7 +3094,7 @@ typedef struct {
   double fieldLength, strength, fse, BFactor[3], BInside[3];
   double xInsideLimit[2], accuracy;
   char *method, *filename;
-  short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridExcess, singlePrecision;
+  short synchRad, checkFields, injectAtZero, driftMatrix, xyInterpolationOrder, xyGridExcess, singlePrecision, verbosity;
   char *particleOutputFile, *apContourElement;
   double zMinApContour, zMaxApContour;
   /* internal variables */

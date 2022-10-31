@@ -3021,6 +3021,10 @@ void processGlobalSettings(NAMELIST_TEXT *nltext) {
 void bombTracking(const char *error) {
   TRACKING_CONTEXT tc;
   getTrackingContext(&tc);
+#if USE_MPI
+  /* allow slaves to print messages. may get many copies */
+  dup2(fd, fileno(stdout));
+#endif
   printf("error:  %s\n", error);
   if (tc.elementName)
     printf("Tracking through %s#%ld at s=%lem\n",

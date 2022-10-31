@@ -283,9 +283,10 @@ long lorentz(
   APERTURE_DATA *apData0
              ) {
   double *coord;
-  long i_part, i_top;
+  long i_part, i_top, mod, count;
   TRACKING_CONTEXT context;
-
+  short verbosity = 0;
+  
   if (!n_part)
     return (0);
 
@@ -336,26 +337,35 @@ long lorentz(
   if (field_type == T_BMAPXYZ) {
     BMAPXYZ *bmxyz;
     bmxyz = (BMAPXYZ *)field;
+    verbosity = bmxyz->verbosity;
     if ((bmxyz->fieldLength > 0 && bmxyz->length != bmxyz->fieldLength) && !bmxyz->injectAtZero)
       exactDrift(part, n_part, (bmxyz->length - bmxyz->fieldLength) / 2);
   }
 
+  if (verbosity) {
+#if USE_MPI
+    dup2(fd, fileno(stdout));
+#endif
+  }
 #ifdef DEBUG
   field_output_on = fp_field ? 1 : 0;
 #endif
   i_top = n_part - 1;
+  mod = n_part/100;
+  count = 0;
   for (i_part = 0; i_part <= i_top; i_part++) {
+    count++;
     coord = part[i_part];
     lastParticleID = part[i_part][particleIDIndex];
-#ifdef DEBUG
-    printf("Tracking particle %ld of %ld, coord=%x\n", i_part, n_part, coord);
-    fflush(stdout);
+    if (verbosity>9 && count%mod==0) {
+#if USE_MPI
+      printf("Worker %d tracking particle %ld of %ld\n", myid, count, i_top);
+#else
+      printf("Tracking particle %ld of %ld\n", count, i_top);
 #endif
-    if (!do_lorentz_integration(coord, field)) {
-#ifdef DEBUG
-      printf("Tracking lost\n");
       fflush(stdout);
-#endif
+    }
+    if (!do_lorentz_integration(coord, field)) {
       if (i_part != i_top) {
         swapParticles(part[i_part], part[i_top]);
         if (accepted)
@@ -365,12 +375,6 @@ long lorentz(
       i_top--;
       i_part--;
     }
-#ifdef DEBUG
-    else {
-      printf("Tracking survived\n");
-      fflush(stdout);
-    }
-#endif
 
     if (field_type == T_BMAPXYZ) {
       BMAPXYZ *bmxyz;
@@ -382,6 +386,16 @@ long lorentz(
       bmxyz->poRow = 0;
     }
   }
+
+#if USE_MPI
+  if (verbosity) {
+#if defined(_WIN32)
+    freopen("NUL", "w", stdout);
+#else
+    freopen("/dev/null", "w", stdout);
+#endif
+  }
+#endif
 
   lorentz_terminate(field, field_type, part, n_part, P_central);
 
@@ -2026,6 +2040,11 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
   nStoredBmapxyzData++;
   cp_str(&(storedBmapxyzData[imap].filename), bmapxyz->filename);
 
+#if USE_MPI
+  if (myid==1)
+    dup2(fd, fileno(stdout));
+#endif
+
   printf("Reading BMXYZ field data from file %s\n", bmapxyz->filename);
   fflush(stdout);
   if (!bmapxyz->singlePrecision) {
@@ -2046,6 +2065,74 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
       fprintf(stderr, "BMAPXYZ input file must have x, y, and z in m (meters)\n");
       exitElegant(1);
     }
+
+    /* It is assumed that the data is ordered so that x changes fastest.
+     * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
+     * The points are assumed to be equipspaced.
+     */
+    nx = 1;
+    data->xmin = x[0];
+    while (nx < data->points) {
+      if (x[nx - 1] > x[nx])
+        break;
+      nx++;
+    }
+    if (nx == data->points) {
+      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (x)\n",
+             bmapxyz->filename);
+      printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exitElegant(1);
+    }
+    data->xmax = x[nx - 1];
+    data->dx = (data->xmax - data->xmin) / (nx - 1);
+
+    ny = 1;
+    data->ymin = y[0];
+    while (ny < (data->points / nx)) {
+      if (y[(ny - 1) * nx] > y[ny * nx])
+        break;
+      ny++;
+    }
+    if (ny == data->points / nx) {
+      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (y)\n",
+             bmapxyz->filename);
+      printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exitElegant(1);
+    }
+    data->ymax = y[(ny - 1) * nx];
+    data->dy = (data->ymax - data->ymin) / (ny - 1);
+
+    if ((data->nx = nx) <= 1 || (data->ny = ny) <= 1 || (data->nz = data->points / (nx * ny)) <= 1 ||
+        (data->nx * data->ny * data->nz != data->points)) {
+      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data\n",
+             bmapxyz->filename);
+      printf("nx = %ld, ny=%ld, nz=%ld, points=%ld\n", data->nx, data->ny, data->nz, data->points);
+      exitElegant(1);
+    }
+    data->zmin = z[0];
+    data->zmax = z[data->points - 1];
+    data->dz = (data->zmax - data->zmin) / (data->nz - 1);
+    printf("BMAPXYZ element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
+           bmapxyz->filename,
+           data->nx, data->ny, data->nz,
+           data->dx, data->dy, data->dz,
+           data->xmin, data->xmax,
+           data->ymin, data->ymax,
+           data->zmin, data->zmax);
+    fflush(stdout);
+    if (data->zmin < 0) {
+      if (bmapxyz->injectAtZero) {
+        printWarningForTracking("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero.",
+                                "Particles will start inside the element. The insertion length (L) and any difference from the field length is ignored.");
+      } else {
+        data->zmax = data->zmax - data->zmin;
+        data->zmin = 0;
+      }
+    }
+    free(x);
+    free(y);
+    free(z);
+
     data->BGiven = 0;
     if (!(Fx = SDDS_GetColumnInDoubles(&SDDSin, "Fx")) || !(Fy = SDDS_GetColumnInDoubles(&SDDSin, "Fy")) ||
         !(Fz = SDDS_GetColumnInDoubles(&SDDSin, "Fz"))) {
@@ -2076,6 +2163,30 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
       exitElegant(1);
     }
 
+    data->Fx1 = data->Fy1 = data->Fz1 = NULL;
+    data->Fx = Fx;
+    data->Fy = Fy;
+    data->Fz = Fz;
+  } else {
+    /* single precision */
+    float *x = NULL, *y = NULL, *z = NULL, *Fx = NULL, *Fy = NULL, *Fz = NULL;
+    printf("Data from file %s will be stored in single precision\n", bmapxyz->filename);
+    fflush(stdout);
+    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxyz->filename) ||
+        SDDS_ReadPage(&SDDSin) <= 0 ||
+        !(x = SDDS_GetColumnInFloats(&SDDSin, "x")) || !(y = SDDS_GetColumnInFloats(&SDDSin, "y")) ||
+        !(z = SDDS_GetColumnInFloats(&SDDSin, "z"))) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
+    }
+    printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
+    fflush(stdout);
+    if (!check_sdds_column(&SDDSin, "x", "m") ||
+        !check_sdds_column(&SDDSin, "y", "m") ||
+        !check_sdds_column(&SDDSin, "z", "m")) {
+      fprintf(stderr, "BMAPXYZ input file must have x, y, and z in m (meters)\n");
+      exitElegant(1);
+    }
+
     /* It is assumed that the data is ordered so that x changes fastest.
      * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
      * The points are assumed to be equipspaced.
@@ -2142,29 +2253,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     free(x);
     free(y);
     free(z);
-    data->Fx1 = data->Fy1 = data->Fz1 = NULL;
-    data->Fx = Fx;
-    data->Fy = Fy;
-    data->Fz = Fz;
-  } else {
-    /* single precision */
-    float *x = NULL, *y = NULL, *z = NULL, *Fx = NULL, *Fy = NULL, *Fz = NULL;
-    printf("Data from file %s will be stored in single precision\n", bmapxyz->filename);
-    fflush(stdout);
-    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxyz->filename) ||
-        SDDS_ReadPage(&SDDSin) <= 0 ||
-        !(x = SDDS_GetColumnInFloats(&SDDSin, "x")) || !(y = SDDS_GetColumnInFloats(&SDDSin, "y")) ||
-        !(z = SDDS_GetColumnInFloats(&SDDSin, "z"))) {
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
-    }
-    printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
-    fflush(stdout);
-    if (!check_sdds_column(&SDDSin, "x", "m") ||
-        !check_sdds_column(&SDDSin, "y", "m") ||
-        !check_sdds_column(&SDDSin, "z", "m")) {
-      fprintf(stderr, "BMAPXYZ input file must have x, y, and z in m (meters)\n");
-      exitElegant(1);
-    }
+
     data->BGiven = 0;
     if (!(Fx = SDDS_GetColumnInFloats(&SDDSin, "Fx")) || !(Fy = SDDS_GetColumnInFloats(&SDDSin, "Fy")) ||
         !(Fz = SDDS_GetColumnInFloats(&SDDSin, "Fz"))) {
@@ -2195,72 +2284,6 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
       exitElegant(1);
     }
 
-    /* It is assumed that the data is ordered so that x changes fastest.
-     * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
-     * The points are assumed to be equipspaced.
-     */
-    nx = 1;
-    data->xmin = x[0];
-    while (nx < data->points) {
-      if (x[nx - 1] > x[nx])
-        break;
-      nx++;
-    }
-    if (nx == data->points) {
-      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (x)\n",
-             bmapxyz->filename);
-      printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
-      exitElegant(1);
-    }
-    data->xmax = x[nx - 1];
-    data->dx = (data->xmax - data->xmin) / (nx - 1);
-
-    ny = 1;
-    data->ymin = y[0];
-    while (ny < (data->points / nx)) {
-      if (y[(ny - 1) * nx] > y[ny * nx])
-        break;
-      ny++;
-    }
-    if (ny == data->points / nx) {
-      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (y)\n",
-             bmapxyz->filename);
-      printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
-      exitElegant(1);
-    }
-    data->ymax = y[(ny - 1) * nx];
-    data->dy = (data->ymax - data->ymin) / (ny - 1);
-
-    if ((data->nx = nx) <= 1 || (data->ny = ny) <= 1 || (data->nz = data->points / (nx * ny)) <= 1 ||
-        (data->nx * data->ny * data->nz != data->points)) {
-      printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data\n",
-             bmapxyz->filename);
-      printf("nx = %ld, ny=%ld, nz=%ld, points=%ld\n", data->nx, data->ny, data->nz, data->points);
-      exitElegant(1);
-    }
-    data->zmin = z[0];
-    data->zmax = z[data->points - 1];
-    data->dz = (data->zmax - data->zmin) / (data->nz - 1);
-    printf("BMAPXYZ element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
-           bmapxyz->filename,
-           data->nx, data->ny, data->nz,
-           data->dx, data->dy, data->dz,
-           data->xmin, data->xmax,
-           data->ymin, data->ymax,
-           data->zmin, data->zmax);
-    fflush(stdout);
-    if (data->zmin < 0) {
-      if (bmapxyz->injectAtZero) {
-        printWarningForTracking("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero.",
-                                "Particles will start inside the element. The insertion length (L) and any difference from the field length is ignored.");
-      } else {
-        data->zmax = data->zmax - data->zmin;
-        data->zmin = 0;
-      }
-    }
-    free(x);
-    free(y);
-    free(z);
     data->Fx = data->Fy = data->Fz = NULL;
     data->Fx1 = Fx;
     data->Fy1 = Fy;
@@ -2426,6 +2449,16 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
 
   printf("Field setup completed for data from file %s\n", bmapxyz->filename);
   fflush(stdout);
+
+#if USE_MPI
+  if (myid==1) {
+#if defined(_WIN32)
+    freopen("NUL", "w", stdout);
+#else
+    freopen("/dev/null", "w", stdout);
+#endif
+  }
+#endif
 }
 
 /*
