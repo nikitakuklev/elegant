@@ -2393,11 +2393,59 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
     }
     printf("x, y, and z found with expected units\n");
     fflush(stdout);
-    if (!(xd = SDDS_GetColumnInDoubles(&SDDS_table, "x")) ||
-        !(yd = SDDS_GetColumnInDoubles(&SDDS_table, "y")) ||
-        !(zd = SDDS_GetColumnInDoubles(&SDDS_table, "z"))) {
+
+    /* It is assumed that the data is ordered so that x changes fastest.
+     * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
+     * The points are assumed to be equipspaced.
+     */
+    if (!(xd = SDDS_GetColumnInDoubles(&SDDS_table, "x")))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
+    nx = 1;
+    xi = xd[0];
+    while (nx < rows) {
+      if (xd[nx - 1] > xd[nx])
+        break;
+      nx++;
     }
+    if (nx == rows) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (x)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }
+    xf = xd[nx - 1];
+    dx = (xf - xi) / (nx - 1);
+    free(xd);
+    
+    if (!(yd = SDDS_GetColumnInDoubles(&SDDS_table, "y")))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
+    ny = 1;
+    yi = yd[0];
+    while (ny < (rows / nx)) {
+      if (yd[(ny - 1) * nx] > yd[ny * nx])
+        break;
+      ny++;
+    }
+    if (ny == rows) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (y)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }
+    yf = yd[(ny - 1) * nx];
+    dy = (yf - yi) / (ny - 1);
+    free(yd);
+    
+    if (!(zd = SDDS_GetColumnInDoubles(&SDDS_table, "z")))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
+    if (nx <= 1 || ny <= 1 || (nz = rows / (nx * ny)) <= 1) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (z)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }
+    zi = zd[0];
+    zf = zd[rows - 1];
+    dz = (zf - zi) / (nz - 1);
+    free(zd);
+    
     if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
         SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
         SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY) {
@@ -2413,48 +2461,6 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
 
-    /* It is assumed that the data is ordered so that x changes fastest.
-     * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
-     * The points are assumed to be equipspaced.
-     */
-    nx = 1;
-    xi = xd[0];
-    while (nx < rows) {
-      if (xd[nx - 1] > xd[nx])
-        break;
-      nx++;
-    }
-    if (nx == rows) {
-      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (x)\n");
-      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-      exit(1);
-    }
-    xf = xd[nx - 1];
-    dx = (xf - xi) / (nx - 1);
-
-    ny = 1;
-    yi = yd[0];
-    while (ny < (rows / nx)) {
-      if (yd[(ny - 1) * nx] > yd[ny * nx])
-        break;
-      ny++;
-    }
-    if (ny == rows) {
-      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (y)\n");
-      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-      exit(1);
-    }
-    yf = yd[(ny - 1) * nx];
-    dy = (yf - yi) / (ny - 1);
-
-    if (nx <= 1 || ny <= 1 || (nz = rows / (nx * ny)) <= 1) {
-      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (z)\n");
-      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-      exit(1);
-    }
-    zi = zd[0];
-    zf = zd[rows - 1];
-    dz = (zf - zi) / (nz - 1);
 
     Bmin = -(Bmax = -DBL_MAX);
     for (idata = 0; idata < rows; idata++) {
@@ -2465,9 +2471,7 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
         Bmin = Byd[idata];
       /* } */
     }
-    free(xd);
-    free(yd);
-    free(zd);
+
     if (Bmax == -DBL_MAX) {
       fprintf(stderr, "BRAT file doesn't have valid Bmax value\n");
       fprintf(stderr, "Bmax = %le, Bmin = %le\n", Bmax, Bmin);
@@ -2536,11 +2540,59 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
     }
     printf("x, y, and z found with expected units\n");
     fflush(stdout);
-    if (!(xd = SDDS_GetColumnInFloats(&SDDS_table, "x")) ||
-        !(yd = SDDS_GetColumnInFloats(&SDDS_table, "y")) ||
-        !(zd = SDDS_GetColumnInFloats(&SDDS_table, "z"))) {
+
+    /* It is assumed that the data is ordered so that x changes fastest.
+     * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
+     * The points are assumed to be equipspaced.
+     */
+    if (!(xd = SDDS_GetColumnInFloats(&SDDS_table, "x"))) 
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
+    nx = 1;
+    xi = xd[0];
+    while (nx < rows) {
+      if (xd[nx - 1] > xd[nx])
+        break;
+      nx++;
     }
+    if (nx == rows) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (x)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }
+    xf = xd[nx - 1];
+    dx = (xf - xi) / (nx - 1);
+    free(xd);
+
+    if (!(yd = SDDS_GetColumnInFloats(&SDDS_table, "y")))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
+    ny = 1;
+    yi = yd[0];
+    while (ny < (rows / nx)) {
+      if (yd[(ny - 1) * nx] > yd[ny * nx])
+        break;
+      ny++;
+    }
+    if (ny == rows) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (y)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }
+    yf = yd[(ny - 1) * nx];
+    dy = (yf - yi) / (ny - 1);
+    free(yd);
+    
+    if (!(zd = SDDS_GetColumnInFloats(&SDDS_table, "z")))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
+    if (nx <= 1 || ny <= 1 || (nz = rows / (nx * ny)) <= 1) {
+      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (z)\n");
+      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
+      exit(1);
+    }
+    zi = zd[0];
+    zf = zd[rows - 1];
+    dz = (zf - zi) / (nz - 1);
+    free(zd);
+
     if (SDDS_CheckColumn(&SDDS_table, "Bx", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
         SDDS_CheckColumn(&SDDS_table, "By", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY ||
         SDDS_CheckColumn(&SDDS_table, "Bz", "T", SDDS_ANY_FLOATING_TYPE, stderr) != SDDS_CHECK_OKAY) {
@@ -2556,48 +2608,6 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
 
-    /* It is assumed that the data is ordered so that x changes fastest.
-     * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
-     * The points are assumed to be equipspaced.
-     */
-    nx = 1;
-    xi = xd[0];
-    while (nx < rows) {
-      if (xd[nx - 1] > xd[nx])
-        break;
-      nx++;
-    }
-    if (nx == rows) {
-      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (x)\n");
-      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-      exit(1);
-    }
-    xf = xd[nx - 1];
-    dx = (xf - xi) / (nx - 1);
-
-    ny = 1;
-    yi = yd[0];
-    while (ny < (rows / nx)) {
-      if (yd[(ny - 1) * nx] > yd[ny * nx])
-        break;
-      ny++;
-    }
-    if (ny == rows) {
-      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (y)\n");
-      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-      exit(1);
-    }
-    yf = yd[(ny - 1) * nx];
-    dy = (yf - yi) / (ny - 1);
-
-    if (nx <= 1 || ny <= 1 || (nz = rows / (nx * ny)) <= 1) {
-      fprintf(stderr, "BRAT file doesn't have correct structure or amount of data (z)\n");
-      fprintf(stderr, "Use sddssort -column=z -column=y -column=x to sort the file\n");
-      exit(1);
-    }
-    zi = zd[0];
-    zf = zd[rows - 1];
-    dz = (zf - zi) / (nz - 1);
 
     Bmin = -(Bmax = -DBL_MAX);
     for (idata = 0; idata < rows; idata++) {
@@ -2608,9 +2618,7 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
         Bmin = Byd[idata];
       /* } */
     }
-    free(xd);
-    free(yd);
-    free(zd);
+
     if (Bmax == -DBL_MAX) {
       fprintf(stderr, "BRAT file doesn't have valid Bmax value\n");
       fprintf(stderr, "Bmax = %le, Bmin = %le\n", Bmax, Bmin);

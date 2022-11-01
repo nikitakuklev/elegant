@@ -2052,9 +2052,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     printf("Data from file %s will be stored in double precision\n", bmapxyz->filename);
     fflush(stdout);
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxyz->filename) ||
-        SDDS_ReadPage(&SDDSin) <= 0 ||
-        !(x = SDDS_GetColumnInDoubles(&SDDSin, "x")) || !(y = SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
-        !(z = SDDS_GetColumnInDoubles(&SDDSin, "z"))) {
+        SDDS_ReadPage(&SDDSin) <= 0) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
     printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
@@ -2062,14 +2060,24 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     if (!check_sdds_column(&SDDSin, "x", "m") ||
         !check_sdds_column(&SDDSin, "y", "m") ||
         !check_sdds_column(&SDDSin, "z", "m")) {
-      fprintf(stderr, "BMAPXYZ input file must have x, y, and z in m (meters)\n");
+      printf("BMAPXYZ input file must have x, y, and z in m (meters)\n");
       exitElegant(1);
     }
+
+    if (!(data->points = SDDS_CountRowsOfInterest(&SDDSin)) || data->points < 2) {
+      printf("file %s for BMAPXYZ element has insufficient data\n", bmapxyz->filename);
+      fflush(stdout);
+      exitElegant(1);
+    }
+    printf("File %s for BMAPXYZ element has %ld points\n", bmapxyz->filename, data->points);
+    fflush(stdout);
 
     /* It is assumed that the data is ordered so that x changes fastest.
      * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
      * The points are assumed to be equipspaced.
      */
+    if (!(x = SDDS_GetColumnInDoubles(&SDDSin, "x")))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     nx = 1;
     data->xmin = x[0];
     while (nx < data->points) {
@@ -2085,7 +2093,10 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     }
     data->xmax = x[nx - 1];
     data->dx = (data->xmax - data->xmin) / (nx - 1);
-
+    free(x);
+    
+    if (!(y = SDDS_GetColumnInDoubles(&SDDSin, "y")))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     ny = 1;
     data->ymin = y[0];
     while (ny < (data->points / nx)) {
@@ -2101,7 +2112,10 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     }
     data->ymax = y[(ny - 1) * nx];
     data->dy = (data->ymax - data->ymin) / (ny - 1);
-
+    free(y);
+    
+    if (!(z = SDDS_GetColumnInDoubles(&SDDSin, "z")))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     if ((data->nx = nx) <= 1 || (data->ny = ny) <= 1 || (data->nz = data->points / (nx * ny)) <= 1 ||
         (data->nx * data->ny * data->nz != data->points)) {
       printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data\n",
@@ -2112,6 +2126,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     data->zmin = z[0];
     data->zmax = z[data->points - 1];
     data->dz = (data->zmax - data->zmin) / (data->nz - 1);
+    free(z);
     printf("BMAPXYZ element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
            bmapxyz->filename,
            data->nx, data->ny, data->nz,
@@ -2157,12 +2172,6 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
       }
     }
 
-    if (!(data->points = SDDS_CountRowsOfInterest(&SDDSin)) || data->points < 2) {
-      printf("file %s for BMAPXYZ element has insufficient data\n", bmapxyz->filename);
-      fflush(stdout);
-      exitElegant(1);
-    }
-
     data->Fx1 = data->Fy1 = data->Fz1 = NULL;
     data->Fx = Fx;
     data->Fy = Fy;
@@ -2173,9 +2182,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     printf("Data from file %s will be stored in single precision\n", bmapxyz->filename);
     fflush(stdout);
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxyz->filename) ||
-        SDDS_ReadPage(&SDDSin) <= 0 ||
-        !(x = SDDS_GetColumnInFloats(&SDDSin, "x")) || !(y = SDDS_GetColumnInFloats(&SDDSin, "y")) ||
-        !(z = SDDS_GetColumnInFloats(&SDDSin, "z"))) {
+        SDDS_ReadPage(&SDDSin) <= 0) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
     printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
@@ -2183,14 +2190,24 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     if (!check_sdds_column(&SDDSin, "x", "m") ||
         !check_sdds_column(&SDDSin, "y", "m") ||
         !check_sdds_column(&SDDSin, "z", "m")) {
-      fprintf(stderr, "BMAPXYZ input file must have x, y, and z in m (meters)\n");
+      printf("BMAPXYZ input file must have x, y, and z in m (meters)\n");
       exitElegant(1);
     }
 
+    if (!(data->points = SDDS_CountRowsOfInterest(&SDDSin)) || data->points < 2) {
+      printf("file %s for BMAPXYZ element has insufficient data\n", bmapxyz->filename);
+      fflush(stdout);
+      exitElegant(1);
+    }
+    printf("File %s for BMAPXYZ element has %ld points\n", bmapxyz->filename, data->points);
+    fflush(stdout);
+    
     /* It is assumed that the data is ordered so that x changes fastest.
      * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
      * The points are assumed to be equipspaced.
      */
+    if (!(x = SDDS_GetColumnInFloats(&SDDSin, "x")))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     nx = 1;
     data->xmin = x[0];
     while (nx < data->points) {
@@ -2206,7 +2223,10 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     }
     data->xmax = x[nx - 1];
     data->dx = (data->xmax - data->xmin) / (nx - 1);
-
+    free(x);
+    
+    if (!(y = SDDS_GetColumnInFloats(&SDDSin, "y")))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     ny = 1;
     data->ymin = y[0];
     while (ny < (data->points / nx)) {
@@ -2222,7 +2242,10 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     }
     data->ymax = y[(ny - 1) * nx];
     data->dy = (data->ymax - data->ymin) / (ny - 1);
-
+    free(y);
+    
+    if (!(z = SDDS_GetColumnInFloats(&SDDSin, "z")))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     if ((data->nx = nx) <= 1 || (data->ny = ny) <= 1 || (data->nz = data->points / (nx * ny)) <= 1 ||
         (data->nx * data->ny * data->nz != data->points)) {
       printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data\n",
@@ -2233,6 +2256,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     data->zmin = z[0];
     data->zmax = z[data->points - 1];
     data->dz = (data->zmax - data->zmin) / (data->nz - 1);
+    free(z);
     printf("BMAPXYZ element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
            bmapxyz->filename,
            data->nx, data->ny, data->nz,
@@ -2250,9 +2274,6 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
         data->zmin = 0;
       }
     }
-    free(x);
-    free(y);
-    free(z);
 
     data->BGiven = 0;
     if (!(Fx = SDDS_GetColumnInFloats(&SDDSin, "Fx")) || !(Fy = SDDS_GetColumnInFloats(&SDDSin, "Fy")) ||
@@ -2276,12 +2297,6 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
         fprintf(stderr, "BMAPXYZ input file must have Fx, Fy, and Fz with no units\n");
         exitElegant(1);
       }
-    }
-
-    if (!(data->points = SDDS_CountRowsOfInterest(&SDDSin)) || data->points < 2) {
-      printf("file %s for BMAPXYZ element has insufficient data\n", bmapxyz->filename);
-      fflush(stdout);
-      exitElegant(1);
     }
 
     data->Fx = data->Fy = data->Fz = NULL;
