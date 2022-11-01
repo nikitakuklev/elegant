@@ -351,7 +351,10 @@ long lorentz(
   field_output_on = fp_field ? 1 : 0;
 #endif
   i_top = n_part - 1;
-  mod = n_part/100;
+  if (verbosity>99)
+    mod = n_part/100;
+  else
+    mod = n_part/10;
   count = 0;
   for (i_part = 0; i_part <= i_top; i_part++) {
     count++;
@@ -359,9 +362,9 @@ long lorentz(
     lastParticleID = part[i_part][particleIDIndex];
     if (verbosity>9 && count%mod==0) {
 #if USE_MPI
-      printf("Worker %d tracking particle %ld of %ld\n", myid, count, i_top);
+      printf("Worker %d tracking particle %ld of %ld\n", myid, count, n_part);
 #else
-      printf("Tracking particle %ld of %ld\n", count, i_top);
+      printf("Tracking particle %ld of %ld\n", count, n_part);
 #endif
       fflush(stdout);
     }
