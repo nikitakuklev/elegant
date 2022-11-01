@@ -2144,9 +2144,6 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
         data->zmin = 0;
       }
     }
-    free(x);
-    free(y);
-    free(z);
 
     data->BGiven = 0;
     if (!(Fx = SDDS_GetColumnInDoubles(&SDDSin, "Fx")) || !(Fy = SDDS_GetColumnInDoubles(&SDDSin, "Fy")) ||
