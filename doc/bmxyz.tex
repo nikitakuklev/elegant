@@ -45,9 +45,9 @@ For example, a normal quadrupole magnet would have
 would have \verb|xSymmetry=even|, \verb|ySymmetry=odd|,
 \verb|Z_SYMMETRY=even|.  A normal octupole would have the same symmetry codes as a normal quadrupole.
 Note that when using these symmetries, the user is not required to limit the field map to, say, 
-\verb|x\geq 0|, verb|y\geq 0|, and \verb|z\geq 0|, though doing so saves the most memory.
-If possible, it is recommended to provide the fields over \verb|x\geq -2\Delta x|, \verb|y\geq -2\Delta y|, 
-and \verb|z\geq 0|, so that the transverse interpolation as a few points on both sides of the origin.
+$x\geq 0$, $y\geq 0$, and $z\geq 0$, though doing so saves the most memory.
+If possible, it is recommended to provide the fields over $x\geq -2\Delta x$, $y\geq -2\Delta y$, 
+and $z\geq 0$, so that the transverse interpolation as a few points on both sides of the origin.
 This will ensure better results near the origin.
 
 Internally, {\tt elegant} stores only the partial field map. When field values are required outside this region, the
