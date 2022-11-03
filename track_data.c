@@ -737,6 +737,8 @@ PARAMETER rfdf_param[N_RFDF_PARAMS] = {
   {"PHASE_NOISE_GROUP", "", IS_LONG, 0, (long)((char *)&rfdf_example.phaseNoiseGroup), NULL, 0.0, 0, "Group number for phase noise."},
   {"START_PASS", "", IS_LONG, 0, (long)((char *)&rfdf_example.startPass), NULL, 0.0, -1, "If non-negative, pass on which to start modeling cavity."},
   {"END_PASS", "", IS_LONG, 0, (long)((char *)&rfdf_example.endPass), NULL, 0.0, -1, "If non-negative, pass on which to end modeling cavity."},
+  {"START_PID", "", IS_LONG, 0, (long)((char *)&rfdf_example.startPID), NULL, 0.0, -1, "If non-negative, lowest particle ID to which deflection is applied."},
+  {"END_PID", "", IS_LONG, 0, (long)((char *)&rfdf_example.endPID), NULL, 0.0, -1, "If non-negative, highest particle ID to which deflection is applied."},
   {"DRIFT_MATRIX", "", IS_SHORT, 0, (long)((char *)&rfdf_example.driftMatrix), NULL, 0.0, 0, "If non-zero, calculations involving matrices assume this element is a drift space."},
   {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.dx), NULL, 0.0, 0, "misalignment"},
   {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.dy), NULL, 0.0, 0, "misalignment"},

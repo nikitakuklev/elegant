@@ -158,16 +158,19 @@ void track_through_rf_deflector(
         printf("ip=%ld  is=%ld  dphase=%21.15e, phase=%21.15e\n",
                ip, is, omega * (t_part - tLight) * 180 / PI, fmod((t_part - tLight) * omega + Ephase, PIx2) * 180 / PI);
 #endif
-        cos_phase = cos((t_part - tLight) * omega + Ephase);
-        px += Estrength * cos_phase * (1 + rf_param->b2 * (x * x - y * y) / 2.0);
-        if (rf_param->b2)
-          py -= Estrength * cos_phase * rf_param->b2 * x * y;
-        if (rf_param->magneticDeflection)
-          pz = sqrt(sqr(pc) - sqr(px) - sqr(py));
-        pz += Estrength * k * x * (1 + rf_param->b2 * (x * x - 3 * y * y) / 6) * sin((t_part - tLight) * omega + Ephase);
-        xp = px / pz;
-        yp = py / pz;
-        pc = sqrt(sqr(px) + sqr(py) + sqr(pz));
+        if (!((rf_param->startPID>=0 && initial[ip][particleIDIndex]<rf_param->startPID) ||
+              (rf_param->endPID>=0 && initial[ip][particleIDIndex]>rf_param->endPID))) {
+          cos_phase = cos((t_part - tLight) * omega + Ephase);
+          px += Estrength * cos_phase * (1 + rf_param->b2 * (x * x - y * y) / 2.0);
+          if (rf_param->b2)
+            py -= Estrength * cos_phase * rf_param->b2 * x * y;
+          if (rf_param->magneticDeflection)
+            pz = sqrt(sqr(pc) - sqr(px) - sqr(py));
+          pz += Estrength * k * x * (1 + rf_param->b2 * (x * x - 3 * y * y) / 6) * sin((t_part - tLight) * omega + Ephase);
+          xp = px / pz;
+          yp = py / pz;
+          pc = sqrt(sqr(px) + sqr(py) + sqr(pz));
+        }
       }
       beta = pc / sqrt(1 + sqr(pc));
       final[ip][0] = x;

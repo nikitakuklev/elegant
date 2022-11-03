@@ -1048,7 +1048,7 @@ extern char *entity_text[N_TYPES];
 #define N_MARK_PARAMS 3
 #define N_MATR_PARAMS 4
 #define N_ALPH_PARAMS 13
-#define N_RFDF_PARAMS 27
+#define N_RFDF_PARAMS 29
 #define N_RFTMEZ0_PARAMS 36
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
@@ -1616,6 +1616,7 @@ typedef struct {
   double groupVoltageNoise, groupPhaseNoise;
   long voltageNoiseGroup, phaseNoiseGroup;
   long startPass, endPass;
+  long startPID, endPID;
   short driftMatrix;
   double dx, dy, dz;
   short magneticDeflection;
