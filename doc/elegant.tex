@@ -77,6 +77,10 @@ Here is a summary of what's changed since release 2022.0.  Historical change log
 \item The \verb|BMXYZ| element now applies apertures defined by \verb|MAXAMP|, \verb|APCONTOUR| (with
   \verb|STICKY=1|), and \verb|aperture_data| in the interior.
 \item The \verb|APCONTOUR| element now accepts multiple contours combined via user-defined logic.
+\item The \verb|WAKE|, \verb|TRWAKE|, \verb|ZLONGIT|, and \verb|ZTRANSVERSE| elements now allow limiting
+  which bunches are subjected to short-range impedance effects, using the \verb|START_BUNCH| and \verb|END_BUNCH|
+  parameters. This was suggested by forum user \verb|Seb_Wilkes| and can provide significant reduction in run
+  time for some types of simulations.
 \end{itemize}
 
 \subsection{New and Modified Commands}

@@ -2266,6 +2266,8 @@ PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
   {"HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char *)&zlongit_example.highFrequencyCutoff0), NULL, -1.0, 0, "Frequency at which smoothing filter begins.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
   {"HIGH_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char *)&zlongit_example.highFrequencyCutoff1), NULL, -1.0, 0, "Frequency at which smoothing filter is 0.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
   {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&zlongit_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
+  {"START_BUNCH", "", IS_LONG, 0, (long)((char *)&zlongit_example.startBunch), NULL, 0.0, -1, "In bunched beam mode, if non-negative, starting bunch number for computations"},
+  {"END_BUNCH", "", IS_LONG, 0, (long)((char *)&zlongit_example.endBunch), NULL, 0.0, -1, "In bunched beam mode, if non-negative, ending bunch number for computations"},
   {"ALLOW_LONG_BEAM", "", IS_LONG, 0, (long)((char *)&zlongit_example.allowLongBeam), NULL, 0.0, 0, "Allow beam longer than covered by impedance data?"},
 };
 
@@ -2357,6 +2359,8 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
   {"X_PROBE_EXPONENT", "", IS_LONG, 0, (long)((char *)&ztransverse_example.xProbeExponent), NULL, 0.0, 0, "Exponent applied to x coordinates of probe particles"},
   {"Y_PROBE_EXPONENT", "", IS_LONG, 0, (long)((char *)&ztransverse_example.yProbeExponent), NULL, 0.0, 0, "Exponent applied to y coordinates of probe particles"},
   {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&ztransverse_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
+  {"START_BUNCH", "", IS_LONG, 0, (long)((char *)&ztransverse_example.startBunch), NULL, 0.0, -1, "In bunched beam mode, if non-negative, starting bunch number for computations"},
+  {"END_BUNCH", "", IS_LONG, 0, (long)((char *)&ztransverse_example.endBunch), NULL, 0.0, -1, "In bunched beam mode, if non-negative, ending bunch number for computations"},
   {"ALLOW_LONG_BEAM", "", IS_LONG, 0, (long)((char *)&ztransverse_example.allowLongBeam), NULL, 0.0, 0, "Allow beam longer than covered by impedance data?"},
 };
 
@@ -2394,6 +2398,8 @@ PARAMETER wake_param[N_WAKE_PARAMS] = {
   {"ALLOW_LONG_BEAM", "", IS_LONG, 0, (long)((char *)&wake_example.allowLongBeam), NULL, 0.0, 0, "allow beam longer than wake data?"},
   {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&wake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
   {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&wake_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
+  {"START_BUNCH", "", IS_LONG, 0, (long)((char *)&wake_example.startBunch), NULL, 0.0, -1, "In bunched beam mode, if non-negative, starting bunch number for computations"},
+  {"END_BUNCH", "", IS_LONG, 0, (long)((char *)&wake_example.endBunch), NULL, 0.0, -1, "In bunched beam mode, if non-negative, ending bunch number for computations"},
   {"ACAUSAL_ALLOWED", "", IS_LONG, 0, (long)((char *)&wake_example.acausalAllowed), NULL, 0.0, 0, "If non-zero, then an acausal wake is allowed."},
 };
 
@@ -2462,6 +2468,8 @@ PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
   {"Y_PROBE_EXPONENT", "", IS_LONG, 0, (long)((char *)&trwake_example.yProbeExponent), NULL, 0.0, 0, "Exponent applied to y coordinates of probe particles"},
   {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&trwake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
   {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&trwake_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
+  {"START_BUNCH", "", IS_LONG, 0, (long)((char *)&trwake_example.startBunch), NULL, 0.0, -1, "In bunched beam mode, if non-negative, starting bunch number for computations"},
+  {"END_BUNCH", "", IS_LONG, 0, (long)((char *)&trwake_example.endBunch), NULL, 0.0, -1, "In bunched beam mode, if non-negative, ending bunch number for computations"},
   {"ACAUSAL_ALLOWED", "", IS_LONG, 0, (long)((char *)&trwake_example.acausalAllowed), NULL, 0.0, 0, "If non-zero, then an acausal wake is allowed."},
 };
 

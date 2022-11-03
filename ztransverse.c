@@ -112,6 +112,10 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
 #endif
 
     for (iBucket = 0; iBucket < nBuckets; iBucket++) {
+      if (ztransverse->bunchedBeamMode && 
+          ((ztransverse->startBunch>=0 && iBucket<ztransverse->startBunch) ||
+           (ztransverse->endBunch>=0 && iBucket>ztransverse->endBunch)))
+        continue;
       if (nBuckets == 1) {
         time = time0;
         part = part0;

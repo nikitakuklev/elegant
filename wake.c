@@ -82,6 +82,10 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
 #endif
 
     for (iBucket = 0; iBucket < nBuckets; iBucket++) {
+      if (wakeData->bunchedBeamMode && 
+          ((wakeData->startBunch>=0 && iBucket<wakeData->startBunch) ||
+           (wakeData->endBunch>=0 && iBucket>wakeData->endBunch)))
+        continue;
       if (nBuckets == 1) {
         time = time0;
         part = part0;

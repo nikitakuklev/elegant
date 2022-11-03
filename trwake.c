@@ -64,6 +64,10 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
     index_bunch_assignments(part0, np0, (charge && wakeData->bunchedBeamMode) ? charge->idSlotsPerBunch : 0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
     for (iBucket = 0; iBucket < nBuckets; iBucket++) {
+      if (wakeData->bunchedBeamMode && 
+          ((wakeData->startBunch>=0 && iBucket<wakeData->startBunch) ||
+           (wakeData->endBunch>=0 && iBucket>wakeData->endBunch)))
+        continue;
       if (nBuckets == 1) {
         time = time0;
         part = part0;

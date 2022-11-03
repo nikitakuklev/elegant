@@ -140,6 +140,10 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #endif
 
     for (iBucket = 0; iBucket < nBuckets; iBucket++) {
+      if (zlongit->bunchedBeamMode && 
+          ((zlongit->startBunch>=0 && iBucket<zlongit->startBunch) ||
+           (zlongit->endBunch>=0 && iBucket>zlongit->endBunch)))
+        continue;
       if (nBuckets == 1) {
         time = time0;
         part = part0;
