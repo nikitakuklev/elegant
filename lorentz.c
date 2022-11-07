@@ -355,6 +355,8 @@ long lorentz(
     mod = n_part/100;
   else
     mod = n_part/10;
+  if (mod<=0)
+    mod = 1;
   count = 0;
   for (i_part = 0; i_part <= i_top; i_part++) {
     count++;
