@@ -1103,6 +1103,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   n_left = n_track;
   if (!announcedNTracked) {
     printf("Tracking %ld particles in total for matrix determination\n", n_track);
+    fflush(stdout);
     announcedNTracked = true;
   }
 #if USE_MPI

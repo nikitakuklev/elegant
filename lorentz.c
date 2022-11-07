@@ -2046,6 +2046,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
 #if USE_MPI
   if (myid==1)
     dup2(fd, fileno(stdout));
+  if (myid!=0) {
 #endif
 
   printf("Reading BMXYZ field data from file %s\n", bmapxyz->filename);
@@ -2466,6 +2467,8 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
   fflush(stdout);
 
 #if USE_MPI
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
   if (myid==1) {
 #if defined(_WIN32)
     freopen("NUL", "w", stdout);
