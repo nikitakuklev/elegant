@@ -294,12 +294,20 @@ long lorentz(
   if (field_type==T_BMAPXYZ) {
     BMAPXYZ *bmxyz;
     bmxyz = (BMAPXYZ *)field;
+    verbosity = bmxyz->verbosity;
     if (bmxyz->apContourElement && strlen(bmxyz->apContourElement))
       setupMultApertureData(&apertureData, 0.0, &bmxyz->apContour, maxamp0, apData0, NULL, context.zStart, context.element);
     else
       setupMultApertureData(&apertureData, 0.0, apcontour0, maxamp0, apData0, NULL, context.zStart, context.element);
   }
   
+  if (verbosity) {
+#if USE_MPI
+    if (myid==1)
+      dup2(fd, fileno(stdout));
+#endif
+  }
+
   log_entry("lorentz");
 
   n_lorentz_calls++;
@@ -342,21 +350,18 @@ long lorentz(
       exactDrift(part, n_part, (bmxyz->length - bmxyz->fieldLength) / 2);
   }
 
-  if (verbosity) {
-#if USE_MPI
-    dup2(fd, fileno(stdout));
-#endif
-  }
 #ifdef DEBUG
   field_output_on = fp_field ? 1 : 0;
 #endif
   i_top = n_part - 1;
+
   if (verbosity>99)
     mod = n_part/100;
   else
     mod = n_part/10;
   if (mod<=0)
     mod = 1;
+  
   count = 0;
   for (i_part = 0; i_part <= i_top; i_part++) {
     count++;
@@ -392,16 +397,6 @@ long lorentz(
     }
   }
 
-#if USE_MPI
-  if (verbosity) {
-#if defined(_WIN32)
-    freopen("NUL", "w", stdout);
-#else
-    freopen("/dev/null", "w", stdout);
-#endif
-  }
-#endif
-
   lorentz_terminate(field, field_type, part, n_part, P_central);
 
   if (field_type == T_BMAPXYZ) {
@@ -412,6 +407,17 @@ long lorentz(
   }
 
   log_exit("lorentz");
+
+#if USE_MPI
+  if (verbosity && myid==1) {
+#if defined(_WIN32)
+    freopen("NUL", "w", stdout);
+#else
+    freopen("/dev/null", "w", stdout);
+#endif
+  }
+#endif
+
   return (i_top + 1);
 #ifdef DEBUG
   printf("Exiting lorentz()\n");
@@ -2045,10 +2051,6 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
   nStoredBmapxyzData++;
   cp_str(&(storedBmapxyzData[imap].filename), bmapxyz->filename);
 
-#if USE_MPI
-  MPI_Barrier(MPI_COMM_WORLD);
-#endif
-
   printf("Reading BMXYZ field data from file %s\n", bmapxyz->filename);
   fflush(stdout);
   if (!bmapxyz->singlePrecision) {
@@ -2059,6 +2061,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
         SDDS_ReadPage(&SDDSin) <= 0) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
+    SDDS_SetColumnMemoryMode(&SDDSin, DONT_TRACK_COLUMN_MEMORY_AFTER_ACCESS);
     printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
     fflush(stdout);
     if (!check_sdds_column(&SDDSin, "x", "m") ||
@@ -2186,6 +2189,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
         SDDS_ReadPage(&SDDSin) <= 0) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
     }
+    SDDS_SetColumnMemoryMode(&SDDSin, DONT_TRACK_COLUMN_MEMORY_AFTER_ACCESS);
     printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
     fflush(stdout);
     if (!check_sdds_column(&SDDSin, "x", "m") ||
@@ -2466,9 +2470,6 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
   printf("Field setup completed for data from file %s\n", bmapxyz->filename);
   fflush(stdout);
 
-#if USE_MPI
-  MPI_Barrier(MPI_COMM_WORLD);
-#endif
 }
 
 /*
