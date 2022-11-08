@@ -337,6 +337,14 @@ long lorentz(
 #endif
 
   lorentz_setup(field, field_type, part, n_part, P_central);
+
+  if (verbosity) {
+#if USE_MPI
+    /* Open file descriptor for rest of processors */
+    if (myid>1) 
+      dup2(fd, fileno(stdout));
+#endif
+  }
 #ifdef DEBUG
   printf("lorentz_setup finished\n");
   fflush(stdout);
@@ -409,7 +417,7 @@ long lorentz(
   log_exit("lorentz");
 
 #if USE_MPI
-  if (verbosity && myid==1) {
+  if (verbosity && myid!=0) {
 #if defined(_WIN32)
     freopen("NUL", "w", stdout);
 #else
