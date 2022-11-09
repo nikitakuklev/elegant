@@ -80,6 +80,7 @@ typedef struct {
   short singlePrecision;
 } STORED_BMAPXYZ_DATA;
 static STORED_BMAPXYZ_DATA *storedBmapxyzData = NULL;
+static long iStoredBmapxyzData = -1;
 static long nStoredBmapxyzData = 0;
 
 void lorentz_setup(void *field, long field_type, double **part, long np, double Po);
@@ -412,6 +413,34 @@ long lorentz(
     bmxyz = (BMAPXYZ *)field;
     if ((bmxyz->fieldLength > 0 && bmxyz->length != bmxyz->fieldLength) && !bmxyz->injectAtZero)
       exactDrift(part, i_top + 1, (bmxyz->length - bmxyz->fieldLength) / 2);
+    if (bmxyz->discardMap && iStoredBmapxyzData>=0) {
+      STORED_BMAPXYZ_DATA mapData;
+      long im;
+      mapData = storedBmapxyzData[iStoredBmapxyzData];
+#if USE_MPI
+      if (myid==1) {
+#endif
+        printf("Discarding field map data from file %s\n", mapData.filename);
+        fflush(stdout);
+#if USE_MPI
+      }
+#endif
+      free(mapData.filename);
+      if (mapData.data->singlePrecision) {
+        free(mapData.data->Fx1);
+        free(mapData.data->Fy1);
+        free(mapData.data->Fz1);
+      } else {
+        free(mapData.data->Fx);
+        free(mapData.data->Fy);
+        free(mapData.data->Fz);
+      }
+      free(mapData.data);
+      for (im=iStoredBmapxyzData+1; im<nStoredBmapxyzData; im++)
+        storedBmapxyzData[im-1] = storedBmapxyzData[im];
+      nStoredBmapxyzData--;
+      bmxyz->data = NULL;
+    }
   }
 
   log_exit("lorentz");
@@ -2037,14 +2066,14 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz) {
     if (strcmp(bmapxyz->filename, storedBmapxyzData[imap].filename) == 0)
       break;
   }
+  iStoredBmapxyzData = imap;
   if (imap < nStoredBmapxyzData) {
     bmapxyz->data = storedBmapxyzData[imap].data;
     bmapxyz->fieldLength = storedBmapxyzData[imap].fieldLength;
     bmapxyz->singlePrecision = storedBmapxyzData[imap].singlePrecision;
     return;
   }
-
-
+ 
   /*
   if (!fexists(bmapxyz->filename)) {
     printf("file %s not found for BMAPXYZ element\n", bmapxyz->filename);

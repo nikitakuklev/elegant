@@ -2380,6 +2380,7 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
       SDDS_SetError("Unable to read BRAT data file");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
     }
+    SDDS_SetColumnMemoryMode(&SDDS_table, DONT_TRACK_COLUMN_MEMORY_AFTER_ACCESS);
     if (!(rows = SDDS_CountRowsOfInterest(&SDDS_table)))
       bomb("no data in BRAT field file", NULL);
     printf("%ld rows of data\n", rows);
@@ -2527,6 +2528,7 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
       SDDS_SetError("Unable to read BRAT data file");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
     }
+    SDDS_SetColumnMemoryMode(&SDDS_table, DONT_TRACK_COLUMN_MEMORY_AFTER_ACCESS);
     if (!(rows = SDDS_CountRowsOfInterest(&SDDS_table)))
       bomb("no data in BRAT field file", NULL);
     printf("%ld rows of data\n", rows);
