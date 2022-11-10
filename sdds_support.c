@@ -1093,8 +1093,8 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     if (isMaster) {
       if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, sample,
                              "Ct", tc, "dCt", tc - tc0,
-                             "pAverage", p_sum_total / particles_total, "pCentral", Po,
-                             "KAverage", (gamma_sum_total / particles_total - 1) * me_mev, NULL)) {
+                             "pAverage", p_sum_total / npCount_total, "pCentral", Po,
+                             "KAverage", (gamma_sum_total / npCount_total - 1) * me_mev, NULL)) {
         SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
       }
