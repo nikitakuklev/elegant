@@ -337,7 +337,7 @@ char *description[N_COMMANDS] = {
   "rf_setup                         set rf cavity frequency, phase, and voltage for ring simulation",
   "chaos_map                        command to perform chaos map analysis",
   "tune_footprint                   command to perform tune footprint tracking",
-  "ion_effects                      command to set up modeling of ion effects"
+  "ion_effects                      command to set up modeling of ion effects",
   "elastic_scattering               determine x', y' aperture from tracking as a function of position in the ring",
   "inelastic_scattering             determine inelastic scattering aperture from tracking as a function of position in the ring",
   "ignore_elements                  declare that elements with certain names and types should be ignored in tracking",
@@ -454,6 +454,24 @@ char **argv;
 #endif
   CHANGE_START_SPEC changeStart = {0, NULL, -1, 0};
   CHANGE_END_SPEC changeEnd = {0, NULL, -1};
+
+  if (0) {
+    long i, j, missing = 0;
+    for (i=0; i<N_COMMANDS; i++) {
+      for (j=0; j<N_COMMANDS; j++) {
+        if (strncmp(command[i], description[j], strlen(command[i]))==0) {
+          printf("Match of command[%ld]=%s and description[%ld]\n", 
+                 i, command[i], j);
+          break;
+        }
+      }
+      if (j==N_COMMANDS) {
+        printf("No match for command[%ld]=%s\n", i, command[i]);
+        missing++;
+      }
+    }
+    printf("%ld commands are missing descriptions\n", missing);
+  }
 
   semaphoreFile[0] = semaphoreFile[1] = semaphoreFile[2] = NULL;
 
