@@ -635,6 +635,7 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
   wakeData.initialized = 1;
   wakeData.wakePoints = n_bins;
   wakeData.isCopy = 0;
+  wakeData.startBunch = wakeData.endBunch = -1;
   wakeData.W = tmalloc(sizeof(double) * n_bins);
   wakeData.t = tmalloc(sizeof(double) * n_bins);
   wakeData.dt = dt;
