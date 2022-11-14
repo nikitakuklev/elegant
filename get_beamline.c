@@ -2179,7 +2179,7 @@ void setUpBMapXYZApContour(BMAPXYZ *bmxyz, ELEMENT_LIST *eptr0)
 
 void initializeApContour(APCONTOUR *apcontour)
 {
-  if (!apcontour->initialized) {
+  if (!apcontour->initialized && !apcontour->cancel) {
     SDDS_DATASET SDDSin;
     long readCode;
     SDDSin.parallel_io = 0;
