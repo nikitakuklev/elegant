@@ -697,11 +697,11 @@ void lgbendFringe(
   short isExit,
   short edgeOrder) {
   double x1, px1, y1, py1, tau1, delta;
-  double x2, px2, y2, py2, tau2, tau;
+  double x2, px2, y2, py2, tau2;
 
   double intK0, intK2, intK4, intK5, intK6, intK7, intI0, intI1;
   double tant, sect, sect3, sint, temp;
-  double focX0, focXd, focY0, focYd, invP;
+  double focX0, focY0, focYd, invP;
   double dispX, kickPx, expT;
 
   long i;
@@ -739,7 +739,6 @@ void lgbendFringe(
   sect = 1.0 / cos(alpha);
   sect3 = sect * sect * sect;
   focX0 = -tant * intK5 - 0.5 * intI0 * (2.0 - tant * tant);
-  focXd = sect3 * intK7;
   focY0 = -tant * (invRhoPlus - invRhoMinus) + tant * sect * sect * intK5 + 0.5 * intI0 * (2.0 + tant * tant);
   focYd = sect3 * ((1.0 + sint * sint) * intK2 - intK7);
   for (i = 0; i < n_part; i++) {
@@ -909,7 +908,6 @@ int retrieveLGBendOptimizedFSEValues(LGBEND *lgbend) {
 }
 
 void storeLGBendOptimizedFSEValues(LGBEND *lgbend) {
-  double dummy;
   long i;
   if (!retrieveLGBendOptimizedFSEValues(lgbend)) {
     i = nStoredLGBENDs++;
@@ -946,8 +944,7 @@ void readLGBendApertureData(LGBEND *lgbend)
   static long apertureDatasets = 0;
   static APERTURE_DATA **apertureDataset = NULL;
   
-  char *filename, key[16834];
-  long index;
+  char *filename;
 
   filename = findFileInSearchPath(lgbend->apertureDataFile);
   

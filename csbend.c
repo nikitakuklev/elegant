@@ -629,7 +629,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (getElementOnGpu()) {
     startGpuTimer();
     i_part = gpu_track_through_csbend(n_part, csbend, p_error, Po, accepted,
-                                      z_start, sigmaDelta2, rootname, maxamp, apContour, apFileData, iSlice);
+                                      z_start, sigmaDelta2, rootname, maxamp, apContour, apFileData, iSlice, eptr);
 #  ifdef GPU_VERIFY
     startCpuTimer();
     track_through_csbend(part, n_part, csbend, p_error, Po, accepted, z_start, sigmaDelta2, rootname, maxamp, apContour, apFileData, iSlice);
@@ -1750,7 +1750,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #ifdef HAVE_GPU
   if (getElementOnGpu()) {
     startGpuTimer();
-    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname, maxamp, apContour, apFileData);
+    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname, maxamp, apContour, apFileData, eptr);
 #  ifdef GPU_VERIFY
     startCpuTimer();
     /* Copy the csrWake global struct (it is reset below) */

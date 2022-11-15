@@ -493,7 +493,7 @@ long elimit_amplitudes(
   if (getElementOnGpu()) {
     startGpuTimer();
     ip = gpu_elimit_amplitudes(xmax, ymax, np, accepted, z, Po,
-                               extrapolate_z, openCode, exponent, yexponent);
+                               extrapolate_z, openCode, exponent, yexponent, eptr);
 #  ifdef GPU_VERIFY
     startCpuTimer();
     elimit_amplitudes(coord, xmax, ymax, np, accepted, z, Po,

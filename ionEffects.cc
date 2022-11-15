@@ -645,7 +645,7 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline) {
           bombElegant("Poisson grid size must be 10 or greater in x and y", NULL);
         ionEffects->ion2dDensity =
           (double **)czarray_2d(sizeof(double), ionEffects->n2dGridIon[0], ionEffects->n2dGridIon[1]);
-        printWarningForTracking("Poisson solver for IONEFFECTS is not fully implemented", "At present no ion fields are included");
+        printWarningForTracking((char*)"Poisson solver for IONEFFECTS is not fully implemented", (char*)"At present no ion fields are included");
       }
     }
     eptr = eptr->succ;
