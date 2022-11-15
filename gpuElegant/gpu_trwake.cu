@@ -120,6 +120,10 @@ extern "C"
         offset = 0;
         for (iBucket = 0; iBucket < nBuckets; iBucket++)
           {
+            if (wakeData->bunchedBeamMode && 
+                ((wakeData->startBunch>=0 && iBucket<wakeData->startBunch) ||
+                 (wakeData->endBunch>=0 && iBucket>wakeData->endBunch)))
+              continue;
             if (nBuckets == 1)
               {
                 np = np0;
@@ -226,7 +230,7 @@ extern "C"
                 char warningBuffer[1024];
                 snprintf(warningBuffer, 1024, "Only %ld of %ld particles were binned. Consider setting N_BINS=0 to invoke autoscaling.", 
                          n_binned, np);
-                printWarningForTracking("Some particles not binned in TRWAKE.", warningBuffer);
+                printWarningForTracking((char*)"Some particles not binned in TRWAKE.", warningBuffer);
               }
 #else
             if (notSinglePart)
@@ -242,8 +246,8 @@ extern "C"
                         if (myid == 1)
                           {
                             dup2(fd, fileno(stdout));
-                            printWarningForTracking("Some particles not binned in TRWAKE.",
-                                                    "Consider setting N_BINS=0 to invoke autoscaling.");
+                            printWarningForTracking((char*)"Some particles not binned in TRWAKE.",
+                                                    (char*)"Consider setting N_BINS=0 to invoke autoscaling.");
                             close(fd);
                           }
                       }

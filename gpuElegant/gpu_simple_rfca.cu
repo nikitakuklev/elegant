@@ -568,9 +568,9 @@ extern "C"
       }
 
     if (rfca->freq<1e3 && rfca->freq)
-      printWarningForTracking("RFCA frequency is less than 1kHz.", "This may be an error. Consult manual for units.");
+      printWarningForTracking((char*)"RFCA frequency is less than 1kHz.", (char*)"This may be an error. Consult manual for units.");
     if (fabs(rfca->volt)<100 && rfca->volt)
-      printWarningForTracking("RFCA voltage is less than 100V.", "This may be an error. Consult manual for units.");
+      printWarningForTracking((char*)"RFCA voltage is less than 100V.", (char*)"This may be an error. Consult manual for units.");
     if (isSlave)
       {
         if (!d_particles)
@@ -1120,7 +1120,7 @@ extern "C"
       bombElegant("invalid cell length for RFCW", NULL);
     if (rfcw->length == 0)
       {
-        printWarningForTracking("RFCW element has zero length, so wakefields will scale to 0.", NULL);
+        printWarningForTracking((char*)"RFCW element has zero length, so wakefields will scale to 0.", NULL);
       }
     /* set up the RFCA, TRWAKE, and WAKE structures */
     rfcw->rfca.length = rfcw->length;
@@ -1153,6 +1153,7 @@ extern "C"
 
     rfcw->trwake.charge = 0;
     rfcw->trwake.bunchedBeamMode = 1;
+    rfcw->trwake.startBunch = rfcw->trwake.endBunch = -1;
     rfcw->trwake.xfactor = rfcw->trwake.yfactor = rfcw->trwake.factor = 1;
     rfcw->trwake.n_bins = rfcw->n_bins;
     rfcw->trwake.interpolate = rfcw->interpolate;
@@ -1195,6 +1196,7 @@ extern "C"
 
     rfcw->wake.charge = 0;
     rfcw->wake.bunchedBeamMode = 1;
+    rfcw->wake.startBunch = rfcw->wake.endBunch = -1;
     rfcw->wake.n_bins = rfcw->n_bins;
     rfcw->wake.acausalAllowed = rfcw->wake.i0 = 0;
     rfcw->wake.interpolate = rfcw->interpolate;

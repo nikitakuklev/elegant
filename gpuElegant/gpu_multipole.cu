@@ -549,7 +549,7 @@ extern "C"
         if (kquad->length < 1e-6 && (kquad->isr || kquad->synch_rad))
           {
             rad_coef = isr_coef = 0; /* avoid unphysical results */
-            printWarningForTracking("Quadrupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.",
+            printWarningForTracking((char*)"Quadrupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.",
                                     NULL);
           }
         if (!kquad->multipolesInitialized)
@@ -626,7 +626,7 @@ extern "C"
         if (ksext->length < 1e-6 && (ksext->isr || ksext->synch_rad))
           {
             rad_coef = isr_coef = 0; /* avoid unphysical results */
-            printWarningForTracking("Sextupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.",
+            printWarningForTracking((char*)"Sextupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.",
                                     NULL);
           }
         if (!ksext->multipolesInitialized)
@@ -690,7 +690,7 @@ extern "C"
         if (koct->length < 1e-6 && (koct->isr || koct->synch_rad))
           {
             rad_coef = isr_coef = 0; /* avoid unphysical results */
-            printWarningForTracking("Octupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.", 
+            printWarningForTracking((char*)"Octupole with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.", 
                                     NULL);
           }
         if (!koct->multipolesInitialized)
@@ -743,7 +743,7 @@ extern "C"
         if (kquse->length < 1e-6 && (kquse->isr || kquse->synch_rad))
           {
             rad_coef = isr_coef = 0; /* avoid unphysical results */
-            printWarningForTracking("KQUSE with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.", NULL);
+            printWarningForTracking((char*)"KQUSE with length < 1e-6 has SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.", NULL);
           }
         KnL[1] = kquse->k2 * kquse->length * (1 + kquse->fse2);
         order[1] = 2;
@@ -794,7 +794,7 @@ extern "C"
     //Copy d_multipoleKicksDone from gpu device to host cpu
     cudaMemcpyToSymbol(&multipoleKicksDone, &d_multipoleKicksDone, sizeof(long), 0, cudaMemcpyDeviceToHost);
 
-    setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, z_start + drift / 2);
+    setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, NULL, z_start + drift / 2, elem);
 
     struct GPUBASE *gpuBase = getGpuBase();
     unsigned int particlePitch = gpuBase->gpu_array_pitch;

@@ -28,7 +28,7 @@ long gpu_imposeApertureData(long np, double **accepted,
 
 long gpu_elimit_amplitudes(double xmax, double ymax, long np, 
                            double **accepted, double z, double Po, long extrapolate_z, 
-                           long openCode, long exponent, long yexponent);
+                           long openCode, long exponent, long yexponent, ELEMENT_LIST *eptr);
 
 #ifdef __cplusplus
 }

@@ -48,8 +48,10 @@ gpu_integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2,
                           double d_rho_actual, double d_rad_coef, double d_isrConstant,
                           int d_distributionBasedRadiation, int d_includeOpeningAngle,
                           double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
-                          int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
-                          double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData, short integration_order);
+                          int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, 
+                          double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
+                          double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, 
+                          MULT_APERTURE_DATA *apData, short integration_order, ELEMENT_LIST *eptr);
 __device__ long
 gpu_integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
                                    double s, int n, long iSlice, double rho0, double p0,
@@ -57,8 +59,10 @@ gpu_integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
                                    double d_rho_actual, double d_rad_coef, double d_isrConstant,
                                    int d_distributionBasedRadiation, int d_includeOpeningAngle,
                                    double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
-                                   int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
-                                   double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData, short integration_order);
+                                   int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, 
+                                   double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
+                                   double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, 
+                                   MULT_APERTURE_DATA *apData, short integration_order, ELEMENT_LIST *eptr);
 __device__ void
 gpu_apply_edge_effects(double *x, double *xp, double *y, double *yp,
                        double rho, double n, double beta, double he,
@@ -73,7 +77,7 @@ __device__ void gpu_dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
 
 __device__ void gpu_setupMultApertureData(MULT_APERTURE_DATA *apertureData, double x_max, double y_max, long elliptical, double tilt,
                                           APERTURE_DATA *apFileData, double zPosition);
-__device__ long gpu_checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData);
+__device__ long gpu_checkMultAperture(double x, double y, double sLocal, MULT_APERTURE_DATA *apData);
 
 // global kernel declarations (defined below)
 void gpu_convertFromCSBendCoords(long np, double rho0, double cos_ttilt,
@@ -247,6 +251,7 @@ class gpu_track_through_csbend_kernel
   double d_refTrajectoryMode;
   long iSlice;
   MULT_APERTURE_DATA apertureData;
+  ELEMENT_LIST *eptr;
  gpu_track_through_csbend_kernel(unsigned int *d_sortIndex,
                                  double *d_sigmaDelta2, double *d_gauss_rn, double *d_gauss_rn_p2, double *d_gauss_rn_p3, curandState_t *state,
                                  double Po, double z_start, double dxi,
@@ -264,7 +269,7 @@ class gpu_track_through_csbend_kernel
                                  double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
                                  int d_distributionBasedRadiation, int d_includeOpeningAngle,
                                  double srGaussianLimit, double *d_refTrajectoryData, 
-                                 double d_refTrajectoryMode, long iSlice, MULT_APERTURE_DATA apertureData) : d_sortIndex(d_sortIndex), d_sigmaDelta2(d_sigmaDelta2),
+                                 double d_refTrajectoryMode, long iSlice, MULT_APERTURE_DATA apertureData, ELEMENT_LIST *eptr) : d_sortIndex(d_sortIndex), d_sigmaDelta2(d_sigmaDelta2),
     d_gauss_rn(d_gauss_rn), d_gauss_rn_p2(d_gauss_rn_p2), d_gauss_rn_p3(d_gauss_rn_p3), state(state), Po(Po), z_start(z_start),
     dxi(dxi), dyi(dyi), dzi(dzi), dxf(dxf), dyf(dyf),
     dzf(dzf), cos_ttilt(cos_ttilt), sin_ttilt(sin_ttilt), e1(e1), e2(e2),
@@ -283,7 +288,7 @@ class gpu_track_through_csbend_kernel
     d_distributionBasedRadiation(d_distributionBasedRadiation),
     d_includeOpeningAngle(d_includeOpeningAngle),
     srGaussianLimit(srGaussianLimit), d_refTrajectoryData(d_refTrajectoryData),
-    d_refTrajectoryMode(d_refTrajectoryMode), iSlice(iSlice), apertureData(apertureData){};
+    d_refTrajectoryMode(d_refTrajectoryMode), iSlice(iSlice), apertureData(apertureData), eptr(eptr){};
 
   __device__ unsigned int operator()(gpuParticleAccessor &coord)
   {
@@ -415,7 +420,7 @@ class gpu_track_through_csbend_kernel
                                                             d_distributionBasedRadiation, d_includeOpeningAngle,
                                                                 d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
                                                             d_expansionOrder, d_hasSkew, d_hasNormal, t_gauss_rn1, t_gauss_rn2, t_gauss_rn3, t_state, srGaussianLimit,
-                                                            d_refTrajectoryData, d_refTrajectoryMode, &apertureData, integration_order);
+                                                            d_refTrajectoryData, d_refTrajectoryMode, &apertureData, integration_order, eptr);
       }
     else
       {
@@ -425,7 +430,7 @@ class gpu_track_through_csbend_kernel
                                                    d_distributionBasedRadiation, d_includeOpeningAngle,
                                                    d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
                                                    d_expansionOrder, d_hasSkew, d_hasNormal, t_gauss_rn1, t_gauss_rn2, t_gauss_rn3, t_state, srGaussianLimit,
-                                                   d_refTrajectoryData, d_refTrajectoryMode, &apertureData, integration_order);
+                                                   d_refTrajectoryData, d_refTrajectoryMode, &apertureData, integration_order, eptr);
       }
     
     if (iSlice<0 || iSlice==(nSlices-1) || particle_lost) {
@@ -575,7 +580,7 @@ extern "C"
   long gpu_track_through_csbend(long n_part, CSBEND *csbend,
                                 double p_error, double Po, double **accepted, double z_start,
                                 double *sigmaDelta2, char *rootname, MAXAMP *maxamp, 
-                                APCONTOUR *apContour, APERTURE_DATA *apFileData, long iSlice)
+                                APCONTOUR *apContour, APERTURE_DATA *apFileData, long iSlice, ELEMENT_LIST *eptr)
   {
     double h;
     long j;
@@ -645,7 +650,7 @@ extern "C"
             setTrackingContext((char *)"csbend0", 0, T_CSBEND, (char *)"none", NULL);
             // keep single particle csbend on CPU
             //gpuBase->elementOnGpu=0;
-            gpu_track_through_csbend(1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apContour, apFileData, -1);
+            gpu_track_through_csbend(1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apContour, apFileData, -1, eptr);
             //track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apFileData);
             //gpuBase->elementOnGpu=1;
             csbend->refTrajectoryChangeSet = 2; /* indicates that reference trajectory has been determined */
@@ -781,7 +786,7 @@ extern "C"
         tilt = csbend->tilt;
         rho0 = csbend->length / angle;
       }
-    setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start + csbend->length / 2);
+    setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, NULL, z_start + csbend->length / 2, eptr);
 
     if (fabs(rho0) > 1e6)
       {
@@ -791,8 +796,8 @@ extern "C"
           {
             ELEMENT_LIST elem;
             KQUAD kquad;
-            printWarningForTracking("CSBEND has radius > 1e6 but non-zero K1.",
-                                    "Treated as KQUAD; higher multipoles ignored.");
+            printWarningForTracking((char*)"CSBEND has radius > 1e6 but non-zero K1.",
+                                    (char*)"Treated as KQUAD; higher multipoles ignored.");
             memset(&elem, 0, sizeof(elem));
             memset(&kquad, 0, sizeof(kquad));
             elem.p_elem = (char *)&kquad;
@@ -812,8 +817,8 @@ extern "C"
           }
         else
           {
-            printWarningForTracking("CSBEND has radius > 1e6 with zero K1.",
-                                    "Treated as EDRIFT; higher multipoles are ignored.");
+            printWarningForTracking((char*)"CSBEND has radius > 1e6 with zero K1.",
+                                    (char*)"Treated as EDRIFT; higher multipoles are ignored.");
             gpu_exactDrift(n_part, csbend->length);
             return n_part;
           }
@@ -1028,7 +1033,7 @@ extern "C"
                                                            csbend->edgeFlags, csbend->expandHamiltonian, csbend->fseCorrection, csbend->fseCorrectionPathError, rho0, rho_actual, rad_coef, isrConstant,
                                                            expansionOrder1, hasSkew, hasNormal, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
                                                            distributionBasedRadiation, includeOpeningAngle, srGaussianLimit,
-                                                           d_refTrajectoryData, refTrajectoryMode, iSlice, apertureData));
+                                                           d_refTrajectoryData, refTrajectoryMode, iSlice, apertureData, eptr));
     gpuErrorHandler("gpu_track_through_csbend: gpu_track_through_csbend_kernel");
     if (rad_coef || isrConstant)
       {
@@ -1069,8 +1074,10 @@ gpu_integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2,
                           double d_rho_actual, double d_rad_coef, double d_isrConstant,
                           int d_distributionBasedRadiation, int d_includeOpeningAngle,
                           double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
-                          int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
-                          double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData, short integration_order)
+                          int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, 
+                          double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
+                          double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, 
+                          MULT_APERTURE_DATA *apData, short integration_order, ELEMENT_LIST *eptr)
 {
   int i;
   double factor, f, phi, ds, dsh, dist;
@@ -1164,7 +1171,7 @@ gpu_integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2,
   for (i = 0; i < n; i++)
     {
       long j;
-      if (apData && !gpu_checkMultAperture(X, Y, apData))
+      if (apData && !gpu_checkMultAperture(X, Y, i*s, apData))
         {
           return 0;
         }
@@ -1201,10 +1208,6 @@ gpu_integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2,
         *dz_lost += dsh;
         f = cos_phi / cosi;
         X = rho0 * (f - 1) + f * X;
-        if (apData && !gpu_checkMultAperture(X, Y, apData))
-          {
-            return 0;
-          }
 
         if (kickFrac[j]==0)
           break;
@@ -1266,9 +1269,10 @@ gpu_integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2,
       if (iSlice>=0)
         break;
     }
-  if (apData && !gpu_checkMultAperture(X, Y, apData))
+
+  *dz_lost = n * s;
+  if (apData && !gpu_checkMultAperture(X, Y, i*s, apData))
     {
-      *dz_lost = n*s;
       return 0;
     }
 
@@ -1283,8 +1287,10 @@ gpu_integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
                                    double d_rho_actual, double d_rad_coef, double d_isrConstant,
                                    int d_distributionBasedRadiation, int d_includeOpeningAngle,
                                    double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
-                                   int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
-                                   double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData, short integration_order)
+                                   int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, 
+                                   double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
+                                   double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, 
+                                   MULT_APERTURE_DATA *apData, short integration_order, ELEMENT_LIST *eptr)
 /* The Hamiltonian in this case is approximated as
  * H = Hd + Hf, where Hd is the drift part and Hf is the field part.
  * Hd = Hd1 + Hd2 + Hd1, where
@@ -1375,7 +1381,7 @@ gpu_integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
   for (i = 0; i < n; i++)
     {
       long j;
-      if (apData && !gpu_checkMultAperture(X, Y, apData))
+      if (apData && !gpu_checkMultAperture(X, Y, i*s, apData))
         {
           return 0;
         }
@@ -1396,7 +1402,7 @@ gpu_integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
         X += QX * dsh / (1 + DPoP);
         Y += QY * dsh / (1 + DPoP);
         QX += dsh * (1 + DPoP) / (2 * rho0);
-        if (apData && !gpu_checkMultAperture(X, Y, apData))
+        if (apData && !gpu_checkMultAperture(X, Y, i*s, apData))
           {
             return 0;
           }
@@ -1444,7 +1450,7 @@ gpu_integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       if (iSlice>=0)
         break;
     }
-  if (apData && !gpu_checkMultAperture(X, Y, apData))
+  if (apData && !gpu_checkMultAperture(X, Y, i*s, apData))
     {
       *dz_lost = n*s;
       return 0;
@@ -1625,13 +1631,14 @@ class gpu_track_through_csbendCSR_kernel5
   double d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0;
   int d_distributionBasedRadiation, d_includeOpeningAngle;
   MULT_APERTURE_DATA apertureData;
+  ELEMENT_LIST *eptr;
  gpu_track_through_csbendCSR_kernel5(unsigned int *d_sortIndex, double *d_beta0,
                                      double *d_gauss_rn, double *d_gauss_rn_p2, double *d_gauss_rn_p3, curandState_t *state, double Po, int integration_order,
                                      double length, double nSlices, int d_expansionOrder, int d_hasSkew, int d_hasNormal, double d_rho0,
                                      double d_rho_actual, double d_rad_coef, double d_isrConstant,
                                      double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
                                      int d_distributionBasedRadiation, int d_includeOpeningAngle,
-                                     double srGaussianLimit, MULT_APERTURE_DATA apertureData) : d_sortIndex(d_sortIndex), d_beta0(d_beta0), d_gauss_rn(d_gauss_rn), d_gauss_rn_p2(d_gauss_rn_p2), d_gauss_rn_p3(d_gauss_rn_p3),
+                                     double srGaussianLimit, MULT_APERTURE_DATA apertureData, ELEMENT_LIST *eptr) : d_sortIndex(d_sortIndex), d_beta0(d_beta0), d_gauss_rn(d_gauss_rn), d_gauss_rn_p2(d_gauss_rn_p2), d_gauss_rn_p3(d_gauss_rn_p3),
     state(state), Po(Po), integration_order(integration_order), length(length),
     nSlices(nSlices), d_expansionOrder(d_expansionOrder), d_hasSkew(d_hasSkew), d_hasNormal(d_hasNormal), d_rho0(d_rho0),
     d_rho_actual(d_rho_actual), d_rad_coef(d_rad_coef),
@@ -1640,7 +1647,7 @@ class gpu_track_through_csbendCSR_kernel5
     d_normalizedCriticalEnergy0(d_normalizedCriticalEnergy0),
     d_distributionBasedRadiation(d_distributionBasedRadiation),
     d_includeOpeningAngle(d_includeOpeningAngle),
-    srGaussianLimit(srGaussianLimit), apertureData(apertureData){};
+    srGaussianLimit(srGaussianLimit), apertureData(apertureData), eptr(eptr){};
 
   __device__ inline void operator()(gpuParticleAccessor &coord)
   {
@@ -1678,7 +1685,7 @@ class gpu_track_through_csbendCSR_kernel5
                                                    d_distributionBasedRadiation, d_includeOpeningAngle,
                                                    d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
                                                    d_expansionOrder, d_hasSkew, d_hasNormal, t_gauss_rn1, t_gauss_rn2, t_gauss_rn3, t_state, srGaussianLimit,
-                                                   NULL, 0, &apertureData, integration_order);
+                                                   NULL, 0, &apertureData, integration_order, eptr);
 
     /* Lost particles are killed in kernel7 and just marked here */
     if (particle_lost)
@@ -1905,7 +1912,7 @@ extern "C"
 
   long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
                                    double p_error, double Po, double **accepted, double z_start,
-                                   double z_end, CHARGE *charge, char *rootname, MAXAMP *maxamp, APCONTOUR *apContour, APERTURE_DATA *apFileData)
+                                   double z_end, CHARGE *charge, char *rootname, MAXAMP *maxamp, APCONTOUR *apContour, APERTURE_DATA *apFileData, ELEMENT_LIST *eptr)
   {
     double h, n, he1, he2;
     static long csrWarning = 0;
@@ -2099,12 +2106,12 @@ extern "C"
         rho0 = csbend->length / angle;
       }
 
-    setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, z_start + csbend->length / 2);
+    setupMultApertureData(&apertureData, -tilt, apContour, maxamp, apFileData, NULL, z_start + csbend->length / 2, eptr);
 
     if (rho0 > 1e6)
       {
-        printWarningForTracking("CSRCSBEND has radius > 1e6 but non-zero K1.",
-                                "Treated as EDRIFT.");
+        printWarningForTracking((char*)"CSRCSBEND has radius > 1e6 but non-zero K1.",
+                                (char*)"Treated as EDRIFT.");
         gpu_exactDrift(n_part, csbend->length);
         return n_part;
       }
@@ -2395,7 +2402,7 @@ extern "C"
                                                                 d_gauss_rn, d_gauss_rn_p2, d_gauss_rn_p3, state, Po, csbend->integration_order, csbend->length,
                                                                 csbend->nSlices, expansionOrder1, hasSkew, hasNormal, rho0, rho_actual, rad_coef,
                                                                 isrConstant, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
-                                                                distributionBasedRadiation, includeOpeningAngle, srGaussianLimit, apertureData));
+                                                                distributionBasedRadiation, includeOpeningAngle, srGaussianLimit, apertureData, eptr));
                   gpuErrorHandler("gpu_track_through_csbendCSR: gpu_track_through_csbendCSR_kernel5");
                 }
             }
@@ -2436,12 +2443,12 @@ extern "C"
                 if (derbenevRatio > 0.1)
                   {
                     if (code==DERBENEV_CRITERION_EVAL) {
-                      printWarningForTracking("Using 1-D CSR formalism but Derbenev criterion not satisfied (ratio > 0.1).",
-                                              "CSR applied regardless per setting of DERBENEV_CRITERION_MODE.");
+                      printWarningForTracking((char*)"Using 1-D CSR formalism but Derbenev criterion not satisfied (ratio > 0.1).",
+                                              (char*)"CSR applied regardless per setting of DERBENEV_CRITERION_MODE.");
                     } else {
                       csrInhibit = 1;
-                      printWarningForTracking("Using 1-D CSR formalism but Derbenev criterion not satisfied (ratio > 0.1).",
-                                              "CSR not applied per setting of DERBENEV_CRITERION_MODE.");
+                      printWarningForTracking((char*)"Using 1-D CSR formalism but Derbenev criterion not satisfied (ratio > 0.1).",
+                                              (char*)"CSR not applied per setting of DERBENEV_CRITERION_MODE.");
                     }
                   }
                 break;
@@ -2527,7 +2534,7 @@ extern "C"
                           {
                             char warningText[1024];
                             snprintf(warningText, 1024, "Negative values in %ld bins.", nz);
-                            printWarningForTracking("Low pass filter resulted in negative values.", warningText);
+                            printWarningForTracking((char*)"Low pass filter resulted in negative values.", warningText);
                           }
                       }
                     if (csbend->SGHalfWidth > 0)
@@ -3302,8 +3309,8 @@ extern "C"
             (csrDrift->useStupakov ? CSRDRIFT_STUPAKOV : 0);
           while (zStart + 1.e-12 < csrWake.zLast)
             {
-              printWarningForTracking("Incrementing zStart by revolution length for CSRDRIFT", 
-                                      "If you are not simulating a ring, this could be a problem!");
+              printWarningForTracking((char*)"Incrementing zStart by revolution length for CSRDRIFT", 
+                                      (char*)"If you are not simulating a ring, this could be a problem!");
               zStart += revolutionLength;
             }
           if (bitsSet(mode) > 1)
@@ -3321,8 +3328,8 @@ extern "C"
           if (mode & CSRDRIFT_STUPAKOV)
             return gpu_track_through_driftCSR_Stupakov(np, csrDrift, Po, accepted, zStart, charge, rootname);
 
-          printWarningForTracking("USE_STUPAKOV=1 is recommended for CSRDRIFT elements.",
-                                  "This is the most physical model available in elegant.");
+          printWarningForTracking((char*)"USE_STUPAKOV=1 is recommended for CSRDRIFT elements.",
+                                  (char*)"This is the most physical model available in elegant.");
 
           dct = csrWake.dctBin;
           if (csrDrift->dz > 0)
@@ -3508,7 +3515,7 @@ extern "C"
                       char warningText[1024];
                       snprintf(warningText, 1024, "zTravel = %le,  csrWake available up to %le\n",
                                zTravel, csrWake.xSaldin[csrWake.nSaldin-1]);
-                      printWarningForTracking("Interpolation failure for Saldin eq. 54.", warningText);
+                      printWarningForTracking((char*)"Interpolation failure for Saldin eq. 54.", warningText);
                       factor = 0;
                     }
                 }
@@ -3777,7 +3784,7 @@ extern "C"
                           {
                             char warningText[1024];
                             snprintf(warningText, 1024, "Negative values in %ld bins.", nz);
-                            printWarningForTracking("Low pass filter resulted in negative values.",
+                            printWarningForTracking((char*)"Low pass filter resulted in negative values.",
                                                     warningText);
                             fflush(stdout);
                           }
@@ -4885,7 +4892,7 @@ __device__ void gpu_dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
               return value;
             }
 
-            __device__ long gpu_checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData)
+            __device__ long gpu_checkMultAperture(double x, double y, double sLocal, MULT_APERTURE_DATA *apData)
             {
               if (apData && apData->present &&
                   ((apData->xMax && fabs(x - apData->xCen) > apData->xMax) ||

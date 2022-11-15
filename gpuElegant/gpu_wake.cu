@@ -85,6 +85,10 @@ extern "C"
         offset = 0;
         for (iBucket = 0; iBucket < nBuckets; iBucket++)
           {
+            if (wakeData->bunchedBeamMode && 
+                ((wakeData->startBunch>=0 && iBucket<wakeData->startBunch) ||
+                 (wakeData->endBunch>=0 && iBucket>wakeData->endBunch)))
+              continue;
             if (nBuckets == 1)
               {
                 np = np0;
@@ -137,7 +141,7 @@ extern "C"
                     snprintf(warningBuffer, 1024,
                              "This may produce unphysical results. The beam length is %le s, while the wake length is %le s\n",
                              tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);  
-                    printWarningForTracking("The beam is longer than the longitudinal wake function.", warningBuffer);
+                    printWarningForTracking((char*)"The beam is longer than the longitudinal wake function.", warningBuffer);
 #if USE_MPI
                     if (myid==1) close(fd);
 #endif
@@ -155,8 +159,8 @@ extern "C"
 #if USE_MPI
                     if (myid==1) dup2(fd, fileno(stdout));
 #endif
-                    printWarningForTracking("Beam shorter than 20 time the spacing of the wake points.",
-                                            "May produce poor results. Consider using finer time spacing in wake data.");
+                    printWarningForTracking((char*)"Beam shorter than 20 time the spacing of the wake points.",
+                                            (char*)"May produce poor results. Consider using finer time spacing in wake data.");
 #if USE_MPI
                     if (myid==1) close(fd);
 #endif
@@ -187,8 +191,8 @@ extern "C"
                   }
                 if (nb <= 0)
                   {
-                    printWarningForTracking("Number of wake bins is 0 or negative.", 
-                                            "Probably indicates an extremely long bunch. Wake ignored!");
+                    printWarningForTracking((char*)"Number of wake bins is 0 or negative.", 
+                                            (char*)"Probably indicates an extremely long bunch. Wake ignored!");
                     return;
                   }
 #ifdef DEBUG
@@ -214,7 +218,7 @@ extern "C"
                     snprintf(warningBuffer, 1024, 
                              "Only %ld of %ld particles were binned. Consider setting n_bins=0 to invoke autoscaling.",
                              n_binned, np);
-                    printWarningForTracking("Some particles not binned in WAKE.", warningBuffer);
+                    printWarningForTracking((char*)"Some particles not binned in WAKE.", warningBuffer);
                     /* return; */
                   }
               }
@@ -230,8 +234,8 @@ extern "C"
                     if (myid == 1)
                       {
                         /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */
-                        printWarningForTracking("Some particles not binned in WAKE.",
-                                                "Consider setting N_BINS=0 to invoke autoscaling.");
+                        printWarningForTracking((char*)"Some particles not binned in WAKE.",
+                                                (char*)"Consider setting N_BINS=0 to invoke autoscaling.");
                       }
                   }
               }

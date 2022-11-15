@@ -25,19 +25,19 @@ __device__ inline unsigned int evaluateLostWithOpenSidesDevice(unsigned int code
   switch (code)
     {
     case OPEN_PLUS_X:
-      if (dx > 0 && fabs(dy) < ysize)
+      if (dx > 0 && (fabs(dy) < ysize || ysize<=0))
         lost = 0;
       break;
     case OPEN_MINUS_X:
-      if (dx < 0 && fabs(dy) < ysize)
+      if (dx < 0 && (fabs(dy) < ysize || ysize<=0))
         lost = 0;
       break;
     case OPEN_PLUS_Y:
-      if (dy > 0 && fabs(dx) < xsize)
+      if (dy > 0 && (fabs(dx) < xsize || xsize<=0))
         lost = 0;
       break;
     case OPEN_MINUS_Y:
-      if (dy < 0 && fabs(dx) < xsize)
+      if (dy < 0 && (fabs(dx) < xsize || xsize<=0))
         lost = 0;
       break;
     default:
@@ -181,7 +181,7 @@ extern "C"
    *          rectangular collimator
    */
   long gpu_rectangular_collimator(RCOL *rcol, long np, double **accepted, double z,
-                                  double Po)
+                                  double Po, ELEMENT_LIST *eptr)
   {
     long openCode;
     double xsize, ysize, x_center, y_center, length;
@@ -290,7 +290,7 @@ extern "C"
    */
   long gpu_limit_amplitudes(
                             double xmax, double ymax, long np, double **accepted,
-                            double z, double Po, long extrapolate_z, long openCode)
+                            double z, double Po, long extrapolate_z, long openCode, ELEMENT_LIST *eptr)
   {
 
     if (xmax < 0 && ymax < 0)
@@ -452,7 +452,7 @@ extern "C"
    *          elliptical collimator
    */
   long gpu_elliptical_collimator(ECOL *ecol, long np, double **accepted,
-                                 double z, double Po)
+                                 double z, double Po, ELEMENT_LIST *eptr)
   {
     double length;
     long openCode;
@@ -502,7 +502,7 @@ extern "C"
             rcol.dy = ecol->dy;
             rcol.invert = ecol->invert;
             rcol.openSide = ecol->openSide;
-            return gpu_rectangular_collimator(&rcol, np, accepted, z, Po);
+            return gpu_rectangular_collimator(&rcol, np, accepted, z, Po, eptr);
           }
         gpu_exactDrift(np, ecol->length);
         return (np);
@@ -601,7 +601,7 @@ extern "C"
    */
   long gpu_elimit_amplitudes(double xmax, double ymax, long np,
                              double **accepted, double z, double Po, long extrapolate_z,
-                             long openCode, long exponent, long yexponent)
+                             long openCode, long exponent, long yexponent, ELEMENT_LIST *eptr)
   {
     double a2, b2;
     TRACKING_CONTEXT context;
@@ -632,7 +632,7 @@ extern "C"
         /* At least one of the dimensions is non-positive and therefore ignored */
         if (xmax > 0 || ymax > 0)
           return gpu_limit_amplitudes(xmax, ymax, np, accepted,
-                                      z, Po, extrapolate_z, openCode);
+                                      z, Po, extrapolate_z, openCode, eptr);
         return (np);
       }
 
@@ -808,7 +808,7 @@ extern "C"
 {
 
   long gpu_beam_scraper(SCRAPER *scraper, long np, double **accepted,
-                        double z, double Po)
+                        double z, double Po, ELEMENT_LIST *eptr)
   {
     double length;
     long do_x, do_y;
@@ -955,11 +955,11 @@ class gpu_imposeApertureData_kernel
 extern "C"
 {
 
-  long interpolateApertureData(double z, APERTURE_DATA *apData,
+  long interpolateApertureData(double sz, APERTURE_DATA *apData,
                                double *xCenter, double *yCenter, double *xSize, double *ySize);
 
   long gpu_imposeApertureData(long np, double **accepted,
-                              double z, double Po, APERTURE_DATA *apData)
+                              double z, double Po, APERTURE_DATA *apData, ELEMENT_LIST *eptr)
   {
     double xSize, ySize;
     double xCenter, yCenter;

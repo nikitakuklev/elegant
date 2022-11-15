@@ -133,7 +133,7 @@ extern "C"
                 char warningText[1024];
                 snprintf(warningText, 1024, 
                          "Only %ld of %ld particles were binned. This shouldn't happen.  Note that tmin %g, tmax %g", n_binned, np, tmin, tmax);
-                printWarningForTracking("Some particles were not binned in LSCDRIFT.",
+                printWarningForTracking((char*)"Some particles were not binned in LSCDRIFT.",
                                         warningText);
               }
           }
@@ -150,7 +150,7 @@ extern "C"
                 if (myid == 1)
                   {
                     /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant to avoid communications */
-                    printWarningForTracking("Some particles were not binned in LSCDRIFT.", "This shouldn't happen.");
+                    printWarningForTracking((char*)"Some particles were not binned in LSCDRIFT.", (char*)"This shouldn't happen.");
                   }
               }
           }
@@ -470,7 +470,7 @@ extern "C"
         char warningText[1024];
         snprintf(warningText, 1024, 
                  "Only %ld of %ld particles were binned, which shouldn't happen.", n_binned, np);
-        printWarningForTracking("Some particles were not binned in LSCKICK.",
+        printWarningForTracking((char*)"Some particles were not binned in LSCKICK.",
                                 warningText);
       }
 
