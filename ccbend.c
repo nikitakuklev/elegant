@@ -184,6 +184,7 @@ long track_through_ccbend(
         }
         ccbend->fseOffset = startValue[0];
         ccbend->dxOffset = startValue[1];
+        ccbend->lengthCorrection = 0;
         /* This gets subtracted from the final x coordinates to ensure the magnet doesn't produce a trajectory error */
         ccbend->xAdjust = xFinal;
         ccbend->KnDelta = ccbendCopy.KnDelta;
@@ -196,7 +197,10 @@ long track_through_ccbend(
         particle0 = (double **)czarray_2d(sizeof(**particle0), 1, totalPropertiesPerParticle);
         memset(particle0[0], 0, totalPropertiesPerParticle * sizeof(**particle));
         track_through_ccbend(particle0, 1, eptr, ccbend, Po, NULL, 0.0, NULL, NULL, NULL, NULL, NULL, -1, 0);
-        ccbend->lengthCorrection = ccbend->length - particle0[0][4];
+        if (ccbend->adjustPathLength)
+          ccbend->lengthCorrection = ccbend->length - particle0[0][4];
+        else
+          ccbend->lengthCorrection = 0;
         free_czarray_2d((void **)particle0, 1, totalPropertiesPerParticle);
         ccbend->optimized = 1;
         if (ccbend->verbose) {
@@ -493,7 +497,7 @@ long track_through_ccbend(
     if (tilt)
       /* use n_part here so lost particles get rotated back */
       rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
-    if (ccbend->optimized) {
+    if (ccbend->optimized==1 && ccbend->adjustPathLength) {
       for (i_part = 0; i_part <= i_top; i_part++)
         particle[i_part][4] += ccbend->lengthCorrection;
     }

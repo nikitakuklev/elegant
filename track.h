@@ -1148,7 +1148,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 16
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CCBEND_PARAMS 68
+#define N_CCBEND_PARAMS 69
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS 19
 #define N_APCONTOUR_PARAMS 15
@@ -2448,7 +2448,8 @@ typedef struct {
     short referenceOrder;
     short minMultipoleOrder[2], maxMultipoleOrder[2]; /* normal, skew */
     short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
-    short optimizeFse, optimizeDx, optimizeFseOnce, optimizeDxOnce, compensateKn, edgeOrder, dxdySign, verbose;
+    short optimizeFse, optimizeDx, optimizeFseOnce, optimizeDxOnce, compensateKn, adjustPathLength;
+    short edgeOrder, dxdySign, verbose;
     /* for internal use only: */
     short optimized, edgeFlip;
     double fseOffset, dxOffset, KnDelta, xAdjust;
