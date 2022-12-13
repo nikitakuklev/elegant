@@ -200,11 +200,11 @@ long track_through_ccbend(
         free_czarray_2d((void **)particle0, 1, totalPropertiesPerParticle);
         ccbend->optimized = 1;
         if (ccbend->verbose) {
-          printf("CCBEND %s#%ld optimized: FSE=%le, dx=%le, accuracy=%le\n",
+          printf("CCBEND %s#%ld optimized: FSE=%21.15le, dx=%21.15le, accuracy=%21.15le\n",
                  eptr ? eptr->name : "?", eptr ? eptr->occurence : -1, ccbend->fseOffset, ccbend->dxOffset, acc);
-          printf("length = %18.12le, angle = %18.12le, K1 = %18.12le\nK2 = %18.12le, yaw = %18.12le, lengthCorrection = %21.12le\n",
+          printf("length = %21.15le, angle = %21.15le, K1 = %21.15le\nK2 = %21.15le, yaw = %21.15le, lengthCorrection = %21.15le\n",
                  ccbend->length, ccbend->angle, ccbend->K1, ccbend->K2, ccbend->yaw, ccbend->lengthCorrection);
-          printf("xMin = %le, xMax = %le, xAve = %le, xInitial = %le, xFinal = %le, xpError = %le\n",
+          printf("xMin = %21.15le, xMax = %21.15le, xAve = %21.15le, xInitial = %21.15le, xFinal = %21.15le, xpError = %21.15le\n",
                  xMin, xMax, xAve, xInitial, xFinal, xpError);
           fflush(stdout);
         }
