@@ -35,68 +35,33 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2022.2}
+\section{Highlights of What's New in Version 2022.3}
 
-Here is a summary of what's changed since release 2022.0.  Historical change logs are collected in Section
+Here is a summary of what's changed since release 2022.2.  Historical change logs are collected in Section
 \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The open-side feature of the \verb|MAXAMP| element behaved incorrectly when the dimension in one
-  plane was not set, as reported by Z. Duan (IHEP). 
-\item When using \verb|moments_output| computations for a beamline that contained \verb|SBEN| elements,
-  a less accurate model was used compared to the same computation with \verb|CSBEND| elements.
-  V. Sajaev (ANL) helped find this bug.
-\item The pole-factor parameters of \verb|CWIGGLER| gave strange results when the number of integration
-  steps per half period was odd. This was reported by forum user Skamarokha. It was fixed by forcing
-  \verb|STEPS_PER_PERIOD| to be $4n$, where $n$ is an integer.
-\item The \verb|START_PID| and \verb|END_PID| parameters of  \verb|WATCH| did not permit selecting a 
-  single particle. This issue was identified with the help of C. Li (DESY).
+\item The \verb|CCBEND| element had a bug in the path-length correction feature that affected runs in which
+  the optimization of fractional strength error or transverse offset was repeated. This could result in 
+  a mismatch between the rf frequency and path-length, for example.
+  M. Venturini (LBNL) reported the issue.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|correct| command had a bug related to threaded and one-to-one trajectory correction if
-  removal of pegged correctors was not invoked.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|CWIGGLER| element can now be split using the \verb|divide_elements| command or
-  the \verb|element_divisions| parameter of the \verb|run_setup| command. In addition, multiple \verb|CWIGGLER| elements
-  that are separated only by \verb|MARK| or \verb|WATCH| elements are considered part of the same element.
-  This was suggested by forum user \verb|Skamarokha|.
-\item The \verb|LGBEND| element now allows the user to provide z-dependent aperture data via an SDDS file.
-\item The \verb|SPEEDBUMP| element now provides information for logging of global coordinates of lost particles.
-\item The \verb|HMON|, \verb|VMON|, and \verb|MONI| elements now provide the number of particles seen on the
-  most recent turn for use in optimization. These are, in essence, virtual BPM sum signals.
-\item The \verb|BMXYZ| element now allows specifying the range over which the optional constant field is applied.
-\item Added ability for \verb|BMXYZ| and \verb|BRAT| elemente to use sections of field maps with defined symmetry,
-  which reduces storage requirements.
-\item The \verb|BMXYZ| element now applies apertures defined by \verb|MAXAMP|, \verb|APCONTOUR| (with
-  \verb|STICKY=1|), and \verb|aperture_data| in the interior.
-\item The \verb|APCONTOUR| element now accepts multiple contours combined via user-defined logic.
-\item The \verb|WAKE|, \verb|TRWAKE|, \verb|ZLONGIT|, and \verb|ZTRANSVERSE| elements now allow limiting
-  which bunches are subjected to short-range impedance effects, using the \verb|START_BUNCH| and \verb|END_BUNCH|
-  parameters. This was suggested by forum user \verb|Seb_Wilkes| and can provide significant reduction in run
-  time for some types of simulations.
-\item The \verb|RFDF| element now allows restricting effects based on particle ID values. This was also
-  suggested by forum user \verb|Seb_Wilkes|.
-\item The \verb|KAverage| and \verb|pAverage| values were wrong in output files for \verb|WATCH| elements
-  for the parallel version. This was pointed out by C. Li (DESY).
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|correct| command (orbit and trajectory correction) now supports Tikhonov regularization of the
-  singular value spectrum in creating the inverse matrices, following some ideas of V. Sajaev (ANL).
-\item The \verb|optimization_term| command now recognizes two new quantities: \verb|sMaxTransmitted| and 
-  \verb|sMaxTransmittedMonitor|, giving the maximum $s$ coordinate to which particles are transmitted to
-  any point or to a monitor, respectively. This can be used for threading of beam through a transport line.
-\item Added 1d-scan and RCDS \cite{Huang-RCDS} methods to the \verb|optimize| command.
-\item Added the \verb|slope_limit| and \verb|coord_limit| parameters to the \verb|global_settings| command.
-  These allow controlling the limiting values for particle motion, beyond which particles are considered lost.
+\item None.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -8447,6 +8412,103 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 2022.2}
+
+Here is a summary of what's changed since release 2022.0.  Historical change logs are collected in Section
+\ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The open-side feature of the \verb|MAXAMP| element behaved incorrectly when the dimension in one
+  plane was not set, as reported by Z. Duan (IHEP). 
+\item When using \verb|moments_output| computations for a beamline that contained \verb|SBEN| elements,
+  a less accurate model was used compared to the same computation with \verb|CSBEND| elements.
+  V. Sajaev (ANL) helped find this bug.
+\item The pole-factor parameters of \verb|CWIGGLER| gave strange results when the number of integration
+  steps per half period was odd. This was reported by forum user Skamarokha. It was fixed by forcing
+  \verb|STEPS_PER_PERIOD| to be $4n$, where $n$ is an integer.
+\item The \verb|START_PID| and \verb|END_PID| parameters of  \verb|WATCH| did not permit selecting a 
+  single particle. This issue was identified with the help of C. Li (DESY).
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The \verb|correct| command had a bug related to threaded and one-to-one trajectory correction if
+  removal of pegged correctors was not invoked.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|CWIGGLER| element can now be split using the \verb|divide_elements| command or
+  the \verb|element_divisions| parameter of the \verb|run_setup| command. In addition, multiple \verb|CWIGGLER| elements
+  that are separated only by \verb|MARK| or \verb|WATCH| elements are considered part of the same element.
+  This was suggested by forum user \verb|Skamarokha|.
+\item The \verb|LGBEND| element now allows the user to provide z-dependent aperture data via an SDDS file.
+\item The \verb|SPEEDBUMP| element now provides information for logging of global coordinates of lost particles.
+\item The \verb|HMON|, \verb|VMON|, and \verb|MONI| elements now provide the number of particles seen on the
+  most recent turn for use in optimization. These are, in essence, virtual BPM sum signals.
+\item The \verb|BMXYZ| element now allows specifying the range over which the optional constant field is applied.
+\item Added ability for \verb|BMXYZ| and \verb|BRAT| elemente to use sections of field maps with defined symmetry,
+  which reduces storage requirements.
+\item The \verb|BMXYZ| element now applies apertures defined by \verb|MAXAMP|, \verb|APCONTOUR| (with
+  \verb|STICKY=1|), and \verb|aperture_data| in the interior.
+\item The \verb|APCONTOUR| element now accepts multiple contours combined via user-defined logic.
+\item The \verb|WAKE|, \verb|TRWAKE|, \verb|ZLONGIT|, and \verb|ZTRANSVERSE| elements now allow limiting
+  which bunches are subjected to short-range impedance effects, using the \verb|START_BUNCH| and \verb|END_BUNCH|
+  parameters. This was suggested by forum user \verb|Seb_Wilkes| and can provide significant reduction in run
+  time for some types of simulations.
+\item The \verb|RFDF| element now allows restricting effects based on particle ID values. This was also
+  suggested by forum user \verb|Seb_Wilkes|.
+\item The \verb|KAverage| and \verb|pAverage| values were wrong in output files for \verb|WATCH| elements
+  for the parallel version. This was pointed out by C. Li (DESY).
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|correct| command (orbit and trajectory correction) now supports Tikhonov regularization of the
+  singular value spectrum in creating the inverse matrices, following some ideas of V. Sajaev (ANL).
+\item The \verb|optimization_term| command now recognizes two new quantities: \verb|sMaxTransmitted| and 
+  \verb|sMaxTransmittedMonitor|, giving the maximum $s$ coordinate to which particles are transmitted to
+  any point or to a monitor, respectively. This can be used for threading of beam through a transport line.
+\item Added 1d-scan and RCDS \cite{Huang-RCDS} methods to the \verb|optimize| command.
+\item Added the \verb|slope_limit| and \verb|coord_limit| parameters to the \verb|global_settings| command.
+  These allow controlling the limiting values for particle motion, beyond which particles are considered lost.
+\end{itemize}
+
+\subsubsection{Other Changes}
+
+\begin{itemize}
+\item None
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item None
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}  Users are encouraged to check results against
+the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+The {\tt elegant} distribution includes many programs and scripts that perform computations with {\tt elegant}
+output data, provide interfaces with other programs, or prepare data for use with {\tt elegant}. These
+are listed in Section \ref{sect:tools}. 
+
+Changes to these tools in this release include
+\begin{itemize}
+\item The \verb|straightDipoleFringeCalc| program now allows the user to specify the arc length of the
+  \verb|CCBEND| element, rather than relying on the internal calculation, which may not be accurate.
+\end{itemize}
 
 \subsection{Highlights of What's New in Version 2022.0}
 
