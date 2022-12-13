@@ -1253,7 +1253,9 @@ void derivatives_tw_linac(
   FrP[0] = FrP[1] = 0;
   droop = 1;
   if ((Z = q[2]) <= Z_end && Z >= 0) {
-    E[2] = twla->EzS * (sin_phase = sin(phase = Z / twla->beta_wave - tau));
+    if (twla->alphaS)
+      droop = exp(-twla->alphaS * Z);
+    E[2] = twla->EzS * (sin_phase = sin(phase = Z / twla->beta_wave - tau))*droop;
 #if defined(DEBUG)
     if (starting_integration) {
       starting_integration = 0;
@@ -1263,12 +1265,12 @@ void derivatives_tw_linac(
 #endif
     Y = q[1] + Y_offset;
     X = q[0] + X_offset;
-    E[0] = twla->ErS * (cos_phase = cos(phase));
+    E[0] = twla->ErS * (cos_phase = cos(phase))*droop;
     E[1] = E[0] * Y;
     E[0] *= X;
     /* B is scaled by gamma here */
     B[2] = twla->BsolS / gamma;
-    B[1] = twla->BphiS * cos_phase / gamma;
+    B[1] = twla->BphiS * cos_phase / gamma * droop;
     B[0] = -B[1] * Y;
     B[1] *= X;
 
@@ -1278,13 +1280,11 @@ void derivatives_tw_linac(
       FrP[1] = -Y * twla->FrP * sqr(cos_phase);
     }
 
-    if (twla->alphaS)
-      droop = exp(-twla->alphaS * Z);
     /* The sign of the electron is taken care of here. */
     /* Also, the Ponderomotive force is always focusing */
-    Pp[0] = -(E[0] + P[1] * B[2] - P[2] * B[1] - FrP[0]) * droop;
-    Pp[1] = -(E[1] + P[2] * B[0] - P[0] * B[2] - FrP[1]) * droop;
-    Pp[2] = -(E[2] + P[0] * B[1] - P[1] * B[0]) * droop;
+    Pp[0] = -(E[0] + P[1] * B[2] - P[2] * B[1] - FrP[0]);
+    Pp[1] = -(E[1] + P[2] * B[0] - P[0] * B[2] - FrP[1]);
+    Pp[2] = -(E[2] + P[0] * B[1] - P[1] * B[0]);
   } else
     Pp[0] = Pp[1] = Pp[2] = 0;
 }
