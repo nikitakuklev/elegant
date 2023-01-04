@@ -884,11 +884,6 @@ int retrieveLGBendOptimizedFSEValues(LGBEND *lgbend) {
         lgbend->xExit == storedLGBEND[i].xExit &&
         lgbend->zExit == storedLGBEND[i].zExit &&
         lgbend->tilt == storedLGBEND[i].tilt &&
-        lgbend->dx == storedLGBEND[i].dx &&
-        lgbend->dy == storedLGBEND[i].dy &&
-        lgbend->dz == storedLGBEND[i].dz &&
-        lgbend->fse == storedLGBEND[i].fse &&
-        lgbend->etilt == storedLGBEND[i].etilt &&
         lgbend->nSlices == storedLGBEND[i].nSlices &&
         lgbend->integration_order == storedLGBEND[i].integration_order &&
         lgbend->compensateKn == storedLGBEND[i].compensateKn &&
@@ -923,11 +918,6 @@ void storeLGBendOptimizedFSEValues(LGBEND *lgbend) {
     storedLGBEND[i].xExit = lgbend->xExit;
     storedLGBEND[i].zExit = lgbend->zExit;
     storedLGBEND[i].tilt = lgbend->tilt;
-    storedLGBEND[i].dx = lgbend->dx;
-    storedLGBEND[i].dy = lgbend->dy;
-    storedLGBEND[i].dz = lgbend->dz;
-    storedLGBEND[i].fse = lgbend->fse;
-    storedLGBEND[i].etilt = lgbend->etilt;
     storedLGBEND[i].nSlices = lgbend->nSlices;
     storedLGBEND[i].integration_order = lgbend->integration_order;
     storedLGBEND[i].compensateKn = lgbend->compensateKn;
