@@ -1709,6 +1709,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       if (slice == 0) {
         memcpy(&lgbend, (LGBEND *)eptr->p_elem, sizeof(LGBEND));
         copyLGBend(&lgbend, (LGBEND *)eptr->p_elem);
+	lgbend.apertureDataFile = NULL;
+	lgbend.localApertureData = NULL;
         lgbend.isr = 0;
         lgbend.nSlices = nSlices / lgbend.nSegments; /* nSlices is the total for all segments */
         lgbend.integration_order = 6;
