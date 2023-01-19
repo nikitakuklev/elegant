@@ -1038,7 +1038,7 @@ extern char *entity_text[N_TYPES];
 #define N_SOLE_PARAMS 7
 #define N_HCOR_PARAMS 11
 #define N_VCOR_PARAMS 11
-#define N_RFCA_PARAMS 18
+#define N_RFCA_PARAMS 19
 #define N_ELSE_PARAMS 0
 #define N_HMON_PARAMS 11
 #define N_VMON_PARAMS 11
@@ -1102,7 +1102,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSRDRIFT_PARAMS 27
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
-#define N_RFCW_PARAMS 41
+#define N_RFCW_PARAMS 42
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 22
@@ -1433,7 +1433,7 @@ typedef struct {
     long phase_reference;
     short change_p0, change_t;
     char *fiducial;
-    short end1Focus, end2Focus;
+    short end1Focus, end2Focus, standingWave;
     char *bodyFocusModel;
     long nKicks;
     double dx, dy;
@@ -2974,7 +2974,7 @@ typedef struct {
     double length, cellLength, volt, phase, freq, Q;
     long phase_reference, change_p0, change_t;
     char *fiducial;
-    long end1Focus, end2Focus;
+    short end1Focus, end2Focus, standingWave;
     char *bodyFocusModel;
     long nKicks;
     long includeZWake;          /* if zero, longitudial wake is disabled */
@@ -3931,7 +3931,9 @@ extern void reset_special_elements(LINE_LIST *beamline, unsigned long flags);
 #define RESET_INCLUDE_ALL 0xFFFFFFFFUL
 extern VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central, 
                                    void *Wi);
-extern VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, long order, long end1Focus, long end2Focus, char *bodyFocusModel, long change_p0, double Preference);
+extern VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, 
+                                 long order, long end1Focus, long end2Focus, char *bodyFocusModel, long sw, long change_p0, 
+                                 double Preference, ELEMENT_LIST *elem, RUN *run);
 
 /* prototypes for concat_beamline2.c: */
 extern void copy_matrices1(VMATRIX *M1,  VMATRIX *M0);
@@ -4025,8 +4027,8 @@ extern long track_through_rfcw(double **part, long np, RFCW *rfcw, double **acce
                                double zEnd, RUN *run, long i_pass, CHARGE *charge);
 extern long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central, double zEnd);
 extern void set_up_kicker(KICKER *kicker);
-void add_to_particle_energy(double *coord, double timeOfFlight, double Po, double dgamma);
-
+extern void add_to_particle_energy(double *coord, double timeOfFlight, double Po, double dgamma);
+extern void identifyRfcaBodyFocusModel(void *pElem, long type, short *matrixMethod, short *useSRSModel, short *twFocusing1);
 
 #define FID_MODE_LIGHT       0x0001UL
 #define FID_MODE_TMEAN       0x0002UL

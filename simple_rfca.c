@@ -18,6 +18,8 @@
 #  include "gpu_simple_rfca.h"
 #endif
 
+void add_to_particle_energy2(double *coord, double timeOfFlight, double Po, double dgamma, double dpx, double dpy);
+
 static char *fiducialModeChoice[4] = {
   "light",
   "tmean",
@@ -302,11 +304,11 @@ long trackRfCavityWithWakes(
   TRWAKE *trwake,
   LSCKICK *LSCKick,
   long wakesAtEnd) {
-  long ip, same_dgamma, nKicks, linearize, ik, matrixMethod;
+  long ip, same_dgamma, nKicks, linearize, ik;
   double timeOffset, dc4, x, xp;
-  double P, gamma, gamma1, dgamma = 0.0, dgammaMax = 0.0, phase, length, dtLight, volt, To;
+  double P, gamma, gamma1, dgamma = 0.0, dgammaMax = 0.0, phase, length, dtLight, volt, To, dpr;
   double *coord, t, t0, omega, beta_i, tau, dt, tAve = 0, dgammaAve = 0;
-  long useSRSModel = 0;
+  short useSRSModel = 0, twFocusing1 = 0, matrixMethod;
   double dgammaOverGammaAve = 0;
   long dgammaOverGammaNp = 0;
   long lockPhase = 0;
@@ -326,21 +328,7 @@ long trackRfCavityWithWakes(
 #endif
 
   matrixMethod = 0;
-  if (rfca->bodyFocusModel) {
-    char *modelName[2] = {"none", "srs"};
-    switch (match_string(rfca->bodyFocusModel, modelName, 2, 0)) {
-    case 0:
-      break;
-    case 1:
-      useSRSModel = 1;
-      matrixMethod = 1;
-      break;
-    default:
-      fprintf(stderr, "Error: bodyFocusModel=%s not understood for RFCA\n", rfca->bodyFocusModel);
-      exitElegant(1);
-      break;
-    }
-  }
+  identifyRfcaBodyFocusModel(rfca, T_RFCA, &matrixMethod, &useSRSModel, &twFocusing1);
 
   if (rfca->freq < 1e3 && rfca->freq)
     printWarningForTracking("RFCA frequency is less than 1kHz.", "This may be an error. Consult manual for units.");
@@ -582,6 +570,7 @@ long trackRfCavityWithWakes(
         dgammaOverGammaAve = dgammaOverGammaNp = 0;
         if (isSlave || !notSinglePart) {
           for (ip = 0; ip < np; ip++) {
+            dpr = 0;
             coord = part[ip];
             if (coord[5] == -1)
               continue;
@@ -600,9 +589,18 @@ long trackRfCavityWithWakes(
             if ((dt = t - t0) < 0)
               dt = 0;
             if (!same_dgamma) {
-              if (!linearize)
-                dgamma = volt * sin(omega * (t - (lockPhase ? tAve : 0) - ik * dtLight) + phase) * (tau ? sqrt(1 - exp(-dt / tau)) : 1);
-              else
+              if (!linearize) {
+                if (rfca->standingWave)
+                  dgamma = volt * sin(omega * (t - (lockPhase ? tAve : 0) ) + phase) * (tau ? sqrt(1 - exp(-dt / tau)) : 1);
+                else {
+                  double phi, dfactor;
+                  phi = omega * (t - (lockPhase ? tAve : 0) - ik * dtLight) + phase;
+                  dfactor = tau ? sqrt(1 - exp(-dt / tau)) : 1;
+                  dgamma = volt * sin(phi) * dfactor;
+                  if (twFocusing1)
+                    dpr = volt/(2*beta_i)*(omega/c_mks)*(1-beta_i)*cos(phi);
+                }
+              } else
                 dgamma = dgammaAve + volt * omega * (t - tAve) * cos(omega * (tAve - timeOffset) + phase);
             }
             if (gamma) {
@@ -624,7 +622,10 @@ long trackRfCavityWithWakes(
             }
 
             /* apply energy kick */
-            add_to_particle_energy(coord, t, *P_central, dgamma);
+            if (dpr!=0)
+              add_to_particle_energy2(coord, t, *P_central, dgamma, dpr*coord[0], dpr*coord[2]);
+            else
+              add_to_particle_energy(coord, t, *P_central, dgamma);
             if ((gamma1 = gamma + dgamma) <= 1)
               coord[5] = -1;
             else
@@ -1004,6 +1005,30 @@ void add_to_particle_energy(double *coord, double timeOfFlight, double Po, doubl
   coord[3] *= PRatio;
 }
 
+void add_to_particle_energy2(double *coord, double timeOfFlight, double Po, double dgamma, double dpx, double dpy) {
+  double gamma, gamma1, pz, P, P1;
+  double px, py, beta, betaz;
+
+  P = Po * (1 + coord[5]);                     /* old momentum */
+  gamma1 = (gamma = sqrt(P * P + 1)) + dgamma; /* new gamma */
+  beta = P/gamma;
+  betaz = beta/sqrt(1 + coord[1]*coord[1] + coord[3]*coord[3]);
+  px = coord[1]*betaz*gamma + dpx;
+  py = coord[3]*betaz*gamma + dpy;
+
+  if (gamma1 <= 1)
+    gamma1 = 1 + 1e-7;
+  P1 = sqrt(gamma1 * gamma1 - 1); /* new momentum */
+  coord[5] = (P1 - Po) / Po;
+
+  /* adjust s for the new particle velocity */
+  coord[4] = timeOfFlight * c_mks * P1 / gamma1;
+
+  pz = sqrt(P1*P1 - px*px - py*py);
+  coord[1] = px/pz;
+  coord[3] = py/pz;
+}
+
 long track_through_rfcw(double **part, long np, RFCW *rfcw, double **accepted, double *P_central, double zEnd,
                         RUN *run, long i_pass, CHARGE *charge) {
 
@@ -1045,6 +1070,7 @@ long track_through_rfcw(double **part, long np, RFCW *rfcw, double **accepted, d
   rfcw->rfca.tReference = -1;
   rfcw->rfca.end1Focus = rfcw->end1Focus;
   rfcw->rfca.end2Focus = rfcw->end2Focus;
+  rfcw->rfca.standingWave = rfcw->standingWave;
   if (rfcw->bodyFocusModel)
     SDDS_CopyString(&rfcw->rfca.bodyFocusModel, rfcw->bodyFocusModel);
   else
@@ -1162,4 +1188,62 @@ double rfAcceptance_Fq(double q) {
 
 double solveForOverVoltage(double F, double q0) {
   return zeroNewton(&rfAcceptance_Fq, F, q0, 1e-6, 1000, 1e-12);
+}
+
+void identifyRfcaBodyFocusModel(void *pElem, long type, short *matrixMethod, short *useSRSModel, short *twFocusing1)
+{
+  char *bodyFocusModel;
+  short standingWave;
+  long nKicks, i;
+
+  switch (type) {
+  case T_RFCA:
+    bodyFocusModel = ((RFCA*)pElem)->bodyFocusModel;
+    standingWave = ((RFCA*)pElem)->standingWave;
+    nKicks = ((RFCA*)pElem)->nKicks;
+    break;
+  case T_RFCW:
+    bodyFocusModel = ((RFCW*)pElem)->bodyFocusModel;
+    standingWave = ((RFCW*)pElem)->standingWave;
+    nKicks = ((RFCW*)pElem)->nKicks;
+    break;
+  default:
+    bombElegantVA("Invalid type %ld in identifyRfcaBodyFocusModel. Report to developers.", type);
+    break;
+  }
+
+  if (bodyFocusModel) {
+    char *modelName[3] = {"none", "srs", "tw1"};
+    switch (match_string(bodyFocusModel, modelName, 3, 0)) {
+    case 0:
+      break;
+    case 1:
+      *useSRSModel = 1;
+      *matrixMethod = 1;
+      if (!standingWave) {
+        printWarningForTracking("Forcing STANDING_WAVE=1 for BODY_FOCUS_MODEL=SRS in RFCA or RFCW",
+                                NULL);
+        if (type==T_RFCA)
+          ((RFCA*)pElem)->standingWave = 1;
+        else
+          ((RFCW*)pElem)->standingWave = 1;
+      }
+      break;
+    case 2:
+      *twFocusing1 = 1;
+      *matrixMethod = 0;
+      if (nKicks<10)
+        bombElegant("When using BODY_FOCUS_MODEL=TW1 for RFCA or RFCW, must have N_KICKS>=10", NULL);
+      if (standingWave)
+        bombElegant("Can't use BODY_FOCUS_MODEL=TW1 in standing wave mode for RFCA", NULL);
+      break;
+    default:
+      fprintf(stderr, "Error: BODY_FOCUS_MODEL=%s not understood for RFC%c. Known models are \n", 
+              bodyFocusModel, type==T_RFCA?'A':'W');
+      for (i=0; i<3; i++)
+        fprintf(stderr, "%s%c ", modelName[i], i==2?'\n':',');
+      exitElegant(1);
+      break;
+    }
+  }
 }

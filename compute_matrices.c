@@ -1651,9 +1651,9 @@ VMATRIX *compute_matrix(
     elem->matrix = rf_cavity_matrix(rfca->length, rfca->volt, rfca->freq, rfca->phase,
                                     &elem->Pref_output, run->default_order ? run->default_order : 1,
                                     rfca->end1Focus, rfca->end2Focus,
-                                    rfca->bodyFocusModel,
+                                    rfca->bodyFocusModel, rfca->standingWave,
                                     fiducialize * (rfca->change_p0 || run->always_change_p0),
-                                    Pref_output);
+                                    Pref_output, elem, run);
     if (rfca->dx || rfca->dy)
       misalign_matrix(elem->matrix, rfca->dx, rfca->dy, 0.0,
                       0.0, 0.0, 0.0, 0.0, 0.0, rfca->length,
@@ -1664,9 +1664,9 @@ VMATRIX *compute_matrix(
     elem->matrix = rf_cavity_matrix(rfcw->length, rfcw->volt, rfcw->freq, rfcw->phase,
                                     &elem->Pref_output, run->default_order ? run->default_order : 1,
                                     rfcw->end1Focus, rfcw->end2Focus,
-                                    rfcw->bodyFocusModel,
+                                    rfcw->bodyFocusModel, rfcw->standingWave,
                                     fiducialize * (rfcw->change_p0 || run->always_change_p0),
-                                    Pref_output);
+                                    Pref_output, elem, run);
     if (rfcw->dx || rfcw->dy)
       misalign_matrix(elem->matrix, rfcw->dx, rfcw->dy, 0.0,
                       0.0, 0.0, 0.0, 0.0, 0.0, rfcw->length,
@@ -1676,8 +1676,8 @@ VMATRIX *compute_matrix(
     modrf = (MODRF *)elem->p_elem;
     elem->matrix = rf_cavity_matrix(modrf->length, modrf->volt, modrf->freq, modrf->phase,
                                     &elem->Pref_output, run->default_order ? run->default_order : 1,
-                                    0, 0, NULL,
-                                    fiducialize * run->always_change_p0, Pref_output);
+                                    0, 0, NULL, 0,
+                                    fiducialize * run->always_change_p0, Pref_output, elem, run);
     break;
   case T_ENERGY:
     energy = (ENERGY *)elem->p_elem;
@@ -2185,12 +2185,14 @@ VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta,
 
 VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase,
                           double *P_central, long order, long end1Focus, long end2Focus,
-                          char *bodyFocusModel, long change_p0, double Preference) {
+                          char *bodyFocusModel, long standingWave,
+                          long change_p0, double Preference, ELEMENT_LIST *elem, RUN *run)
+{
   VMATRIX *M, *Medge, *Mtot, *tmp;
   double *C, **R, ***T, dP, gamma, dgamma, dgammaMax;
   double cos_phase, sin_phase;
   double inverseF[2] = {0, 0};
-  long end, useSRSModel;
+  short useSRSModel=0, useTWModel=0, matrixMethod=0;
 
   if (voltage == 0)
     return drift_matrix(length, order);
@@ -2216,23 +2218,23 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
   gamma = sqrt(sqr(*P_central) + 1);
   dP = sqrt(sqr(gamma + dgamma) - 1) - *P_central;
 
-  useSRSModel = 0;
-  if (bodyFocusModel) {
-    char *modelName[2] = {"none", "srs"};
-    switch (match_string(bodyFocusModel, modelName, 2, 0)) {
-    case 0:
-      break;
-    case 1:
-      useSRSModel = 1;
-      break;
-    default:
-      fprintf(stderr, "Error: bodyFocusModel=%s not understood for RFCA\n", bodyFocusModel);
-      exitElegant(1);
-      break;
-    }
-  }
+  if (elem->type==T_RFCA || elem->type==T_RFCW)
+    identifyRfcaBodyFocusModel(elem->p_elem, elem->type, &matrixMethod, &useSRSModel, &useTWModel);
 
-  if (!useSRSModel) {
+  if (useTWModel) {
+    double pSave;
+    long cp0Save;
+    pSave = run->p_central;
+    cp0Save = run->always_change_p0;
+    run->p_central = *P_central;
+    run->always_change_p0 = change_p0;
+    M = determineMatrix(run, elem, NULL, NULL);
+    elem->Pref_output = run->p_central;
+    run->p_central = pSave;
+    run->always_change_p0 = cp0Save;
+    return M;
+  } else if (!useSRSModel) {
+    /* old TRANSPORT matrix */
     double p00s, sinPhi0, cosPhi0, cotPhi0,
       cscPhi0, f1, sf1, f2, cos2phi0, f4, f2s, f5, logf4, sf5,
       dgMaxs, sqrt2, f5_1p5, cosPhi0s, sinPhi0s, lambdas, f6, logf6,
@@ -2332,6 +2334,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
   }
 
   if (length && (end1Focus || end2Focus)) {
+    short end;
     if (end1Focus) {
       inverseF[0] = dgamma / (2 * length * gamma);
     }

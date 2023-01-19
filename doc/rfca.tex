@@ -2,9 +2,19 @@ The phase convention is as follows, assuming a positive rf voltage:
 \verb|PHASE=90| is the crest for acceleration.  \verb|PHASE=180| is the stable
 phase for a storage ring above transition without energy losses.
 
-The body-focusing model is based on Rosenzweig and Serafini, Phys. Rev. E 49 (2),
+{\bf Body focus models}: By default, no body focusing (i.e., focusing along the
+cavity) is included. Two options are included:
+\begin{itemize}
+\item[SRS] --- Simplified Rosenzweig-Serafini, based on Rosenzweig and Serafini, Phys. Rev. E 49 (2),
 1599.  As suggested by N. Towne (NSLS), I simplified this to assume a pure pi-mode
-standing wave.
+standing wave. To use this, one must also set \verb|STANDING_WAVE=1|.
+\item[TW1] --- Traveling Wave 1, which includes the radial electric and azimuthal
+magnetic field components for a pure traveling wave given by 
+\begin{equation}
+        E_z = E_0 \sin \left(\omega t - k z + \phi\right)
+\end{equation}
+To use this, one must set \verb|STANDING_WAVE=0| (the default). One must also have \verb|N_KICKS|$\geq 10$.
+\end{itemize}
 
 The \verb|CHANGE_T| parameter may be needed for reasons that stem from
 {\tt elegant}'s internal use of the total time-of-flight as the

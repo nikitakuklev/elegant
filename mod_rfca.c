@@ -87,11 +87,11 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
       np_tmp = np;
     MPI_Allreduce(&np_tmp, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     if (np_total <= 0) {
-      log_exit("trackRfCavityWithWakes");
+      log_exit("modulated_rf_cavity");
       return (np_total);
     }
   } else if (np <= 0) {
-    log_exit("trackRfCavityWithWakes");
+    log_exit("modulated_rf_cavity");
     return (np);
   }
 #endif

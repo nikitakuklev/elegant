@@ -860,6 +860,12 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   case T_TWLA:
     motion(coord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
     break;
+  case T_RFCA:
+    simple_rf_cavity(coord, n_track, (RFCA *)eptr->p_elem, NULL, &run->p_central, 0);
+    break;
+  case T_RFCW:
+    track_through_rfcw(coord, n_track, (RFCW *)eptr->p_elem, NULL, &run->p_central, 0, run, 0, NULL);
+    break;
   case T_RFDF:
     /* Don't actually use this */
     track_through_rf_deflector(coord, (RFDF *)eptr->p_elem,
@@ -915,12 +921,14 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   free_czarray_2d((void **)coord, 1 + 4 * 6, totalPropertiesPerParticle);
 
   /*
-  if (strlen(eptr->name)<900)
-    sprintf(s, "\nElement %s#%ld matrix determined from tracking:\n", eptr->name, eptr->occurence);
-  else
-    sprintf(s, "\nElement matrix determined from tracking:\n");
-  print_matrices(stdout, s, M);
+  if (1) {
+    char s[1024];
+    if (strlen(eptr->name)<900)
+      sprintf(s, "\nElement %s#%ld matrix determined from tracking:\n", eptr->name, eptr->occurence);
+    print_matrices(stdout, s, M);
+  }
   */
+
 #if USE_MPI
   notSinglePart = notSinglePart_saved;
 #endif
