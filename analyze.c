@@ -104,8 +104,8 @@ void setup_transport_analysis(
     print_namelist(stdout, &analyze_map);
 
   /* check for data errors */
-  if (!output && !printout)
-    bombElegant("no output filename or printout filename specified", NULL);
+  if (!output) 
+    bombElegant("no output filename specified", NULL);
   if (printout_order > 3) {
     printWarning("analyze_map: maximum printout order is 3", NULL);
     printout_order = 3;
