@@ -1196,6 +1196,10 @@ void identifyRfcaBodyFocusModel(void *pElem, long type, short *matrixMethod, sho
   short standingWave;
   long nKicks, i;
 
+  nKicks = 0;
+  bodyFocusModel = NULL;
+  standingWave = 0;
+
   switch (type) {
   case T_RFCA:
     bodyFocusModel = ((RFCA*)pElem)->bodyFocusModel;
