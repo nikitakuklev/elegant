@@ -81,7 +81,7 @@ long track_through_ccbend(
     bombTracking("Programming error: one-step mode invoked for unoptimized CCBEND.");
   if (iFinalSlice > 0 && iPart >= 0)
     bombTracking("Programming error: partial integration mode and one-step mode invoked together for CCBEND.");
-  if (iFinalSlice > 0 && ccbend->optimized != 1)
+  if (iFinalSlice > 0 && ccbend->optimized != 1 && (ccbend->optimizeFse || ccbend->optimizeDx))
     bombTracking("Programming error: partial integration mode invoked for unoptimized CCBEND.");
   if (iFinalSlice >= ccbend->nSlices)
     iFinalSlice = 0;
