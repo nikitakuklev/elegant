@@ -3013,6 +3013,8 @@ VMATRIX *interpolateMatrixWithIdentityMatrix(VMATRIX *M0, double fraction, long 
   M->order = order;
   initialize_matrices(M, M->order);
 
+  for (i=0; i<6; i++)
+    M->C[i] = M0->C[i]*fraction;
   M->C[4] = M0->C[4];
 
   for (i = 0; i < 6; i++)
