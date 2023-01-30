@@ -47,6 +47,8 @@ Here is a summary of what's changed since release 2022.2.  Historical change log
   the optimization of fractional strength error or transverse offset was repeated. This could result in 
   a mismatch between the rf frequency and path-length, for example.
   M. Venturini (LBNL) reported the issue.
+\item The \verb|C| matrix component for \verb|MATR| elements was ignored, with the exception of the 
+  \verb|C[4]| (path-length) component.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -56,10 +58,18 @@ Here is a summary of what's changed since release 2022.2.  Historical change log
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item \verb|CCBEND| now has a parameter, \verb|ADJUST_PATH_LENGTH| that permits turning off path-length 
-  adjustment.
+\item \verb|CCBEND| now has a parameter, \verb|REFERENCE_CORRECTION| that permits turning on correction of
+  residual trajectory errors due to limited accuracy in optimization of the reference trajectory.
 \item \verb|RFCA| and \verb|RFCW| now optionally include body focusing terms for a pure sinusoidal traveling wave.
   This deficiency was pointed out by B. Simona (PSI).
+\item The \verb|CKICKER| element, used as the kicker for simulation of optical stochastic cooling, was improved
+  by the main author, A. J. Dick. Improvements include
+  \begin{itemize}
+  \item Corrected the upper bound of integration in XYZ.
+  \item Corrected bugs in computation of incoherent effects.
+  \item The envelope function is now applied correctly to both coherent and incoherent kicks.
+  \item Corrected some mistakes in the documentation.
+  \end{itemize}
 \end{itemize}
 
 \subsection{New and Modified Commands}

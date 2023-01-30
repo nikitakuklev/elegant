@@ -24,7 +24,9 @@
      long usleep_mpi_io_kludge = 0;
      double tracking_matrix_step_factor = 1;
      double tracking_matrix_points = 9;
+     double tracking_matrix_max_fit_order = 8;
      double tracking_matrix_step_size[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
+     short tracking_matrix_cleanup = 0;
      long warning_limit = 10;
      short malign_method = 0;
      double slope_limit = SLOPE_LIMIT;

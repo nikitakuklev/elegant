@@ -2998,6 +2998,8 @@ void processGlobalSettings(NAMELIST_TEXT *nltext) {
   memcpy(tracking_matrix_step_size, trackingMatrixStepSize, sizeof(*trackingMatrixStepSize) * 6);
   tracking_matrix_step_factor = trackingMatrixStepFactor;
   tracking_matrix_points = trackingMatrixPoints;
+  tracking_matrix_max_fit_order = trackingMatrixMaxFitOrder;
+  tracking_matrix_cleanup = trackingMatrixCleanUp;
 
   set_print_namelist_flags(0);
   if (processNamelist(&global_settings, nltext) == NAMELIST_ERROR)
@@ -3018,6 +3020,8 @@ void processGlobalSettings(NAMELIST_TEXT *nltext) {
   warningCountLimit = warning_limit;
   trackingMatrixStepFactor = tracking_matrix_step_factor;
   trackingMatrixPoints = tracking_matrix_points;
+  trackingMatrixMaxFitOrder = tracking_matrix_max_fit_order;
+  trackingMatrixCleanUp = tracking_matrix_cleanup;
   memcpy(trackingMatrixStepSize, tracking_matrix_step_size, sizeof(*trackingMatrixStepSize) * 6);
   parallelTrackingBasedMatrices = parallel_tracking_based_matrices;
   slopeLimit = slope_limit;

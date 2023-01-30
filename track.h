@@ -112,10 +112,10 @@ extern long trackingBasedMatricesStoreLimit;
 extern long trackingBasedDiffusionMatrixParticles;
 extern long parallelTrackingBasedMatrices;
 extern double trackingMatrixStepFactor;
-extern long trackingMatrixPoints;
+extern long trackingMatrixPoints, trackingMatrixMaxFitOrder;
 extern double trackingMatrixStepSize[6];
 extern long warningCountLimit;
-extern short misalignmentMethod;
+extern short misalignmentMethod, trackingMatrixCleanUp;
 extern double slopeLimit, coordLimit;
 
 /* flag used to identify which processor is allowed to write to a file */
@@ -2448,13 +2448,13 @@ typedef struct {
     short referenceOrder;
     short minMultipoleOrder[2], maxMultipoleOrder[2]; /* normal, skew */
     short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
-    short optimizeFse, optimizeDx, optimizeFseOnce, optimizeDxOnce, compensateKn, adjustPathLength;
+    short optimizeFse, optimizeDx, optimizeFseOnce, optimizeDxOnce, compensateKn, referenceCorrection;
     short edgeOrder, dxdySign, verbose;
     /* for internal use only: */
     short optimized, edgeFlip;
     double fseOffset, dxOffset, KnDelta, xAdjust;
     double referenceData[5]; /* length, angle, K1, K2, yaw */
-    double lengthCorrection;
+    double referenceTrajectory[5];
     short multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
     MULTIPOLE_DATA edge1MultipoleData; 
@@ -4345,6 +4345,7 @@ extern void print_matrices(FILE *fp, char *string, VMATRIX *M);
 extern void print_matrices1(FILE *fp, char *string, char *format, VMATRIX *M);
 extern void initialize_matrices(VMATRIX *M, long order);
 extern void null_matrices(VMATRIX *M, unsigned long flags);
+extern void remove_s_dependent_matrix_elements(VMATRIX *M, long order);
 /* flags for null_matrices */
 #define EXCLUDE_C  0x01
 #define EXCLUDE_R  0x02

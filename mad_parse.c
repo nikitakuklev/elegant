@@ -1268,12 +1268,10 @@ void copy_p_elem(char *target, char *source, long type) {
     ((CCBEND *)target)->dxOffset = ((CCBEND *)source)->dxOffset;
     ((CCBEND *)target)->xAdjust = ((CCBEND *)source)->xAdjust;
     ((CCBEND *)target)->KnDelta = ((CCBEND *)source)->KnDelta;
-    ((CCBEND *)target)->lengthCorrection = ((CCBEND *)source)->lengthCorrection;
-    ((CCBEND *)target)->referenceData[0] = ((CCBEND *)source)->referenceData[0];
-    ((CCBEND *)target)->referenceData[1] = ((CCBEND *)source)->referenceData[1];
-    ((CCBEND *)target)->referenceData[2] = ((CCBEND *)source)->referenceData[2];
-    ((CCBEND *)target)->referenceData[3] = ((CCBEND *)source)->referenceData[3];
-    ((CCBEND *)target)->referenceData[4] = ((CCBEND *)source)->referenceData[4];
+    for (int ii=0; ii<5; ii++)
+      ((CCBEND *)target)->referenceData[ii] = ((CCBEND *)source)->referenceData[ii];
+    for (int ii=0; ii<5; ii++)
+      ((CCBEND *)target)->referenceTrajectory[ii] = ((CCBEND *)source)->referenceTrajectory[ii];
     ((CCBEND *)target)->edgeFlip = ((CCBEND *)source)->edgeFlip;
     break;
   case T_LGBEND:
