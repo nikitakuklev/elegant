@@ -41,9 +41,10 @@ long trackingBasedDiffusionMatrixParticles = 1000;
 long parallelTrackingBasedMatrices = 1;
 double trackingMatrixStepFactor = 1;
 long trackingMatrixPoints = 9;
+long trackingMatrixMaxFitOrder = 8;
 double trackingMatrixStepSize[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
 long warningCountLimit = 10;
-short misalignmentMethod = 0;
+short misalignmentMethod = 0, trackingMatrixCleanUp = 0;
 #if USE_MPI
 short mpiAbort = 0;
 #endif
@@ -3662,7 +3663,7 @@ PARAMETER ccbend_param[N_CCBEND_PARAMS] = {
   {"OPTIMIZE_FSE_ONCE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.optimizeFseOnce), NULL, 0.0, 0, "If nonzero, the FSE offset is optimized only once, even if relevant parameters are changed."},
   {"OPTIMIZE_DX_ONCE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.optimizeDxOnce), NULL, 0.0, 0, "If nonzero, the x offset is optimized only once, even if relevant parameters are changed."},
   {"COMPENSATE_KN", "", IS_SHORT, 0, (long)((char *)&ccbend_example.compensateKn), NULL, 0.0, 0, "If nonzero, K1 and K2 strengths are adjusted to compensate for the changes in FSE needed to center the trajectory."},
-  {"ADJUST_PATH_LENGTH", "", IS_SHORT, 0, (long)((char *)&ccbend_example.adjustPathLength), NULL, 0.0, 1, "If nonzero, path length of the central trajectory is adjusted match the given arc length, after optimization."},
+  {"REFERENCE_CORRECTION", "", IS_SHORT, 0, (long)((char *)&ccbend_example.referenceCorrection), NULL, 0.0, 1, "If nonzero, central trajectory is adjusted to suppress errors remaining after optimization."},
   {"EDGE_ORDER", "", IS_SHORT, 0, (long)((char *)&ccbend_example.edgeOrder), NULL, 0.0, 3, "Gives order of edge effects. Does not affect edge multipoles."},
   {"DX_DY_SIGN", "", IS_SHORT, 0, (long)((char *)&ccbend_example.dxdySign), NULL, 0.0, 1, "Prior to 2020.4, the sign of DX and DY was reversed for ANGLE<0. For backward compatibility, this is retained. Set this field to a positive value to use a consistent convention."},
   {"VERBOSE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.verbose), NULL, 0.0, 0, "If nonzero, print messages showing optimized FSE and x offset."},
@@ -3813,7 +3814,7 @@ PARAMETER ckicker_param[N_CKICKER_PARAMS] = {
   {"ID", "", IS_STRING, 0, (long)((char *)&cKicker_example.ID), NULL, 0.0, 0, "System identifier"},
   {"STRENGTH", "", IS_DOUBLE, 0, (long)((char *)&cKicker_example.strength), NULL, 0.0, 0, "Strength factor"},
   {"KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&cKicker_example.kickLimit), NULL, 0.0, 0, "Limit on applied kick, nominally in radians."},
-  {"PHASE", "Deg", IS_DOUBLE, 0, (long)((char *)&cKicker_example.phase), NULL, 0.0, 0, "Phase of the applied voltage relative to the bunch center, with 0 being on-crest.x2"},
+  {"PHASE", "1/(2*Pi)", IS_DOUBLE, 0, (long)((char *)&cKicker_example.phase), NULL, 0.0, 0, "Phase of the applied voltage relative to the bunch center, with 0 being on-crest."},
   {"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char *)&cKicker_example.updateInterval), NULL, 0.0, 0, "Interval in units of pickup update interval for sampling pickup data and upda"},
   {"START_PASS", "", IS_LONG, 0, (long)((char *)&cKicker_example.startPass), NULL, 0.0, -1, "If positive, first pass on which to drive beam."},
   {"END_PASS", "", IS_LONG, 0, (long)((char *)&cKicker_example.endPass), NULL, 0.0, -1, "If positive, last pass on which to drive beam."},
