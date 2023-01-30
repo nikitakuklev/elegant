@@ -386,7 +386,7 @@ void do_transport_analysis(
           printf("%16.8e ", orbit[i]);
         fputc('\n', stdout);
       }
-      printf("final coordinates of refence particle: \n");
+      printf("final coordinates of reference particle: \n");
       fflush(stdout);
       for (i = 0; i < 6; i++)
         printf("%16.8e ", finalCoord[0][i]);
@@ -433,7 +433,6 @@ void do_transport_analysis(
 
     M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
                                     maximumValue, n_points, n_track, max_fit_order, verbosity > 1 ? 1 : 0);
-
     performChromaticAnalysisFromMap(M, &twiss, &chromDeriv);
 
     data[X_BETA_OFFSET] = twiss.betax;
@@ -950,7 +949,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   long ltmp1, ltmp2;
   double dgamma, dtmp1, dP[3];
   long nPoints1 = trackingMatrixPoints;
-  long maxFitOrder = 4;
+  long maxFitOrder = trackingMatrixMaxFitOrder; 
 #if USE_MPI
   long nWorking = 0, n_leftTotal, k, *nToTrackCounts, fiducialOnly = 0;
 #endif
@@ -960,6 +959,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   static VMATRIX **storedMatrix = NULL;
   static bool announcedNTracked = false;
   long my_nTrack, my_offset;
+  int hasSDependence = 0;
 
   setTrackingContext(eptr->name, eptr->occurence, eptr->type, run->rootname, eptr);
 
@@ -1009,7 +1009,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
           crbptr1->referenceData[2] = crbptr0->referenceData[2];
           crbptr1->referenceData[3] = crbptr0->referenceData[3];
           crbptr1->referenceData[4] = crbptr0->referenceData[4];
-          crbptr1->lengthCorrection = crbptr0->lengthCorrection;
+          for (int ii=0; ii<4; ii++)
+            crbptr1->referenceTrajectory[ii] = crbptr0->referenceTrajectory[ii];
           copied = 1;
 #ifdef DEBUG_CCBEND
           printf("Using stored matrix for CCBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
@@ -1290,17 +1291,22 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       ((BOFFAXE *)eptr->p_elem)->isr = ltmp1;
       ((BOFFAXE *)eptr->p_elem)->synchRad = ltmp2;
       break;
-    case T_TWMTA:
     case T_MAPSOLENOID:
+      motion(finalCoord + my_offset, my_nTrack, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
+      break;
+    case T_TWMTA:
     case T_TWLA:
+      hasSDependence = 1;
       motion(finalCoord + my_offset, my_nTrack, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
       break;
     case T_RFDF:
       /* Don't actually use this */
+      hasSDependence = 1;
       track_through_rf_deflector(finalCoord + my_offset, (RFDF *)eptr->p_elem,
                                  finalCoord + my_offset, my_nTrack, run->p_central, 0, eptr->end_pos, 0);
       break;
     case T_LSRMDLTR:
+      hasSDependence = 1;
       ltmp1 = ((LSRMDLTR *)eptr->p_elem)->isr;
       ltmp2 = ((LSRMDLTR *)eptr->p_elem)->synchRad;
       dtmp1 = ((LSRMDLTR *)eptr->p_elem)->laserPeakPower;
@@ -1436,12 +1442,16 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       max = max > min ? max : min;
       for (j = 0; j < n_track; j++)
         coordError[j][i] = max * accuracy_factor;
+
     }
 
     M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
                                     maximumValue, nPoints1, n_track, maxFitOrder, 0);
 
     free_matrices_above_order(M, order);
+    if (!hasSDependence && trackingMatrixCleanUp)
+      /* Clean up spurious s-dependency in the matrix */
+      remove_s_dependent_matrix_elements(M, order);
 
 #if USE_MPI
   }
