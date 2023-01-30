@@ -292,7 +292,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   long ib;
 
 #if USE_MPI
-  double sumTotal;
+  double sumTotal, s_sumTotal;
   long npTotal;
 
   if (!partOnMaster) {
@@ -322,7 +322,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
     F.params = &params;
 
     // (gsl_function F, a, b, epsabs, epsrel, result, error, neval)
-    gsl_integration_qng(&F, 0, ckicker->angle_rad, 0, 1e-7, &Ex0, &error, &neval);
+    gsl_integration_qng(&F, 0, ckicker->angle_rad / Po, 0, 1e-7, &Ex0, &error, &neval);
   }
 
   if (ckicker->initialized == 0)
@@ -387,6 +387,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
       char pidString[32];
       long *sitmp, *sourceIndex = NULL;
       indexed_coord *incoherent_ar = NULL;
+      double s0, s_sum, s_avg;
 
       sourceIndex = (long *)malloc(sizeof(long) * npBucket[ib]);
       for (i = 0; i < npBucket[ib]; i++) {
@@ -402,8 +403,11 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
       if (ckicker->incoherentMode != 0)
         incoherent_ar = (indexed_coord *)malloc(sizeof(indexed_coord) * npBucket[ib]);
       sum = 0;
+      s_sum = 0;
       for (i = 0; i < npBucket[ib]; i++) {
         sum += time0[ipBucket[ib][i]];
+        s_sum += part0[ipBucket[ib][i]][4];
+
         if (ckicker->incoherentMode != 0) {
           incoherent_ar[i].index = i;
           incoherent_ar[i].x = ckicker->pickup->horz_coords[ib][sourceIndex[i]];
@@ -423,11 +427,19 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
         MPI_Allreduce(&sum, &sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
         MPI_Allreduce(&npBucket[ib], &npTotal, 1, MPI_LONG, MPI_SUM, workers);
         t_avg = sumTotal / npTotal - ckicker->pickup->tAverage[ib];
-      } else
+
+        MPI_Allreduce(&s_sum, &s_sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
+        s_avg = s_sumTotal / npTotal;
+
+      } else {
         t_avg = sum / npBucket[ib] - ckicker->pickup->tAverage[ib];
+        s_avg = s_sum / npBucket[ib];
+      }
 #else
     t_avg = sum / npBucket[ib] - ckicker->pickup->tAverage[ib];
+    s_avg = s_sum / npBucket[ib];
 #endif
+
 #ifdef DEBUG
       printf("bunch %ld has %ld particles, t_avg = %le\n", ib, npBucket[ib], t_avg);
       fflush(stdout);
@@ -437,20 +449,33 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
         for (i = 0; i < npBucket[ib]; i++) {
           long index;
           index = incoherent_ar[i].index; /* index of target particle in the unsorted arrays */
-          for (j = i + 1; j < npBucket[ib]; j++) {
-            if (fabs(incoherent_ar[j].t - incoherent_ar[i].t) < ckicker->Nu * ckicker->lambda_rad) {
-              double incoherent_phase, incoherent_strength, kick;
-              incoherent_phase = fabs(incoherent_ar[j].t - incoherent_ar[i].t) * twopi / ckicker->lambda_rad;
-              incoherent_strength = 1 - fabs(incoherent_phase / (twopi * ckicker->Nu));
-              kick = -(ckicker->strength * incoherent_strength) * sin(incoherent_phase + ckicker->phase * twopi);
+          for (j = 0; j < npBucket[ib]; j++) {
+            if (i != j) {
+              if (fabs(incoherent_ar[j].t - incoherent_ar[i].t) < (ckicker->Nu * ckicker->lambda_rad) / c_mks) {
 
-              part0[ipBucket[ib][index]][5] += kick;
+                double incoherent_phase, coherent_phase, incoherent_strength, kick;
+
+                t_i = time0[ipBucket[ib][incoherent_ar[i].index]] - ckicker->pickup->long_coords[ib][sourceIndex[incoherent_ar[i].index]];
+
+                coherent_phase = (t_avg - t_i) * c_mks * (twopi / ckicker->lambda_rad);
+                incoherent_phase = (incoherent_ar[i].t - incoherent_ar[j].t) * c_mks * (twopi / ckicker->lambda_rad);
+
+                double phi = (coherent_phase + incoherent_phase);
+                double nu_2 = ckicker->Nu / 2;
+
+                incoherent_strength = (1 - abs(phi / twopi) / (ckicker->Nu)) * (2.0 / twopi) * (100 * atan((phi + nu_2)) + atan(-100 * (phi - nu_2)));
+
+                kick = -(ckicker->strength * incoherent_strength) * sin(phi + ckicker->phase * twopi);
+
+                part0[ipBucket[ib][index]][5] += kick;
+              }
             }
           }
         }
         free(incoherent_ar);
       }
 
+      //printf("%li\n",pass);
       for (i = 0; i < npBucket[ib]; i++) {
         // particle coords
         t_i = time0[ipBucket[ib][i]] - ckicker->pickup->long_coords[ib][sourceIndex[i]];
@@ -458,10 +483,12 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
         y_i = part0[ipBucket[ib][i]][2] - ckicker->magnification * ckicker->pickup->vert_coords[ib][sourceIndex[i]];
 
         // on-axis kick = sin(c*(difference in arrival time)*2*Pi/lambda + phase)
-        double sigma = 0.01;
-        double w = ckicker->Nu / 2;
-        double x = ckicker->phase;
-        env_term = (1.0 / PI) * (atan((x + w) / sigma) + atan(-(x - w) / sigma)) * (1 - abs(x) / w);
+
+        double nu_2 = ckicker->Nu / 2;
+        double phi = (t_avg - t_i) * (c_mks / ckicker->lambda_rad);
+
+        env_term = (2.0 / twopi) * (atan(100 * (phi + (2 * nu_2))) + atan(-100 * (phi - (2 * nu_2)))) * (1 - abs(phi) / (2 * nu_2));
+
         nom_kick = -(ckicker->strength) * env_term * sin((t_avg - t_i) * c_mks * (twopi / (ckicker->lambda_rad)) + ckicker->phase * twopi);
 
         if (ckicker->transverseMode != 0) {
@@ -469,11 +496,12 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
           size_t neval;
           gsl_function F;
           struct E_params params = {x_i, y_i, Po, ckicker->lambda_rad}; // {x, y, gamma, lambda}
-
+          //struct E_params params = {0.0 , 0.0, Po, ckicker->lambda_rad};
           F.function = &Ex;
           F.params = &params;
 
           gsl_integration_qng(&F, 0, ckicker->angle_rad / Po, 0, 1e-7, &Exi, &error, &neval);
+
           part0[ipBucket[ib][i]][5] += nom_kick * Exi / Ex0;
         } else {
           part0[ipBucket[ib][i]][5] += nom_kick;
