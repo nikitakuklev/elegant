@@ -171,7 +171,8 @@ long track_through_ccbend(
         eptrCopy = eptr;
         ccbendCopy.fse = ccbendCopy.fseDipole = ccbendCopy.fseQuadrupole = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz =
           ccbendCopy.etilt = ccbendCopy.tilt = ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle =
-            ccbendCopy.KnDelta = ccbendCopy.lengthCorrection = ccbendCopy.xKick = 0;
+            ccbendCopy.KnDelta = ccbendCopy.xKick = 0;
+        memset(&ccbendCopy.referenceTrajectory[0], 0, 5*sizeof(ccbendCopy.referenceTrajectory[0]));
         PoCopy = Po;
         stepSize[0] = 1e-3; /* FSE */
         stepSize[1] = 1e-4; /* X */
@@ -184,8 +185,6 @@ long track_through_ccbend(
         }
         ccbend->fseOffset = startValue[0];
         ccbend->dxOffset = startValue[1];
-        ccbend->lengthCorrection = 0;
-        /* This gets subtracted from the final x coordinates to ensure the magnet doesn't produce a trajectory error */
         ccbend->xAdjust = xFinal;
         ccbend->KnDelta = ccbendCopy.KnDelta;
         ccbend->referenceData[0] = ccbend->length;
@@ -197,17 +196,16 @@ long track_through_ccbend(
         particle0 = (double **)czarray_2d(sizeof(**particle0), 1, totalPropertiesPerParticle);
         memset(particle0[0], 0, totalPropertiesPerParticle * sizeof(**particle));
         track_through_ccbend(particle0, 1, eptr, ccbend, Po, NULL, 0.0, NULL, NULL, NULL, NULL, NULL, -1, 0);
-        if (ccbend->adjustPathLength)
-          ccbend->lengthCorrection = ccbend->length - particle0[0][4];
-        else
-          ccbend->lengthCorrection = 0;
+        for (int ii = 0; ii<4; ii++)
+          ccbend->referenceTrajectory[ii] = particle0[0][ii];
+        ccbend->referenceTrajectory[4] = particle0[0][4] - ccbend->length;
         free_czarray_2d((void **)particle0, 1, totalPropertiesPerParticle);
         ccbend->optimized = 1;
         if (ccbend->verbose) {
           printf("CCBEND %s#%ld optimized: FSE=%21.15le, dx=%21.15le, accuracy=%21.15le\n",
                  eptr ? eptr->name : "?", eptr ? eptr->occurence : -1, ccbend->fseOffset, ccbend->dxOffset, acc);
           printf("length = %21.15le, angle = %21.15le, K1 = %21.15le\nK2 = %21.15le, yaw = %21.15le, lengthCorrection = %21.15le\n",
-                 ccbend->length, ccbend->angle, ccbend->K1, ccbend->K2, ccbend->yaw, ccbend->lengthCorrection);
+                 ccbend->length, ccbend->angle, ccbend->K1, ccbend->K2, ccbend->yaw, ccbend->referenceTrajectory[4]);
           printf("xMin = %21.15le, xMax = %21.15le, xAve = %21.15le, xInitial = %21.15le, xFinal = %21.15le, xpError = %21.15le\n",
                  xMin, xMax, xAve, xInitial, xFinal, xpError);
           fflush(stdout);
@@ -331,7 +329,8 @@ long track_through_ccbend(
         printf("Using file %s for edge 2 of %s#%ld\n",
                ccbend->edge_multipoles, eptr->name, eptr->occurence);
     }
-    readErrorMultipoleData(&(ccbend->randomMultipoleData), ccbend->random_multipoles, 0);
+    if (ccbend->optimized!=-1)
+      readErrorMultipoleData(&(ccbend->randomMultipoleData), ccbend->random_multipoles, 0);
     ccbend->multipolesInitialized = 1;
   }
   if (!ccbend->totalMultipolesComputed) {
@@ -497,9 +496,10 @@ long track_through_ccbend(
     if (tilt)
       /* use n_part here so lost particles get rotated back */
       rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
-    if (ccbend->optimized==1 && ccbend->adjustPathLength) {
+    if (ccbend->optimized==1 && ccbend->referenceCorrection) {
       for (i_part = 0; i_part <= i_top; i_part++)
-        particle[i_part][4] += ccbend->lengthCorrection;
+        for (int ii=0; ii<5; ii++)
+          particle[i_part][ii] -= ccbend->referenceTrajectory[ii];
     }
     /*
     printf("output after adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
