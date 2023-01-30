@@ -1381,3 +1381,29 @@ void checkSymplecticity3rdOrder(VMATRIX *M, double meanMax[3][2]) {
   free(quadraticTerms2);
   free(sympJmat);
 }
+
+void remove_s_dependent_matrix_elements(VMATRIX *M, long order)
+{
+  long i, j, k, l;
+
+  for (i=0; i<6; i++) {
+    if (i==4) continue;
+    M->R[i][4] = 0;
+
+    for (j=0; j<6; j++) {
+      for (k=0; k<=j; k++)
+        if (k==4 || j==4)
+          M->T[i][j][k] = 0;
+    }
+    
+    for (j=0; j<6; j++) {
+      for (k=0; k<=j; k++)
+        for (l=0; l<=k; l++)
+          if (k==4 || j==4  || l==4)
+            M->Q[i][j][k][l] = 0;
+    }
+  }
+}
+
+      
+      
