@@ -41,7 +41,7 @@ long trackingBasedDiffusionMatrixParticles = 1000;
 long parallelTrackingBasedMatrices = 1;
 double trackingMatrixStepFactor = 1;
 long trackingMatrixPoints = 9;
-long trackingMatrixMaxFitOrder = 8;
+long trackingMatrixMaxFitOrder = 4;
 double trackingMatrixStepSize[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
 long warningCountLimit = 10;
 short misalignmentMethod = 0, trackingMatrixCleanUp = 0;
