@@ -3663,7 +3663,7 @@ PARAMETER ccbend_param[N_CCBEND_PARAMS] = {
   {"OPTIMIZE_FSE_ONCE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.optimizeFseOnce), NULL, 0.0, 0, "If nonzero, the FSE offset is optimized only once, even if relevant parameters are changed."},
   {"OPTIMIZE_DX_ONCE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.optimizeDxOnce), NULL, 0.0, 0, "If nonzero, the x offset is optimized only once, even if relevant parameters are changed."},
   {"COMPENSATE_KN", "", IS_SHORT, 0, (long)((char *)&ccbend_example.compensateKn), NULL, 0.0, 0, "If nonzero, K1 and K2 strengths are adjusted to compensate for the changes in FSE needed to center the trajectory."},
-  {"REFERENCE_CORRECTION", "", IS_SHORT, 0, (long)((char *)&ccbend_example.referenceCorrection), NULL, 0.0, 1, "If nonzero, central trajectory is adjusted to suppress errors remaining after optimization."},
+  {"REFERENCE_CORRECTION", "", IS_SHORT, 0, (long)((char *)&ccbend_example.referenceCorrection), NULL, 0.0, 1, "1: correct pathlength, 2: correct trajectory, 3: correct both."},
   {"EDGE_ORDER", "", IS_SHORT, 0, (long)((char *)&ccbend_example.edgeOrder), NULL, 0.0, 3, "Gives order of edge effects. Does not affect edge multipoles."},
   {"DX_DY_SIGN", "", IS_SHORT, 0, (long)((char *)&ccbend_example.dxdySign), NULL, 0.0, 1, "Prior to 2020.4, the sign of DX and DY was reversed for ANGLE<0. For backward compatibility, this is retained. Set this field to a positive value to use a consistent convention."},
   {"VERBOSE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.verbose), NULL, 0.0, 0, "If nonzero, print messages showing optimized FSE and x offset."},

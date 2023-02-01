@@ -193,6 +193,7 @@ long track_through_ccbend(
         ccbend->referenceData[3] = ccbend->K2;
         ccbend->referenceData[4] = ccbend->yaw;
 
+        ccbend->optimized = 1;
         particle0 = (double **)czarray_2d(sizeof(**particle0), 1, totalPropertiesPerParticle);
         memset(particle0[0], 0, totalPropertiesPerParticle * sizeof(**particle));
         track_through_ccbend(particle0, 1, eptr, ccbend, Po, NULL, 0.0, NULL, NULL, NULL, NULL, NULL, -1, 0);
@@ -200,12 +201,17 @@ long track_through_ccbend(
           ccbend->referenceTrajectory[ii] = particle0[0][ii];
         ccbend->referenceTrajectory[4] = particle0[0][4] - ccbend->length;
         free_czarray_2d((void **)particle0, 1, totalPropertiesPerParticle);
-        ccbend->optimized = 1;
         if (ccbend->verbose) {
           printf("CCBEND %s#%ld optimized: FSE=%21.15le, dx=%21.15le, accuracy=%21.15le\n",
                  eptr ? eptr->name : "?", eptr ? eptr->occurence : -1, ccbend->fseOffset, ccbend->dxOffset, acc);
-          printf("length = %21.15le, angle = %21.15le, K1 = %21.15le\nK2 = %21.15le, yaw = %21.15le, lengthCorrection = %21.15le\n",
-                 ccbend->length, ccbend->angle, ccbend->K1, ccbend->K2, ccbend->yaw, ccbend->referenceTrajectory[4]);
+          printf("length = %21.15le, angle = %21.15le, K1 = %21.15le\nK2 = %21.15le, yaw = %21.15le\n",
+                 ccbend->length, ccbend->angle, ccbend->K1, ccbend->K2, ccbend->yaw);
+          if (ccbend->referenceCorrection&1)
+            printf("lengthCorrection = %21.15le\n", ccbend->referenceTrajectory[4]);
+          if (ccbend->referenceCorrection&2)
+            printf("trajectory corrections: %21.15le, %21.15le, %21.15le, %21.15le\n",
+                   ccbend->referenceTrajectory[0], ccbend->referenceTrajectory[1], ccbend->referenceTrajectory[2],
+                   ccbend->referenceTrajectory[3]);
           printf("xMin = %21.15le, xMax = %21.15le, xAve = %21.15le, xInitial = %21.15le, xFinal = %21.15le, xpError = %21.15le\n",
                  xMin, xMax, xAve, xInitial, xFinal, xpError);
           fflush(stdout);
@@ -497,9 +503,15 @@ long track_through_ccbend(
       /* use n_part here so lost particles get rotated back */
       rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
     if (ccbend->optimized==1 && ccbend->referenceCorrection) {
-      for (i_part = 0; i_part <= i_top; i_part++)
-        for (int ii=0; ii<5; ii++)
-          particle[i_part][ii] -= ccbend->referenceTrajectory[ii];
+      if (ccbend->referenceCorrection&2) {
+        for (i_part = 0; i_part <= i_top; i_part++) 
+          for (int ii=0; ii<4; ii++)
+            particle[i_part][ii] -= ccbend->referenceTrajectory[ii];
+      }
+      if (ccbend->referenceCorrection&1) {
+        for (i_part = 0; i_part <= i_top; i_part++) 
+          particle[i_part][4] -= ccbend->referenceTrajectory[4];
+      }
     }
     /*
     printf("output after adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
