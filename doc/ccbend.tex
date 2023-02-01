@@ -31,7 +31,19 @@ gradient, or sextupole term change:
 One can block the re-optimization of these parameters by setting 
 \verb|OPTIMIZE_FSE_ONCE| and \verb|OPTIMIZE_DX_ONCE| to 1.
 Note also that the optimization is performed with all error-defining parameters
-(\verb|DX|, \verb|DY|, \verb|DZ|, \verb|FSE|, and \verb|ETILT|) set to zero.
+(\verb|DX|, \verb|DY|, \verb|DZ|, \verb|FSE|, \verb|ETILT|, etc.) set to zero.
+However, errors that are assigned to, say, the \verb|K1| value directly would
+not be recognized as such.
+For this reason, assigning errors to \verb|K1| is not recommended; instead, use
+the \verb|FSE_QUADRUPOLE| parameter.
+
+Having computed the ideal trajectory through a \verb|CCBEND| element, {\tt elegant}
+can suppress any errors in the trajectory. Such errors may occur due to
+limited accuracy in numerical integration. It is recommended to
+set \verb|REFERENCE_CORRECTION=1| to ensure that the path length is corrected.
+Optionally, setting \verb|REFERENCE_CORRECTION=2| would instead correct
+residual transverse trajectory errors. Using \verb|REFERENCE_CORRECTION=3| corrects
+both types of error.
 
 {\bf Edge angles and edge effects} 
 
@@ -70,15 +82,18 @@ the emitting electron.
 {\bf Adding errors}
 
 When adding errors, care should be taken to choose the right
-parameters.  The \verb|FSE| and \verb|ETILT| parameters are used for
+parameters.  The \verb|FSE|, \verb|FSE_DIPOLE|, \verb|FSE_QUADRUPOLE|, \verb|ETILT|, \verb|EPITCH|, and
+\verb|YAW|, \verb|DX|, \verb|DY|, and \verb|DZ| parameters are used for
 assigning errors to the strength and alignment relative to the ideal
 values given by \verb|ANGLE| and \verb|TILT|.  One can also assign 
 errors to \verb|ANGLE| and \verb|TILT|, but this has a different meaning:
 in this case, one is assigning errors to the survey itself.  The reference
-beam path changes, so there is no orbit/trajectory error. The most common
-thing is to assign errors to \verb|FSE| and \verb|ETILT|.  Note that when
+beam path changes, so there is no orbit/trajectory error.  Note that when
 adding errors to \verb|FSE|, the error is assumed to come from the power
 supply, which means that multipole strengths also change.
+
+Assigning errors to \verb|K1| is also possible, but is not the best approach, since
+it changes the internal reference trajectory calculation for the element.
 
 {\bf Splitting dipoles}
 
