@@ -1058,11 +1058,7 @@ long multipole_tracking2(
   if (iSlice <= 0) {
     if (malignMethod != 0) {
       if (dx || dy || dz || tilt || pitch || yaw) {
-        if (malignMethod == 1) {
-          offsetParticlesForEntranceCenteredMisalignmentExact(particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
-        } else {
-          offsetParticlesForBodyCenteredMisalignmentExact(particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
-        }
+        offsetParticlesForMisalignment(malignMethod, particle, n_part, dx, dy, dz, pitch, yaw, 0.0, tilt, 0.0, drift, 1);
       }
     } else {
       if (dx || dy || dz)
@@ -1147,11 +1143,7 @@ long multipole_tracking2(
 
     if (malignMethod != 0) {
       if (dx || dy || dz || tilt || pitch || yaw) {
-        if (malignMethod == 1) {
-          offsetParticlesForEntranceCenteredMisalignmentExact(particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
-        } else {
-          offsetParticlesForBodyCenteredMisalignmentExact(particle, n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
-        }
+        offsetParticlesForMisalignment(malignMethod, particle, n_part, dx, dy, dz, pitch, yaw, 0.0, tilt, 0.0, drift, 2);
       }
     } else {
       if (tilt)

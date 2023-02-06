@@ -1004,11 +1004,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
           crbptr1->dxOffset = crbptr0->dxOffset;
           crbptr1->xAdjust = crbptr0->xAdjust;
           crbptr1->KnDelta = crbptr0->KnDelta;
-          crbptr1->referenceData[0] = crbptr0->referenceData[0];
-          crbptr1->referenceData[1] = crbptr0->referenceData[1];
-          crbptr1->referenceData[2] = crbptr0->referenceData[2];
-          crbptr1->referenceData[3] = crbptr0->referenceData[3];
-          crbptr1->referenceData[4] = crbptr0->referenceData[4];
+          for (int ii=0; ii<5; ii++)
+                 crbptr1->referenceData[ii] = crbptr0->referenceData[ii];
           for (int ii=0; ii<4; ii++)
             crbptr1->referenceTrajectory[ii] = crbptr0->referenceTrajectory[ii];
           copied = 1;

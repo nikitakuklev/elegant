@@ -387,7 +387,8 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
       char pidString[32];
       long *sitmp, *sourceIndex = NULL;
       indexed_coord *incoherent_ar = NULL;
-      double s0, s_sum, s_avg;
+      double s_sum;
+      // double s_avg;
 
       sourceIndex = (long *)malloc(sizeof(long) * npBucket[ib]);
       for (i = 0; i < npBucket[ib]; i++) {
@@ -429,15 +430,15 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
         t_avg = sumTotal / npTotal - ckicker->pickup->tAverage[ib];
 
         MPI_Allreduce(&s_sum, &s_sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
-        s_avg = s_sumTotal / npTotal;
+        // s_avg = s_sumTotal / npTotal;
 
       } else {
         t_avg = sum / npBucket[ib] - ckicker->pickup->tAverage[ib];
-        s_avg = s_sum / npBucket[ib];
+        // s_avg = s_sum / npBucket[ib];
       }
 #else
     t_avg = sum / npBucket[ib] - ckicker->pickup->tAverage[ib];
-    s_avg = s_sum / npBucket[ib];
+    // s_avg = s_sum / npBucket[ib];
 #endif
 
 #ifdef DEBUG

@@ -310,10 +310,10 @@ long track_through_lgbend(
       if (etilt)
         rotateBeamCoordinatesForMisalignment(particle, n_part, etilt);
       */
-      offsetParticlesForBodyCenteredMisalignmentExact(particle, n_part,
-                                                      dx, dy, dz,
-                                                      epitch, eyaw, etilt,
-                                                      0.0, 0.0, lgbend->segment[lgbend->nSegments - 1].zAccumulated, 1);
+      offsetParticlesForMisalignment(4, particle, n_part,
+                                  dx, dy, dz,
+                                  epitch, eyaw, etilt,
+                                  0.0, 0.0, lgbend->segment[lgbend->nSegments - 1].zAccumulated, 1);
     }
     if (iPart <= 0) {
       /* Start of a segment */
@@ -409,10 +409,10 @@ long track_through_lgbend(
         if (dx || dy || dz)
           offsetBeamCoordinatesForMisalignment(particle, i_top+1, -dx, -dy, -dz);
         */
-        offsetParticlesForBodyCenteredMisalignmentExact(particle, i_top + 1,
-                                                        dx, dy, dz,
-                                                        epitch, eyaw, etilt,
-                                                        0.0, 0.0, lgbend->segment[lgbend->nSegments - 1].zAccumulated, 2);
+        offsetParticlesForMisalignment(4, particle, i_top + 1,
+                                    dx, dy, dz,
+                                    epitch, eyaw, etilt,
+                                    0.0, 0.0, lgbend->segment[lgbend->nSegments - 1].zAccumulated, 2);
         switchLgbendPlane(particle, i_top + 1, -exitPosition, -exitAngle, Po, 1);
 #ifdef DEBUG
         if (lgbend->optimized != -1 && iPart >= 0)

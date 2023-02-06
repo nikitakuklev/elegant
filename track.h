@@ -2453,7 +2453,7 @@ typedef struct {
     /* for internal use only: */
     short optimized, edgeFlip;
     double fseOffset, dxOffset, KnDelta, xAdjust;
-    double referenceData[5]; /* length, angle, K1, K2, yaw */
+    double referenceData[6]; /* length, angle, K1, K2, yaw, tilt */
     double referenceTrajectory[5];
     short multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -4324,6 +4324,10 @@ extern void misalign_matrix(VMATRIX *M, double dx, double dy, double dz,
                             short method, short bodyCentered);
 extern VMATRIX *misalignment_matrix(MALIGN *malign, long order);
 extern void offsetBeamCoordinatesForMisalignment(double **part, long np, double dx, double dy, double dz);
+extern void offsetParticlesForMisalignment(long mode, double **coord, long np, double dx, double dy, 
+                                           double dz,  double ax, double ay, double az,
+                                           double tilt, double thetaBend, double length,
+                                           short face);
 extern void offsetParticlesForEntranceCenteredMisalignmentExact(double **coord, long np, double dx, double dy, 
                                                                 double dz,  double ax, double ay, double az,
                                                                 double tilt, double thetaBend, double length,

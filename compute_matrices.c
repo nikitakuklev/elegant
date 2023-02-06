@@ -1266,7 +1266,7 @@ VMATRIX *compute_matrix(
                                      quad->fringeIntM, quad->fringeIntP, quad->radial);
     if (quad->dx || quad->dy || quad->dz || quad->tilt || quad->pitch || quad->yaw) {
       misalign_matrix(elem->matrix, quad->dx, quad->dy, quad->dz,
-                      quad->pitch, quad->yaw, quad->tilt, 0.0, 0.0, quad->length,
+                      quad->pitch, quad->yaw, 0.0, quad->tilt, 0.0, quad->length,
                       quad->malignMethod, quad->malignMethod == 1 ? 0 : 1);
     }
     break;
@@ -1277,7 +1277,7 @@ VMATRIX *compute_matrix(
                                     sext->fse, 0.0, 0.0, sext->ffringe);
     if (sext->dx || sext->dy || sext->dz || sext->tilt)
       misalign_matrix(elem->matrix, sext->dx, sext->dy, sext->dz,
-                      0.0, 0.0, sext->tilt, 0.0, 0.0, sext->length,
+                      0.0, 0.0, 0.0, sext->tilt, 0.0, sext->length,
                       misalignmentMethod, misalignmentMethod == 1 ? 0 : 1);
     break;
   case T_OCT:
@@ -1286,7 +1286,7 @@ VMATRIX *compute_matrix(
                                    oct->order ? oct->order : run->default_order, oct->fse);
     if (oct->dx || oct->dy || oct->dz || oct->tilt)
       misalign_matrix(elem->matrix, oct->dx, oct->dy, oct->dz,
-                      0.0, 0.0, oct->tilt, 0.0, 0.0, oct->length,
+                      0.0, 0.0, 0.0, oct->tilt, 0.0, oct->length,
                       misalignmentMethod, misalignmentMethod == 1 ? 0 : 1);
     break;
   case T_ALPH:
@@ -1386,7 +1386,7 @@ VMATRIX *compute_matrix(
                                   qfring->fse);
     if (qfring->dx || qfring->dy || qfring->dz || qfring->tilt)
       misalign_matrix(elem->matrix, qfring->dx, qfring->dy, qfring->dz,
-                      0.0, 0.0, qfring->tilt, 0.0, 0.0, qfring->length,
+                      0.0, 0.0, 0.0, qfring->tilt, 0.0, qfring->length,
                       misalignmentMethod, misalignmentMethod == 1 ? 0 : 1);
     break;
   case T_MALIGN:
@@ -1443,7 +1443,7 @@ VMATRIX *compute_matrix(
                                        kquad->fringeIntM, kquad->fringeIntP, kquad->radial);
       if (kquad->dx || kquad->dy || kquad->dz || kquad->tilt || kquad->pitch || kquad->yaw)
         misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz,
-                        kquad->pitch, kquad->yaw, kquad->tilt, 0.0, 0.0, kquad->length,
+                        kquad->pitch, kquad->yaw, 0.0, kquad->tilt, 0.0, kquad->length,
                         kquad->malignMethod, kquad->malignMethod == 1 ? 0 : 1);
     } else {
       if (kquad->trackingBasedMatrix > 3)
@@ -1464,7 +1464,7 @@ VMATRIX *compute_matrix(
                                     0.0);
     if (ksext->dx || ksext->dy || ksext->dz || ksext->tilt || ksext->yaw || ksext->pitch)
       misalign_matrix(elem->matrix, ksext->dx, ksext->dy, ksext->dz,
-                      ksext->pitch, ksext->yaw, ksext->tilt, 0.0, 0.0, ksext->length,
+                      ksext->pitch, ksext->yaw, 0.0, ksext->tilt, 0.0, ksext->length,
                       ksext->malignMethod, ksext->malignMethod == 1 ? 0 : 1);
     readErrorMultipoleData(&(ksext->systematicMultipoleData),
                            ksext->systematic_multipoles, 0);
@@ -1480,7 +1480,7 @@ VMATRIX *compute_matrix(
     elem->matrix = octupole_matrix(koct->k3, koct->length, (run->default_order ? run->default_order : 2), koct->fse);
     if (koct->dx || koct->dy || koct->dz || koct->tilt || koct->yaw || koct->pitch)
       misalign_matrix(elem->matrix, koct->dx, koct->dy, koct->dz,
-                      koct->pitch, koct->yaw, koct->tilt, 0.0, 0.0, koct->length,
+                      koct->pitch, koct->yaw, 0.0, koct->tilt, 0.0, koct->length,
                       koct->malignMethod, koct->malignMethod == 1 ? 0 : 1);
     readErrorMultipoleData(&(koct->systematicMultipoleData),
                            koct->systematic_multipoles, 0);
@@ -1496,7 +1496,7 @@ VMATRIX *compute_matrix(
                                kquse->fse1, kquse->fse2);
     if (kquse->dx || kquse->dy || kquse->dz || kquse->tilt)
       misalign_matrix(elem->matrix, kquse->dx, kquse->dy, kquse->dz,
-                      0.0, 0.0, kquse->tilt, 0.0, 0.0, kquse->length,
+                      0.0, 0.0, 0.0, kquse->tilt, 0.0, kquse->length,
                       misalignmentMethod, misalignmentMethod == 1 ? 0 : 1);
     break;
   case T_MAGNIFY:
@@ -1761,7 +1761,7 @@ VMATRIX *compute_matrix(
     elem->matrix = mult_matrix(mult = (MULT *)elem->p_elem, Pref_output, run->default_order);
     if (mult->dx || mult->dy || mult->dz || mult->tilt)
       misalign_matrix(elem->matrix, mult->dx, mult->dy, mult->dz,
-                      0.0, 0.0, mult->tilt, 0.0, 0.0, mult->length,
+                      0.0, 0.0, 0.0, mult->tilt, 0.0, mult->length,
                       misalignmentMethod, misalignmentMethod == 1 ? 0 : 1);
     break;
   case T_FMULT:
@@ -2671,7 +2671,7 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference) {
 
     if (rfdf->dx || rfdf->dy || rfdf->dz || rfdf->tilt)
       misalign_matrix(M, rfdf->dx, rfdf->dy, rfdf->dz,
-                      0.0, 0.0, rfdf->tilt, 0.0, 0.0, rfdf->length,
+                      0.0, 0.0, 0.0, rfdf->tilt,  0.0, rfdf->length,
                       misalignmentMethod, misalignmentMethod == 1 ? 0 : 1);
     return (M);
   } else {
@@ -2767,7 +2767,7 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference) {
 
     if (rfdf->dx || rfdf->dy || rfdf->dz || rfdf->tilt)
       misalign_matrix(Mt, rfdf->dx, rfdf->dy, rfdf->dz,
-                      0.0, 0.0, rfdf->tilt, 0.0, 0.0, rfdf->length,
+                      0.0, 0.0, 0.0, rfdf->tilt, 0.0, rfdf->length,
                       misalignmentMethod, misalignmentMethod == 1 ? 0 : 1);
     return (Mt);
   }

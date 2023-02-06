@@ -112,7 +112,8 @@ long track_through_ccbend(
         ccbend->angle != ccbend->referenceData[1] ||
         ccbend->K1 != ccbend->referenceData[2] ||
         ccbend->K2 != ccbend->referenceData[3] ||
-        ccbend->yaw != ccbend->referenceData[4]) {
+        ccbend->yaw != ccbend->referenceData[4]  ||
+        ccbend->tilt != ccbend->referenceData[5]) {
       double acc;
       double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
       short disable[2] = {0, 0};
@@ -170,7 +171,7 @@ long track_through_ccbend(
         }
         eptrCopy = eptr;
         ccbendCopy.fse = ccbendCopy.fseDipole = ccbendCopy.fseQuadrupole = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz =
-          ccbendCopy.etilt = ccbendCopy.tilt = ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle =
+          ccbendCopy.etilt = ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle =
             ccbendCopy.KnDelta = ccbendCopy.xKick = 0;
         memset(&ccbendCopy.referenceTrajectory[0], 0, 5*sizeof(ccbendCopy.referenceTrajectory[0]));
         PoCopy = Po;
@@ -192,6 +193,7 @@ long track_through_ccbend(
         ccbend->referenceData[2] = ccbend->K1;
         ccbend->referenceData[3] = ccbend->K2;
         ccbend->referenceData[4] = ccbend->yaw;
+        ccbend->referenceData[5] = ccbend->tilt;
 
         ccbend->optimized = 1;
         particle0 = (double **)czarray_2d(sizeof(**particle0), 1, totalPropertiesPerParticle);

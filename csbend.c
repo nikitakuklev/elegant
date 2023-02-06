@@ -951,14 +951,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     dyf = csbend->dy;
   } else {
     if (iSlice <= 0) {
-      if (csbend->malignMethod == 1)
-        offsetParticlesForEntranceCenteredMisalignmentExact(part, n_part,
-                                                            csbend->dx, csbend->dy, csbend->dz,
-                                                            csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
-      else
-        offsetParticlesForBodyCenteredMisalignmentExact(part, n_part,
-                                                        csbend->dx, csbend->dy, csbend->dz,
-                                                        csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
+      offsetParticlesForMisalignment(csbend->malignMethod, part, n_part,
+                                     csbend->dx, csbend->dy, csbend->dz,
+                                     csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 1);
     }
   }
 
@@ -1248,16 +1243,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   }
 
   if (iSlice < 0 || iSlice == (csbend->nSlices - 1)) {
-    if (csbend->malignMethod != 0) {
-      if (csbend->malignMethod == 1)
-        offsetParticlesForEntranceCenteredMisalignmentExact(part, n_part,
-                                                            csbend->dx, csbend->dy, csbend->dz,
-                                                            csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 2);
-      else
-        offsetParticlesForBodyCenteredMisalignmentExact(part, n_part,
-                                                        csbend->dx, csbend->dy, csbend->dz,
-                                                        csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 2);
-    }
+    if (csbend->malignMethod != 0)
+      offsetParticlesForMisalignment(csbend->malignMethod, part, n_part,
+                                     csbend->dx, csbend->dy, csbend->dz,
+                                     csbend->epitch, csbend->eyaw, csbend->etilt, tilt, angle, csbend->length, 2);
   }
 
   if (distributionBasedRadiation) {

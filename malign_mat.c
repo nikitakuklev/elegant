@@ -23,8 +23,8 @@ VMATRIX *transformMatrixBetweenMomentumAndSlopes(VMATRIX *VM);
 void misalign_matrix(
   VMATRIX *M,                            /* matrix to modify, will be changed */
   double dx, double dy, double dz,       /* displacements */
-  double pitch, double yaw, double tilt, /* angular errors */
-  double designTilt,                     /* design tilt (meaningful for dipoles) */
+  double pitch, double yaw, double tilt, /* angular errors, tilt is non-zero only for dipoles */
+  double designTilt,                     /* design tilt for dipoles, tilt for straight elements */
   double thetaBend,                      /* bending angle */
   double length,                         /* length */
   short method,                          /* 0 = "traditional", 1 = Venturini */
@@ -277,10 +277,10 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized(
   /* rotational-error matrix in the xyz coordinate system */
   cx = cos(ax);
   cy = cos(ay);
-  cz = cos(az + tilt);
+  cz = cos(az);
   sx = sin(ax);
   sy = sin(ay);
-  sz = sin(az + tilt);
+  sz = sin(az);
 
   RX->a[0][0] = cy * cz;
   RX->a[0][1] = -cy * sz;
@@ -437,6 +437,10 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized(
 
   if (coord && np != 0) {
     double qx, qy;
+
+    if (face==1 && tilt)
+      rotateBeamCoordinatesForMisalignment(coord, np, tilt);
+
     for (ip = 0; ip < np; ip++) {
       /* convert from (x, xp, y, yp, s, delta) to (x, qx, y, qy, s, delta) */
       factor = (1 + coord[ip][5]) / sqrt(1 + sqr(coord[ip][1]) + sqr(coord[ip][3]));
@@ -454,6 +458,10 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized(
       coord[ip][1] *= factor;
       coord[ip][3] *= factor;
     }
+
+    if (face==2 && tilt)
+      rotateBeamCoordinatesForMisalignment(coord, np, -tilt);
+
   }
 
   /* These matrices are in (x, qx, y, qy, s, delta) coordinates.
@@ -471,7 +479,66 @@ void offsetParticlesForEntranceCenteredMisalignmentLinearized(
     }
     /* Transform to slope coordinates */
     transformMatrixBetweenMomentumAndSlopes(*VM);
+
+    if (tilt) {
+      VMATRIX *Mt1, *Mt2;
+      Mt2 = tmalloc(sizeof(*Mt2));
+      initialize_matrices(Mt2, (*VM)->order);
+      if (face==1) {
+        Mt1 = rotation_matrix(tilt);
+        concat_matrices(Mt2, *VM, Mt1, 0);
+        *VM = Mt2;
+        free_matrices(Mt1);
+      } else {
+        Mt1 = rotation_matrix(-tilt);
+        concat_matrices(Mt2, Mt1, *VM, 0);
+        *VM = Mt2;
+        free_matrices(Mt1);
+      }
+    }
   }
+}
+
+void offsetParticlesForMisalignment
+(
+ long mode, /* 1 = linear entrance, 2 = linear body, 3 = exact entrance, 4 = exact body */
+ double **coord, long np,
+ double dx, double dy, double dz, /* error displacements */
+ double ax,                       /* error pitch */
+ double ay,                       /* error yaw */
+ double az,                       /* error roll or tilt */
+ double tilt,                     /* design tilt */
+ double thetaBend,
+ double length,
+ short face /* 1 => entry, 2 => exit */
+ ) {
+  switch (mode) {
+  case 1:
+    offsetParticlesForEntranceCenteredMisalignmentLinearized
+      (
+       NULL, coord, np, dx, dy, dz, ax, ay, az, tilt, thetaBend, length, face);
+    break;
+    
+  case 2:
+    offsetParticlesForBodyCenteredMisalignmentLinearized
+      (
+       NULL, coord, np, dx, dy, dz, ax, ay, az, tilt, thetaBend, length, face);
+    break;
+
+  case 3:
+    offsetParticlesForEntranceCenteredMisalignmentExact
+      (
+       coord, np, dx, dy, dz, ax, ay, az, tilt, thetaBend, length, face);
+    break;
+    
+  case 4:
+    offsetParticlesForBodyCenteredMisalignmentExact
+      (
+       coord, np, dx, dy, dz, ax, ay, az, tilt, thetaBend, length, face);
+    break;
+    
+  }
+
 }
 
 /* Algorithm due to M. Venturini, ALSU-AP-TN-2021-001. */
@@ -577,10 +644,10 @@ void offsetParticlesForEntranceCenteredMisalignmentExact(
   /* rotational-error matrix in the xyz coordinate system */
   cx = cos(ax);
   cy = cos(ay);
-  cz = cos(az + tilt);
+  cz = cos(az);
   sx = sin(ax);
   sy = sin(ay);
-  sz = sin(az + tilt);
+  sz = sin(az);
 
   RX->a[0][0] = cy * cz;
   RX->a[0][1] = -cy * sz;
@@ -732,6 +799,10 @@ void offsetParticlesForEntranceCenteredMisalignmentExact(
 
   if (coord && np != 0) {
     double qx, qy;
+
+    if (face==1 && tilt)
+      rotateBeamCoordinatesForMisalignment(coord, np, tilt);
+
     for (ip = 0; ip < np; ip++) {
       /*
       if (face==1) {
@@ -822,6 +893,8 @@ void offsetParticlesForEntranceCenteredMisalignmentExact(
       }
       */
     }
+    if (face==2 && tilt)
+      rotateBeamCoordinatesForMisalignment(coord, np, -tilt);
   }
 }
 
@@ -918,10 +991,10 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized(
   /* rotational-error matrix in the x0y0z0 coordinate system */
   cx = cos(ax0);
   cy = cos(ay0);
-  cz = cos(az0 + tilt);
+  cz = cos(az0);
   sx = sin(ax0);
   sy = sin(ay0);
-  sz = sin(az0 + tilt);
+  sz = sin(az0);
 
   R0->a[0][0] = cy * cz;
   R0->a[0][1] = -cy * sz;
@@ -1122,6 +1195,9 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized(
 
   if (coord && np != 0) {
     double qx, qy;
+    if (face==1 && tilt)
+      rotateBeamCoordinatesForMisalignment(coord, np, tilt);
+
     for (ip = 0; ip < np; ip++) {
       /* convert from (x, xp, y, yp, s, delta) to (x, qx, y, qy, s, delta) */
       factor = (1 + coord[ip][5]) / sqrt(1 + sqr(coord[ip][1]) + sqr(coord[ip][3]));
@@ -1139,6 +1215,9 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized(
       coord[ip][1] *= factor;
       coord[ip][3] *= factor;
     }
+
+    if (face==2 && tilt)
+      rotateBeamCoordinatesForMisalignment(coord, np, -tilt);
   }
 
   /* These matrices are in (x, qx, y, qy, s, delta) coordinates.
@@ -1156,6 +1235,23 @@ void offsetParticlesForBodyCenteredMisalignmentLinearized(
     }
     /* Transform to slope coordinates */
     transformMatrixBetweenMomentumAndSlopes(*VM);
+
+    if (tilt) {
+      VMATRIX *Mt1, *Mt2;
+      Mt2 = tmalloc(sizeof(*Mt2));
+      initialize_matrices(Mt2, (*VM)->order);
+      if (face==1) {
+        Mt1 = rotation_matrix(tilt);
+        concat_matrices(Mt2, *VM, Mt1, 0);
+        *VM = Mt2;
+        free_matrices(Mt1);
+      } else {
+        Mt1 = rotation_matrix(-tilt);
+        concat_matrices(Mt2, Mt1, *VM, 0);
+        *VM = Mt2;
+        free_matrices(Mt1);
+      }
+    }
   }
 }
 
@@ -1337,10 +1433,10 @@ void offsetParticlesForBodyCenteredMisalignmentExact(
   /* rotational-error matrix in the x0y0z0 coordinate system */
   cx = cos(ax0);
   cy = cos(ay0);
-  cz = cos(az0 + tilt);
+  cz = cos(az0);
   sx = sin(ax0);
   sy = sin(ay0);
-  sz = sin(az0 + tilt);
+  sz = sin(az0);
 
   R0->a[0][0] = cy * cz;
   R0->a[0][1] = -cy * sz;
@@ -1577,6 +1673,9 @@ void offsetParticlesForBodyCenteredMisalignmentExact(
 
   if (coord && np != 0) {
     double qx, qy;
+    if (face==1 && tilt)
+      rotateBeamCoordinatesForMisalignment(coord, np, tilt);
+    
     for (ip = 0; ip < np; ip++) {
       /*
       if (face==1) {
@@ -1660,5 +1759,7 @@ void offsetParticlesForBodyCenteredMisalignmentExact(
       coord[ip][1] = qx * factor;
       coord[ip][3] = qy * factor;
     }
+    if (face==2 && tilt)
+      rotateBeamCoordinatesForMisalignment(coord, np, -tilt);
   }
 }
