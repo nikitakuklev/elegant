@@ -48,7 +48,11 @@ Here is a summary of what's changed since release 2022.2.  Historical change log
   a mismatch between the rf frequency and path-length, for example.
   M. Venturini (LBNL) reported the issue.
 \item The \verb|C| matrix component for \verb|MATR| elements was ignored, with the exception of the 
-  \verb|C[4]| (path-length) component.
+  \verb|C[4]| (path-length) component. 
+\item Z. Duan (IHEP) reported an issue with misalignment methods 1 and 2 for \verb|CSBEND| elements when
+  when \verb|TILT| was nonzero, which he identified as an error in the code that incorrectly used
+  \verb|TILT| and \verb|ETILT| in combination. This was fixed, but for now the exact method of
+  performing misalignments has been disabled. Instead, a method that is linear in the errors is used.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -2756,7 +2760,9 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   offsets and roll (\verb|TILT|). A value of \verb|1| indicates the new method \cite{Venturini2021} in entrance-centered
   mode; this includes the possibility of pitch and yaw errors on elements that support it.  A value of \verb|2|
   indicates the new method in body-centered mode; this includes the possibility of pitch and yaw errors on elements that
-  support it.
+  support it. User's should note an important difference for elements with non-zero \verb|TILT| parameter: for
+  \verb|malign_method=0|, the displacements are performed in the lab frame, while for the other methods the displacements
+  are in the tilted magnet frame.
 \item \verb|slope_limit|, \verb|coord_limit| --- By default, \verb|elegant| limits the maximum slopes ($x^\prime$ and
   $y^\prime$) and coordinates ($x$ and $y$) in order to avoid potential overflows and unreasonable values. These
   parameters allow users to change those limits.

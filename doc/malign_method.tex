@@ -8,9 +8,11 @@ is controlled by the value of the \verb|MALIGN_METHOD| parameter:
 \item \verb|MALIGN_METHOD=1| --- This selects a method based on M. Venturini's
   work \cite{Venturini2021}, with misalignment referenced to the entrance face.
   The \verb|YAW| and \verb|PITCH| parameters are implemented.
-  This is incompatible with the \verb|moments_output| command at present.
 \item \verb|MALIGN_METHOD=2| --- This selects a method based on M. Venturini's
   work \cite{Venturini2021}, with misalignment referenced to the magnet center.
   The \verb|YAW| and \verb|PITCH| parameters are implemented.
-  This is incompatible with the \verb|moments_output| command at present.
 \end{itemize}
+
+For elements with non-zero \verb|TILT|,  it is important to note that for \verb|MALIGN_METHOD=0|
+displacements are performed in the lab frame, while for other methods the displacements are
+performed in the tilted magnet frame.
