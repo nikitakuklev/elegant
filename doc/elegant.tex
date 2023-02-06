@@ -78,7 +78,10 @@ Here is a summary of what's changed since release 2022.2.  Historical change log
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item The \verb|touschek_scatter| command was interpreting \verb|ignored_portion| values less than
+  or equal to $10^{-6}$ as zero, under the assumption that typically $\sim$1 million particles
+  would be used. This cut-over now occurs at $10^{-9}$. Forum user \verb|Skamarokha| reported this
+  issue.
 \end{itemize}
 
 \subsection{Other Changes}

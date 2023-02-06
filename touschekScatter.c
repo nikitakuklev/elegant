@@ -630,7 +630,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline) {
       index = (long *)malloc(sizeof(long) * tsptr->simuCount);
       for (i = 0; i < tsptr->simuCount; i++)
         index[i] = i;
-      if (tsSpec->ignoredPortion <= 1e-6) {
+      if (tsSpec->ignoredPortion <= 1e-9) {
         iTotal = tsptr->simuCount;
         wTotal = tsptr->totalWeight;
       } else {
