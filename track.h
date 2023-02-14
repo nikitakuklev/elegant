@@ -1148,7 +1148,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 16
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CCBEND_PARAMS 69
+#define N_CCBEND_PARAMS 72
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS 19
 #define N_APCONTOUR_PARAMS 15
@@ -2438,9 +2438,11 @@ typedef struct {
     short fringeModel;
     double hgap, fint1, fint2;
     double fringeInt1[N_CCBEND_FRINGE_INT], fringeInt2[N_CCBEND_FRINGE_INT];
-    double dx, dy, dz, xKick;
+    double dx, dy, dz;
+    double eTilt, ePitch, eYaw;
+    short malignMethod;
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
-    double etilt;   /* error tilt angle */
+    double xKick;
     long nSlices;
     short integration_order;
     char *systematic_multipoles, *edge_multipoles, *edge1_multipoles, *edge2_multipoles, *random_multipoles;
@@ -4321,7 +4323,7 @@ void resetElementToDefaults(char *p_elem, long type);
 extern void misalign_matrix(VMATRIX *M, double dx, double dy, double dz, 
                             double pitch, double yaw, double tilt,
                             double designTilt, double thetaBend, double length, 
-                            short method, short bodyCentered);
+                            short method);
 extern VMATRIX *misalignment_matrix(MALIGN *malign, long order);
 extern void offsetBeamCoordinatesForMisalignment(double **part, long np, double dx, double dy, double dz);
 extern void offsetParticlesForMisalignment(long mode, double **coord, long np, double dx, double dy, 

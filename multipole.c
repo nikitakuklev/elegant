@@ -1056,16 +1056,7 @@ long multipole_tracking2(
   setupMultApertureData(&apertureData, -tilt, apcontour, maxamp, apFileData, NULL, z_start + drift / 2, elem);
 
   if (iSlice <= 0) {
-    if (malignMethod != 0) {
-      if (dx || dy || dz || tilt || pitch || yaw) {
-        offsetParticlesForMisalignment(malignMethod, particle, n_part, dx, dy, dz, pitch, yaw, 0.0, tilt, 0.0, drift, 1);
-      }
-    } else {
-      if (dx || dy || dz)
-        offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
-      if (tilt)
-        rotateBeamCoordinatesForMisalignment(particle, n_part, tilt);
-    }
+    offsetParticlesForMisalignment(malignMethod, particle, n_part, dx, dy, dz, pitch, yaw, 0.0, tilt, 0.0, drift, 1);
 
     if (doEndDrift) {
       exactDrift(particle, n_part, lEnd);
@@ -1141,16 +1132,8 @@ long multipole_tracking2(
       exactDrift(particle, n_part, lEnd);
     }
 
-    if (malignMethod != 0) {
-      if (dx || dy || dz || tilt || pitch || yaw) {
-        offsetParticlesForMisalignment(malignMethod, particle, n_part, dx, dy, dz, pitch, yaw, 0.0, tilt, 0.0, drift, 2);
-      }
-    } else {
-      if (tilt)
-        rotateBeamCoordinatesForMisalignment(particle, n_part, -tilt);
-      if (dx || dy || dz)
-        offsetBeamCoordinatesForMisalignment(particle, n_part, -dx, -dy, -dz);
-    }
+    if (dx || dy || dz || tilt || pitch || yaw) 
+      offsetParticlesForMisalignment(malignMethod, particle, n_part, dx, dy, dz, pitch, yaw, 0.0, tilt, 0.0, drift, 2);
   }
 
   if (freeMultData && multData->copy) {

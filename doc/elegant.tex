@@ -51,8 +51,10 @@ Here is a summary of what's changed since release 2022.2.  Historical change log
   \verb|C[4]| (path-length) component. 
 \item Z. Duan (IHEP) reported an issue with misalignment methods 1 and 2 for \verb|CSBEND| elements when
   when \verb|TILT| was nonzero, which he identified as an error in the code that incorrectly used
-  \verb|TILT| and \verb|ETILT| in combination. This was fixed, but for now the exact method of
-  performing misalignments has been disabled. Instead, a method that is linear in the errors is used.
+  \verb|TILT| and \verb|ETILT| in combination. This was fixed, but in the process it proved advisable to
+  change the order of operations to conform to the original one in {\tt elegant}; in particular,
+  a \verb|TILT| is imposed on the misaligned element in all cases except \verb|CCBEND|.
+  In addition, we added the ability to selected either the linearized or exact Venturini algorithm.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -2758,14 +2760,20 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   Set to 0 to see no detailed warnings, only the summary; this is not recommended.
   Set to -1 to see all detailed warnings; this is suggested for debugging only, since it may create large log files
   and reduce performance.
-\item \verb|malign_method| --- Allows globally setting the default misalignment method. Three values are recognized.  A
-  value of \verb|0| indicates the original misalignment method that is entrance-centered and includes three position
-  offsets and roll (\verb|TILT|). A value of \verb|1| indicates the new method \cite{Venturini2021} in entrance-centered
-  mode; this includes the possibility of pitch and yaw errors on elements that support it.  A value of \verb|2|
-  indicates the new method in body-centered mode; this includes the possibility of pitch and yaw errors on elements that
-  support it. User's should note an important difference for elements with non-zero \verb|TILT| parameter: for
-  \verb|malign_method=0|, the displacements are performed in the lab frame, while for the other methods the displacements
-  are in the tilted magnet frame.
+\item \verb|malign_method| --- Allows globally setting the default misalignment method {\em for those elements that
+    lack the \verb|MALIGN_METHOD| parameter.}. Five values are recognized:
+  \begin{itemize}
+  \item 0 --- Indicates the original misalignment method that is entrance-centered and includes three position
+    offsets and roll (\verb|TILT|). 
+  \item 1 --- Indicates the new method \cite{Venturini2021} in entrance-centered
+    mode in the linear approximation. This includes the possibility of pitch and yaw errors on elements that support it. 
+  \item 2 --- Indicates the new method in body-centered mode in the linear approximation. 
+    This includes the possibility of pitch and yaw errors on elements that support it. 
+  \item 3 --- Indicates the new method \cite{Venturini2021} in entrance-centered
+    mode using an exact form.  This includes the possibility of pitch and yaw errors on elements that support it. 
+  \item 4 --- Indicates the new method in body-centered mode using an exact form.
+    This includes the possibility of pitch and yaw errors on elements that support it. 
+  \end{itemize}
 \item \verb|slope_limit|, \verb|coord_limit| --- By default, \verb|elegant| limits the maximum slopes ($x^\prime$ and
   $y^\prime$) and coordinates ($x$ and $y$) in order to avoid potential overflows and unreasonable values. These
   parameters allow users to change those limits.

@@ -64,7 +64,7 @@ long track_through_ccbend(
   long nSlices, integ_order;
   long i_part, i_top;
   double *coef;
-  double fse, etilt, tilt, rad_coef, isr_coef, dzLoss = 0;
+  double fse, etilt, epitch, eyaw, tilt, rad_coef, isr_coef, dzLoss = 0;
   double rho0, arcLength, length, angle, yaw, angleSign, extraTilt;
   MULTIPOLE_DATA *multData = NULL, *edge1MultData = NULL, *edge2MultData = NULL;
   long freeMultData = 0;
@@ -88,8 +88,8 @@ long track_through_ccbend(
 
   if (N_CCBEND_FRINGE_INT != 8)
     bombTracking("Coding error detected: number of fringe integrals for CCBEND is different than expected.");
-  if (ccbend->fringeModel < 0 || ccbend->fringeModel > 1)
-    bombTracking("FRINGEMODEL parameter of CCBEND must be 0 or 1.");
+  if (ccbend->fringeModel < -1 || ccbend->fringeModel > 1)
+    bombTracking("FRINGEMODEL parameter of CCBEND must be -1, 0, or 1.");
 
   if (!ccbend->edgeFlip) {
     memcpy(fringeInt1, ccbend->fringeInt1, N_CCBEND_FRINGE_INT * sizeof(fringeInt1[0]));
@@ -171,8 +171,9 @@ long track_through_ccbend(
         }
         eptrCopy = eptr;
         ccbendCopy.fse = ccbendCopy.fseDipole = ccbendCopy.fseQuadrupole = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz =
-          ccbendCopy.etilt = ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle =
-            ccbendCopy.KnDelta = ccbendCopy.xKick = 0;
+          ccbendCopy.ePitch = ccbendCopy.eYaw =  ccbendCopy.eTilt = 
+          ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle =
+          ccbendCopy.KnDelta = ccbendCopy.xKick = 0;
         memset(&ccbendCopy.referenceTrajectory[0], 0, 5*sizeof(ccbendCopy.referenceTrajectory[0]));
         PoCopy = Po;
         stepSize[0] = 1e-3; /* FSE */
@@ -393,7 +394,9 @@ long track_through_ccbend(
     bombTracking("expansion_coefficients(2) returned NULL pointer (track_through_ccbend)");
 
   tilt = ccbend->tilt + extraTilt;
-  etilt = ccbend->etilt;
+  etilt = ccbend->eTilt;
+  eyaw = ccbend->eYaw;
+  epitch = ccbend->ePitch;
   dx = ccbend->dx;
   dy = ccbend->dy;
   dz = ccbend->dz * (ccbend->edgeFlip ? -1 : 1);
@@ -414,18 +417,19 @@ long track_through_ccbend(
            particle[0][0], particle[0][1], particle[0][2],
            particle[0][3], particle[0][4], particle[0][5]);
     */
+    /* We perform the tilt first and separately for CCBEND because of the R-bend plane switch */
     if (tilt)
       rotateBeamCoordinatesForMisalignment(particle, n_part, tilt);
     /* save initial x, x' value of the possible reference particle for optimization of FSE and DX */
     xInitial = particle[0][0];
     xpInitial = particle[0][1];
     switchRbendPlane(particle, n_part, angle / 2 - yaw, Po);
-    if (dx || dy || dz)
-      offsetBeamCoordinatesForMisalignment(particle, n_part, dx, dy, dz);
+    if (dx || dy || dz || eyaw || epitch)
+      offsetParticlesForMisalignment(ccbend->malignMethod, particle, n_part,
+                                     dx, dy, dz,
+                                     epitch, eyaw, etilt, 0, 0, length, 1);
     if (ccbend->optimized)
       offsetBeamCoordinatesForMisalignment(particle, n_part, ccbend->dxOffset, 0, 0);
-    if (etilt)
-      rotateBeamCoordinatesForMisalignment(particle, n_part, etilt);
     verticalRbendFringe(particle, n_part, angle / 2 - yaw, rho0, KnL[1] / length, KnL[2] / length, gK[0],
                         &(fringeInt1[0]), angleSign, 0, ccbend->fringeModel, ccbend->edgeOrder);
     /*
@@ -480,12 +484,12 @@ long track_through_ccbend(
     */
     verticalRbendFringe(particle, i_top + 1, angle / 2 + yaw, rho0, KnL[1] / length, KnL[2] / length, gK[1],
                         &(fringeInt2[0]), angleSign, 1, ccbend->fringeModel, ccbend->edgeOrder);
-    if (etilt)
-      rotateBeamCoordinatesForMisalignment(particle, n_part, -etilt);
     if (ccbend->optimized)
       offsetBeamCoordinatesForMisalignment(particle, i_top + 1, ccbend->xAdjust, 0, 0);
-    if (dx || dy || dz)
-      offsetBeamCoordinatesForMisalignment(particle, i_top + 1, -dx, -dy, -dz);
+    if (dx || dy || dz || etilt || eyaw || epitch)
+      offsetParticlesForMisalignment(ccbend->malignMethod, particle, i_top+1,
+                                     dx, dy, dz, 
+                                     epitch, eyaw, etilt, 0, 0, length, 2);
     switchRbendPlane(particle, i_top + 1, angle / 2 + yaw, Po);
     if (ccbend->fringeModel) {
       /* If fringes are (possibly) extended, we use the difference between the initial and final 
@@ -1022,6 +1026,10 @@ void verticalRbendFringe(
   short isExit,
   short fringeModel,
   short order) {
+
+
+  if (fringeModel == -1)
+    return;
 
   if (fringeModel == 0) {
     // old method
