@@ -35,7 +35,7 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2022.3}
+\section{Highlights of What's New in Version 2023.1}
 
 Here is a summary of what's changed since release 2022.2.  Historical change logs are collected in Section
 \ref{sect:changeLog}.
@@ -47,14 +47,32 @@ Here is a summary of what's changed since release 2022.2.  Historical change log
   the optimization of fractional strength error or transverse offset was repeated. This could result in 
   a mismatch between the rf frequency and path-length, for example.
   M. Venturini (LBNL) reported the issue.
-\item The \verb|C| matrix component for \verb|MATR| elements was ignored, with the exception of the 
-  \verb|C[4]| (path-length) component. 
 \item Z. Duan (IHEP) reported an issue with misalignment methods 1 and 2 for \verb|CSBEND| elements when
   when \verb|TILT| was nonzero, which he identified as an error in the code that incorrectly used
   \verb|TILT| and \verb|ETILT| in combination. This was fixed, but in the process it proved advisable to
   change the order of operations to conform to the original one in {\tt elegant}; in particular,
-  a \verb|TILT| is imposed on the misaligned element in all cases except \verb|CCBEND|.
-  In addition, we added the ability to selected either the linearized or exact Venturini algorithm.
+  mislignments now occur in the untilted frame in all cases except \verb|CCBEND| elements.
+  In addition, we added the ability to select either the linearized or exact Venturini algorithm by
+  adding two new modes. In particular,
+  \begin{itemize}
+  \item Method \verb|0| --- This selects the original method, which was
+    the only one available before version 2021.1. The misalignment is
+    referenced to the entrance face. Yaw and pitch errors are not supported.
+  \item Method \verb|1| --- This selects a linearized method based on M. Venturini's
+    work \cite{Venturini2021}, with misalignment referenced to the entrance face.
+    Yaw and pitch errors are supported.
+  \item Method \verb|2| --- This selects a linearized method based on M. Venturini's
+    work \cite{Venturini2021}, with misalignment referenced to the magnet center.
+    Yaw and pitch errors are supported.
+  \item Method \verb|3| --- This selects an  exact method based on M. Venturini's
+    work \cite{Venturini2021}, with misalignment referenced to the entrance face.
+    Yaw and pitch errors are supported.
+  \item Method \verb|4| --- This selects an exact method based on M. Venturini's
+    work \cite{Venturini2021}, with misalignment referenced to the magnet center.
+    Yaw and pitch errors are supported.
+  \end{itemize}
+\item The \verb|C| matrix component for \verb|MATR| elements was ignored, with the exception of the 
+  \verb|C[4]| (path-length) component. 
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -76,6 +94,7 @@ Here is a summary of what's changed since release 2022.2.  Historical change log
   \item The envelope function is now applied correctly to both coherent and incoherent kicks.
   \item Corrected some mistakes in the documentation.
   \end{itemize}
+\item The \verb|LGBEND| element now supports yaw and pitch misalignments.
 \end{itemize}
 
 \subsection{New and Modified Commands}
