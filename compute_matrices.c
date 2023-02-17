@@ -1583,12 +1583,16 @@ VMATRIX *compute_matrix(
     break;
   case T_BRAT:
     brat = (BRAT *)elem->p_elem;
-    if (brat->useSbenMatrix)
+    if (brat->useDriftMatrix)
+      elem->matrix = drift_matrix(brat->length, 1);
+    else if (brat->useSbenMatrix)
       elem->matrix = bend_matrix(brat->length, brat->angle, 0.0, 0.0,
                                  0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0,
                                  brat->fse, 0.0, 0.0, 0.0, 1, 0, 0, 0, 0.0, 0.0);
-    else
+    else {
+      printf("Using tracking to determine matrix for %s\n", elem->name);
       elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
+    }
     break;
   case T_BMAPXY:
     elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));

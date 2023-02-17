@@ -3496,6 +3496,7 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
   {"XY_GRID_EXCESS", "", IS_SHORT, 0, (long)((char *)&brat_example.xyGridExcess), NULL, 0.0, 0, "Number of rows or columns to add in each dimension to the minimum."},
   {"XY_EXTRAPOLATE", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.xyExtrapolate), NULL, 0.0, 0, "If nonzero, will extrapolate the field map in (x,y) if particle is outside. Otherwise, field is assumed to be zero."},
   {"USE_SBEN_MATRIX", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.useSbenMatrix), NULL, 0.0, 0, "If nonzero, instead of using tracking to determine the matrix, will just use a sector-bend matrix."},
+  {"USE_DRIFT_MATRIX", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.useDriftMatrix), NULL, 0.0, 0, "If nonzero, instead of using tracking to determine the matrix, will just use a drift matrix."},
   {"SINGLE_PRECISION", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.singlePrecision), NULL, 0.0, 0, "If nonzero, store field data in single precision to reduce memory requirements. Incompatible with FTABLE mode."},
   {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char *)&brat_example.particleOutput), NULL, 0.0, 0, "Filename template for particle output. Can be very resource intensive!"},
   {"PARTICLE_OUTPUT_LOST_ONLY", NULL, IS_SHORT, 0, (long)((char *)&brat_example.particleOutputLostOnly), NULL, 0.0, 0, "If non-zero, particle output includes only lost particles."},
@@ -4070,21 +4071,21 @@ void compute_offsets() {
       /* difference of offsets must be positive and less than size of double */
       if ((difference = parameter[j].offset - parameter[j - 1].offset) <= 0 && !(parameter[j].flags & PARAM_IS_ALIAS)) {
         printf("error: bad parameter offset (retrograde) for element type %s, parameter %ld (%s)\n",
-               entity_name[i], i, parameter[j].name ? parameter[j].name : "NULL");
+               entity_name[i], j, parameter[j].name ? parameter[j].name : "NULL");
         fflush(stdout);
         exitElegant(1);
       }
       if (parameter[j].flags & PARAM_IS_ALIAS) {
         if (difference != 0) {
           printf("error: bad parameter offset (should be zero) for element type %s, parameter %ld (%s)\n",
-                 entity_name[i], i, parameter[j].name ? parameter[j].name : "NULL");
+                 entity_name[i], j, parameter[j].name ? parameter[j].name : "NULL");
           fflush(stdout);
           exitElegant(1);
         }
       } else {
         if (difference > sizeof(double) && i != T_TWISSELEMENT && i != T_EMATRIX) {
           printf("error: bad parameter offset (too large) for element type %s, parameter %ld (%s)\n",
-                 entity_name[i], i, parameter[j].name ? parameter[j].name : "NULL");
+                 entity_name[i], j, parameter[j].name ? parameter[j].name : "NULL");
           fflush(stdout);
           exitElegant(1);
         }

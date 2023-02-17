@@ -1142,7 +1142,7 @@ extern char *entity_text[N_TYPES];
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
 #define N_BMAPXYZ_PARAMS 32
-#define N_BRAT_PARAMS 31
+#define N_BRAT_PARAMS 32
 #define N_BGGEXP_PARAMS 35
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
@@ -3123,8 +3123,7 @@ typedef struct {
   double yawMap;
   double mainFactor, additionalFactor;
   double fieldFactor, deltaByInside;
-  short useFTABLE, xyInterpolationOrder, xyGridExcess, xyExtrapolate, useSbenMatrix, singlePrecision;
-  short limitX, limitY;
+  short useFTABLE, xyInterpolationOrder, xyGridExcess, xyExtrapolate, useSbenMatrix, useDriftMatrix, singlePrecision;
   char *particleOutput;
   short particleOutputLostOnly;
   long particleOutputSelectionInterval, particleOutputSampleInterval;
