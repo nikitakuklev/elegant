@@ -223,7 +223,8 @@ class gpuRfTracFunction3 : public gpuFunctionIfc
                     const long &akickInd, const long &asame_dgamma,
                     const long &alinearize, const long &alockPhase,
                     long *ad_dgammaOverGammaNp,
-                    double *ad_dgammaOverGammaAve, double *ad_inverseF) : length(alength), pcentral(aPcentral), cmks(ac_mks),
+                    double *ad_dgammaOverGammaAve, double *ad_inverseF,
+                    const short &astandingWave, const short &atwFocusing1) : length(alength), pcentral(aPcentral), cmks(ac_mks),
     timeOffset(atimeOffset), t0(at0), tAve(atAve),
     omega(aomega), volt(avolt), dtLight(adtLight), phase(aphase),
     tau(atau), dgammaAve(adgammaAve), change_t(achange_t),
@@ -231,7 +232,7 @@ class gpuRfTracFunction3 : public gpuFunctionIfc
     linearize(alinearize), lockPhase(alockPhase),
     d_dgammaOverGammaNp(ad_dgammaOverGammaNp),
     d_dgammaOverGammaAve(ad_dgammaOverGammaAve),
-    d_inverseF(ad_inverseF){};
+    d_inverseF(ad_inverseF), standingWave(astandingWave), twFocusing1(atwFocusing1){};
 
   double length;
   double pcentral;
@@ -254,6 +255,9 @@ class gpuRfTracFunction3 : public gpuFunctionIfc
   long *d_dgammaOverGammaNp;
   double *d_dgammaOverGammaAve;
   double *d_inverseF;
+  short standingWave;
+  short twFocusing1;
+  double dpr;
 
   __device__ void inline operator()(gpuParticleAccessor &coord)
   {
@@ -266,6 +270,7 @@ class gpuRfTracFunction3 : public gpuFunctionIfc
         dgamma = volt * sin(phase);
       }
 
+    dpr = 0;
     if (coord[5] == -1)
       return;
 
@@ -287,11 +292,36 @@ class gpuRfTracFunction3 : public gpuFunctionIfc
       {
         if (!linearize)
           {
+            if (standingWave)
+              {
+                dgamma = volt * sin(omega * (t - (lockPhase ? tAve : 0) ) + phase) * (tau ? sqrt(1 - exp(-dt / tau)) : 1);
+              }
+            else
+              {
+                double phi, dfactor;
+                phi = omega * (t - (lockPhase ? tAve : 0) - kickInd * dtLight) + phase;
+                dfactor = tau ? sqrt(1 - exp(-dt / tau)) : 1;
+                dgamma = volt * sin(phi) * dfactor;
+                if (twFocusing1)
+                  dpr = volt/(2*beta_i)*(omega/c_mks)*(1-beta_i)*cos(phi);
+              }
+          }
+        else
+          {
+            dgamma = dgammaAve + volt * omega * (t - tAve) * cos(omega * (tAve - timeOffset) + phase);
+          }
+      }
+    /*
+    if (!same_dgamma)
+      {
+        if (!linearize)
+          {
             dgamma = volt * sin(omega * (t - (lockPhase ? tAve : 0) - kickInd * dtLight) + phase) * (tau ? sqrt(1 - exp(-dt / tau)) : 1);
           }
         else
           dgamma = dgammaAve + volt * omega * (t - tAve) * cos(omega * (tAve - timeOffset) + phase);
       }
+    */
     if (gamma)
       {
         d_dgammaOverGammaNp[partInd] = 1;
@@ -315,7 +345,11 @@ class gpuRfTracFunction3 : public gpuFunctionIfc
       }
 
     /* apply energy kick */
-    gpu_add_to_particle_energy(coord, t, pcentral, dgamma);
+    if (dpr!=0)
+      gpu_add_to_particle_energy2(coord, t, pcentral, dgamma, dpr*coord[0], dpr*coord[2]);
+    else
+      gpu_add_to_particle_energy(coord, t, pcentral, dgamma);
+    //gpu_add_to_particle_energy(coord, t, pcentral, dgamma);
 
     if ((gamma1 = gamma + dgamma) <= 1)
       coord[5] = -1;
@@ -525,7 +559,7 @@ extern "C"
     double *d_particles = gpubase->d_particles;
     unsigned int particlePitch = gpubase->gpu_array_pitch;
     double *d_temp_particles = gpubase->d_temp_particles;
-    long same_dgamma, nKicks, linearize, ik, matrixMethod;
+    long same_dgamma, nKicks, linearize, ik;
 
     long ip;
     double dc4, gamma, gamma1, dt, dgamma=0.0;
@@ -533,7 +567,7 @@ extern "C"
     double timeOffset;
     double P, phase, length, dtLight, volt, To;
     double coord[6], t, t0, omega, beta_i, tau, tAve = 0, dgammaAve = 0;
-    long useSRSModel = 0;
+    short useSRSModel = 0, twFocusing1 = 0, matrixMethod;
     double dgammaOverGammaAve = 0;
     long dgammaOverGammaNp = 0;
     long lockPhase = 0;
@@ -549,23 +583,7 @@ extern "C"
     cudaMalloc((void **)&d_dgammaOverGammaNp, sizeof(long) * particlePitch);
 
     matrixMethod = 0;
-    if (rfca->bodyFocusModel)
-      {
-        char *modelName[2] = {(char *)"none", (char *)"srs"};
-        switch (match_string(rfca->bodyFocusModel, modelName, 2, 0))
-          {
-          case 0:
-            break;
-          case 1:
-            useSRSModel = 1;
-            matrixMethod = 1;
-            break;
-          default:
-            fprintf(stderr, "Error: bodyFocusModel=%s not understood for RFCA\n", rfca->bodyFocusModel);
-            exitElegant(1);
-            break;
-          }
-      }
+    identifyRfcaBodyFocusModel(rfca, T_RFCA, &matrixMethod, &useSRSModel, &twFocusing1);
 
     if (rfca->freq<1e3 && rfca->freq)
       printWarningForTracking((char*)"RFCA frequency is less than 1kHz.", (char*)"This may be an error. Consult manual for units.");
@@ -825,7 +843,8 @@ extern "C"
                             gpuRfTracFunction3(length, *P_central, c_mks, timeOffset,
                                                t0, tAve, omega, volt, dtLight, phase, tau, dgammaAve,
                                                rfca->change_t, rfca->end1Focus, ik, same_dgamma, linearize,
-                                               lockPhase, d_dgammaOverGammaNp, d_dgammaOverGammaAve, d_inverseF));
+                                               lockPhase, d_dgammaOverGammaNp, d_dgammaOverGammaAve, d_inverseF,
+                                               rfca->standingWave, twFocusing1));
                   dgammaOverGammaNp = gpuReduceAddLong(d_dgammaOverGammaNp, np);
                   dgammaOverGammaAve = gpuReduceAdd(d_dgammaOverGammaAve, np);
                 }
@@ -1133,6 +1152,7 @@ extern "C"
     rfcw->rfca.tReference = -1;
     rfcw->rfca.end1Focus = rfcw->end1Focus;
     rfcw->rfca.end2Focus = rfcw->end2Focus;
+    rfcw->rfca.standingWave = rfcw->standingWave;
     if (rfcw->bodyFocusModel)
       SDDS_CopyString(&rfcw->rfca.bodyFocusModel, rfcw->bodyFocusModel);
     else

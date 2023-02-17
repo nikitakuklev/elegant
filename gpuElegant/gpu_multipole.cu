@@ -801,21 +801,21 @@ extern "C"
     unsigned int *d_sortIndex = gpuBase->d_tempu_alpha;
 
     if (iSlice<=0) {
-    if (malignMethod!=0) {
-      if (dx || dy || dz || tilt || pitch || yaw) {
-        bombTracking("gpu_multipole_tracking2: Non zero MALIGN_METHOD not supported in the GPU version.");
-        /*
-        if (malignMethod==1) {
-          gpu_offsetParticlesForEntranceCenteredMisalignmentExact
+      if (malignMethod!=0) {
+        if (dx || dy || dz || tilt || pitch || yaw) {
+          bombTracking("gpu_multipole_tracking2: Non zero MALIGN_METHOD not supported in the GPU version.");
+          /*
+            if (malignMethod==1) {
+            gpu_offsetParticlesForEntranceCenteredMisalignmentExact
             (n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
-        }
-        else {
-          gpu_offsetParticlesForBodyCenteredMisalignmentExact
+            }
+            else {
+            gpu_offsetParticlesForBodyCenteredMisalignmentExact
             (n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 1);
+            }
+          */
         }
-        */
       }
-    }
     else {
       if (dx || dy || dz)
         gpu_offsetBeamCoordinatesForMisalignment(n_part, dx, dy, dz);
@@ -966,14 +966,14 @@ extern "C"
       if (dx || dy || dz || tilt || pitch || yaw)  {
         bombTracking("gpu_multipole_tracking2: Non zero MALIGN_METHOD not supported in the GPU version.");
         /*
-        if (malignMethod==1) {
+          if (malignMethod==1) {
           gpu_offsetParticlesForEntranceCenteredMisalignmentExact
-            (n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
-        }
-        else {
+          (n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
+          }
+          else {
           gpu_offsetParticlesForBodyCenteredMisalignmentExact
-            (n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
-        }
+          (n_part, dx, dy, dz, pitch, yaw, tilt, 0.0, 0.0, drift, 2);
+          }
         */
       }
     } else {

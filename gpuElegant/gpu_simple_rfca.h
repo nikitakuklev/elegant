@@ -51,6 +51,32 @@ __inline__ __device__ void
   coord[1] *= PRatio;
   coord[3] *= PRatio;
 }
+__inline__ __device__ void 
+  gpu_add_to_particle_energy2(gpuParticleAccessor& coord, double timeOfFlight, 
+                             double Po, double dgamma, double dpx, double dpy)
+{
+  double gamma, gamma1, pz, P, P1;
+  double px, py, beta, betaz;
+
+  P = Po*(1+coord[5]);                    /* old momentum */
+  gamma1 = (gamma=sqrt(P*P+1)) + dgamma;  /* new gamma */
+  beta = P/gamma;
+  betaz = beta/sqrt(1 + coord[1]*coord[1] + coord[3]*coord[3]);
+  px = coord[1]*betaz*gamma + dpx;
+  py = coord[3]*betaz*gamma + dpy;
+
+  if (gamma1 <= 1)
+    gamma1 = 1 + 1e-7;
+  P1 = sqrt(gamma1 * gamma1 - 1); /* new momentum */
+  coord[5] = (P1 - Po) / Po;
+
+  /* adjust s for the new particle velocity */
+  coord[4] = timeOfFlight*c_mks*P1/gamma1;
+
+  pz = sqrt(P1*P1 - px*px - py*py);
+  coord[1] = px/pz;
+  coord[3] = py/pz;
+}
 #endif /* __CUDACC__ */
 
 #endif /* GPU_SIMPLE_RFCA_H */
