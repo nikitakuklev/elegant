@@ -230,7 +230,8 @@ void SDDS_BeamLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long 
 }
 
 #define CENTROID_COLUMNS 9
-static SDDS_DEFINITION centroid_column[CENTROID_COLUMNS] = {
+#define CENTROID_COLUMNS_WITH_WEIGHTS 11
+static SDDS_DEFINITION centroid_column[CENTROID_COLUMNS_WITH_WEIGHTS] = {
   {"Cx", "&column name=Cx, symbol=\"<x>\", units=m, type=double, description=\"x centroid\" &end"},
   {"Cxp", "&column name=Cxp, symbol=\"<x'>\", type=double, description=\"x' centroid\" &end"},
   {"Cy", "&column name=Cy, symbol=\"<y>\", units=m, type=double, description=\"y centroid\" &end"},
@@ -240,10 +241,12 @@ static SDDS_DEFINITION centroid_column[CENTROID_COLUMNS] = {
   {"Particles", "&column name=Particles, description=\"Number of particles\", type=long &end"},
   {"pCentral", "&column name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double, description=\"Reference beta*gamma\" &end"},
   {"Charge", "&column name=Charge, description=\"Charge in the beam\", units=C, type=double &end"},
+  {"xBPMWeight", "&column name=xBPMWeight, description=\"Horizontal-plane BPM weight\", type=double &end"},
+  {"yBPMWeight", "&column name=yBPMWeight, description=\"Vertical-plane BPM weight\", type=double &end"},
 };
 
 void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents,
-                              char *command_file, char *lattice_file, char *caller) {
+                              char *command_file, char *lattice_file, char *caller, short bpmsOnly) {
   log_entry("SDDS_CentroidOutputSetup");
 #if USE_MPI
   if (myid != 0)
@@ -257,7 +260,8 @@ void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode,
                           standard_parameter, STANDARD_PARAMETERS, element_column, ELEMENT_COLUMNS,
                           caller, SDDS_EOS_NEWFILE);
   SDDS_ElegantOutputSetup(SDDS_table, NULL, 0, 0, NULL, NULL, NULL, NULL, 0,
-                          centroid_column, CENTROID_COLUMNS, caller, SDDS_EOS_COMPLETE);
+                          centroid_column,
+                          bpmsOnly?CENTROID_COLUMNS_WITH_WEIGHTS:CENTROID_COLUMNS, caller, SDDS_EOS_COMPLETE);
   log_exit("SDDS_CentroidOutputSetup");
 }
 
@@ -1742,11 +1746,12 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
                    double p_central, short bpmsOnly) {
   long i, j, row;
   BEAM_SUMS *beam;
-  ELEMENT_LIST *eptr;
+  ELEMENT_LIST *eptr, *eptrLast;
   double *cent;
   char *name, *type_name;
-  long s_index, Cx_index = 0, occurence, type;
-
+  long s_index, Cx_index = -1, occurence, type;
+  long wIndex = -1;
+  
 #if USE_MPI
   if (myid < 0)
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
@@ -1782,6 +1787,7 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
     eptr = beamline->elem;
   else
     eptr = beamline->ecat;
+  eptrLast = eptr;
   name = "_BEG_";
   type_name = "MARK";
   occurence = 1;
@@ -1804,7 +1810,7 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
       for (j = 0; j < 6; j++)
         cent[j] = 0;
     if (!bpmsOnly || type == T_MONI || type == T_HMON || type == T_VMON) {
-      if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX | SDDS_PASS_BY_VALUE, row++,
+      if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX | SDDS_PASS_BY_VALUE, row,
                              Cx_index, cent[0], Cx_index + 1, cent[1], Cx_index + 2, cent[2],
                              Cx_index + 3, cent[3], Cx_index + 4, cent[4], Cx_index + 5, cent[5],
                              Cx_index + 6, beam->n_part, Cx_index + 7, beam->p0,
@@ -1814,11 +1820,39 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
         SDDS_SetError("Problem setting row values for SDDS table (dump_centroid)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
       }
+      if (bpmsOnly) {
+        double xWeight, yWeight;
+        if (wIndex==-1 &&
+            ((wIndex = SDDS_GetColumnIndex(SDDS_table, "xBPMWeight")) < 0)) {
+          SDDS_SetError("Problem getting index of SDDS columns (dump_centroid)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
+        }
+        xWeight = yWeight = -1;
+        if (type == T_MONI) {
+          xWeight = yWeight = ((MONI*)(eptrLast->p_elem))->weight;
+        } else if (type == T_HMON) {
+          //print_elem(stdout, eptrLast);
+          xWeight = ((HMON*)(eptrLast->p_elem))->weight;
+        } else if (type == T_VMON) {
+          //print_elem(stdout, eptrLast);
+          yWeight = ((VMON*)(eptrLast->p_elem))->weight;
+        }
+        //printf("%s %le %le\n", name, xWeight, yWeight);
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+                               wIndex, xWeight,
+                               wIndex+1, yWeight,
+                               -1)) {
+          SDDS_SetError("Problem setting row values for SDDS table (dump_centroid)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
+        }
+      }
+      row++;
     }
     name = eptr->name;
     type_name = entity_name[eptr->type];
     type = eptr->type;
     occurence = eptr->occurence;
+    eptrLast = eptr;
     if (eptr->succ)
       eptr = eptr->succ;
     else if (beamline->elem_recirc)

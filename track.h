@@ -4814,7 +4814,7 @@ extern void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle
                          double Po, double charge);
 extern void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_data);
 extern void storeSASEFELAtEndInRPN(SASEFEL_OUTPUT *sasefelOutput);
-extern void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, char *command_file, char *lattice_file, char *caller);
+extern void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, char *command_file, char *lattice_file, char *caller, short bpmsOnly);
 extern void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
                            char *command_file, char *lattice_file, char *caller);
 extern void readErrorMultipoleData(MULTIPOLE_DATA *multData, char *multFile, long steering);

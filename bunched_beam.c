@@ -1074,14 +1074,14 @@ void setup_output(
   if (run->centroid) {
     /* prepare dump of centroid vs z */
     SDDS_CentroidOutputSetup(&output->SDDS_centroid, run->centroid, SDDS_BINARY, 1, "centroid output", run->runfile,
-                             run->lattice, "setup_output");
+                             run->lattice, "setup_output", 0);
     output->centroid_initialized = 1;
   }
 
   if (run->bpmCentroid) {
     /* prepare dump of centroid vs z at BPMs */
     SDDS_CentroidOutputSetup(&output->SDDS_bpmCentroid, run->bpmCentroid, SDDS_BINARY, 1, "output of centroid at BPMs", run->runfile,
-                             run->lattice, "setup_output");
+                             run->lattice, "setup_output", 1);
     output->bpmCentroid_initialized = 1;
   }
 
