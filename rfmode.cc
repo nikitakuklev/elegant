@@ -1156,6 +1156,8 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   if (rfmode->sample_interval <= 0)
     rfmode->sample_interval = 1;
   if (!rfmode->fileInitialized) {
+    if (rfmode->record && strlen(rfmode->record)==0)
+      rfmode->record = NULL;
     if (rfmode->record) {
       rfmode->record = compose_filename(rfmode->record, run->rootname);
 #if (USE_MPI)
@@ -1185,6 +1187,8 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
           SDDS_Bomb((char *)"problem setting up RFMODE record file");
         }
     }
+    if (rfmode->feedbackRecordFile && strlen(rfmode->feedbackRecordFile)==0)
+      rfmode->feedbackRecordFile = NULL;
     if (rfmode->driveFrequency > 0 && rfmode->feedbackRecordFile) {
       rfmode->feedbackRecordFile = compose_filename(rfmode->feedbackRecordFile, run->rootname);
 #if (USE_MPI)
