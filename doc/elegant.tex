@@ -2956,7 +2956,8 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
 \item \verb|add_at_end| --- If nonzero, the element is also inserted to the end of the beamline.
 \item \verb|add_at_start| --- If nonzero, the element is also inserted to the start of the beamline, ahead of all other elements.
 \item \verb|element_def| --- The definition of the new element should be just as it would be entered in 
-the lattice file.
+the lattice file. To insert an existing element, simply give the name of the element and define it to be a \verb|MARK| element;
+{\tt elegant} will recognize that the element already exists and use the previous definition.
 \item \verb|total_occurrences|, \verb|occurrence| --- 
 These parameters are used to insert the new elements after specified occurrences of 
 the element \verb|name|.  \verb|total_occurrences| specifies how many new elements to add,
