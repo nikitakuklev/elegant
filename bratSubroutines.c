@@ -97,7 +97,7 @@ static long nArcPoints;
 static double integ_tol, zero_tol;
 
 /* variables for storing integration history */
-static short storeData = 0; /* 0: no data stored, 1: only (X, Y, Z, BX, BY, BZ) are stored, 2: everything stored */
+static short storeData = 0; /* 0: no data stored, 1: only (X, Y, Z, BX, BY, BZ) are stored, 2: add (wX, Wy, wZ), 3: everything */
 static double *X_stored = NULL, *Z_stored = NULL, *Y_stored = NULL;
 static double *wX_stored = NULL, *wZ_stored = NULL, *wY_stored = NULL;
 static double *aX_stored = NULL, *aZ_stored = NULL, *aY_stored = NULL;
@@ -194,6 +194,9 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       if (!SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "x", "m", SDDS_FLOAT) ||
           !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "y", "m", SDDS_FLOAT) ||
           !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "z", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "wx", NULL, SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "wy", NULL, SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "wz", NULL, SDDS_FLOAT) ||
           !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bx", "T", SDDS_FLOAT) ||
           !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "By", "T", SDDS_FLOAT) ||
           !SDDS_DefineSimpleColumn(brat->SDDSparticleOutput, "Bz", "m", SDDS_FLOAT) ||
@@ -220,8 +223,8 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
     brat->initialized = 1;
   }
 
-  /* Store nothing if running test particles, otherwise store (x, y, z, Bx, By, Bz) */
-  storeData = tcontext.flags & TEST_PARTICLES ? 0 : 1;
+  /* Store nothing if running test particles, otherwise store (x, y, z, Wx, Wy, Wz, Bx, By, Bz) */
+  storeData = tcontext.flags & TEST_PARTICLES ? 0 : 2;
 
   if (brat->dataIndex < 0 || brat->dataIndex >= nBrat3dData)
     bombElegant("BRAT data indexing bug (1). Please report.", NULL);
@@ -426,17 +429,20 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       }
       if (brat->particleOutputSampleInterval < 1)
         brat->particleOutputSampleInterval = 1;
-      for (i = j = 0; i < n_stored; i += brat->particleOutputSampleInterval, j++) {
-        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX | SDDS_PASS_BY_VALUE, j,
-                               0, (float)X_stored[i], 1, (float)Y_stored[i], 2, (float)Z_stored[i],
-                               3, (float)FX_stored[i], 4, (float)FY_stored[i], 5, (float)FZ_stored[i], -1)) {
-          SDDS_SetError("Problem setting data in SDDS table (BRAT)");
+      if (storeData>1) {
+        for (i = j = 0; i < n_stored; i += brat->particleOutputSampleInterval, j++) {
+          if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX | SDDS_PASS_BY_VALUE, j,
+                                 0, (float)X_stored[i], 1, (float)Y_stored[i], 2, (float)Z_stored[i],
+                                 3, (float)wX_stored[i], 4, (float)wY_stored[i], 5, (float)wZ_stored[i],
+                                 6, (float)FX_stored[i], 7, (float)FY_stored[i], 8, (float)FZ_stored[i], -1)) {
+            SDDS_SetError("Problem setting data in SDDS table (BRAT)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          }
+        }
+        if (!SDDS_WriteTable(SDDS_table)) {
+          SDDS_SetError("Problem writing data in SDDS table (BRAT)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         }
-      }
-      if (!SDDS_WriteTable(SDDS_table)) {
-        SDDS_SetError("Problem writing data in SDDS table (BRAT)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
     }
 #endif /* If not ABRAT program */
@@ -939,11 +945,13 @@ void BRAT_store_data(double *qp, double *q, double s, double exval) {
       wX_stored = trealloc(wX_stored, sizeof(*X_stored) * max_store);
       wY_stored = trealloc(wY_stored, sizeof(*Y_stored) * max_store);
       wZ_stored = trealloc(wZ_stored, sizeof(*Z_stored) * max_store);
-      aX_stored = trealloc(aX_stored, sizeof(*X_stored) * max_store);
-      aY_stored = trealloc(aY_stored, sizeof(*Y_stored) * max_store);
-      aZ_stored = trealloc(aZ_stored, sizeof(*Z_stored) * max_store);
-      Fint_stored = trealloc(Fint_stored, sizeof(*Fint_stored) * max_store);
-      s_stored = trealloc(s_stored, sizeof(*s_stored) * max_store);
+      if (storeData > 2) {
+        aX_stored = trealloc(aX_stored, sizeof(*X_stored) * max_store);
+        aY_stored = trealloc(aY_stored, sizeof(*Y_stored) * max_store);
+        aZ_stored = trealloc(aZ_stored, sizeof(*Z_stored) * max_store);
+        Fint_stored = trealloc(Fint_stored, sizeof(*Fint_stored) * max_store);
+        s_stored = trealloc(s_stored, sizeof(*s_stored) * max_store);
+      }
     }
   }
   Z_stored[n_stored] = q[0];
@@ -956,11 +964,13 @@ void BRAT_store_data(double *qp, double *q, double s, double exval) {
     wZ_stored[n_stored] = q[3];
     wX_stored[n_stored] = q[4];
     wY_stored[n_stored] = q[5];
-    aZ_stored[n_stored] = qp[3];
-    aX_stored[n_stored] = qp[4];
-    aY_stored[n_stored] = qp[5];
-    Fint_stored[n_stored] = q[9] / gap / 2;
-    s_stored[n_stored] = s;
+    if (storeData > 2) {
+      aZ_stored[n_stored] = qp[3];
+      aX_stored[n_stored] = qp[4];
+      aY_stored[n_stored] = qp[5];
+      Fint_stored[n_stored] = q[9] / gap / 2;
+      s_stored[n_stored] = s;
+    }
   }
   n_stored++;
 #if DEBUG
