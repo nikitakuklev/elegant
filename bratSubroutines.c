@@ -2692,7 +2692,7 @@ void readBratFieldFile(BRAT *brat, char *filename, short additionalFile) {
       bombElegantVA("Problem with \"zSymmetry\" parameter in BRAT file %s: not string type \n", filename);
     if ((zSymmetryCode = match_string(zSymmetry, symmetry, 3, 0))<0)
       bombElegantVA("Problem with \"zSymmetry\" parameter in BRAT file %s: value %s not recognized\n", filename, zSymmetry);
-    printf("Recognized y-plane magnet symmetry of %s\n", symmetry[zSymmetryCode]);
+    printf("Recognized z-plane magnet symmetry of %s\n", symmetry[zSymmetryCode]);
   }
   brat3dData[nBrat3dData].ySymmetryCode = ySymmetryCode;
   brat3dData[nBrat3dData].zSymmetryCode = zSymmetryCode;
