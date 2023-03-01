@@ -3520,6 +3520,9 @@ typedef struct {
   double ionRange[2];              /* range in x or y for ion histogram */
   long ionBins[2];                 /* number of bins in each dimension for 1d histograms (may be changed by code) */
   double **ion2dDensity;           /* for Poisson solver */
+  double **ionPotential;
+  double **xKickPoisson;
+  double **yKickPoisson;
   double *xyIonHistogram[2];       /* values for ion histogram independent coordinates (x, y) */
   double *ionHistogram[2];         /* charge histogram */
   double *ionHistogramFit[2];      /* fit to same */

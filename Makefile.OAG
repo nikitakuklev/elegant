@@ -11,11 +11,14 @@ endif
 
 ifeq ($(MDEBUG),1)
 HOST_OPT = NO
-USR_LDFLAGS+= -g
+USR_LDFLAGS+= -g 
 else
 HOST_OPT = YES
 Ocustom = -O3
 endif
+
+
+USR_LDFLAGS+= -lfftw3 -lm 
 
 #RATIONAL = purify
 #RATIONAL = quantify
@@ -132,7 +135,7 @@ SVN_VERSION=unknown
 endif
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
-		-DIEEE_MATH -DzLib -DWL=32 -DSVN_VERSION=\"$(SVN_VERSION)\"
+		-DIEEE_MATH -DzLib -DWL=32 -DSVN_VERSION=\"$(SVN_VERSION)\" 
 #USR_CFLAGS += CHECK_BEAM_STRUCTURE=1
 USR_CPPFLAGS = 	$(USR_CFLAGS)
 
@@ -626,7 +629,7 @@ elegant_SRCS = 	pointInsideContour.c ignoreElements.c alpha_data.c alpha_matrix.
                 makeInitialParticleEnsemble.c computeMatricesFromTracking.c transformBeamWithScript.c sdds_support_common.c bratSubroutines.c \
                 magneticFieldFromGeneralizedGradient.c ionEffects.cc slicePoint.c pressureData.c elasticScattering.c \
                 inelasticScattering.c magneticFieldOffAxisExpansion.c lorentzian.c shrfdf.c trimApertureSearchResult.c \
-                warnings.c context.c obstructionData.c cooler.c  lgbend.c
+                warnings.c context.c obstructionData.c cooler.c  lgbend.c poissonBuffer.cc poisson.cc
                    
 Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c genetic.c swarm.c
 

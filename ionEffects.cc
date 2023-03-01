@@ -21,6 +21,9 @@
 #include "constants.h"
 #include "pressureData.h"
 
+#include "poissonBuffer.h"
+
+
 #define ION_FIELD_GAUSSIAN 0
 #define ION_FIELD_BIGAUSSIAN 1
 #define ION_FIELD_BILORENTZIAN 2
@@ -28,7 +31,8 @@
 #define ION_FIELD_TRILORENTZIAN 4
 #define ION_FIELD_EGAUSSIAN 5
 #define ION_FIELD_GAUSSIANFIT 6
-#define N_ION_FIELD_METHODS 7
+#define ION_FIELD_POISSON 7
+#define N_ION_FIELD_METHODS 8
 static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
   (char *)"gaussian",
   (char *)"bigaussian",
@@ -36,7 +40,9 @@ static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
   (char *)"trigaussian",
   (char *)"trilorentzian",
   (char *)"egaussian",
-  (char *)"gaussianfit"};
+  (char *)"gaussianfit",
+  (char*)"poisson"
+};
 static long ionFieldMethod = -1;
 static long isLorentzian = 0;
 
@@ -145,6 +151,11 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
                           double paramValueY[9], IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]);
 double multiGaussianFunction(double *param, long *invalid);
 double multiLorentzianFunction(double *param, long *invalid);
+
+
+//for poisson solver
+//static double **ionPotential, **xKickPoisson, **yKickPoisson;
+
 
 //void report();
 void report(double res, double *a, long pass, long n_eval, long n_dimen);
@@ -590,6 +601,8 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline) {
           ionEffects->ionHistogramFit[iPlane] = NULL;
     }
     if (!eptr->succ) {
+      if (!ionSeen)
+        bombElegant("No ION_EFFECTS elements seen", NULL);
       ionEffects = (IONEFFECTS *)eptrLast->p_elem;
       ionEffects->sEnd = eptr->end_pos;
     }
@@ -645,7 +658,14 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline) {
           bombElegant("Poisson grid size must be 10 or greater in x and y", NULL);
         ionEffects->ion2dDensity =
           (double **)czarray_2d(sizeof(double), ionEffects->n2dGridIon[0], ionEffects->n2dGridIon[1]);
-        printWarningForTracking((char*)"Poisson solver for IONEFFECTS is not fully implemented", (char*)"At present no ion fields are included");
+        printWarningForTracking((char*)"Poisson solver for IONEFFECTS is not fully implemented", (char*)"It is presently being tested and debugged");
+
+	ionEffects->ionPotential = 
+	  (double**)czarray_2d(sizeof(double), ionEffects->n2dGridIon[0], ionEffects->n2dGridIon[1]);
+	ionEffects->xKickPoisson = 
+	  (double**)czarray_2d(sizeof(double), ionEffects->n2dGridIon[0], ionEffects->n2dGridIon[1]);
+	ionEffects->yKickPoisson = 
+	  (double**)czarray_2d(sizeof(double), ionEffects->n2dGridIon[0], ionEffects->n2dGridIon[1]);
       }
     }
     eptr = eptr->succ;
@@ -820,14 +840,14 @@ void trackWithIonEffects(
     if (npTotal) {
       generateIons(ionEffects, iPass, iBunch, nBunches, qBunch, bunchCentroid, bunchSigma);
 
-      applyElectronBunchKicksToIons(ionEffects, iPass, qBunch, bunchCentroid, bunchSigma, dpSum);
+      applyElectronBunchKicksToIons(ionEffects, iPass, qBunch, bunchCentroid, bunchSigma, dpSum); 
     }
 
     computeIonOverallParameters(ionEffects, ionCentroid, ionSigma, &qIon, &nIonsTotal, bunchCentroid, bunchSigma, iBunch);
 
     setIonEffectsIonParameterOutput(ionEffects, tNow, iPass, iBunch, nBunches, qIon, ionSigma, ionCentroid);
 
-    if (npTotal)
+    if (npTotal && nIonsTotal)
       applyIonKicksToElectronBunch(ionEffects, part, np, Po, iBunch, iPass, qBunch, bunchCentroid, bunchSigma,
                                    qIon, nIonsTotal, ionCentroid, ionSigma, dpSum);
 
@@ -835,7 +855,7 @@ void trackWithIonEffects(
       if (nBunches != 1) {
         /*** Copy bunch coordinates back to original array */
         for (ip = 0; ip < np; ip++)
-          memcpy(part0[ipBunch[iBunch][ip]], part[ip], sizeof(double) * 7);
+          memcpy(part0[ipBunch[iBunch][ip]], part[ip], sizeof(double) * totalPropertiesPerParticle);
       }
     }
 
@@ -2896,7 +2916,109 @@ void applyIonKicksToElectronBunch(
 
     /* - Solve poisson equation */
 
+    //double C1;
+    double delta[2];
+
+    //C1 = e_mks * re_mks / me_mks / c_mks;
+
+    for (int iPlane=0; iPlane<2; iPlane++) {
+      delta[iPlane] = 2*ionEffects->span[iPlane]/(ionEffects->n2dGridIon[iPlane]-1.0);
+    }
+
+    memset(ionEffects->ionPotential[0], 0, sizeof(double) * ionEffects->n2dGridIon[0] * ionEffects->n2dGridIon[1]);
+    memset(ionEffects->xKickPoisson[0], 0, sizeof(double) * ionEffects->n2dGridIon[0] * ionEffects->n2dGridIon[1]);
+    memset(ionEffects->yKickPoisson[0], 0, sizeof(double) * ionEffects->n2dGridIon[0] * ionEffects->n2dGridIon[1]);
+    
+    poissonSolverWrapper(ionEffects->ion2dDensity,  ionEffects->ionPotential,  ionEffects->n2dGridIon[0], ionEffects->n2dGridIon[1], ionEffects->xKickPoisson, ionEffects->yKickPoisson, delta);
+
+    //testFunc();
+    // debug output
+    /*
+    FILE *findex1, *findex2, *findex3, *findex4;
+    double C3;
+    double temp3[2];
+    //if ((iPass >= 80) && (iBunch > 180) && (ionEffects->sLocation > 900)) {
+    //if ((iPass == 81) && (ionEffects->sLocation < 100)) {
+    //if ((iPass%81 == 0) && (iBunch == 0)) {
+    if ((ionSigma[1] > 3e-4) || (iBunch == 1)) {
+      printf("bunch %d \n", iBunch);
+      C3 =  -e_mks / (Po * me_mks * c_mks * c_mks * 8.85e-12);
+      findex1 = fopen("dens.dat", "w");
+      findex2 = fopen("potential.dat", "w");
+      findex3 = fopen("xkick.dat", "w");
+      findex4 = fopen("ykick.dat", "w");
+      for(int i=0; i<ionEffects->n2dGridIon[0]; i++) {
+	for(int j=0; j<ionEffects->n2dGridIon[1]; j++) {
+	  fprintf(findex1, "%4.3e \n ", ionEffects->ion2dDensity[i][j]);
+	  fprintf(findex2, "%4.3e \n ", ionEffects->ionPotential[i][j]);
+
+	  temp3[0] = C3 * ionEffects->xKickPoisson[i][j];
+	  temp3[1] = C3 * ionEffects->yKickPoisson[i][j];
+	  fprintf(findex3, "%4.3e \n ", temp3[0]);
+	  fprintf(findex4, "%4.3e \n ", temp3[1]);
+	}
+	  //fprintf(findex, "\n");
+      }
+      fclose(findex1);
+      fclose(findex2);
+      fclose(findex3);
+      fclose(findex4);
+
+      //gaussian comp
+      double fkick[2], fpart[4], xdelta, ydelta, C1, tempk[2];
+      FILE * fcalc, *fgauss;  
+
+      fgauss = fopen("gauss_kick.dat", "w");
+
+      for (int i=0; i<ionEffects->n2dGridIon[0]; i++) {
+	fpart[0] = -ionEffects->span[0] + i*delta[0];
+
+	for (int j=0; j<ionEffects->n2dGridIon[1]; j++) {
+	  fpart[2] = -ionEffects->span[1] + j*delta[1];
+	  fkick[0] = 0;
+	  fkick[1] = 0;
+
+	  gaussianBeamKick(fpart, ionCentroid, ionSigma, 0, kick, qIon, me_mks, 1);
+	  tempk[0] = kick[0] / c_mks / Po;
+	  tempk[1] = kick[1] / c_mks / Po; 
+	  fprintf(fgauss, "%4.3e %4.3e \n", tempk[0], tempk[1]);
+
+	}
+      }
+
+      fclose(fgauss);
+
+    }
+    */
+    
     /* - Compute field and apply kicks to electrons */
+    double C2;
+    long iBin[2];
+    C2 = e_mks / (Po * me_mks * c_mks * c_mks * 8.85e-12);
+
+    for (ip=0; ip<np; ip++) {
+
+      if ((abs(part[ip][0]) <  ionEffects->span[0]) && (abs(part[ip][2]) <  ionEffects->span[1])) {
+	  iBin[0] = floor((part[ip][0] + ionEffects->span[0])/delta[0]);
+	  iBin[1] = floor((part[ip][2] + ionEffects->span[1])/delta[1]);
+	  part[ip][1] -= C2 * ionEffects->xKickPoisson[iBin[0]][iBin[1]];
+	  part[ip][3] -= C2 * ionEffects->yKickPoisson[iBin[0]][iBin[1]];
+	  //debug
+	  /*
+	  double kickampy;
+	  kickampy = abs(C2 * ionEffects->yKickPoisson[iBin[0]][iBin[1]]);
+	  if (kickampy > 5e-7) {
+	    int tempint = 0;
+	    //printf("large kickampy: %3.2e, Pass %d, bunch %d, sLoc %3.1f \n", kickampy, iPass, iBunch, ionEffects->sLocation);
+	  }
+	  */
+	    
+      }
+
+    }
+
+
+
 
   } else {
     /* Use 1D fits for ion fields */
