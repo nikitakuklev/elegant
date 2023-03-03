@@ -1441,8 +1441,8 @@ particles.
 
 \begin{itemize}
 \item \verb|element_name| --- Name of the element where the lattice will end,  which implies removing all 
-  elements downstream of the named element. If the element occurs more than once, the first instance is used.
-  The named element will be the first element in the lattice.
+  elements downstream of the named element. If the element occurs more than once, the first instance is used, unless
+  \verb|element_occurence| is given. The named element will be the last element in the lattice.
 \item \verb|element_occurence| --- Occurrence number of the element to use. By default, uses the last occurrence.
 \item \verb|delta_position| --- The number of elements before (if negative) or after (if positive) by which to
   offset the end position.
