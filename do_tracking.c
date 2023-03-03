@@ -3841,10 +3841,17 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
   zero_beam_sums(sums, 1);
   accumulate_beam_sums(sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, -1, -1, 0);
 #if USE_MPI
-  if (parallelStatus == trueParallel && partOnMaster && notSinglePart)
+#if MPI_DEBUG
+  printf("myid=%d: np = %ld, parallelStatus = %d, partOnMaster = %d, notSinglePart = %d\n", myid, np,
+         parallelStatus, partOnMaster, notSinglePart);
+#endif
+  if (parallelStatus == trueParallel && !partOnMaster && notSinglePart)
     MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
   else
     npTotal = np;
+#if MPI_DEBUG
+  printf("myid=%d: npTotal = %ld\n", myid, npTotal);
+#endif
 #else
   npTotal = np;
 #endif
