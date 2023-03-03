@@ -262,6 +262,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
   set_print_namelist_flags(0);
   name = item = NULL;
   step_size = 1;
+  fractional_step_size = -1;
   lower_limit = -(upper_limit = DBL_MAX);
   differential_limits = 0;
   force_inside = 0;
@@ -373,7 +374,10 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
       exit(1);
     }
   }
-  variables->orig_step[n_variables] = step_size;
+  if (fractional_step_size<=0) 
+    variables->orig_step[n_variables] = step_size;
+  else
+    variables->orig_step[n_variables] = (upper_limit - lower_limit)*fractional_step_size;
   variables->varied_quan_name[n_variables] = tmalloc(sizeof(char) * (strlen(name) + strlen(item) + 3));
   sprintf(variables->varied_quan_name[n_variables], "%s.%s", name, item);
   variables->lower_limit[n_variables] = lower_limit;

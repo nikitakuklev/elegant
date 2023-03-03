@@ -83,6 +83,7 @@ static char *crossover_type[N_CROSSOVER_TYPES] = {
     double lower_limit = 0;
     double upper_limit = 0;
     double step_size = 1;
+    double fractional_step_size = -1;
     long disable = 0;
     long force_inside = 0;
     long differential_limits = 0;

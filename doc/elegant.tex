@@ -4554,6 +4554,7 @@ at the beginning of such a name.
     double upper_limit = 0;
     long differential_limits = 0;
     double step_size = 1;
+    double fractional_step_size = -1;
     long disable = 0;
     long force_inside = 0;
     long no_element = 0;
@@ -4568,7 +4569,10 @@ at the beginning of such a name.
 equal, the range of the parameter is unlimited.
 \item \verb|differential_limits| --- If nonzero, then the lower and upper limits are being given relative to the initial value,
   rather than in absolute terms.
-\item \verb|step_size| --- The initial step size (``simplex'' optimization ) or the grid size in this dimension (``grid'' or ``sample'' optimization).
+\item \verb|step_size|, \verb|fractional_step_size| --- Specifies the initial step size (``simplex'' optimization ) or the grid size in
+  this dimension (``grid'' or ``sample'' optimization). If  \verb|fractional_step_size| is positive, it is used in place of
+  \verb|step_size|; in that case, the step size is determined by using the indicated fraction of the difference between \verb|upper_limit|
+  and \verb|lower_limit|.
 \item \verb|disable| --- If nonzero, the variable is ignored.
 \item \verb|force_inside| --- If nonzero, the initial value is forced inside the allowed range defined by the \verb|lower_limit| and \verb|upper_limit| parameters.
 \item \verb|no_element|, \verb|initial_value|  --- Allows defining a variable that is not connected to a beamline element, and giving
