@@ -64,7 +64,7 @@ else
     #USER_MPI_FLAGS+= -DMPI_DEBUG # -DDEBUG        # print debugging information for MPI 
     #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
                                         # or the particle number is changed
-    MPI_PATH = $(firstword $(wildcard /lustre/3rdPartySoftware/mpich-4.0.3/bin/ /soft/compilers/wrappers/xl/ /soft/libraries/mpi/mvapich2/gcc/bin/ /clhome/asd_tools/mvapich2-2.0/bin/ /Users/soliday/mpich-3.4.2/bin/ ))
+    MPI_PATH = $(firstword $(wildcard /lustre/3rdPartySoftware/mpich-4.1.1/bin/ /soft/compilers/wrappers/xl/ /soft/libraries/mpi/mvapich2/gcc/bin/ /clhome/asd_tools/mvapich2-2.0/bin/ /Users/soliday/mpich-3.4.2/bin/ ))
 
 ifeq ($(HOST_ARCH),linux-ppc-bgp-ibm)
   CC += $(USER_MPI_FLAGS)
@@ -141,7 +141,7 @@ USR_CPPFLAGS = 	$(USR_CFLAGS)
 
 USR_CFLAGS_Linux = -DMINIMIZE_MEMORY -D_GNU_SOURCE -std=c11 
 #USR_CFLAGS_Linux = -I/lib/modules/`uname -r`/build/include -DMINIMIZE_MEMORY -D_GNU_SOURCE 
-USR_CPPFLAGS_Linux = $(USR_CFLAGS_Linux)
+USR_CPPFLAGS_Linux = -DMINIMIZE_MEMORY -D_GNU_SOURCE 
 USR_LDFLAGS_Linux = -fopenmp
 
 USR_CFLAGS_DEFAULT += -DUNIX -DMINIMIZE_MEMORY
