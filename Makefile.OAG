@@ -18,7 +18,6 @@ Ocustom = -O3
 endif
 
 
-USR_LDFLAGS+= -lfftw3 -lm 
 
 #RATIONAL = purify
 #RATIONAL = quantify
@@ -293,9 +292,10 @@ USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		namelist rpnlib mdbmth mdblib lzma \
 		meschach 
 endif
-SYS_PROD_LIBS_DEFAULT += z 
-SYS_PROD_LIBS_Linux += z 
+SYS_PROD_LIBS_DEFAULT += z fftw3
+SYS_PROD_LIBS_Linux += z fftw3
 SYS_PROD_LIBS_solaris += z rt 	
+#USR_LDFLAGS+= -lfftw3 -lm 
 endif
 
 MAKE = make
