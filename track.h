@@ -4918,7 +4918,8 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
 void SDDS_BeamScatterLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
                                char *command_file, char *lattice_file, char *caller);
 void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos, double **particleOri,
-                                   long *lostOnPass, long particles, double *weight, TSCATTER *tsptr);
+                                   long *lostOnPass, long particles, double *weight, TSCATTER *tsptr, 
+                                   ELEMENT_LIST *eptr);
 
 void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass, double Po, long idSlotsPerBunch);
 void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp);

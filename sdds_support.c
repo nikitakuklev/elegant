@@ -2157,10 +2157,16 @@ static SDDS_DEFINITION beam_scatter_loss_column[BEAM_SCATTER_LOSS_COLUMNS] = {
   {"LRate", "&column name=LRate, units=\"1/s\", type=double, description=\"represents local scattering rate\" &end"},
   {"TRate", "&column name=TRate, units=\"1/s\", type=double, description=\"represents total scattering rate between 2 TSCATTER elements of a beam\" &end"},
 };
-#define BEAM_SCATTER_LOSS_PARAMETERS 10
+#define BEAM_SCATTER_LOSS_PARAMETERS 16
 static SDDS_DEFINITION beam_scatter_loss_parameter[BEAM_SCATTER_LOSS_PARAMETERS] = {
   {"Particles", "&parameter name=Particles, type=long, description=\"Total lost simulated scattered particles\" &end"},
   {"S0", "&parameter name=S0, type=double, units=m, description=\"Scatter location\" &end"},
+  {"ElementName", "&parameter name=ElementName, type=string &end"},
+  {"ElementOccurence", "&parameter name=ElementOccurence, type=long &end"},
+  {"PreviousElementName", "&parameter name=PreviousElementName, type=string &end"},
+  {"PreviousElementOccurence", "&parameter name=PreviousElementOccurence, type=long &end"},
+  {"NextElementName", "&parameter name=NextElementName, type=string &end"},
+  {"NextElementOccurence", "&parameter name=NextElementOccurence, type=long &end"},
   {"PLocalRate", "&parameter name=PLocalRate, type=double, units=\"1/s\", description=\"Piwinski's Local Rate\" &end"},
   {"SLocalRate", "&parameter name=SLocalRate, type=double, units=\"1/s\", description=\"Simulated Local Rate\" &end"},
   {"IgnoredRate", "&parameter name=IgnoredRate, type=double, units=\"1/s\", description=\"Ignored Scattering Rate\" &end"},
@@ -2183,7 +2189,7 @@ void SDDS_BeamScatterLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode
 }
 
 void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos, double **particleOri,
-                                   long *lostOnPass, long particles, double *weight, TSCATTER *tsptr) {
+                                   long *lostOnPass, long particles, double *weight, TSCATTER *tsptr, ELEMENT_LIST *eptr) {
   long i, j;
   double rate, intLossRate;
 
@@ -2243,6 +2249,16 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
 #endif
   if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "Particles", particles, NULL)) ||
       (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "S0", tsptr->s, NULL)) ||
+      (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "ElementName", eptr->name, NULL)) ||
+      (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "ElementOccurence", eptr->occurence, NULL)) ||
+      (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "PreviousElementName", 
+                           eptr->pred?eptr->pred->name:"_BEGIN_", NULL)) ||
+      (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "PreviousElementOccurence", 
+                           eptr->pred?eptr->pred->occurence:-1, NULL)) ||
+      (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "NextElementName", 
+                           eptr->succ?eptr->succ->name:"_BEGIN_", NULL)) ||
+      (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "NextElementOccurence", 
+                           eptr->succ?eptr->succ->occurence:-1, NULL)) ||
       (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "PLocalRate", tsptr->p_rate, NULL)) ||
       (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "SLocalRate", tsptr->s_rate, NULL)) ||
       (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, "IgnoredRate", tsptr->i_rate, NULL)) ||

@@ -830,7 +830,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline) {
               report_stats(stdout, s);
             }
             dump_scattered_loss_particles(&SDDS_loss, lostParticle, beam->original,
-                                          NULL, nLost, weight, tsptr);
+                                          NULL, nLost, weight, tsptr, eptr);
             if (occurenceSeen && !SDDS_Terminate(&SDDS_loss)) {
               SDDS_SetError("Problem terminating 'losses' file (finish_output)");
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
