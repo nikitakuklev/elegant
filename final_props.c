@@ -343,10 +343,12 @@ void dump_final_properties(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums,
 
   if (isMaster)
     if ((n_properties = SDDS_ParameterCount(SDDS_table)) !=
-        (FINAL_PROPERTY_PARAMETERS + n_varied_quan + n_perturbed_quan + 3*(n_optim_quan-3) + 3 - perturbed_quan_duplicates)) {
+        (FINAL_PROPERTY_PARAMETERS + n_varied_quan + n_perturbed_quan + 
+         (n_optim_quan?3*(n_optim_quan-3) + 3:0) - perturbed_quan_duplicates)) {
       printf("error: the number of parameters (%ld) defined for the SDDS table for the final properties file is not equal to the number of quantities (%ld) for which information is provided (dump_final_properties)\n",
              n_properties,
-             FINAL_PROPERTY_PARAMETERS + n_varied_quan + n_perturbed_quan + 3*(n_optim_quan-3) +3 - perturbed_quan_duplicates);
+             FINAL_PROPERTY_PARAMETERS + n_varied_quan + n_perturbed_quan + 
+             (n_optim_quan?3*(n_optim_quan-3) + 3:0) - perturbed_quan_duplicates);
       fflush(stdout);
       abort();
     }
@@ -358,11 +360,13 @@ void dump_final_properties(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums,
   computed_properties = tmalloc(sizeof(*computed_properties) * n_properties);
   if ((n_computed = compute_final_properties(computed_properties, sums, n_original, p_central, M, particle, step,
                                              totalSteps, charge)) !=
-      (n_properties - (n_varied_quan + n_perturbed_quan + 3*(n_optim_quan -3 ) + 3 - perturbed_quan_duplicates))) {
+      (n_properties - (n_varied_quan + n_perturbed_quan + 
+                       (n_optim_quan?3*(n_optim_quan -3 ) + 3:0) - perturbed_quan_duplicates))) {
     printf("error: compute_final_properties computed %ld quantities--%ld expected. (dump_final_properties)\n",
-           n_computed, n_properties - (n_varied_quan + n_perturbed_quan + 3*(n_optim_quan-3) + 3 - perturbed_quan_duplicates));
+           n_computed, n_properties - (n_varied_quan + n_perturbed_quan + 
+                                       (n_optim_quan?3*(n_optim_quan-3) + 3:0) - perturbed_quan_duplicates));
     printf("n_varied_quan = %ld, n_perturbed_quan = %ld, perturbed_quan_duplicates = %ld\n",
-           n_varied_quan, n_perturbed_quan + 3*(n_optim_quan-3) + 3, perturbed_quan_duplicates);
+           n_varied_quan, n_perturbed_quan + (n_optim_quan?3*(n_optim_quan-3) + 3:0), perturbed_quan_duplicates);
     fflush(stdout);
     abort();
   }
