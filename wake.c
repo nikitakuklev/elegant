@@ -276,12 +276,6 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
       }
     }
 
-    if (nBuckets > 1) {
-      free(npBucket);
-      free_czarray_2d((void **)ipBucket, nBuckets, np0);
-      npBucket = NULL;
-      ipBucket = NULL;
-    }
   }
 
 #if USE_MPI
