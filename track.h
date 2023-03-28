@@ -4056,7 +4056,7 @@ extern void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long m
 extern void dump_final_properties(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums,
      double *varied_quan, char *first_varied_quan_name, long n_varied_quan, long totalSteps,
      double *perturbed_quan, long *perturbed_quan_index, long perturbed_duplicates, long n_perturbed_quan,
-     double *optim_quan, char *first_optim_quan_name, long n_optim_quan,
+     double *optim_quan, char *first_optim_quan_name, long n_optim_quan, double *optim_lower, double *optim_upper, 
      long step, double **particle, long n_original, double p_central, VMATRIX *M,
      double finalCharge);
 extern long compute_final_properties

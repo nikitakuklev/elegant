@@ -1005,6 +1005,8 @@ void do_track_beam_output(RUN *run, VARY *control,
                           errcon->error_value, errcon->quan_final_index, errcon->quan_final_duplicates, errcon->n_items,
                           optim->varied_quan_value, optim->varied_quan_name ? *optim->varied_quan_name : NULL,
                           optim->n_variables ? optim->n_variables + 3 : 0,
+                          optim->n_variables ? optim->lower_limit : NULL,
+                          optim->n_variables ? optim->upper_limit : NULL,
                           control->i_step, beam->particle, beam->n_to_track, p_central, M,
                           finalCharge);
 #else
@@ -1016,6 +1018,8 @@ void do_track_beam_output(RUN *run, VARY *control,
                           errcon->error_value, errcon->quan_final_index, errcon->quan_final_duplicates, errcon->n_items,
                           optim->varied_quan_value, optim->varied_quan_name ? *optim->varied_quan_name : NULL,
                           optim->n_variables ? optim->n_variables + 3 : 0,
+                          optim->n_variables ? optim->lower_limit : NULL,
+                          optim->n_variables ? optim->upper_limit : NULL,
                           control->i_step, beam->particle, beam->n_to_track_total, p_central, M,
                           finalCharge);
 #endif
@@ -1204,6 +1208,8 @@ void finish_output(
                           errcon->n_items,
                           optim->varied_quan_value, optim->varied_quan_name ? *optim->varied_quan_name : NULL,
                           optim->n_variables ? optim->n_variables + 2 : 0,
+                          optim->n_variables ? optim->lower_limit : NULL,
+                          optim->n_variables ? optim->upper_limit : NULL,
                           0, beam->particle, beam->n_to_track, beam->p0, M = full_matrix(beamline->elem, run, 1),
                           finalCharge);
 #else
@@ -1216,6 +1222,8 @@ void finish_output(
                           errcon->n_items,
                           optim->varied_quan_value, optim->varied_quan_name ? *optim->varied_quan_name : NULL,
                           optim->n_variables ? optim->n_variables + 2 : 0,
+                          optim->n_variables ? optim->lower_limit : NULL,
+                          optim->n_variables ? optim->upper_limit : NULL,
                           0, beam->particle, beam->n_to_track_total, beam->p0, M = full_matrix(beamline->elem, run, 1),
                           finalCharge);
 #endif
