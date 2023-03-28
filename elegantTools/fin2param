@@ -29,6 +29,7 @@ if [file exists $output] {
 exec sddscollapse $input -pipe=out | sddssort -pipe -column=optimizationFunction,incr \
   | sddsprocess -pipe -clip=1,0,invert \
   | sddsconvert -pipe -retain=column,*.* \
+  | sddsconvert -pipe -delete=column,*.LowerLimit,*.UpperLimit \
   | sddstranspose -pipe -oldColumnNames=NameString -root=ParameterValue \
   | sddsprocess -pipe=in $output \
     "-edit=column,ElementName,NameString,S/./100D" \
