@@ -128,6 +128,7 @@ static long elementTimingActive = 0;
 
 void resetElementTiming() {
   long i;
+  printf("Resetting element timing data.\n"); fflush(stdout);
   for (i = 0; i < N_TYPES; i++)
     timeCounter[i] = runCounter[i] = 0;
   elementTimingActive = 1;
@@ -828,8 +829,10 @@ long do_tracking(
       printf("element %s#%ld, %ld particles, %ld left\n", eptr->name, eptr->occurence, nToTrack, nLeft);
       fflush(stdout);
 #endif
-      if (run->showElementTiming)
-        tStart = getTimeInSecs();
+      if (run->showElementTiming) {
+        elementTimingActive = 1;
+        tStart = delapsed_time();
+      }
       if (run->monitorMemoryUsage)
         memoryBefore = memoryUsage();
 #ifdef DEBUG_CRASH
@@ -2713,7 +2716,7 @@ long do_tracking(
 #endif
 
       if (run->showElementTiming && last_type >= 0 && last_type <= N_TYPES) {
-        timeCounter[last_type] += getTimeInSecs() - tStart;
+        timeCounter[last_type] += delapsed_time() - tStart;
         runCounter[last_type] += 1;
       }
       if (run->monitorMemoryUsage) {
