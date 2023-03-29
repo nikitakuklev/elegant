@@ -100,31 +100,28 @@ void poisson_solver(double **vec_rhs, double x_domain, double y_domain, int N_x,
   static double **k_square = NULL;
   static double last_x_domain, last_y_domain;
   static int last_N_x, last_N_y;
-  int regenMeshGrid = 1;
+  int parametersChanged = 1;
 
-  if (k_square) {
-    if (N_x != last_N_x || N_y != last_N_y || x_domain != last_x_domain || y_domain != last_y_domain)
-      regenMeshGrid = 1;
-    else
-      regenMeshGrid = 0;
-  }
-  if (regenMeshGrid) {
+  if (N_x != last_N_x || N_y != last_N_y || x_domain != last_x_domain || y_domain != last_y_domain)
+    parametersChanged = 1;
+  else
+    parametersChanged = 0;
+  if (parametersChanged || !k_square) {
     if (k_square)
       free_czarray_2d((void **)k_square, N_x, N_y);
     k_square = (double **)czarray_2d(sizeof(double), N_x, N_y);
-    last_N_x = N_x;
-    last_N_y = N_y;
-    last_x_domain = x_domain;
-    last_y_domain = y_domain;
     meshgrid_wavenumber(N_x, N_y, x_domain, y_domain, k_square);
   }
   
-  fftw_complex *fftwIn;
-  fftw_plan p;
-  int n0 = N_x * (N_y / 2 + 1);
-  fftwIn = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n0);
+  static fftw_complex *fftwIn = NULL;
+  if (!fftwIn || parametersChanged) {
+    int n0 = N_x * (N_y / 2 + 1);
+    if (fftwIn)
+      fftw_free(fftwIn);
+    fftwIn = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n0);
+  }
   //fftwOut = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N_x * N_y);
-
+    
   /*
   for (int i=0; i<N_x; i++) {
      for (int j=0; j<N_y; j++) {
@@ -133,23 +130,39 @@ void poisson_solver(double **vec_rhs, double x_domain, double y_domain, int N_x,
      }
   }
   */
-  
-  p = fftw_plan_dft_r2c_2d(N_x, N_y, &(vec_rhs[0][0]), fftwIn, FFTW_ESTIMATE);
-  
- 
-  // p = fftw_plan_dft_2d(N_x, N_y, fftwIn, fftwIn,
-  //		       FFTW_FORWARD, FFTW_ESTIMATE);
-  
-  fftw_execute(p);
+
+  static short p1Created = 0;
+  static fftw_plan p1;
+  static double **p1Buffer = NULL;
+  if (!p1Created || parametersChanged) {
+    p1Buffer = (double**)czarray_2d(sizeof(double), N_x, N_y);
+    memcpy(&(p1Buffer[0][0]), &(vec_rhs[0][0]), sizeof(double)*N_x*N_y);
+    p1 = fftw_plan_dft_r2c_2d(N_x, N_y, &(p1Buffer[0][0]), fftwIn, FFTW_MEASURE);
+    p1Created = 1;
+    printf("FFTW_MEASURE plan 1 created\n"); fflush(stdout);
+  }
+  memcpy(&(p1Buffer[0][0]), &(vec_rhs[0][0]), sizeof(double)*N_x*N_y);
+
+  fftw_execute(p1);
   
   divide_fftw_vec(N_x, N_y, fftwIn, k_square);
   
   //p = fftw_plan_dft_2d(N_x, N_y, fftwIn, fftwIn,
-  //		       FFTW_BACKWARD, FFTW_ESTIMATE);
+  //		       FFTW_BACKWARD, FFTW_MEASURE);
 
-  p = fftw_plan_dft_c2r_2d(N_x, N_y, fftwIn, &(u_fft[0][0]), FFTW_ESTIMATE);
-  
-  fftw_execute(p);
+
+  static short p2Created = 0;
+  static fftw_plan p2;
+  static double **p2Buffer = NULL;
+  if (!p2Created || parametersChanged) {
+    p2Buffer = (double**)czarray_2d(sizeof(double), N_x, N_y);
+    p2 = fftw_plan_dft_c2r_2d(N_x, N_y, fftwIn, &(p2Buffer[0][0]), FFTW_MEASURE);
+    p2Created = 1;
+    printf("FFTW_MEASURE plan 2 created\n"); fflush(stdout);
+  }
+
+  fftw_execute(p2);
+  memcpy(&(u_fft[0][0]), &(p2Buffer[0][0]), sizeof(double)*N_x*N_y);
 
   /*
   for (int i=0; i<N_x; i++) {
@@ -159,13 +172,15 @@ void poisson_solver(double **vec_rhs, double x_domain, double y_domain, int N_x,
   }
   */
 
-  fftw_destroy_plan(p);
-  fftw_free(fftwIn);
   //fftw_free(fftwOut);
   //fftw_free(fftwOut2);
   
   subtract_const(N_x, N_y, u_fft);
   
+  last_N_x = N_x;
+  last_N_y = N_y;
+  last_x_domain = x_domain;
+  last_y_domain = y_domain;
   
   //return u_fft;
 }
