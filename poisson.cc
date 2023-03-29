@@ -18,7 +18,6 @@ const double pi = 3.14159265358979323846;
 
 
 void meshgrid_wavenumber(int N_x, int N_y, double x_domain, double y_domain, double **k_square) {
-
   //vector<double> v_1d_x(N_x, 0.0);
   double *v_1d_x;
   v_1d_x = (double *)tmalloc(sizeof(*v_1d_x) * N_x);
@@ -81,11 +80,13 @@ void meshgrid_wavenumber(int N_x, int N_y, double x_domain, double y_domain, dou
 
 
 void subtract_const(int N_x, int N_y, double **vec_c) {
+  double c00;
 
   //vector<vector<double> > vec_x(N_x, vector<double> (N_y, 0));
+  c00 = vec_c[0][0];
   for ( int i=0; i<N_x; i++ ) {
     for ( int j=0; j<N_y; j++ ) {
-      vec_c[i][j] = (vec_c[i][j] - vec_c[0][0]) / N_x / N_y;
+      vec_c[i][j] = (vec_c[i][j] - c00) / N_x / N_y;
     }
   }
   //return vec_x;
@@ -95,10 +96,28 @@ void subtract_const(int N_x, int N_y, double **vec_c) {
 
 void poisson_solver(double **vec_rhs, double x_domain, double y_domain, int N_x, int N_y, double **u_fft) {
 
-  
-  double **k_square;
-  k_square = (double **)czarray_2d(sizeof(double), N_x, N_y);
-  meshgrid_wavenumber(N_x, N_y, x_domain, y_domain, k_square);
+  // Save the mesh grid for re-use, since it is expensive to generate.
+  static double **k_square = NULL;
+  static double last_x_domain, last_y_domain;
+  static int last_N_x, last_N_y;
+  int regenMeshGrid = 1;
+
+  if (k_square) {
+    if (N_x != last_N_x || N_y != last_N_y || x_domain != last_x_domain || y_domain != last_y_domain)
+      regenMeshGrid = 1;
+    else
+      regenMeshGrid = 0;
+  }
+  if (regenMeshGrid) {
+    if (k_square)
+      free_czarray_2d((void **)k_square, N_x, N_y);
+    k_square = (double **)czarray_2d(sizeof(double), N_x, N_y);
+    last_N_x = N_x;
+    last_N_y = N_y;
+    last_x_domain = x_domain;
+    last_y_domain = y_domain;
+    meshgrid_wavenumber(N_x, N_y, x_domain, y_domain, k_square);
+  }
   
   fftw_complex *fftwIn;
   fftw_plan p;
@@ -142,8 +161,6 @@ void poisson_solver(double **vec_rhs, double x_domain, double y_domain, int N_x,
 
   fftw_destroy_plan(p);
   fftw_free(fftwIn);
-  free_czarray_2d((void **)k_square, N_x, N_y);
-  //free(k_square);
   //fftw_free(fftwOut);
   //fftw_free(fftwOut2);
   
