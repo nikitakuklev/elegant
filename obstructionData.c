@@ -543,6 +543,7 @@ long filterParticlesWithObstructions(double **coord, long np, double **accepted,
 void resetObstructionData(OBSTRUCTION_DATASETS *obsData) {
   long i, j;
   if (obsData->initialized) {
+    printf("Freeing old obstruction data\n"); fflush(stdout);
     for (j = 0; j < obsData->nY; j++) {
       for (i = 0; i < obsData->nDataSets[j]; i++) {
         free(obsData->data[j][i].X);
@@ -552,12 +553,12 @@ void resetObstructionData(OBSTRUCTION_DATASETS *obsData) {
       obsData->data[j] = NULL;
     }
     free(obsData->data);
+    obsData->data = NULL;
     free(obsData->YValue);
+    obsData->YValue = NULL;
     obsData->initialized = 0;
     obsData->YLimit[0] = -10;
     obsData->YLimit[1] = 10;
+    printf("Done freeing old obstruction data\n"); fflush(stdout);
   }
-  obstructionDataSets.YValue = NULL;
-  obstructionDataSets.nY = 0;
-  obstructionDataSets.YSpacing = 0;
 }

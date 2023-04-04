@@ -432,7 +432,7 @@ void dump_final_properties(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums,
         if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX | SDDS_PASS_BY_VALUE,
                                 3*i + index    , optim_quan[i],
                                 3*i + index + 1, optim_lower[i],
-                                3*i + index + 2, optim_lower[i],
+                                3*i + index + 2, optim_upper[i],
                                 -1)) {
           SDDS_SetError("Problem setting SDDS parameter values for optimization quantities (dump_final_properties)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors | SDDS_EXIT_PrintErrors);
