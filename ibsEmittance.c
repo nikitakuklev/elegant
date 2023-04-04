@@ -717,7 +717,7 @@ int main(int argc, char **argv) {
     if (!emityInput)
       emityInput = emitxInput * coupling;
     else
-      coupling = emityInput / emityInput;
+      coupling = emityInput / emitxInput;
     sigmaDelta = sigmaDeltaInput;
     if (length)
       sigmaz0 = length;
