@@ -161,7 +161,7 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
  {-charge=<nC>|-particles=<value>} {-coupling=<value>|-emityInput=<meters>}\n\
  [-emitInput=<value>] [-deltaInput=<value>] \n\
  [-emit0=<value>] [-delta0=<value>] \n\
- [-superperiods=<value>] [-isRing=1|0] [-forceCoupling=1|0] \n\
+ [-superperiods=<value>] [-isRing=1|0] [-forceCoupling=1|0] [-fixEmity=0|1] \n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>|-distribution=<timeHistogramFile>,<t-column>,<hist-column>}\n\
  [-energy=<MeV>] \n\
  [ {-growthRatesOnly | -integrate=turns=<number>[,stepSize=<number>] } ]\n\
@@ -177,6 +177,9 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
                  how many repetitions of the <twissFile> are needed to make a full ring.\n\
 -isRing          Default is 1. Set to 0 for linac or transport line.\n\
 -forceCoupling   Default is 1, meaning that ratio given with -coupling option is enforced.\n\
+-fixEmity        Default is 0, meaning that vertical emittance changes due to IBS.\n\
+                 If 1, then it is assumed that some other process maintains fixed vertical\n\
+                 emittance at the initial value. Ignored for -integration mode.\n\
 -RF              Specify rf parameters for bunch length calculation.\n\
 -length          Specify initial bunch length. Ratio of energy spread to bunch length is held fixed.\n\
 -distribution    Give slice-by-slice distribution of charge density in the bunch.\n\
@@ -208,7 +211,8 @@ By L. Emery, A. Xiao, and M. Borland. Version 6, January 2016\n";
 #define EMIT0 19
 #define DELTA0 20
 #define DISTRIBUTION 21
-#define N_OPTIONS 22
+#define FIXEMITY 22
+#define N_OPTIONS 23
 char *option[N_OPTIONS] = {
   "energy",
   "verbose",
@@ -231,7 +235,8 @@ char *option[N_OPTIONS] = {
   "emityinput",
   "emit0",
   "delta0",
-  "distribution"};
+  "distribution",
+  "fixemity"};
 
 #include "zibs.h"
 void exitElegant(long status);
@@ -250,7 +255,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
                   double coupling,
                   double *s, double *pCentral, double *betax, double *alphax, double *betay,
                   double *alphay, double *etax, double *etaxp, double *etay, double *etayp, long elements,
-                  long superperiods, long verbosity, long isRing, long force);
+                  long superperiods, long verbosity, long isRing, long forceCoupling);
 
 void IBSRateForDistribution(double particles,
                             long elements, long superperiods, long verbosity, long isRing,
@@ -275,7 +280,7 @@ int main(int argc, char **argv) {
   char *inputfile, *outputfile;
   SDDS_DATASET twissPage, resultsPage;
   double particles, charge, length;
-  long verbosity, noWarning, i, elements, superperiods, growthRatesOnly, force;
+  long verbosity, noWarning, i, elements, superperiods, growthRatesOnly, forceCoupling, fixEmity;
   double pCentral0, I1, I2, I3, I4, I5, taux, tauy, taudelta;
   double EMeV;
   double emitx0 = 0, emitx, emitxInput, emityInput, emity, coupling, sigmaz;
@@ -286,7 +291,7 @@ int main(int argc, char **argv) {
   /* used in simplex minimization */
   double yReturn, *xGuess, *dxGuess, *xLowerLimit, *xUpperLimit;
   short *disable;
-  long dimensions = 15, maxEvaluations = 500, maxPasses = 2;
+  long dimensions = 17, maxEvaluations = 500, maxPasses = 2;
   double target = 1e-6;
   int32_t integrationTurns, integrationStepSize;
   long integrationPoints = 0;
@@ -313,7 +318,8 @@ int main(int argc, char **argv) {
   particles = 0;
   charge = 0;
   coupling = emityInput = 0;
-  force = 1;
+  forceCoupling = 1;
+  fixEmity = 0;
   length = 0;
   superperiods = 1;
   method = 0;
@@ -373,7 +379,10 @@ int main(int argc, char **argv) {
         get_double(&emityInput, scanned[i].list[1]);
         break;
       case FORCECOUPLING:
-        get_long(&force, scanned[i].list[1]);
+        get_long(&forceCoupling, scanned[i].list[1]);
+        break;
+      case FIXEMITY:
+        get_long(&fixEmity, scanned[i].list[1]);
         break;
       case PARTICLES:
         get_double(&particles, scanned[i].list[1]);
@@ -480,6 +489,14 @@ int main(int argc, char **argv) {
   if (energy && !isRing) {
     energy = 0;
     fprintf(stdout, "*Warning* you can not scale energy for linac beam. Scaling will be disabled.\n");
+  }
+  if (integrationTurns) {
+    if (fixEmity && !noWarning)
+      fprintf(stdout, "*Warning*: -fixEmity=1 is ignored in integration mode.\n");
+  } else {
+    if (!forceCoupling && !noWarning)
+      fprintf(stdout, "*Warning*: -forceCoupling=0 is ignored in non-integration mode. Perhaps -fixEmity=1 will do?\n");
+    forceCoupling = 1;
   }
 
   /***************************************************\
@@ -739,7 +756,7 @@ int main(int argc, char **argv) {
                    pCentral0, emitx, emity, sigmaDelta, sigmaz, particles,
                    emitx0, sigmaDelta0, 2. / taux, 2. / tauy, 2. / taudelta, coupling,
                    s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp, elements,
-                   superperiods, verbosity, isRing, force);
+                   superperiods, verbosity, isRing, forceCoupling);
     } else {
       if (!(xRateVsS = SDDS_Realloc(xRateVsS, sizeof(*xRateVsS) * elements)) ||
           !(yRateVsS = SDDS_Realloc(yRateVsS, sizeof(*yRateVsS) * elements)) ||
@@ -799,6 +816,8 @@ int main(int argc, char **argv) {
       xGuess[12] = elements;
       xGuess[13] = superperiods;
       xGuess[14] = verbosity;
+      xGuess[15] = forceCoupling;
+      xGuess[16] = fixEmity;
       xLowerLimit[2] = pCentral0;
       xLowerLimit[3] = emity;
       xLowerLimit[4] = sigmaz0;
@@ -812,6 +831,8 @@ int main(int argc, char **argv) {
       xLowerLimit[12] = elements;
       xLowerLimit[13] = superperiods;
       xLowerLimit[14] = verbosity;
+      xLowerLimit[15] = forceCoupling;
+      xLowerLimit[16] = fixEmity;
       xUpperLimit[2] = pCentral0;
       xUpperLimit[3] = emity;
       xUpperLimit[4] = sigmaz0;
@@ -825,6 +846,8 @@ int main(int argc, char **argv) {
       xUpperLimit[12] = elements;
       xUpperLimit[13] = superperiods;
       xUpperLimit[14] = verbosity;
+      xUpperLimit[15] = forceCoupling;
+      xUpperLimit[16] = fixEmity;
       disable[0] = 0;
       disable[1] = 0;
       for (i = 2; i < dimensions; i++) {
@@ -840,7 +863,8 @@ int main(int argc, char **argv) {
       /* final answers */
       emitx = xGuess[0];
       sigmaDelta = xGuess[1];
-      emity = emitx * coupling;
+      if (!fixEmity)
+        emity = emitx * coupling;
       sigmaz = sigmaz0 * (sigmaDelta / sigmaDelta0);
       dz *= (sigmaDelta / sigmaDelta0);
     }
@@ -939,9 +963,10 @@ double IBSequations(double *x, long *invalid) {
   /* double pCentral0; */
   double emity, sigmaz, sigmaz0, particles, emitx0,
     sigmaDelta0, taux, tauy, taudelta, coupling;
-  long elements, superperiods, verbosity;
+  long elements, superperiods, verbosity, fixEmity;
   double xGrowthRate, yGrowthRate, zGrowthRate;
   double a, b, c, d, e, f, func1, func2;
+  /* long forceCoupling;   */
 
   emitx = x[0];
   sigmaDelta = x[1];
@@ -957,6 +982,8 @@ double IBSequations(double *x, long *invalid) {
   elements = x[12];
   superperiods = x[13];
   verbosity = x[14];
+  /* forceCoupling = x[15]; */ /* not used */
+  fixEmity = x[16];
 
   /* zap code requires damping rate for horizontal and longitudinal emittances
        which is twice the damping rate for one coordinate.
@@ -1022,7 +1049,12 @@ double IBSequations(double *x, long *invalid) {
        during and after the calculation of emitx.
        */
 
-  emity = emitx * coupling;
+  if (!fixEmity)
+    /* enforce emity/emitx ratio. Otherwise, emity is constant */
+    emity = emitx * coupling;
+  else
+    emity = x[3];
+
   sigmaz = sigmaz0 * (sigmaDelta / sigmaDelta0);
   if (nDistData)
     IBSRateForDistribution(particles, elements, superperiods, verbosity, isRing,
@@ -1069,7 +1101,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
                   double coupling,
                   double *s, double *pCentral, double *betax, double *alphax, double *betay,
                   double *alphay, double *etax, double *etaxp, double *etay, double *etayp, long elements,
-                  long superperiods, long verbosity, long isRing, long force) {
+                  long superperiods, long verbosity, long isRing, long forceCoupling) {
   long turn, slot;
   double dT, gamma, vz, emitz, zRatio;
   double xGrowthRate, yGrowthRate, zGrowthRate, emitz0;
@@ -1107,7 +1139,8 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
     emitx += (xGrowthRate - xSRdampRate) * emitx * dT + xSRdampRate * emitx0 * dT / (1 + coupling);
     emity += (yGrowthRate - ySRdampRate) * emity * dT + ySRdampRate * emitx0 * coupling * dT / (1 + coupling);
     emitz += (zGrowthRate - longitSRdampRate) * emitz * dT + longitSRdampRate * emitz0 * dT;
-    if (force) {
+    if (forceCoupling) {
+      /* Not sure this is right if Jx!=1 */
       emitx = (emitx + emity) / (1 + coupling);
       emity = emitx * coupling;
     }

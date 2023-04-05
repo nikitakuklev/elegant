@@ -97,7 +97,10 @@ are listed in Section \ref{sect:tools}.
 Changes to these tools in this release include
 \begin{itemize}
 \item Fixed a bug in \verb|ibsEmittance| that resulted in the emittance ratio being forced to 1 when the 
-  \verb|emityInput| option was used.
+  \verb|-emityInput| option was used. 
+\item \verb|ibsEmittance| has a new option, \verb|-fixEmity|, that allows forcing the vertical emittance
+  to a constant value when finding equilibrium parameters in a ring.  This was requested by forum user
+  \verb|Seb_Wilkes|.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
