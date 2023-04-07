@@ -717,7 +717,7 @@ typedef struct {
     long update_periodic_twiss_parameters;    /* flag: user must request this */
     long new_data_read;          /* new data has been read for optimization */
     long n_restarts;
-    double restart_worst_term_factor;
+    double restart_reset_threshold, restart_worst_term_factor;
     long restart_worst_terms;
     long matrix_order, *TijkMem, *UijklMem;
     double simplexDivisor, simplexPassRangeFactor;

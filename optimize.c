@@ -113,6 +113,8 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     bombElegant("n_evaluations <= 0", NULL);
   if ((optimization_data->n_restarts = n_restarts) < 0)
     bombElegant("n_restarts < 0", NULL);
+  if ((optimization_data->restart_reset_threshold = restart_reset_threshold)<0)
+    bombElegant("restart_reset_threshold < 0", NULL);
   if ((optimization_data->matrix_order = matrix_order) < 1 ||
       matrix_order > 3)
     bombElegant("matrix_order must be 1, 2, or 3", NULL);
@@ -209,7 +211,7 @@ void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELI
   }
 
   if (optimization_data->method == OPTIM_METHOD_SWARM) /* The n_restarts is used to control n_iterations for particle swarm optimization */
-    optimization_data->n_restarts = n_iterations - 1;
+  optimization_data->n_restarts = n_iterations - 1;
   optimization_data->n_iterations = n_iterations;
   optimization_data->max_no_change = max_no_change;
   optimization_data->population_size = population_size;
@@ -1599,6 +1601,21 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #endif
       for (i = 0; i < variables->n_variables; i++) {
         variables->step[i] = variables->orig_step[i];
+      }
+      if (optimization_data->restart_reset_threshold>0) {
+        /* reset variables back to their original values if they have not changed much (compared to their range) */
+        for (i=0; i<variables->n_variables; i++) {
+          double deltaFrac;
+          deltaFrac = fabs(variables->varied_quan_value[i]-variables->initial_value[i])
+            /fabs(variables->upper_limit[i]-variables->lower_limit[i]);
+          if (deltaFrac!=0 && deltaFrac < optimization_data->restart_reset_threshold) {
+            if (optimization_data->verbose) {
+              printf("Resetting %s to %le (was %le)\n",
+                     variables->varied_quan_name[i], variables->initial_value[i], variables->varied_quan_value[i]);
+            }
+            variables->varied_quan_value[i] = variables->initial_value[i];
+          }
+        }
       }
       if (optimization_data->restart_worst_term_factor != 1 && optimization_data->terms > 1) {
         int64_t imax, imin, iworst;

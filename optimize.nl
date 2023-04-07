@@ -49,6 +49,7 @@ static char *crossover_type[N_CROSSOVER_TYPES] = {
     long n_passes = 2;
     long n_evaluations = 500;
     long n_restarts = 0;
+    double restart_reset_threshold = 0;
     double restart_worst_term_factor = 1;
     long restart_worst_terms = 1;
     long matrix_order = 1;

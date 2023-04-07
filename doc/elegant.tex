@@ -63,6 +63,8 @@ Here is a summary of what's changed since release 2023.1.  Historical change log
 \item The \verb|bpm_centroids| output from the \verb|run_setup| command how includes two columns giving the BPM weights.
 \item The \verb|optimization_variable| command now accepts step sizes as a function of the allowed range, using the
   \verb|fractional_step_size| parameter.
+\item The \verb|optimization_setup| command supports ``resetting'' of optimization variables upon restarts of the
+  algorithm based on a threshold. This helps prune variables that have a small effect on the outcome.
 \item The \verb|loss| output file from \verb|touschek_scatter| now contains several parameters to help more easily identify
   the scattering location. This was inspired by a question from forum user \verb|blanco-garcia|.
 \end{itemize}
@@ -4145,13 +4147,14 @@ variables and covariable may be accessed via names like \verb|<element-name>.<pa
     long n_passes = 2;
     long n_evaluations = 500; 
     long n_restarts = 0;
+    double restart_reset_threshold = 0;
+    double restart_worst_term_factor = 1;
+    long restart_worst_terms = 1;
     long matrix_order = 1;
     STRING log_file = NULL;
     STRING term_log_file = NULL;
     long output_sparsing_factor = 0;
     long balance_terms = 0;
-    double restart_worst_term_factor = 1;
-    long restart_worst_terms = 1;
     long verbose = 1;
     long balance_terms = 0;
     double simplex_divisor = 3;
@@ -4314,6 +4317,13 @@ optimization (simplex only).  This is an additional loop around the
 \verb|n_passes| loop.  The difference is that a restart involves using
 the optimized result but the original step sizes.  It is highly
 recommended that this feature be used if convergence problems are seen.
+
+\item \verb|restart_reset_threshold| --- If positive, then before a restart,
+  the change in each optimization variable relative to the starting value
+  is compared to the difference between the upper and lower limits of the variable.
+  If that ratio is less than the given threshold, the variable's value is set
+  to the starting value. This can help prune small, spurious changes that
+  have little effect on the outcome.
 
 \item \verb|restart_worst_term_factor|, \verb|restart_worst_terms| --- Often
 when there are convergence problems, it is because a few terms are causing 
