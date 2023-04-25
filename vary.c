@@ -101,6 +101,15 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
 
   log_entry("add_varied_element");
 
+  /* process namelist text */
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  if (processNamelist(&vary_element, nltext) == NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
+  if (echoNamelists)
+    print_namelist(stdout, &vary_element);
+  if (disable) return;
+
   if (_control->n_indices <= 0)
     bombElegant("can't vary an element if n_indices==0 in run_control namelist", NULL);
 
@@ -126,14 +135,6 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     trealloc(_control->varied_quan_value, sizeof(*_control->varied_quan_value) * (n_elements_to_vary + 1));
   _control->varied_param = trealloc(_control->varied_param, sizeof(*_control->varied_param) * (n_elements_to_vary + 1));
   _control->flags = trealloc(_control->flags, sizeof(*_control->flags) * (n_elements_to_vary + 1));
-
-  /* process namelist text */
-  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
-  set_print_namelist_flags(0);
-  if (processNamelist(&vary_element, nltext) == NAMELIST_ERROR)
-    bombElegant(NULL, NULL);
-  if (echoNamelists)
-    print_namelist(stdout, &vary_element);
 
   /* check for valid input */
   if (index_number < 0 || index_number >= _control->n_indices)

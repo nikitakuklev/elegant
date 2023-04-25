@@ -30,4 +30,5 @@
     long multiplicative = 0;
     STRING enumeration_file = NULL;
     STRING enumeration_column = NULL;
+    long disable = 0;
 #end
