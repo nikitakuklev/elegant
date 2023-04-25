@@ -67,6 +67,7 @@ Here is a summary of what's changed since release 2023.1.  Historical change log
   algorithm based on a threshold. This helps prune variables that have a small effect on the outcome.
 \item The \verb|loss| output file from \verb|touschek_scatter| now contains several parameters to help more easily identify
   the scattering location. This was inspired by a question from forum user \verb|blanco-garcia|.
+\item The \verb|vary_element| command now has a \verb|disable| parameter. If set to a non-zero value, the command is ignored.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -6375,6 +6376,7 @@ at the beginning of such a name.
     long geometric = 0;
     STRING enumeration_file = NULL;
     STRING enumeration_column = NULL;
+    long disable = 0;
 &end
 \end{verbatim}
 
@@ -6395,6 +6397,7 @@ multipliers to be applied to the predefined value of the parameter in order to o
 the actual initial and final values.
 \item \verb|geometric| --- If nonzero, then variation is geometric rather than 
 arithmetic.
+\item \verb|disable| --- If nonzero, the command is ignored.
 \end{itemize}
 
 \newpage
