@@ -2938,15 +2938,16 @@ void applyIonKicksToElectronBunch(
     double C3;
     double temp3[2];
     //if ((iPass >= 80) && (iBunch > 180) && (ionEffects->sLocation > 900)) {
-    //if ((iPass == 81) && (ionEffects->sLocation < 100)) {
+    //if ((iPass == 0) && (iBunch == 0) && (ionEffects->sLocation < 100)) {
     //if ((iPass%81 == 0) && (iBunch == 0)) {
-    if ((ionSigma[1] > 3e-4) || (iBunch == 1)) {
-      printf("bunch %d \n", iBunch);
+    //if ((ionSigma[1] > 3e-4) || (iBunch == 1)) {
+    if ((iBunch == 0) && (ionEffects->sLocation < 200) && (iPass%10==1)) {
+      printf("pass %d, bunch %d \n", iPass, iBunch);
       C3 =  -e_mks / (Po * me_mks * c_mks * c_mks * 8.85e-12);
-      findex1 = fopen("dens.dat", "w");
-      findex2 = fopen("potential.dat", "w");
-      findex3 = fopen("xkick.dat", "w");
-      findex4 = fopen("ykick.dat", "w");
+      findex1 = fopen("dens.dat", "a");
+      findex2 = fopen("potential.dat", "a");
+      findex3 = fopen("xkick.dat", "a");
+      findex4 = fopen("ykick.dat", "a");
       for(int i=0; i<ionEffects->n2dGridIon[0]; i++) {
 	for(int j=0; j<ionEffects->n2dGridIon[1]; j++) {
 	  fprintf(findex1, "%4.3e \n ", ionEffects->ion2dDensity[i][j]);
@@ -2968,7 +2969,7 @@ void applyIonKicksToElectronBunch(
       double fkick[2], fpart[4], xdelta, ydelta, C1, tempk[2];
       FILE * fcalc, *fgauss;  
 
-      fgauss = fopen("gauss_kick.dat", "w");
+      fgauss = fopen("gauss_kick.dat", "a");
 
       for (int i=0; i<ionEffects->n2dGridIon[0]; i++) {
 	fpart[0] = -ionEffects->span[0] + i*delta[0];
@@ -2987,9 +2988,11 @@ void applyIonKicksToElectronBunch(
       }
 
       fclose(fgauss);
+      printf("output written \n");
 
     }
     */
+    
     
     /* - Compute field and apply kicks to electrons */
     double C2;

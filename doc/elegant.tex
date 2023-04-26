@@ -3114,6 +3114,7 @@ included in the plane in question.
           double ion_histogram_output_s_end = -1;
           long ion_histogram_output_interval = 1000;
           long ion_histogram_min_output_bins = 200;
+          long ion_poisson_bins[2] = {0, 0};
           long disable_until_pass = 0;
           long freeze_ions_until_pass = 0;
           long freeze_electrons_until_pass = 0;
@@ -3167,6 +3168,7 @@ included in the plane in question.
     (L(y, h_{y,1}, a_{y,1}, c_{y,1}) + L(y, h_{y,2}, a_{y,2}, c_{y,2})),
   \end{equation}
   where $L(q, h, a, c) = h/(1 + (q-c)^2/a^2)$.
+  Finally, once can make use of a Poisson solver by setting \verb|field_calculation_method| to \verb|"poisson"|.
 \item \verb|gaussian_ion_range| --- If the default field calculation method is used, gives the range (in beam sigma) over which ions are counted, for calculating the ion-beam kicks.
 \item \verb|distribution_fit_target| --- If the distribution field calculation method is selected, gives the target for the
   fractional deviation of the fit. Smaller numbers will result in long run times.
@@ -3231,7 +3233,8 @@ included in the plane in question.
       \verb|ion_histogram_output| gives the (incomplete) filename.
       \verb|ion_histogram_output_s_start| and \verb|ion_histogram_output_s_end| give limits on the $s$ coordinate of the
       \verb|IONEFFECTS| element. \verb|ion_histogram_output_interval| gives the interval in bunches between output.
-\item \verb|verbosity| --- Larger values result in more output during running. Used for debugging only.
+    \item \verb|verbosity| --- Larger values result in more output during running. Used for debugging only.
+    \item \verb|ion_poisson_bins| --- For the Poisson solver option, the number of bins in x and y.  For optimal speed, these should by the multiple of small primes.
 \end{itemize}
 
 The user is strongly advised to study the ion histograms by using the \verb|ion_histogram_output| parameter to request
@@ -3245,6 +3248,7 @@ sddsplot -column=Position,Charge* run.ionHist -split=page
          -groupby=page -separate=page -graph=line,vary 
 \end{verbatim}
 
+The Poisson solver option makes use of the FFTW library (http://www.fftw.org/).  This library must be installed for the Poisson solver to work.  The Poisson equation is solved over the full \verb|ion_span|.
 
 %\begin{latexonly}
 \newpage

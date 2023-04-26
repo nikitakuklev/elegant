@@ -156,8 +156,14 @@ void poisson_solver(double **vec_rhs, double x_domain, double y_domain, int N_x,
   static double **p2Buffer = NULL;
   if (!p2Created || parametersChanged) {
     p2Buffer = (double**)czarray_2d(sizeof(double), N_x, N_y);
+    fftw_complex *fftwTmp = NULL;
+    int n0 = N_x * (N_y / 2 + 1);
+    fftwTmp = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n0);
+    memcpy(&(fftwTmp[0][0]), &(fftwIn[0][0]), sizeof(fftw_complex)*n0);
     p2 = fftw_plan_dft_c2r_2d(N_x, N_y, fftwIn, &(p2Buffer[0][0]), FFTW_MEASURE);
     p2Created = 1;
+    memcpy(&(fftwIn[0][0]), &(fftwTmp[0][0]), sizeof(fftw_complex)*n0);
+    fftw_free(fftwTmp);
     printf("FFTW_MEASURE plan 2 created\n"); fflush(stdout);
   }
 
