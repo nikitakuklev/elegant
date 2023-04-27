@@ -60,6 +60,9 @@ Here is a summary of what's changed since release 2023.1.  Historical change log
 
 \subsection{New and Modified Commands}
 \begin{itemize}
+\item The \verb|ion_effects| command now supports use of a Poisson solver for computation of fields from ions.
+  This was implemented by J. Calvey (APS), with assistance from Y. P. Sun and M. Borland (both APS). It uses 
+  the widely-available FFTW library.
 \item The \verb|bpm_centroids| output from the \verb|run_setup| command how includes two columns giving the BPM weights.
 \item The \verb|optimization_variable| command now accepts step sizes as a function of the allowed range, using the
   \verb|fractional_step_size| parameter.
@@ -3147,12 +3150,17 @@ included in the plane in question.
 \item \verb|ion_output_interval| --- The interval in bunches between output of ion data.
 \item \verb|field_calculation_method| --- By default, the fields are computed on the
   assumption that the beam and ion distributions are gaussian. This is a good assumption for the beam, but not highly accurate
-  for the ions. More accurate, but slower, methods is sums of two or three gaussians, or sums 
-  of two or three lorentzians, which can be invoked by setting
-  \verb|field_calculation_method| to \verb|"gaussianfit"|, 
-  \verb|"bigaussian"|, \verb|"trigaussian"|, \verb|"bilorentzian"|, or \verb|"trilorentzian"|;
-  these are collectively referred to as ``histogram fitting methods'' below.
-  In the gaussian-fit case, the charge distribution is of the form
+  for the ions. 
+
+  One can make use of a Poisson solver for the ion fields by setting \verb|field_calculation_method| to \verb|"poisson"|;
+  {\em this is presently the recommended method}. The Poisson solver uses the FFTW library and is both more stable
+  and faster than the other methods.
+
+  Older alternatives that, though not as good as the Poisson solver, are still more accurate than the gaussian
+  approximation for ion fields are sums of two or three gaussians, or sums of two or three lorentzians, which can be
+  invoked by setting \verb|field_calculation_method| to \verb|"gaussianfit"|, \verb|"bigaussian"|, \verb|"trigaussian"|,
+  \verb|"bilorentzian"|, or \verb|"trilorentzian"|; these are collectively referred to as ``histogram fitting methods''
+  below.  In the gaussian-fit case, the charge distribution is of the form
   \begin{equation}
     \rho(x, y) = G(x, h_x, \sigma_x, c_x)*G(y, h_y, \sigma_y, c_y),
   \end{equation}
@@ -3168,7 +3176,7 @@ included in the plane in question.
     (L(y, h_{y,1}, a_{y,1}, c_{y,1}) + L(y, h_{y,2}, a_{y,2}, c_{y,2})),
   \end{equation}
   where $L(q, h, a, c) = h/(1 + (q-c)^2/a^2)$.
-  Finally, once can make use of a Poisson solver by setting \verb|field_calculation_method| to \verb|"poisson"|.
+
 \item \verb|gaussian_ion_range| --- If the default field calculation method is used, gives the range (in beam sigma) over which ions are counted, for calculating the ion-beam kicks.
 \item \verb|distribution_fit_target| --- If the distribution field calculation method is selected, gives the target for the
   fractional deviation of the fit. Smaller numbers will result in long run times.
