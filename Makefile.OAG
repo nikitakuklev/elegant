@@ -258,44 +258,45 @@ endif
 
 
 ifdef WIN32
-ifeq ($(MPI),1)
-USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
+ ifeq ($(MPI),1)
+  USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
 		namelist rpnlib mdbmth mdblib lzma \
 		meschach z pgapack
-else
-USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
+ else
+  USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		namelist rpnlib mdbmth mdblib lzma \
 		meschach z  
-endif
-z_DIR = $(EPICS_EXTENSIONS_LIB)
+ endif
+ z_DIR = $(EPICS_EXTENSIONS_LIB)
 
-ifeq ($(MPI),1)
- USR_CFLAGS_WIN32 = -Ic:/MicrosoftMPI/Include
- USR_CPPFLAGS_WIN32 = -Ic:/Microsoft/MPI/Include
- USR_LIBS += msmpi
- ifeq ($(EPICS_HOST_ARCH),win32-x86)
-  msmpi_DIR = c:/MicrosoftMPI/Lib/x86
+ ifeq ($(MPI),1)
+  USR_CFLAGS_WIN32 = -Ic:/MicrosoftMPI/Include
+  USR_CPPFLAGS_WIN32 = -Ic:/Microsoft/MPI/Include
+  USR_LIBS += msmpi
+  ifeq ($(EPICS_HOST_ARCH),win32-x86)
+   msmpi_DIR = c:/MicrosoftMPI/Lib/x86
+  endif
+  ifeq ($(EPICS_HOST_ARCH),windows-x64)
+   msmpi_DIR = c:/MicrosoftMPI/Lib/x64
+  endif
+ else
+  USR_CFLAGS_WIN32 = -nil-
  endif
- ifeq ($(EPICS_HOST_ARCH),windows-x64)
-  msmpi_DIR = c:/MicrosoftMPI/Lib/x64
- endif
+ 
 else
- USR_CFLAGS_WIN32 = -nil-
-endif
-else
-ifeq ($(MPI),1)
-USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
+ ifeq ($(MPI),1)
+  USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
 		namelist rpnlib mdbmth mdblib lzma \
 		meschach pgapack 
-else
-USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
+ else
+  USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		namelist rpnlib mdbmth mdblib lzma \
 		meschach 
-endif
-SYS_PROD_LIBS_DEFAULT += z fftw3
-SYS_PROD_LIBS_Linux += z fftw3
-SYS_PROD_LIBS_solaris += z rt 	
-#USR_LDFLAGS+= -lfftw3 -lm 
+ endif
+ SYS_PROD_LIBS_DEFAULT += z fftw3
+ SYS_PROD_LIBS_Linux += z fftw3
+ SYS_PROD_LIBS_solaris += z rt 	
+ #USR_LDFLAGS+= -lfftw3 -lm 
 endif
 
 MAKE = make
@@ -324,7 +325,7 @@ endif
 INTEL_MKL=0
 ifeq ($(EPICS_HOST_ARCH),linux-phi)
  INTEL_MKL_LIB = $(MKLROOT)/lib/intel64
- INTEL_MKL_INCLUDE = $(MKLROOT)/include/
+ INTEL_MKL_INCLUDE = $(MKLROOT)/include
  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  ifneq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL = 1
@@ -332,36 +333,36 @@ ifeq ($(EPICS_HOST_ARCH),linux-phi)
 endif
 ifeq ($(EPICS_HOST_ARCH),linux-x86_64)
  INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.3.222/linux/mkl/lib/intel64
- INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.3.222/linux/mkl/include/
+ INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.3.222/linux/mkl/include
  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  ifeq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/include/
+  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/include
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  endif
  ifeq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL_LIB = /clhome/asd_tools/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /clhome/asd_tools/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/include/
+  INTEL_MKL_INCLUDE = /clhome/asd_tools/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/include
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  endif
  ifeq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/include/
+  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/include
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  endif
  ifeq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/include/
+  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/include
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  endif
  ifeq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL_LIB = /opt/intel/composer_xe_2015.1.133/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /opt/intel/composer_xe_2015.1.133/mkl/include/
+  INTEL_MKL_INCLUDE = /opt/intel/composer_xe_2015.1.133/mkl/include
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  endif
  ifeq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL_LIB = $(MKLROOT)/lib/intel64
-  INTEL_MKL_INCLUDE = $(MKLROOT)/include/
+  INTEL_MKL_INCLUDE = $(MKLROOT)/include
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  endif
  ifneq ($(INTEL_MKL_FOUND), 0)
@@ -386,7 +387,7 @@ ifeq ($(EPICS_HOST_ARCH),windows-x64)
   MKLROOT2 = $(subst \,/,$(MKLROOT))
   MKLROOT2 := $(subst Program Files (x86),Program\ Files\ \(x86\),$(MKLROOT2))
   INTEL_MKL_LIB = $(MKLROOT2)/lib/intel64
-  INTEL_MKL_INCLUDE = $(MKLROOT2)/include/
+  INTEL_MKL_INCLUDE = $(MKLROOT2)/include
   INTEL_MKL = 1
  endif
 endif
@@ -395,7 +396,7 @@ ifeq ($(EPICS_HOST_ARCH),win32-x86)
   MKLROOT2 = $(subst \,/,$(MKLROOT))
   MKLROOT2 := $(subst Program Files (x86),Program\ Files\ \(x86\),$(MKLROOT2))
   INTEL_MKL_LIB = $(MKLROOT2)/lib/ia32
-  INTEL_MKL_INCLUDE = $(MKLROOT2)/include/
+  INTEL_MKL_INCLUDE = $(MKLROOT2)/include
   INTEL_MKL = 1
  endif
 endif
@@ -521,12 +522,12 @@ ifneq ($(INTEL_MKL), 0)
    OP_SYS_LDLIBS += -mkl=sequential
   else
    ifeq ($(EPICS_HOST_ARCH),windows-x64)
-    USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
+    USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE) -I$(INTEL_MKL_INCLUDE)/fftw
     elegant_LDFLAGS_WIN32 +=  mkl_rt.lib
     Pelegant_LDFLAGS_WIN32 +=  mkl_rt.lib
    else
     ifeq ($(EPICS_HOST_ARCH),win32-x86)
-       USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
+       USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE) -I$(INTEL_MKL_INCLUDE)/fftw
        elegant_LDFLAGS_WIN32 +=  mkl_rt.lib
        Pelegant_LDFLAGS_WIN32 +=  mkl_rt.lib
     else
