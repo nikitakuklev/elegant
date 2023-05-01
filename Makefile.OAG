@@ -134,17 +134,16 @@ SVN_VERSION=unknown
 endif
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
-		-DIEEE_MATH -DzLib -DWL=32 -DSVN_VERSION=\"$(SVN_VERSION)\" 
+		-DIEEE_MATH -DzLib -DWL=32 -DSVN_VERSION=\"$(SVN_VERSION)\"
 #USR_CFLAGS += CHECK_BEAM_STRUCTURE=1
-USR_CPPFLAGS = 	$(USR_CFLAGS)
+USR_CXXFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
+		-DIEEE_MATH -DzLib -DWL=32 -DSVN_VERSION=\"$(SVN_VERSION)\"
 
-USR_CFLAGS_Linux = -DMINIMIZE_MEMORY -D_GNU_SOURCE -std=c11 
-#USR_CFLAGS_Linux = -I/lib/modules/`uname -r`/build/include -DMINIMIZE_MEMORY -D_GNU_SOURCE 
-USR_CPPFLAGS_Linux = -DMINIMIZE_MEMORY -D_GNU_SOURCE 
+USR_CFLAGS_Linux =   -DMINIMIZE_MEMORY -D_GNU_SOURCE -std=c11
+USR_CXXFLAGS_Linux = -DMINIMIZE_MEMORY -D_GNU_SOURCE
+USR_CFLAGS_DEFAULT +=   -DUNIX -DMINIMIZE_MEMORY
+USR_CXXFLAGS_DEFAULT += -DUNIX -DMINIMIZE_MEMORY
 USR_LDFLAGS_Linux = -fopenmp
-
-USR_CFLAGS_DEFAULT += -DUNIX -DMINIMIZE_MEMORY
-USR_CPPFLAGS_DEFAULT += -DUNIX -DMINIMIZE_MEMORY
 
 ifeq ($(LYNCEANTECH),1) 
         USR_CFLAGS += -DLYNCEANTECH
@@ -152,10 +151,10 @@ endif
 
 
 ifeq ($(EPICS_HOST_ARCH),win32-x86-mingw)
-regexCode_CPPFLAGS+= -std=c++11
+regexCode_CXXFLAGS+= -std=c++11
 endif
 ifeq ($(EPICS_HOST_ARCH),windows-x64-mingw)
-regexCode_CPPFLAGS+= -std=c++11
+regexCode_CXXFLAGS+= -std=c++11
 endif
 
 #Look for private version of GSL used here at APS
@@ -271,7 +270,7 @@ ifdef WIN32
 
  ifeq ($(MPI),1)
   USR_CFLAGS_WIN32 = -Ic:/MicrosoftMPI/Include
-  USR_CPPFLAGS_WIN32 = -Ic:/Microsoft/MPI/Include
+  USR_CXXFLAGS_WIN32 = -Ic:/Microsoft/MPI/Include
   USR_LIBS += msmpi
   ifeq ($(EPICS_HOST_ARCH),win32-x86)
    msmpi_DIR = c:/MicrosoftMPI/Lib/x86
@@ -332,52 +331,37 @@ ifeq ($(EPICS_HOST_ARCH),linux-phi)
  endif
 endif
 ifeq ($(EPICS_HOST_ARCH),linux-x86_64)
- INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.3.222/linux/mkl/lib/intel64
- INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.3.222/linux/mkl/include
+ INTEL_MKL_LIB = /usr/local/oag/3rdParty/intel/oneapi/mkl/latest/lib/intel64
+ INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/intel/oneapi/mkl/latest/include/
  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  ifeq ($(INTEL_MKL_FOUND), 0)
-  INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/include
-  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
- endif
- ifeq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL_LIB = /clhome/asd_tools/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /clhome/asd_tools/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/include
-  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
- endif
- ifeq ($(INTEL_MKL_FOUND), 0)
-  INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/include
-  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
- endif
- ifeq ($(INTEL_MKL_FOUND), 0)
-  INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/include
+  INTEL_MKL_INCLUDE = /clhome/asd_tools/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/include/
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  endif
  ifeq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL_LIB = /opt/intel/composer_xe_2015.1.133/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /opt/intel/composer_xe_2015.1.133/mkl/include
+  INTEL_MKL_INCLUDE = /opt/intel/composer_xe_2015.1.133/mkl/include/
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  endif
  ifeq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL_LIB = $(MKLROOT)/lib/intel64
-  INTEL_MKL_INCLUDE = $(MKLROOT)/include
+  INTEL_MKL_INCLUDE = $(MKLROOT)/include/
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
+ endif
+ ifeq ($(INTEL_MKL_FOUND), 0)
+  INTEL_MKL_LIB = /usr/lib/x86_64-linux-gnu
+  INTEL_MKL_INCLUDE = /usr/include/mkl
+  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)/libmkl_core.a))
  endif
  ifneq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL = 1
  endif
 endif
 ifeq ($(EPICS_HOST_ARCH),linux-x86)
- INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/lib/ia32
- INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/include/
+ INTEL_MKL_LIB = /usr/local/oag/3rdParty/intel/oneapi/mkl/latest/lib/ia32
+ INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/intel/oneapi/mkl/latest/include/
  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
- ifeq ($(INTEL_MKL_FOUND), 0)
-  INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/lib/ia32
-  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/include/
-  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
- endif
  ifneq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL = 1
  endif
@@ -442,7 +426,7 @@ endif
 
 ifneq ($(ESSL), 0)
  USR_CFLAGS += -DESSL -I/soft/libraries/essl/current/include 
- USR_CPPFLAGS += -DESSL -I/soft/libraries/essl/current/include 
+ USR_CXXFLAGS += -DESSL -I/soft/libraries/essl/current/include 
 endif
 
 
@@ -470,12 +454,12 @@ endif
 
 ifneq ($(SUNPERF), 0)
  USR_CFLAGS += -DSUNPERF -dalign
- USR_CPPFLAGS += -DSUNPERF -dalign
+ USR_CXXFLAGS += -DSUNPERF -dalign
  OP_SYS_LDLIBS += -xlic_lib=sunperf
 else
  ifneq ($(LAPACK), 0)
   USR_CFLAGS += -DHAVE_LAPACK -DLAPACK
-  USR_CPPFLAGS += -DHAVE_LAPACK -DLAPACK
+  USR_CXXFLAGS += -DHAVE_LAPACK -DLAPACK
   ifeq ($(OS_CLASS),Linux)
    ifneq (cori, $(findstring cori, $(HOSTNAME)))
     ifneq (edison, $(findstring edison, $(HOSTNAME)))
@@ -504,9 +488,9 @@ else
   endif #ifeq ($(OS_CLASS),Linux)
   ifeq ($(OS_CLASS),solaris)
    OPT_CFLAGS_YES=
-   OPT_CPPFLAGS_YES=
+   OPT_CXXFLAGS_YES=
    USR_CFLAGS += -dalign -xtarget=ultra
-   USR_CPPFLAGS += -dalign -xtarget=ultra
+   USR_CXXFLAGS += -dalign -xtarget=ultra
    OP_SYS_LDLIBS += -L/usr/local/oag/lib -llapack -lblas -lF77
   endif #ifeq ($(OS_CLASS),solaris)
  endif #ifneq ($(LAPACK), 0)
@@ -514,24 +498,24 @@ endif
 
 ifneq ($(INTEL_MKL), 0)
  ifeq (cori, $(findstring cori, $(HOSTNAME)))
-  USR_CPPFLAGS += -DMKL -mkl=sequential
+  USR_CXXFLAGS += -DMKL -mkl=sequential
   OP_SYS_LDLIBS += -mkl=sequential
  else
   ifeq (edison, $(findstring edison, $(HOSTNAME)))
-   USR_CPPFLAGS += -DMKL -mkl=sequential
+   USR_CXXFLAGS += -DMKL -mkl=sequential
    OP_SYS_LDLIBS += -mkl=sequential
   else
    ifeq ($(EPICS_HOST_ARCH),windows-x64)
-    USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE) -I$(INTEL_MKL_INCLUDE)/fftw
+    USR_CXXFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE) -I$(INTEL_MKL_INCLUDE)/fftw
     elegant_LDFLAGS_WIN32 +=  mkl_rt.lib
     Pelegant_LDFLAGS_WIN32 +=  mkl_rt.lib
    else
     ifeq ($(EPICS_HOST_ARCH),win32-x86)
-       USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE) -I$(INTEL_MKL_INCLUDE)/fftw
+       USR_CXXFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE) -I$(INTEL_MKL_INCLUDE)/fftw
        elegant_LDFLAGS_WIN32 +=  mkl_rt.lib
        Pelegant_LDFLAGS_WIN32 +=  mkl_rt.lib
     else
-     USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
+     USR_CXXFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
      OP_SYS_LDLIBS += -Wl,--start-group $(INTEL_MKL_LIB)/libmkl_intel_lp64.a $(INTEL_MKL_LIB)/libmkl_sequential.a $(INTEL_MKL_LIB)/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl
     endif
    endif
@@ -541,12 +525,12 @@ else
  # section on CLAPACK
  ifneq ($(CLAPACK), 0)
   ifdef WIN32
-   USR_CPPFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE)
+   USR_CXXFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE)
    USR_LDFLAGS += /nodefaultlib:libcmt $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/clapack.lib $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/BLAS.lib $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/libf2c.lib
   else
    ifeq ($(OS_CLASS),solaris)
     # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
-    USR_CPPFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE) -I$(ATLAS_INCLUDE)
+    USR_CXXFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE) -I$(ATLAS_INCLUDE)
     USR_LIBS += lapack cblaswr cblas atlas F77 I77 
     lapack_DIR = $(CLAPACK_LIB)
     cblaswr_DIR = $(CLAPACK_LIB)
@@ -556,7 +540,7 @@ else
     I77_DIR = $(F2C_LIB)
    else
     # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
-    USR_CPPFLAGS += -DCLAPACK -I$(ATLAS_INCLUDE)
+    USR_CXXFLAGS += -DCLAPACK -I$(ATLAS_INCLUDE)
     USR_LIBS += lapack ptcblas ptf77blas atlas 
     #USR_LIBS += lapack cblas f77blas atlas 
     lapack_DIR = $(ATLAS_LIB)
@@ -571,7 +555,7 @@ else
   # section on LAPACK
   ifneq ($(LAPACK), 0)
    ifdef WIN32
-    USR_CPPFLAGS += -DLAPACK -I$(LAPACK_INCLUDE)
+    USR_CXXFLAGS += -DLAPACK -I$(LAPACK_INCLUDE)
     USR_LIBS += lapack
    else
     # there is no lapack header file
@@ -580,13 +564,13 @@ else
       OP_SYS_LDLIBS += -llapack -lblas 
      endif
     endif
-    USR_CPPFLAGS += -DLAPACK 
+    USR_CXXFLAGS += -DLAPACK 
    endif
   else
    # SUNPERF choice is placed last since it may be set to 1
    # because of the existence of the library.
    ifneq ($(SUNPERF), 0)
-    USR_CPPFLAGS += -DSUNPERF
+    USR_CXXFLAGS += -DSUNPERF
     OP_SYS_LDLIBS += -xlic_lib=sunperf -lsunperf
     OP_SYS_LDFLAGS = $(COMPILER_LDFLAGS) -z combreloc -z lazyload
    endif
