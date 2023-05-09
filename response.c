@@ -109,10 +109,10 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
   if (correct->method==COUPLED_CORRECTION) {
     if (response[0])
       setup_response_output(&xRespOutput, response[0], correction_mode[correct->mode], run, beamline->name,
-                            correct->CMFx, &correct->SLx, 0, 0, 0, unitsCode);
+                            correct->CMFx, &correct->SLx, 2, 2, 0, unitsCode);
     if (inverse[0])
       setup_response_output(&xInvRespOutput, inverse[0], correction_mode[correct->mode], run, beamline->name,
-                            correct->CMFx, &correct->SLx, 0, 0, 1, unitsCode);
+                            correct->CMFx, &correct->SLx, 2, 2, 1, unitsCode);
   } else {
     if (response[0])
       setup_response_output(&xRespOutput, response[0], correction_mode[correct->mode], run, beamline->name,
@@ -146,9 +146,15 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
   static char s[256], t[256], units[32];
   long i, j, *unique_name, sl_index;
   long matrixType;
-  char *matrixTypeName[4] = {"horizontal", "vertical", "v->h", "h->v"};
+  char *matrixTypeName[5] = {"horizontal", "vertical", "v->h", "h->v", "coupled"};
 
-  matrixType = bpmPlane == correctorPlane ? bpmPlane : 2 + bpmPlane;
+  if (bpmPlane==2) {
+    /* two-plane BPM data */
+    if (correctorPlane!=2)
+      bombElegant("Coding error: setup_response_output has two-plane BPM data by one-plane corrector data", NULL);
+    matrixType = 4;
+  } else
+    matrixType = bpmPlane == correctorPlane ? bpmPlane : 2 + bpmPlane;
 
   log_entry("setup_response_output");
   filename = compose_filename(filename, run->rootname);
