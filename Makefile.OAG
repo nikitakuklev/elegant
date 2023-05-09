@@ -499,23 +499,28 @@ endif
 ifneq ($(INTEL_MKL), 0)
  ifeq (cori, $(findstring cori, $(HOSTNAME)))
   USR_CXXFLAGS += -DMKL -mkl=sequential
+  USR_CFLAGS += -DMKL -mkl=sequential
   OP_SYS_LDLIBS += -mkl=sequential
  else
   ifeq (edison, $(findstring edison, $(HOSTNAME)))
    USR_CXXFLAGS += -DMKL -mkl=sequential
+   USR_CFLAGS += -DMKL -mkl=sequential
    OP_SYS_LDLIBS += -mkl=sequential
   else
    ifeq ($(EPICS_HOST_ARCH),windows-x64)
     USR_CXXFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE) -I$(INTEL_MKL_INCLUDE)/fftw
+    USR_CFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE) -I$(INTEL_MKL_INCLUDE)/fftw
     elegant_LDFLAGS_WIN32 +=  mkl_rt.lib
     Pelegant_LDFLAGS_WIN32 +=  mkl_rt.lib
    else
     ifeq ($(EPICS_HOST_ARCH),win32-x86)
        USR_CXXFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE) -I$(INTEL_MKL_INCLUDE)/fftw
+       USR_CFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE) -I$(INTEL_MKL_INCLUDE)/fftw
        elegant_LDFLAGS_WIN32 +=  mkl_rt.lib
        Pelegant_LDFLAGS_WIN32 +=  mkl_rt.lib
     else
      USR_CXXFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
+     USR_CFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
      OP_SYS_LDLIBS += -Wl,--start-group $(INTEL_MKL_LIB)/libmkl_intel_lp64.a $(INTEL_MKL_LIB)/libmkl_sequential.a $(INTEL_MKL_LIB)/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl
     endif
    endif
@@ -526,11 +531,13 @@ else
  ifneq ($(CLAPACK), 0)
   ifdef WIN32
    USR_CXXFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE)
+   USR_CFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE)
    USR_LDFLAGS += /nodefaultlib:libcmt $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/clapack.lib $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/BLAS.lib $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/libf2c.lib
   else
    ifeq ($(OS_CLASS),solaris)
     # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
     USR_CXXFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE) -I$(ATLAS_INCLUDE)
+    USR_CFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE) -I$(ATLAS_INCLUDE)
     USR_LIBS += lapack cblaswr cblas atlas F77 I77 
     lapack_DIR = $(CLAPACK_LIB)
     cblaswr_DIR = $(CLAPACK_LIB)
@@ -541,6 +548,7 @@ else
    else
     # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
     USR_CXXFLAGS += -DCLAPACK -I$(ATLAS_INCLUDE)
+    USR_CFLAGS += -DCLAPACK -I$(ATLAS_INCLUDE)
     USR_LIBS += lapack ptcblas ptf77blas atlas 
     #USR_LIBS += lapack cblas f77blas atlas 
     lapack_DIR = $(ATLAS_LIB)
@@ -556,6 +564,7 @@ else
   ifneq ($(LAPACK), 0)
    ifdef WIN32
     USR_CXXFLAGS += -DLAPACK -I$(LAPACK_INCLUDE)
+    USR_CFLAGS += -DLAPACK -I$(LAPACK_INCLUDE)
     USR_LIBS += lapack
    else
     # there is no lapack header file
@@ -565,12 +574,14 @@ else
      endif
     endif
     USR_CXXFLAGS += -DLAPACK 
+    USR_CFLAGS += -DLAPACK 
    endif
   else
    # SUNPERF choice is placed last since it may be set to 1
    # because of the existence of the library.
    ifneq ($(SUNPERF), 0)
     USR_CXXFLAGS += -DSUNPERF
+    USR_CFLAGS += -DSUNPERF
     OP_SYS_LDLIBS += -xlic_lib=sunperf -lsunperf
     OP_SYS_LDFLAGS = $(COMPILER_LDFLAGS) -z combreloc -z lazyload
    endif
