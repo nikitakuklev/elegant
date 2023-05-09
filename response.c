@@ -106,27 +106,36 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
     return;
 #endif
 
-  if (response[0])
-    setup_response_output(&xRespOutput, response[0], correction_mode[correct->mode], run, beamline->name,
-                          correct->CMFx, &correct->SLx, 0, 0, 0, unitsCode);
-  if (response[1])
-    setup_response_output(&yRespOutput, response[1], correction_mode[correct->mode], run, beamline->name,
-                          correct->CMFy, &correct->SLy, 1, 1, 0, unitsCode);
-
-  if (response[2])
-    setup_response_output(&yxRespOutput, response[2], correction_mode[correct->mode], run, beamline->name,
-                          &CMyx, &correct->SLx, 1, 0, 0, unitsCode);
-  if (response[3])
-    setup_response_output(&xyRespOutput, response[3], correction_mode[correct->mode], run, beamline->name,
-                          &CMxy, &correct->SLy, 0, 1, 0, unitsCode);
-
-  if (inverse[0])
-    setup_response_output(&xInvRespOutput, inverse[0], correction_mode[correct->mode], run, beamline->name,
-                          correct->CMFx, &correct->SLx, 0, 0, 1, unitsCode);
-  if (inverse[1])
-    setup_response_output(&yInvRespOutput, inverse[1], correction_mode[correct->mode], run, beamline->name,
-                          correct->CMFy, &correct->SLy, 1, 1, 1, unitsCode);
-
+  if (correct->method==COUPLED_CORRECTION) {
+    if (response[0])
+      setup_response_output(&xRespOutput, response[0], correction_mode[correct->mode], run, beamline->name,
+                            correct->CMFx, &correct->SLx, 0, 0, 0, unitsCode);
+    if (inverse[0])
+      setup_response_output(&xInvRespOutput, inverse[0], correction_mode[correct->mode], run, beamline->name,
+                            correct->CMFx, &correct->SLx, 0, 0, 1, unitsCode);
+  } else {
+    if (response[0])
+      setup_response_output(&xRespOutput, response[0], correction_mode[correct->mode], run, beamline->name,
+                            correct->CMFx, &correct->SLx, 0, 0, 0, unitsCode);
+    if (response[1])
+      setup_response_output(&yRespOutput, response[1], correction_mode[correct->mode], run, beamline->name,
+                            correct->CMFy, &correct->SLy, 1, 1, 0, unitsCode);
+    
+    if (response[2])
+      setup_response_output(&yxRespOutput, response[2], correction_mode[correct->mode], run, beamline->name,
+                            &CMyx, &correct->SLx, 1, 0, 0, unitsCode);
+    if (response[3])
+      setup_response_output(&xyRespOutput, response[3], correction_mode[correct->mode], run, beamline->name,
+                            &CMxy, &correct->SLy, 0, 1, 0, unitsCode);
+    
+    if (inverse[0])
+      setup_response_output(&xInvRespOutput, inverse[0], correction_mode[correct->mode], run, beamline->name,
+                            correct->CMFx, &correct->SLx, 0, 0, 1, unitsCode);
+    if (inverse[1])
+      setup_response_output(&yInvRespOutput, inverse[1], correction_mode[correct->mode], run, beamline->name,
+                            correct->CMFy, &correct->SLy, 1, 1, 1, unitsCode);
+  }
+  
   log_exit("setup_correction_matrix_output");
 }
 
@@ -295,30 +304,37 @@ void update_response(RUN *run, LINE_LIST *beamline, CORRECTION *correct) {
   Ty = correct->CMFy->T;
   correct->CMFy->C = correct->CMFy->T = NULL;
 
-  if (correct->mode == TRAJECTORY_CORRECTION) {
-    compute_trajcor_matrices(correct->CMFx, &correct->SLx, 0, run, beamline, COMPUTE_RESPONSE_SILENT);
-    compute_trajcor_matrices(correct->CMFy, &correct->SLy, 2, run, beamline, COMPUTE_RESPONSE_SILENT);
-    if (coupled) {
-      compute_trajcor_matrices(&CMxy, &correct->SLy, 0, run, beamline, COMPUTE_RESPONSE_SILENT);
-      compute_trajcor_matrices(&CMyx, &correct->SLx, 2, run, beamline, COMPUTE_RESPONSE_SILENT);
-    }
-  } else if (correct->mode == ORBIT_CORRECTION) {
-    if (!use_response_from_computed_orbits) {
-      compute_orbcor_matrices(correct->CMFx, &correct->SLx, 0, run, beamline, COMPUTE_RESPONSE_SILENT | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0));
-      compute_orbcor_matrices(correct->CMFy, &correct->SLy, 2, run, beamline, COMPUTE_RESPONSE_SILENT | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0));
-    } else {
-      compute_orbcor_matrices1(correct->CMFx, &correct->SLx, 0, run, beamline, COMPUTE_RESPONSE_SILENT | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0), correct);
-      compute_orbcor_matrices1(correct->CMFy, &correct->SLy, 2, run, beamline, COMPUTE_RESPONSE_SILENT | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0), correct);
-    }
-    if (coupled) {
-      compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline,
-                               COMPUTE_RESPONSE_VERBOSE | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0), correct);
-      compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline,
-                               COMPUTE_RESPONSE_VERBOSE | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0), correct);
-    }
-  } else
-    bombElegant("bad correction mode (update_response)", NULL);
-
+  if (correct->method == COUPLED_CORRECTION) {
+    /* The correction matrix is coupled */
+    if (correct->mode != TRAJECTORY_CORRECTION) 
+      bombElegant("correction method is COUPLED_CORRECTION but mode is not TRAJECTORY_CORRECTION", NULL);
+    compute_coupled_trajcor_matrices(correct->CMFx, &correct->SLx, run, beamline, COMPUTE_RESPONSE_SILENT);
+  } else {
+    if (correct->mode == TRAJECTORY_CORRECTION) {
+      compute_trajcor_matrices(correct->CMFx, &correct->SLx, 0, run, beamline, COMPUTE_RESPONSE_SILENT);
+      compute_trajcor_matrices(correct->CMFy, &correct->SLy, 2, run, beamline, COMPUTE_RESPONSE_SILENT);
+      if (coupled) {
+        compute_trajcor_matrices(&CMxy, &correct->SLy, 0, run, beamline, COMPUTE_RESPONSE_SILENT);
+        compute_trajcor_matrices(&CMyx, &correct->SLx, 2, run, beamline, COMPUTE_RESPONSE_SILENT);
+      }
+    } else if (correct->mode == ORBIT_CORRECTION) {
+      if (!use_response_from_computed_orbits) {
+        compute_orbcor_matrices(correct->CMFx, &correct->SLx, 0, run, beamline, COMPUTE_RESPONSE_SILENT | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0));
+        compute_orbcor_matrices(correct->CMFy, &correct->SLy, 2, run, beamline, COMPUTE_RESPONSE_SILENT | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0));
+      } else {
+        compute_orbcor_matrices1(correct->CMFx, &correct->SLx, 0, run, beamline, COMPUTE_RESPONSE_SILENT | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0), correct);
+        compute_orbcor_matrices1(correct->CMFy, &correct->SLy, 2, run, beamline, COMPUTE_RESPONSE_SILENT | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0), correct);
+      }
+      if (coupled) {
+        compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline,
+                                 COMPUTE_RESPONSE_VERBOSE | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0), correct);
+        compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline,
+                                 COMPUTE_RESPONSE_VERBOSE | (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0), correct);
+      }
+    } else
+      bombElegant("bad correction mode (update_response)", NULL);
+  }
+  
   /* copy matrices back to the correction structure and free memory */
   matrix_free(correct->CMFx->C);
   matrix_free(correct->CMFx->T);
@@ -352,69 +368,78 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
   Ty = correct->CMFy->T;
   correct->CMFy->C = correct->CMFy->T = NULL;
 
-  if (correct->mode == TRAJECTORY_CORRECTION) {
-    printf("Computing trajectory correction matrices for output.\n");
-    fflush(stdout);
-    compute_trajcor_matrices(correct->CMFx, &correct->SLx, 0, run, beamline,
-                             (!(inverse[0] == NULL || SDDS_StringIsBlank(inverse[0])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT);
-    compute_trajcor_matrices(correct->CMFy, &correct->SLy, 2, run, beamline,
-                             (!(inverse[1] == NULL || SDDS_StringIsBlank(inverse[1])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT);
-
-    if (coupled) {
-      compute_trajcor_matrices(&CMxy, &correct->SLy, 0, run, beamline, COMPUTE_RESPONSE_SILENT);
-      compute_trajcor_matrices(&CMyx, &correct->SLx, 2, run, beamline, COMPUTE_RESPONSE_SILENT);
-    }
-  } else if (correct->mode == ORBIT_CORRECTION) {
-    if (!use_response_from_computed_orbits) {
-      printf("Computing orbit correction matrices for output using beta functions, with %s length.\n",
-             fixed_length ? "fixed" : "variable");
+  if (correct->method == COUPLED_CORRECTION) {
+    /* The correction matrix is coupled */
+    if (correct->mode != TRAJECTORY_CORRECTION) 
+      bombElegant("correction method is COUPLED_CORRECTION but mode is not TRAJECTORY_CORRECTION", NULL);
+    compute_coupled_trajcor_matrices(correct->CMFx, &correct->SLx, run, beamline,
+                                     (!(inverse[0] == NULL || SDDS_StringIsBlank(inverse[0])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT);
+  } else {
+    if (correct->mode == TRAJECTORY_CORRECTION) {
+      printf("Computing coupled trajectory correction matrices for output.\n");
       fflush(stdout);
-      compute_orbcor_matrices(correct->CMFx, &correct->SLx, 0, run, beamline,
-                              (!(inverse[0] == NULL || SDDS_StringIsBlank(inverse[0])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT |
+      compute_trajcor_matrices(correct->CMFx, &correct->SLx, 0, run, beamline,
+                               (!(inverse[0] == NULL || SDDS_StringIsBlank(inverse[0])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT);
+      compute_trajcor_matrices(correct->CMFy, &correct->SLy, 2, run, beamline,
+                               (!(inverse[1] == NULL || SDDS_StringIsBlank(inverse[1])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT);
+      
+      if (coupled) {
+        compute_trajcor_matrices(&CMxy, &correct->SLy, 0, run, beamline, COMPUTE_RESPONSE_SILENT);
+        compute_trajcor_matrices(&CMyx, &correct->SLx, 2, run, beamline, COMPUTE_RESPONSE_SILENT);
+      }
+    } else if (correct->mode == ORBIT_CORRECTION) {
+      if (!use_response_from_computed_orbits) {
+        printf("Computing orbit correction matrices for output using beta functions, with %s length.\n",
+               fixed_length ? "fixed" : "variable");
+        fflush(stdout);
+        compute_orbcor_matrices(correct->CMFx, &correct->SLx, 0, run, beamline,
+                                (!(inverse[0] == NULL || SDDS_StringIsBlank(inverse[0])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT |
                                 (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0));
-      compute_orbcor_matrices(correct->CMFy, &correct->SLy, 2, run, beamline,
-                              (!(inverse[1] == NULL || SDDS_StringIsBlank(inverse[1])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT |
+        compute_orbcor_matrices(correct->CMFy, &correct->SLy, 2, run, beamline,
+                                (!(inverse[1] == NULL || SDDS_StringIsBlank(inverse[1])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT |
                                 (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0));
-    } else {
-      printf("Computing orbit correction matrices for output using closed orbits, with %s length.\n",
-             fixed_length ? "fixed" : "variable");
-      fflush(stdout);
-      compute_orbcor_matrices1(correct->CMFx, &correct->SLx, 0, run, beamline,
-                               (!(inverse[0] == NULL || SDDS_StringIsBlank(inverse[0])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT |
+      } else {
+        printf("Computing orbit correction matrices for output using closed orbits, with %s length.\n",
+               fixed_length ? "fixed" : "variable");
+        fflush(stdout);
+        compute_orbcor_matrices1(correct->CMFx, &correct->SLx, 0, run, beamline,
+                                 (!(inverse[0] == NULL || SDDS_StringIsBlank(inverse[0])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT |
                                  (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0),
-                               correct);
-      compute_orbcor_matrices1(correct->CMFy, &correct->SLy, 2, run, beamline,
-                               (!(inverse[1] == NULL || SDDS_StringIsBlank(inverse[1])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT |
+                                 correct);
+        compute_orbcor_matrices1(correct->CMFy, &correct->SLy, 2, run, beamline,
+                                 (!(inverse[1] == NULL || SDDS_StringIsBlank(inverse[1])) ? COMPUTE_RESPONSE_INVERT : 0) | COMPUTE_RESPONSE_SILENT |
                                  (fixed_length ? COMPUTE_RESPONSE_FIXEDLENGTH : 0),
-                               correct);
-    }
-    if (coupled) {
-      printf("Computing coupled orbit correction matrices for output using closed orbits, with %s length.\n",
-             fixed_length ? "fixed" : "variable");
-      fflush(stdout);
-      compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline, COMPUTE_RESPONSE_VERBOSE, correct);
-      compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline, COMPUTE_RESPONSE_VERBOSE, correct);
-    }
-  } else
-    bombElegant("bad correction mode (run_response_output)", NULL);
-
+                                 correct);
+      }
+      if (coupled) {
+        printf("Computing coupled orbit correction matrices for output using closed orbits, with %s length.\n",
+               fixed_length ? "fixed" : "variable");
+        fflush(stdout);
+        compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline, COMPUTE_RESPONSE_VERBOSE, correct);
+        compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline, COMPUTE_RESPONSE_VERBOSE, correct);
+      }
+    } else
+      bombElegant("bad correction mode (run_response_output)", NULL);
+  }
+  
 #if USE_MPI
   if (!isSlave) {
 #endif
 
     if (response[0])
       do_response_output(&xRespOutput, correct->CMFx, &correct->SLx, 0, 0, unitsCode, tune_corrected);
-    if (response[1])
-      do_response_output(&yRespOutput, correct->CMFy, &correct->SLy, 1, 0, unitsCode, tune_corrected);
-    if (response[2])
-      do_response_output(&yxRespOutput, &CMyx, &correct->SLx, 0, 0, unitsCode, tune_corrected);
-    if (response[3])
-      do_response_output(&xyRespOutput, &CMxy, &correct->SLy, 1, 0, unitsCode, tune_corrected);
     if (inverse[0])
       do_response_output(&xInvRespOutput, correct->CMFx, &correct->SLx, 0, 1, unitsCode, tune_corrected);
-    if (inverse[1])
-      do_response_output(&yInvRespOutput, correct->CMFy, &correct->SLy, 1, 1, unitsCode, tune_corrected);
-
+    if (correct->method!=COUPLED_CORRECTION) {
+      if (response[1])
+        do_response_output(&yRespOutput, correct->CMFy, &correct->SLy, 1, 0, unitsCode, tune_corrected);
+      if (response[2])
+        do_response_output(&yxRespOutput, &CMyx, &correct->SLx, 0, 0, unitsCode, tune_corrected);
+      if (response[3])
+        do_response_output(&xyRespOutput, &CMxy, &correct->SLy, 1, 0, unitsCode, tune_corrected);
+      if (inverse[1])
+        do_response_output(&yInvRespOutput, correct->CMFy, &correct->SLy, 1, 1, unitsCode, tune_corrected);
+    }
 #if USE_MPI
   }
 #endif

@@ -54,7 +54,8 @@ typedef struct {
     long mode;
 #define TRAJECTORY_CORRECTION 0
 #define ORBIT_CORRECTION 1
-    long method, verbose, track_before_and_after, n_iterations, n_xy_cycles, minimum_cycles;
+    long method;
+    long verbose, track_before_and_after, n_iterations, n_xy_cycles, minimum_cycles;
     long prezero_correctors, start_from_centroid, use_actual_beam, response_only, disable;
     long xplane, yplane, forceAlternation;
     long use_response_from_computed_orbits;
@@ -119,3 +120,11 @@ void finish_orb_traj_output();
 void finish_bpm_output();
 void finish_corrector_output();
 void finish_cormon_stats();
+
+#define GLOBAL_CORRECTION 0
+#define ONE_TO_ONE_CORRECTION 1
+#define THREAD_CORRECTION 2
+#define ONE_TO_BEST_CORRECTION 3
+#define ONE_TO_NEXT_CORRECTION 4
+#define COUPLED_CORRECTION 5
+#define N_CORRECTION_METHODS 6

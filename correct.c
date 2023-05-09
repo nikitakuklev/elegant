@@ -24,13 +24,6 @@
 char *correction_mode[N_CORRECTION_MODES] = {
   "trajectory", "orbit"};
 
-#define GLOBAL_CORRECTION 0
-#define ONE_TO_ONE_CORRECTION 1
-#define THREAD_CORRECTION 2
-#define ONE_TO_BEST_CORRECTION 3
-#define ONE_TO_NEXT_CORRECTION 4
-#define COUPLED_CORRECTION 5
-#define N_CORRECTION_METHODS 6
 char *correction_method[N_CORRECTION_METHODS] = {
   "global", "one-to-one", "thread", "one-to-best", "one-to-next", "coupled"};
 
