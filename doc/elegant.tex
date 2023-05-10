@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2023.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 2023.3\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,42 +35,30 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2023.2}
+\section{Highlights of What's New in Version 2023.3}
 
-Here is a summary of what's changed since release 2023.1.  Historical change logs are collected in Section
+Here is a summary of what's changed since release 2023.2.  Historical change logs are collected in Section
 \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item A memory leak was fixed in the \verb|WAKE| element for multi-bunch mode. This was reported by
-  forum user \verb|Seb_Wilkes|.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item A bug was fixed in the \verb|obstruction_data| command that would cause a crash if a second command
-  was given.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|PARTICLE_OUTPUT_FILE| file from \verb|BRAT| elements now includes the direction cosines.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|ion_effects| command now supports use of a Poisson solver for computation of fields from ions.
-  This was implemented by J. Calvey (APS), with assistance from Y. P. Sun and M. Borland (both APS). It uses 
-  the widely-available FFTW library.
-\item The \verb|bpm_centroids| output from the \verb|run_setup| command how includes two columns giving the BPM weights.
-\item The \verb|optimization_variable| command now accepts step sizes as a function of the allowed range, using the
-  \verb|fractional_step_size| parameter.
-\item The \verb|optimization_setup| command supports ``resetting'' of optimization variables upon restarts of the
-  algorithm based on a threshold. This helps prune variables that have a small effect on the outcome.
-\item The \verb|loss| output file from \verb|touschek_scatter| now contains several parameters to help more easily identify
-  the scattering location. This was inspired by a question from forum user \verb|blanco-garcia|.
-\item The \verb|vary_element| command now has a \verb|disable| parameter. If set to a non-zero value, the command is ignored.
+\item None.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -102,11 +90,7 @@ are listed in Section \ref{sect:tools}.
 
 Changes to these tools in this release include
 \begin{itemize}
-\item Fixed a bug in \verb|ibsEmittance| that resulted in the emittance ratio being forced to 1 when the 
-  \verb|-emityInput| option was used. 
-\item \verb|ibsEmittance| has a new option, \verb|-fixEmity|, that allows forcing the vertical emittance
-  to a constant value when finding equilibrium parameters in a ring.  This was requested by forum user
-  \verb|Seb_Wilkes|.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -8456,6 +8440,80 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 2023.2}
+
+Here is a summary of what's changed since release 2023.1.  Historical change logs are collected in Section
+\ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item A memory leak was fixed in the \verb|WAKE| element for multi-bunch mode. This was reported by
+  forum user \verb|Seb_Wilkes|.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item A bug was fixed in the \verb|obstruction_data| command that would cause a crash if a second command
+  was given.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|PARTICLE_OUTPUT_FILE| file from \verb|BRAT| elements now includes the direction cosines.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|ion_effects| command now supports use of a Poisson solver for computation of fields from ions.
+  This was implemented by J. Calvey (APS), with assistance from Y. P. Sun and M. Borland (both APS). It uses 
+  the widely-available FFTW library.
+\item The \verb|bpm_centroids| output from the \verb|run_setup| command how includes two columns giving the BPM weights.
+\item The \verb|optimization_variable| command now accepts step sizes as a function of the allowed range, using the
+  \verb|fractional_step_size| parameter.
+\item The \verb|optimization_setup| command supports ``resetting'' of optimization variables upon restarts of the
+  algorithm based on a threshold. This helps prune variables that have a small effect on the outcome.
+\item The \verb|loss| output file from \verb|touschek_scatter| now contains several parameters to help more easily identify
+  the scattering location. This was inspired by a question from forum user \verb|blanco-garcia|.
+\item The \verb|vary_element| command now has a \verb|disable| parameter. If set to a non-zero value, the command is ignored.
+\end{itemize}
+
+\subsubsection{Other Changes}
+
+\begin{itemize}
+\item None
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item None
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}  Users are encouraged to check results against
+the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+The {\tt elegant} distribution includes many programs and scripts that perform computations with {\tt elegant}
+output data, provide interfaces with other programs, or prepare data for use with {\tt elegant}. These
+are listed in Section \ref{sect:tools}. 
+
+Changes to these tools in this release include
+\begin{itemize}
+\item Fixed a bug in \verb|ibsEmittance| that resulted in the emittance ratio being forced to 1 when the 
+  \verb|-emityInput| option was used. 
+\item \verb|ibsEmittance| has a new option, \verb|-fixEmity|, that allows forcing the vertical emittance
+  to a constant value when finding equilibrium parameters in a ring.  This was requested by forum user
+  \verb|Seb_Wilkes|.
+\end{itemize}
 
 \subsection{Highlights of What's New in Version 2023.1}
 
