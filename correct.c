@@ -1460,6 +1460,8 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 
     /* change the corrector by corr_tweek and compute the new matrix for the corrector */
     *((double *)(corr->p_elem + kick_offset)) = kick0 + corr_tweek;
+    if (beamline->links)
+      assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
 #ifdef DEBUG
     printf("corrector %s tweeked to %e (type=%s, name=%s, offset=%ld)\n", corr->name, *((double *)(corr->p_elem + kick_offset)),
            entity_name[corr->type],
@@ -3723,6 +3725,8 @@ void compute_coupled_trajcor_matrices(
 
     /* change the corrector by corr_tweek and compute the new matrix for the corrector */
     *((double *)(corr->p_elem + kick_offset)) = kick0 + corr_tweek;
+    if (beamline->links)
+      assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
 
     if (corr->matrix) {
       save = corr->matrix;
