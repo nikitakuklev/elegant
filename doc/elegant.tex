@@ -48,7 +48,8 @@ Here is a summary of what's changed since release 2023.2.  Historical change log
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item The computation of trajectory and orbit response matrices had a bug when \verb|link_elements| was used
+  to link various steering elements. The response was computed without the links.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -58,7 +59,8 @@ Here is a summary of what's changed since release 2023.2.  Historical change log
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item The \verb|correction_matrix_output| command can now output response and inverse matrices for
+  coupled, i.e., unified, trajectory correction.
 \end{itemize}
 
 \subsection{Other Changes}
