@@ -694,6 +694,9 @@ void assert_parameter_values(char **elem_name, long *param_number, long *type, d
     }
     while (find_element(elem_name[i_elem], &eptr, beamline->elem)) {
       p_elem = eptr->p_elem;
+      if (eptr->divisions>1 && entity_description[elem_type].parameter[param].flags&PARAM_DIVISION_RELATED)
+        bombElegantVA("Error: variation or optimization of a division-related parameter of subdivided element like %s#%ld.%s is not supported.",
+                      eptr->name, eptr->occurence, entity_description[elem_type].parameter[param].name);
       switch (data_type) {
       case IS_DOUBLE:
         *((double *)(p_elem + entity_description[elem_type].parameter[param].offset)) = value[i_elem];
