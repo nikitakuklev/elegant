@@ -24,6 +24,7 @@ static long add_elem_flag = 0;
 #define COPYLEN 1024
 /* static char elementDefCopy[COPYLEN+1]; */
 static long insertCount = 0;
+static long insertStartEndCount = 0;
 
 long getAddElemFlag() {
   return (add_elem_flag);
@@ -34,10 +35,14 @@ char *getElemDefinition() {
 }
 
 long getAddEndFlag() {
+  if (addElem.add_end)
+    insertStartEndCount++;
   return (addElem.add_end);
 }
 
 long getAddStartFlag() {
+  if (addElem.add_start)
+    insertStartEndCount++;
   return (addElem.add_start);
 }
 
@@ -128,6 +133,7 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) {
   }
 
   insertCount = 0;
+  insertStartEndCount = 0;
   beamline = get_beamline(NULL, beamline->name, run->p_central, 0, 0, NULL, NULL);
   if (run->backtrack)
     beamline->flags |= BEAMLINE_BACKTRACKING;
@@ -135,9 +141,23 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) {
 
   add_elem_flag = 0;
   if (verbose)
-    printf("%ld elements inserted in total\n", insertCount);
-  if (insertCount==0)
-    bombElegant("No instances inserted.", NULL);
+    printf("%ld elements inserted in total\n", insertCount+insertStartEndCount);
+  if (insertCount==0) {
+    if (allow_no_matches) {
+      char warningBuffer[16384];
+      snprintf(warningBuffer, 16384, "Attempting insertion of %s", element_def);
+      printWarning("No matches found, nothing inserted for insert_elements", warningBuffer);
+    } else
+      bombElegant("No matches found, no instances inserted.", NULL);
+  }
+  if ((insertCount+insertStartEndCount)==0) {
+    if (allow_no_insertions) {
+      char warningBuffer[16384];
+      snprintf(warningBuffer, 16384, "Attempting insertion of %s", element_def);
+      printWarning("Nothing inserted for insert_elements", warningBuffer);
+    } else
+      bombElegant("No instances inserted.", NULL);
+  }
 
   return;
 }

@@ -20,6 +20,8 @@
         long verbose = 0;
         long total_occurrences = 0;
         long occurrence[100]={0};
+        long allow_no_matches = 0;
+        long allow_no_insertions = 0;
 #end
 
 

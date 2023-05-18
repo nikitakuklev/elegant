@@ -50,6 +50,8 @@ Here is a summary of what's changed since release 2023.2.  Historical change log
 \begin{itemize}
 \item The computation of trajectory and orbit response matrices had a bug when \verb|link_elements| was used
   to link various steering elements. The response was computed without the links.
+\item The \verb|insert_elements| command previously did not warn the user when nothing was inserted, which
+  could have surprising consequences. This is now flagged as an error, with an option to issue a warning instead.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -2938,6 +2940,8 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
         STRING element_def = NULL;
         long total_occurrences = 0;
         long occurrence[100]={0};
+        long allow_no_insertions = 0;
+        long allow_no_matches = 0;
 &end
 \end{verbatim}
 
@@ -2966,6 +2970,10 @@ the element \verb|name|.  \verb|total_occurrences| specifies how many new elemen
 up to a maximum of 100, while the entries in the array \verb|occurrence| specify the occurrences
 after which to add the new elements. If \verb|total_occurrences| is non-zero, then {\bf skip} must
 be set to zero  and the {\bf name} must be the exact name (no wild-card matching). 
+\item \verb|allow_no_matches| --- If nothing is inserted because there are no matches found to the name and element
+  type, it is normally considered an error. If this parameter is non-zero, a warning is issued but the run continues.
+\item \verb|allow_no_insertions| --- If nothing is inserted, it is normally considered an error. If this parameter is
+  non-zero, a warning is issued but the run continues.
 \end{itemize}
 
 %\begin{latexonly}
