@@ -136,6 +136,8 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) {
   add_elem_flag = 0;
   if (verbose)
     printf("%ld elements inserted in total\n", insertCount);
+  if (insertCount==0)
+    bombElegant("No instances inserted.", NULL);
 
   return;
 }
