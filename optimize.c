@@ -68,7 +68,8 @@ void checkTarget(double myResult, long invalid);
 #endif
 
 static time_t interrupt_file_mtime = 0;
-static long interrupt_file_step = 0;
+static double interrupt_file_check_time = 0; /* last time the interrupt file was checked */
+static short interrupt_in_progress = 0;
 time_t get_mtime(char *filename) {
   struct stat statbuf;
   if (stat(filename, &statbuf) == -1)
@@ -1135,6 +1136,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #endif
 
   startsLeft = optimization_data->n_restarts + 1;
+  interrupt_in_progress = 0;
   result = DBL_MAX;
   balanceTerms = 1;
 #if USE_MPI
@@ -1587,12 +1589,16 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       break;
     }
     lastResult = result;
-    if (interrupt_file && fexists(interrupt_file) &&
-        (interrupt_file_mtime == 0 || interrupt_file_mtime < get_mtime(interrupt_file))) {
-      printf("Interrupt file %s was created or changed---terminating optimization loop\n", interrupt_file);
-      simplexMinAbort(1);
-      startsLeft = 0;
-      break;
+    if (interrupt_file) {
+      interrupt_file_check_time = delapsed_time();
+      if (fexists(interrupt_file) &&
+          (interrupt_file_mtime == 0 || interrupt_file_mtime < get_mtime(interrupt_file))) {
+        printf("Interrupt file %s was created or changed---terminating optimization loop\n", interrupt_file);
+        simplexMinAbort(1);
+        interrupt_in_progress = 1;
+        startsLeft = 0;
+        break;
+      }
     }
     if (startsLeft && !stopOptimization) {
 #ifdef DEBUG
@@ -2121,14 +2127,18 @@ double optimization_function(double *value, long *invalid) {
     seedElegantRandomNumbers(0, RESTART_RN_ALL);
 
   if (interrupt_file) {
-    if (interrupt_file_check_interval > 0 && interrupt_file_step % interrupt_file_check_interval == 0) {
+    if (interrupt_file_check_interval==0 || (interrupt_file_check_time+interrupt_file_check_interval)>delapsed_time()) {
       if (fexists(interrupt_file) &&
           (interrupt_file_mtime == 0 || interrupt_file_mtime < get_mtime(interrupt_file))) {
-        printf("Interrupt file %s was created or changed---beginning termination of optimization loop\n", interrupt_file);
+        if (!interrupt_in_progress) {
+          printf("Interrupt file %s was created or changed---beginning termination of optimization loop\n", interrupt_file);
+          fflush(stdout);
+        }
+        interrupt_in_progress = 1;
         simplexMinAbort(1);
       }
+      interrupt_file_check_time = delapsed_time();
     }
-    interrupt_file_step++;
   }
 
   *invalid = 0;

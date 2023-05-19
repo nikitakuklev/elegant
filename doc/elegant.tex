@@ -63,6 +63,8 @@ Here is a summary of what's changed since release 2023.2.  Historical change log
 \begin{itemize}
 \item The \verb|correction_matrix_output| command can now output response and inverse matrices for
   coupled, i.e., unified, trajectory correction.
+\item The function of the interrupt-file feature of the \verb|optimize| command was improved, allowing control of
+  the time interval between checks.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -4171,7 +4173,7 @@ variables and covariable may be accessed via names like \verb|<element-name>.<pa
     long start_from_simplex_vertex1 = 0;
     long restart_random_numbers = 0;
     STRING interrupt_file = "%s.interrupt";
-    long interrupt_file_check_interval = 0;
+    double interrupt_file_check_interval = 10;
 &end
 \end{verbatim}
 
@@ -4390,9 +4392,7 @@ a significant difference in the optimization speed.
 \item \verb|interrupt_file| --- Gives the name of a file that will be monitored by the program as it runs.
   If the file is created or modified while optimization is running, the optimizer will complete the present
   step and cleanly terminate, allowing subsequent commands, if any, to proceed.
-\item \verb|interrupt_file_check_interval| --- If nonzero, then gives the interval in function evaluations between
-  checks of the interrupt file. If zero, the interrupt file is only
-  checked at the end of a simplex pass.
+\item \verb|interrupt_file_check_interval| --- The interval in seconds between checking the interrupt file.
   N.B.: Depending on the responsiveness of the file system and the time required for a function evaluation, setting
   this to a small value could have a significant adverse impact on the run time. 
 \end{itemize}
