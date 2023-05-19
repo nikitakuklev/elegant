@@ -2127,7 +2127,7 @@ double optimization_function(double *value, long *invalid) {
     seedElegantRandomNumbers(0, RESTART_RN_ALL);
 
   if (interrupt_file) {
-    if (interrupt_file_check_interval==0 || (interrupt_file_check_time+interrupt_file_check_interval)>delapsed_time()) {
+    if (interrupt_file_check_interval==0 || (interrupt_file_check_time+interrupt_file_check_interval)<delapsed_time()) {
       if (fexists(interrupt_file) &&
           (interrupt_file_mtime == 0 || interrupt_file_mtime < get_mtime(interrupt_file))) {
         if (!interrupt_in_progress) {
