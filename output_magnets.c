@@ -25,6 +25,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline) {
   CSBEND *cbptr;
   CCBEND *crbptr;
   CSRCSBEND *csrbptr;
+  LGBEND *lgbptr;
   long iPhase;
   double start, end, dz, value;
   /* double total_length; */
@@ -228,6 +229,21 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline) {
                 eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end,
                 eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end);
       else if (cbptr->angle < 0)
+        fprintf(fpm,
+                "\"%s\" %s %e -.33333333\n\"%s\" %s %e -.33333333\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e 0\n",
+                eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end,
+                eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end);
+      start = end;
+      break;
+    case T_LGBEND:
+      lgbptr = (LGBEND *)eptr->p_elem;
+      end = start + lgbptr->length;
+      if (lgbptr->angle > 0)
+        fprintf(fpm,
+                "\"%s\" %s %e .33333333\n\"%s\" %s %e .33333333\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e 0\n",
+                eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end,
+                eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end);
+      else if (lgbptr->angle < 0)
         fprintf(fpm,
                 "\"%s\" %s %e -.33333333\n\"%s\" %s %e -.33333333\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e 0\n",
                 eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end,
