@@ -38,10 +38,11 @@ typedef struct {
   char **excludeNamePattern, **excludeItemPattern, **excludeTypePattern;
   long excludeNamePatterns, excludeItemPatterns, excludeTypePatterns;
   char *editNameCommand;
-  long skip_pages;        /* if >0, pages are skipped, used as counter */
-  long last_code;         /* return code from SDDS_ReadTable */
-  double *starting_value; /* only for numerical data */
-  char *use_start;        /* if nonzero, starting_value will be used to restore to initial state */
+  short repeat_first_page_at_each_step; /* If non-zero, the file is expected to be single-page and is asserted at each step */
+  long skip_pages;           /* if >0, pages are skipped, used as counter */
+  long last_code;            /* return code from SDDS_ReadTable */
+  double *starting_value;    /* only for numerical data */
+  char *use_start;           /* if nonzero, starting_value will be used to restore to initial state */
   void **reset_address;
   short *value_type;
   ELEMENT_LIST **element;
@@ -100,6 +101,13 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     printf("Using single filename for parameter loading\n");
   }
 
+  if (repeat_first_page_at_each_step) {
+    if (change_defined_values)
+      bombElegant("change_defined_values and repeat_first_page_at_each_step modes are incompatible", NULL);
+    if (skip_pages)
+      bombElegant("skip_pages feature and repeat_first_page_at_each_step mode are incompatible", NULL);
+  }
+
   if (clear_settings && load_requests) {
     for (i = 0; i < load_requests; i++) {
       if (!SDDS_Terminate(&load_request[i].table))
@@ -140,6 +148,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
   load_request[load_requests].excludeItemPattern = addPatterns(&(load_request[load_requests].excludeItemPatterns), exclude_item_pattern);
   load_request[load_requests].excludeTypePattern = addPatterns(&(load_request[load_requests].excludeTypePatterns), exclude_type_pattern);
   load_request[load_requests].skip_pages = skip_pages;
+  load_request[load_requests].repeat_first_page_at_each_step = repeat_first_page_at_each_step;
 #ifdef USE_MPE /* use the MPE library */
   int event1a, event1b;
   event1a = MPE_Log_get_event_number();
@@ -425,6 +434,12 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions) {
           exitElegant(1);
         }
       }
+    }
+
+    if (load_request[i].repeat_first_page_at_each_step) {
+      SDDS_Terminate(&load_request[i].table);
+      SDDS_InitializeInputFromSearchPath(&load_request[i].table,
+                                         load_request[i].filename);
     }
 
     load_request[i].values = 0;

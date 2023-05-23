@@ -65,6 +65,8 @@ Here is a summary of what's changed since release 2023.2.  Historical change log
   coupled, i.e., unified, trajectory correction.
 \item The function of the interrupt-file feature of the \verb|optimize| command was improved, allowing control of
   the time interval between checks.
+\item The \verb|load_parameters| command can now optionally load the same page from a file repeatedly. This can be
+  used to reassert a baseline configuration prior to other changes, for example.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -3409,6 +3411,7 @@ assigned to the target parameter.
         STRING exclude_type_pattern = NULL;
         STRING edit_name_command = NULL;
         long change_defined_values = 0;
+        long repeat_at_each_step = 0;
         long clear_settings = 0;
         long allow_missing_elements = 0;
         long allow_missing_parameters = 0;
@@ -3484,6 +3487,11 @@ Note that the \verb|ElementOccurence| data is normally ignored if
 \verb|change_defined_values| is nonzero.  This is because there is
 only one definition of each element, even if it is used multiple times.
 This behavior can be altered with the next control.
+
+\item \verb|repeat_first_page_at_each_step| --- Normally each simulation step results in loading a new page from
+  the file. If this parameter is non-zero, then the first page is instead loaded at each step. This can be used,
+  for example, to reassert a starting configuration prior to other changes, or to load a common set of changes into
+  a series of configurations.
 
 \item \verb|force_occurence_data| --- If set, then occurence data is
 used even in \verb|change_defined_values| mode. When loading data for
