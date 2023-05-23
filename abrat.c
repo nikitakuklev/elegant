@@ -619,7 +619,7 @@ int main(int argc, char **argv)
 
   /* set variables for saving the path */
   max_store = 0;
-  storeData = 2; /* store everything */
+  storeData = 3; /* store everything */
   X_stored = Z_stored = Y_stored = s_stored = NULL;
   wX_stored = wZ_stored = wY_stored = NULL;
   aX_stored = aZ_stored = aY_stored = NULL;

@@ -946,9 +946,9 @@ void BRAT_store_data(double *qp, double *q, double s, double exval) {
       wY_stored = trealloc(wY_stored, sizeof(*Y_stored) * max_store);
       wZ_stored = trealloc(wZ_stored, sizeof(*Z_stored) * max_store);
       if (storeData > 2) {
-        aX_stored = trealloc(aX_stored, sizeof(*X_stored) * max_store);
-        aY_stored = trealloc(aY_stored, sizeof(*Y_stored) * max_store);
-        aZ_stored = trealloc(aZ_stored, sizeof(*Z_stored) * max_store);
+        aX_stored = trealloc(aX_stored, sizeof(*aX_stored) * max_store);
+        aY_stored = trealloc(aY_stored, sizeof(*aY_stored) * max_store);
+        aZ_stored = trealloc(aZ_stored, sizeof(*aZ_stored) * max_store);
         Fint_stored = trealloc(Fint_stored, sizeof(*Fint_stored) * max_store);
         s_stored = trealloc(s_stored, sizeof(*s_stored) * max_store);
       }
