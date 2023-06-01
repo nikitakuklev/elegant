@@ -159,6 +159,11 @@ divideElements$(OBJ): divideElements.h
 divideElements.h: ../divideElements.nl
 	nlpp -suppressSummaryVariables ../divideElements.nl divideElements.h
 
+global_settings$(OBJ): global_settings.h
+
+global_settings.h: ../global_settings.nl
+	nlpp -suppressSummaryVariables ../global_settings.nl global_settings.h
+
 transmuteElements$(OBJ): transmuteElements.h
 
 transmuteElements.h: ../transmuteElements.nl

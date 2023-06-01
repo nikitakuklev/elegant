@@ -57,7 +57,6 @@ void setSigmaIndices();
 void process_particle_command(NAMELIST_TEXT *nltext);
 void process_change_start(NAMELIST_TEXT *nltext, CHANGE_START_SPEC *css);
 void process_change_end(NAMELIST_TEXT *nltext, CHANGE_END_SPEC *ces);
-void processGlobalSettings(NAMELIST_TEXT *nltext);
 void freeInputObjects();
 void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST *beamline, short final, short mustSurvive);
 
@@ -835,6 +834,10 @@ char **argv;
             do_find_aperture = do_rf_setup = 0;
           linear_chromatic_tracking_setup_done = losses_include_global_coordinates = 0;
           losses_s_limit[0] = -(losses_s_limit[1] = DBL_MAX);
+          if (searchPath && strlen(searchPath))
+            cp_str(&search_path, searchPath);
+          else
+            search_path = NULL;  
 
           set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
           set_print_namelist_flags(0);
@@ -2992,52 +2995,6 @@ void process_particle_command(NAMELIST_TEXT *nltext) {
     */
   printWarning("Changing the particle type is not a fully tested feature",
                ". Please be alert for and report results that don't make sense.");
-}
-
-void processGlobalSettings(NAMELIST_TEXT *nltext) {
-  memcpy(tracking_matrix_step_size, trackingMatrixStepSize, sizeof(*trackingMatrixStepSize) * 6);
-  tracking_matrix_step_factor = trackingMatrixStepFactor;
-  tracking_matrix_points = trackingMatrixPoints;
-  tracking_matrix_max_fit_order = trackingMatrixMaxFitOrder;
-  tracking_matrix_cleanup = trackingMatrixCleanUp;
-
-  set_print_namelist_flags(0);
-  if (processNamelist(&global_settings, nltext) == NAMELIST_ERROR)
-    bombElegant(NULL, NULL);
-  if (echoNamelists)
-    print_namelist(stdout, &global_settings);
-
-  misalignmentMethod = malign_method;
-  inhibitFileSync = inhibit_fsync;
-  allowOverwrite = allow_overwrite;
-  echoNamelists = echo_namelists;
-  mpiRandomizationMode = mpi_randomization_mode;
-  srGaussianLimit = SR_gaussian_limit;
-  exactNormalizedEmittance = exact_normalized_emittance;
-  inhibitRandomSeedPermutation(inhibit_seed_permutation);
-  shareTrackingBasedMatrices = share_tracking_based_matrices;
-  trackingBasedMatricesStoreLimit = tracking_based_matrices_store_limit;
-  warningCountLimit = warning_limit;
-  trackingMatrixStepFactor = tracking_matrix_step_factor;
-  trackingMatrixPoints = tracking_matrix_points;
-  trackingMatrixMaxFitOrder = tracking_matrix_max_fit_order;
-  trackingMatrixCleanUp = tracking_matrix_cleanup;
-  memcpy(trackingMatrixStepSize, tracking_matrix_step_size, sizeof(*trackingMatrixStepSize) * 6);
-  parallelTrackingBasedMatrices = parallel_tracking_based_matrices;
-  slopeLimit = slope_limit;
-  coordLimit = coord_limit;
-#if SDDS_MPI_IO
-  SDDS_MPI_SetWriteKludgeUsleep(usleep_mpi_io_kludge);
-  SDDS_MPI_SetFileSync(mpi_io_force_file_sync);
-  if (mpi_io_read_buffer_size)
-    SDDS_SetDefaultReadBufferSize(mpi_io_read_buffer_size);
-  if (mpi_io_write_buffer_size)
-    SDDS_SetDefaultWriteBufferSize(mpi_io_write_buffer_size);
-#endif
-  if (log_file)
-    freopen(log_file, "w", stdout);
-  if (error_log_file)
-    freopen(error_log_file, "w", stderr);
 }
 
 void bombTracking(const char *error) {

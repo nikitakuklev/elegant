@@ -117,6 +117,7 @@ extern double trackingMatrixStepSize[6];
 extern long warningCountLimit;
 extern short misalignmentMethod, trackingMatrixCleanUp;
 extern double slopeLimit, coordLimit;
+extern char *searchPath;
 
 /* flag used to identify which processor is allowed to write to a file */
 extern long writePermitted;
@@ -5072,6 +5073,9 @@ extern long insideObstruction_xyz(double x, double xp, double y, double yp, long
 				  double tilt, short mode, double dz, long segment, long nSegments);
 extern long insideObstruction_XYZ(double X, double Y, double Z, double dXi, double dYi, double dZi, 
                                   double thetai, double xp, double *lossCoordinates);
+
+
+extern void processGlobalSettings(NAMELIST_TEXT *nltext);
 
 #ifdef __cplusplus
 }
