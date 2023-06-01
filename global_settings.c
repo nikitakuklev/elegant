@@ -41,7 +41,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext) {
   trackingMatrixPoints = tracking_matrix_points;
   trackingMatrixMaxFitOrder = tracking_matrix_max_fit_order;
   trackingMatrixCleanUp = tracking_matrix_cleanup;
-  searchPath = search_path;
+  cp_str(&searchPath, search_path);
   memcpy(trackingMatrixStepSize, tracking_matrix_step_size, sizeof(*trackingMatrixStepSize) * 6);
   parallelTrackingBasedMatrices = parallel_tracking_based_matrices;
   slopeLimit = slope_limit;

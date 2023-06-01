@@ -834,23 +834,24 @@ char **argv;
             do_find_aperture = do_rf_setup = 0;
           linear_chromatic_tracking_setup_done = losses_include_global_coordinates = 0;
           losses_s_limit[0] = -(losses_s_limit[1] = DBL_MAX);
-          if (searchPath && strlen(searchPath))
-            cp_str(&search_path, searchPath);
-          else
-            search_path = NULL;  
-
+          search_path = NULL;
+          
           set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
           set_print_namelist_flags(0);
           if (processNamelist(&run_setup, &namelist_text) == NAMELIST_ERROR)
             bombElegant(NULL, NULL);
+            
+          if ((!search_path || !strlen(search_path)) && searchPath && strlen(searchPath)) {
+            search_path = searchPath;
+          }
           if (echoNamelists)
             print_namelist(stdout, &run_setup);
+          setSearchPath(search_path);
 
           if (concat_order != 0)
             printWarning("concat_order is non-zero in run_setup.",
                          "Using matrix concatenation is rarely needed and reduces accuracy.");
 
-          setSearchPath(search_path);
           /* check for validity of namelist inputs */
           if (lattice == NULL) {
             if (!saved_lattice)
