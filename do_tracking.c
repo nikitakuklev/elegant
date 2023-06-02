@@ -58,12 +58,6 @@ void findMinMax(double **coord, long np, double *min, double *max, double *c0, d
 void interpolateFTable(double *B, double *xyz, FTABLE *ftable);
 void ftable_frame_converter(double **coord, long np, FTABLE *ftable, long entrance_exit);
 double choose_theta(double rho, double x0, double x1, double x2);
-void track_through_multipole_deflector(
-  double **final,
-  MRFDF *rf_param,
-  double **initial,
-  long n_particles,
-  double pc_central);
 void track_through_space_harmonic_deflector(
   double **final,
   SHRFDF *rf_param,
@@ -1400,7 +1394,7 @@ long do_tracking(
             case T_MRFDF:
               if (!(flags & TIME_DEPENDENCE_OFF))
                 track_through_multipole_deflector(coord, (MRFDF *)eptr->p_elem,
-                                                  coord, nToTrack, *P_central);
+                                                  coord, nToTrack, *P_central, i_pass);
               break;
             case T_SHRFDF:
               if (!(flags & TIME_DEPENDENCE_OFF))

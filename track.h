@@ -1136,7 +1136,7 @@ extern char *entity_text[N_TYPES];
 #define N_KOCT_PARAMS 22
 #define N_MRADITEGRALS_PARAMS 1
 #define N_APPLE_PARAMS 25
-#define N_MRFDF_PARAMS 23
+#define N_MRFDF_PARAMS 27
 #define N_CORGPIPE_PARAMS 15
 #define N_LRWAKE_PARAMS 15
 #define N_EHCOR_PARAMS 15
@@ -1638,6 +1638,8 @@ typedef struct {
   double factor, tilt;
   double a[5], b[5], frequency[5], phase[5];
   long phase_reference;
+  long startPass, endPass;
+  long startPID, endPID;
   /* for internal use only */
   double t_first_particle;        
   long initialized, fiducial_seen;
@@ -4495,6 +4497,8 @@ extern void track_through_rf_deflector(double **final, RFDF *rf_param,
                                        double **initial, long n_particles,
                                        double pc_central, double L_central, double zEnd,
                                        long pass);
+extern void track_through_multipole_deflector(double **final, MRFDF *rf_param, double **initial,
+                                              long n_particles, double pc_central, long pass);
 
 /* prototypes for vary4.c: */
 extern void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);

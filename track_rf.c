@@ -528,12 +528,14 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
   }
 }
 
-void track_through_multipole_deflector(
-  double **final,
-  MRFDF *rf_param,
-  double **initial,
-  long n_particles,
-  double pc_central) {
+void track_through_multipole_deflector
+(
+ double **final,
+ MRFDF *rf_param,
+ double **initial,
+ long n_particles,
+ double pc_central,
+ long pass) {
   double t_first; /* time when first particle reaches cavity */
   double x, xp, y, yp;
   double beta, px, py, pz, pc;
@@ -553,83 +555,93 @@ void track_through_multipole_deflector(
   if (!rf_param->initialized || !rf_param->fiducial_seen)
     set_up_mrfdf(rf_param, initial, n_particles, pc_central);
 
+  if ((rf_param->startPass >= 0 && pass < rf_param->startPass) ||
+      (rf_param->endPass >= 0 && pass > rf_param->endPass))
+    return;
+
   t_first = rf_param->t_first_particle;
 
   if (rf_param->tilt)
     rotateBeamCoordinatesForMisalignment(initial, n_particles, rf_param->tilt);
 
   for (ip = 0; ip < n_particles; ip++) {
-    x = initial[ip][0];
-    xp = initial[ip][1];
-    y = initial[ip][2];
-    yp = initial[ip][3];
-    pc = pc_central * (1 + initial[ip][5]);
-    pz = pc / sqrt(1 + sqr(xp) + sqr(yp));
-    px = xp * pz;
-    py = yp * pz;
-    beta = pc / sqrt(1 + sqr(pc));
-    t_part = initial[ip][4] / (c_mks * beta);
-    dpx = dpy = dpz = 0;
-
-    for (mode = 0; mode < 5; mode++) {
-      if (rf_param->frequency[mode] == 0 || (rf_param->a[mode] == 0 && rf_param->b[mode] == 0))
-        continue;
-
-      omega = 2 * PI * rf_param->frequency[mode];
-      k = omega / c_mks;
-      phase = rf_param->phase[mode] * PI / 180.0 + omega * (t_part - t_first);
-      ptPhaseFactor = cos(phase) / k;
-      pzPhaseFactor = sin(phase);
-      if (isSlave || !notSinglePart) {
-        switch (mode) {
-        case 0: /* dipole */
-          dpx += rf_param->b[0] * ptPhaseFactor;
-          dpy -= rf_param->a[0] * ptPhaseFactor;
-          dpz += (rf_param->b[0] * x - rf_param->a[0] * y) * pzPhaseFactor;
+    if (!((rf_param->startPID>=0 && initial[ip][particleIDIndex]<rf_param->startPID) ||
+          (rf_param->endPID>=0 && initial[ip][particleIDIndex]>rf_param->endPID))) {
+      x = initial[ip][0];
+      xp = initial[ip][1];
+      y = initial[ip][2];
+      yp = initial[ip][3];
+      pc = pc_central * (1 + initial[ip][5]);
+      pz = pc / sqrt(1 + sqr(xp) + sqr(yp));
+      px = xp * pz;
+      py = yp * pz;
+      beta = pc / sqrt(1 + sqr(pc));
+      t_part = initial[ip][4] / (c_mks * beta);
+      dpx = dpy = dpz = 0;
+      
+      for (mode = 0; mode < 5; mode++) {
+        if (rf_param->frequency[mode] == 0 || (rf_param->a[mode] == 0 && rf_param->b[mode] == 0))
+          continue;
+        
+        omega = 2 * PI * rf_param->frequency[mode];
+        k = omega / c_mks;
+        phase = rf_param->phase[mode] * PI / 180.0 + omega * (t_part - t_first);
+        ptPhaseFactor = cos(phase) / k;
+        pzPhaseFactor = sin(phase);
+        if (isSlave || !notSinglePart) {
+          switch (mode) {
+          case 0: /* dipole */
+            dpx += rf_param->b[0] * ptPhaseFactor;
+            dpy -= rf_param->a[0] * ptPhaseFactor;
+            dpz += (rf_param->b[0] * x - rf_param->a[0] * y) * pzPhaseFactor;
+            break;
+          case 1: /* quadrupole */
+            dpx += 2 * (rf_param->b[1] * x - rf_param->a[1] * y) * ptPhaseFactor;
+            dpy -= 2 * (rf_param->b[1] * y + rf_param->a[1] * x) * ptPhaseFactor;
+            dpz += (rf_param->b[1] * (x * x - y * y) - 2 * rf_param->a[1] * x * y) * pzPhaseFactor;
+            break;
+          case 2: /* sextupole */
+            dpx += (rf_param->b[2] * (3 * x * x - 3 * y * y) + rf_param->a[2] * (-6 * x * y)) * ptPhaseFactor;
+            dpy -= (rf_param->b[2] * 6 * x * y + rf_param->a[2] * (3 * x * x - 3 * y * y)) * ptPhaseFactor;
+            dpz += (rf_param->b[2] * (ipow(x, 3) - 3 * x * y * y) - rf_param->a[2] * (3 * x * x * y - ipow(y, 3))) * pzPhaseFactor;
+            break;
+          case 3: /* octupole  */
+            dpx += (rf_param->b[3] * (4 * ipow(x, 3) - 12 * x * y * y) + rf_param->a[3] * (-12 * x * x * y + 4 * ipow(y, 3))) * ptPhaseFactor;
+            dpy -= (rf_param->b[3] * (12 * x * x * y - 4 * ipow(y, 3)) + rf_param->a[3] * (4 * ipow(x, 3) - 12 * x * y * y)) * ptPhaseFactor;
+            dpz += (rf_param->b[3] * (ipow(x, 4) - 6 * ipow(x * y, 2) + ipow(y, 4)) - 4 * rf_param->a[3] * (x * x - y * y) * x * y) * pzPhaseFactor;
+            break;
+          case 4: /* decapole */
+            dpx += (rf_param->b[4] * (5 * ipow(y, 4) + 5 * ipow(x, 4) - 30 * ipow(x * y, 2)) + rf_param->a[4] * (-20 * ipow(x, 3) * y + 20 * x * ipow(y, 3))) * ptPhaseFactor;
+            dpy -= (rf_param->b[4] * (20 * ipow(x, 3) * y - 20 * x * ipow(y, 3)) + rf_param->a[4] * (5 * ipow(x, 4) - 30 * ipow(x * y, 2) + 5 * ipow(y, 4))) * ptPhaseFactor;
+            dpz += (rf_param->b[4] * (ipow(x, 5) - 10 * ipow(x, 3) * y * y + 5 * x * ipow(y, 4)) - rf_param->a[4] * (ipow(y, 5) + 5 * ipow(x, 4) * y - 10 * y * ipow(x * y, 2))) * pzPhaseFactor;
           break;
-        case 1: /* quadrupole */
-          dpx += 2 * (rf_param->b[1] * x - rf_param->a[1] * y) * ptPhaseFactor;
-          dpy -= 2 * (rf_param->b[1] * y + rf_param->a[1] * x) * ptPhaseFactor;
-          dpz += (rf_param->b[1] * (x * x - y * y) - 2 * rf_param->a[1] * x * y) * pzPhaseFactor;
-          break;
-        case 2: /* sextupole */
-          dpx += (rf_param->b[2] * (3 * x * x - 3 * y * y) + rf_param->a[2] * (-6 * x * y)) * ptPhaseFactor;
-          dpy -= (rf_param->b[2] * 6 * x * y + rf_param->a[2] * (3 * x * x - 3 * y * y)) * ptPhaseFactor;
-          dpz += (rf_param->b[2] * (ipow(x, 3) - 3 * x * y * y) - rf_param->a[2] * (3 * x * x * y - ipow(y, 3))) * pzPhaseFactor;
-          break;
-        case 3: /* octupole  */
-          dpx += (rf_param->b[3] * (4 * ipow(x, 3) - 12 * x * y * y) + rf_param->a[3] * (-12 * x * x * y + 4 * ipow(y, 3))) * ptPhaseFactor;
-          dpy -= (rf_param->b[3] * (12 * x * x * y - 4 * ipow(y, 3)) + rf_param->a[3] * (4 * ipow(x, 3) - 12 * x * y * y)) * ptPhaseFactor;
-          dpz += (rf_param->b[3] * (ipow(x, 4) - 6 * ipow(x * y, 2) + ipow(y, 4)) - 4 * rf_param->a[3] * (x * x - y * y) * x * y) * pzPhaseFactor;
-          break;
-        case 4: /* decapole */
-          dpx += (rf_param->b[4] * (5 * ipow(y, 4) + 5 * ipow(x, 4) - 30 * ipow(x * y, 2)) + rf_param->a[4] * (-20 * ipow(x, 3) * y + 20 * x * ipow(y, 3))) * ptPhaseFactor;
-          dpy -= (rf_param->b[4] * (20 * ipow(x, 3) * y - 20 * x * ipow(y, 3)) + rf_param->a[4] * (5 * ipow(x, 4) - 30 * ipow(x * y, 2) + 5 * ipow(y, 4))) * ptPhaseFactor;
-          dpz += (rf_param->b[4] * (ipow(x, 5) - 10 * ipow(x, 3) * y * y + 5 * x * ipow(y, 4)) - rf_param->a[4] * (ipow(y, 5) + 5 * ipow(x, 4) * y - 10 * y * ipow(x * y, 2))) * pzPhaseFactor;
-          break;
+          }
         }
       }
+      /* We assume the deflection is from magnetic fields, so p^2 doesn't change */
+      px += dpx * rf_param->factor * particleCharge / (particleMass * sqr(c_mks));
+      py += dpy * rf_param->factor * particleCharge / (particleMass * sqr(c_mks));
+      pz = sqrt(sqr(pc) - sqr(px) - sqr(py));
+      
+      /* Now add the effect of longitudinal field */
+      pz += dpz * rf_param->factor * particleCharge / (particleMass * sqr(c_mks));
+      pc = sqrt(sqr(px) + sqr(py) + sqr(pz));
+      
+      xp = px / pz;
+      yp = py / pz;
+      
+      beta = pc / sqrt(1 + sqr(pc));
+      final[ip][0] = x;
+      final[ip][1] = xp;
+      final[ip][2] = y;
+      final[ip][3] = yp;
+      final[ip][4] = t_part * c_mks * beta;
+      final[ip][5] = (pc - pc_central) / pc_central;
+      final[ip][6] = initial[ip][6];
+    } else {
+      for (int i=0; i<totalPropertiesPerParticle; i++)
+        final[ip][i] = initial[ip][i];
     }
-    /* We assume the deflection is from magnetic fields, so p^2 doesn't change */
-    px += dpx * rf_param->factor * particleCharge / (particleMass * sqr(c_mks));
-    py += dpy * rf_param->factor * particleCharge / (particleMass * sqr(c_mks));
-    pz = sqrt(sqr(pc) - sqr(px) - sqr(py));
-
-    /* Now add the effect of longitudinal field */
-    pz += dpz * rf_param->factor * particleCharge / (particleMass * sqr(c_mks));
-    pc = sqrt(sqr(px) + sqr(py) + sqr(pz));
-
-    xp = px / pz;
-    yp = py / pz;
-
-    beta = pc / sqrt(1 + sqr(pc));
-    final[ip][0] = x;
-    final[ip][1] = xp;
-    final[ip][2] = y;
-    final[ip][3] = yp;
-    final[ip][4] = t_part * c_mks * beta;
-    final[ip][5] = (pc - pc_central) / pc_central;
-    final[ip][6] = initial[ip][6];
   }
 
   if (rf_param->tilt)

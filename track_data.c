@@ -2439,9 +2439,9 @@ PARAMETER lrwake_param[N_LRWAKE_PARAMS] = {
   {"QXCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[4]), NULL, 0.0, 0, "column in INPUTFILE containing horizontal quadrupole Green function"},
   {"QYCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[5]), NULL, 0.0, 0, "column in INPUTFILE containing vertical quadrupole Green function"},
   {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.factor), NULL, 1.0, 0, "factor by which to multiply wakes"},
-  {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.xFactor), NULL, 1.0, 0, "factor by which to multiply longitudinal wake"},
-  {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.yFactor), NULL, 1.0, 0, "factor by which to multiply horizontal dipole wake"},
-  {"ZFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.zFactor), NULL, 1.0, 0, "factor by which to multiply vertical dipole wake"},
+  {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.xFactor), NULL, 1.0, 0, "factor by which to multiply horizontal dipole wake"},
+  {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.yFactor), NULL, 1.0, 0, "factor by which to multiply vertical dipole wake"},
+  {"ZFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.zFactor), NULL, 1.0, 0, "factor by which to multiply longitudinal dipole wake"},
   {"QXFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.qxFactor), NULL, 1.0, 0, "factor by which to multiply horizontal quadrupole wake"},
   {"QYFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.qyFactor), NULL, 1.0, 0, "factor by which to multiply vertical quadrupole wake"},
   {"TURNS_TO_KEEP", "", IS_LONG, 0, (long)((char *)&lrwake_example.turnsToKeep), NULL, 0.0, 128, "number of turns of data to retain"},
@@ -3369,6 +3369,10 @@ PARAMETER mrfdf_param[N_MRFDF_PARAMS] = {
   {"PHASE4", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.phase[3]), NULL, 0.0, 0, "Octupole phase"},
   {"PHASE5", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.phase[4]), NULL, 0.0, 0, "Decapole phase"},
   {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&mrfdf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
+  {"START_PASS", "", IS_LONG, 0, (long)((char *)&mrfdf_example.startPass), NULL, 0.0, -1, "If non-negative, pass on which to start modeling cavity."},
+  {"END_PASS", "", IS_LONG, 0, (long)((char *)&mrfdf_example.endPass), NULL, 0.0, -1, "If non-negative, pass on which to end modeling cavity."},
+  {"START_PID", "", IS_LONG, 0, (long)((char *)&mrfdf_example.startPID), NULL, 0.0, -1, "If non-negative, lowest particle ID to which deflection is applied."},
+  {"END_PID", "", IS_LONG, 0, (long)((char *)&mrfdf_example.endPID), NULL, 0.0, -1, "If non-negative, highest particle ID to which deflection is applied."},
 };
 
 EHCOR ehcor_example;
