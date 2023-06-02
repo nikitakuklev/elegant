@@ -1,0 +1,3 @@
+#!/bin/bash
+
+\rm run1.out run1.transverse beam.sdds beam.his 

@@ -1,0 +1,23 @@
+Example of making customized longitudinal distributions.
+M. Borland, 2023
+
+
+deltaDist.sdds
+        File giving the desired distribution for fractional momentum offset.
+        Note that the PDF is not normalized, which is ok.
+timeDist.sdds
+        File giving the desired distribution for time.
+        Note that the PDF is not normalized, which is ok.
+
+lattice.lte
+run1.ele
+        These are used to make a beam with the desired (gaussian) transverse
+        distributions. At the same time, (t, p) coordinates are generated, but
+        those will be replaced
+
+makeCustomDist
+        Script to run everything.
+
+cleanUp
+        Script to clean up for a fresh try.
+

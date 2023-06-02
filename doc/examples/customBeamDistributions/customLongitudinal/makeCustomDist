@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Make transverse distribution, plus throw-away coordinates for longitudinal
+elegant run1.ele 
+
+# Throw out (t, p)
+sddsconvert run1.out run1.transverse  -delete=column,t,p
+
+# How many particles do we need?
+np=`sdds2stream -rows=bare run1.transverse`
+
+# Sample the t and delta distributions, then merge with transverse data
+sddssampledist -pipe=out -samples=$np \
+    -column=indep=delta,df=PDF,output=delta,datafile=deltaDist.sdds \
+    -column=indep=t,df=PDF,units=s,output=t,datafile=timeDist.sdds \
+    | sddsxref -pipe run1.transverse -transfer=parameter,* -take=x,xp,y,yp \
+    | sddsprocess -pipe=in beam.sdds "-define=column,p,pCentral 1 delta + *" 
+
+# Histogram the new longitudinal coordinates and plot comparisons
+# with desired distributions
+sddsmultihist beam.sdds beam.his -columns=t,delta -bins=100 -separate
+
+sddsplot -graph=line,vary -mode=y=normalize \
+    -column=t,tFrequency beam.his -column=t,PDF timeDist.sdds 
+
+sddsplot -graph=line,vary -mode=y=normalize \
+    -column=delta,deltaFrequency beam.his -column=delta,PDF deltaDist.sdds 

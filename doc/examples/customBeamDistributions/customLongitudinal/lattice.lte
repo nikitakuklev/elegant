@@ -1,0 +1,3 @@
+!! Null beamline
+d0: drift
+bl: line=(d0)
