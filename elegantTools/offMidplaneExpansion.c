@@ -153,7 +153,7 @@ int main(int argc, char **argv)
           exit(1);
         }
         scanned[i_arg].n_items -= 1;
-        if (!scanItemList(&dummyFlags, scanned[i_arg].list+2, &scanned[i_arg].n_items, 0,
+        if (!scanItemList(&dummyFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
                           "x", SDDS_LONG, &xDerivOrder, 1, 0,
                           "z", SDDS_LONG, &zDerivOrder, 1, 0,
                           NULL) || 
