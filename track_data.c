@@ -3698,7 +3698,12 @@ PARAMETER boffaxe_param[N_BOFFAXE_PARAMS] = {
   {"Z_SUBDIVISIONS", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.zSubdivisions), NULL, 0.0, 1, "Number of subdivisions of z interval to use in integration"},
   {"SYNCH_RAD", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.synchRad), NULL, 0.0, 0, "if nonzero, include classical, single-particle synchrotron radiation"},
   {"ISR", "", IS_SHORT, 0, (long)((char *)&boffaxe_example.isr), NULL, 0.0, 0, "if nonzero, include incoherent synchrotron radiation (quantum excitation)"},
-  {"PARTICLE_OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&boffaxe_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space and field output. Use for debugging only!"},
+  {"PARTICLE_OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&boffaxe_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space and field output. Use for debugging only in serial version."},
+  {"FIELD_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char *)&boffaxe_example.fieldOutputFile), NULL, 0.0, 0, "name of file to which a grid of field values will be written. Disabled for parallel version."},
+  {"NX_OUTPUT", NULL, IS_LONG, 0, (long)((char *)&boffaxe_example.nOutput[0]), NULL, 0.0, 0, "Number of x sample points for field output"},
+  {"NY_OUTPUT", NULL, IS_LONG, 0, (long)((char *)&boffaxe_example.nOutput[1]), NULL, 0.0, 0, "Number of y sample points for field output"},
+  {"X_HALF_SPAN_OUTPUT", NULL, IS_DOUBLE, 0, (long)((char *)&boffaxe_example.halfSpanOutput[0]), NULL, -1.0, 0, "Half-span of x sample points for field output"},
+  {"Y_HALF_SPAN_OUTPUT", NULL, IS_DOUBLE, 0, (long)((char *)&boffaxe_example.halfSpanOutput[1]), NULL, -1.0, 0, "Half-span of y sample points for field output"},
 };
 
 APCONTOUR apcontour_example;

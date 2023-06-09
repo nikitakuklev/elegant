@@ -1151,7 +1151,7 @@ extern char *entity_text[N_TYPES];
 #define N_SPEEDBUMP_PARAMS 8
 #define N_CCBEND_PARAMS 72
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
-#define N_BOFFAXE_PARAMS 19
+#define N_BOFFAXE_PARAMS (19+5)
 #define N_APCONTOUR_PARAMS 15
 #define N_TAPERAPC_PARAMS 6
 #define N_TAPERAPE_PARAMS 12
@@ -3188,6 +3188,9 @@ typedef struct {
   short zSubdivisions;    /* whether to subdivide the z steps */
   short synchRad, isr;
   char *particleOutputFile;  
+  char *fieldOutputFile;
+  long nOutput[2];
+  double halfSpanOutput[2];
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;

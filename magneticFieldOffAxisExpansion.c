@@ -20,6 +20,7 @@ static htab *fileHashTable = NULL;
 
 void computeMagneticFieldFromOffAxisExpansion(double *B, double x, double y, long iz, long is,
                                               BOFFAXE *boa, STORED_BOFFAXE_DATA *boaData);
+void outputBOFFAXEDataOnGrid(BOFFAXE *boa);
 
 #define BUFSIZE 16834
 
@@ -218,6 +219,8 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
       bombElegantVA("Z_INTERVAL<1 given for BOFFAXE %s#%ld\n", tcontext.elementName, tcontext.elementOccurrence);
     boa->dataIndex = addBOFFAXEData(boa->filename, boa->zColumn, boa->fieldColumn, boa->order);
 #if !USE_MPI
+    if (boa->fieldOutputFile)
+      outputBOFFAXEDataOnGrid(boa);
     if (boa->particleOutputFile && !boa->SDDSpo) {
       boa->SDDSpo = tmalloc(sizeof(*(boa->SDDSpo)));
       boa->particleOutputFile = compose_filename(boa->particleOutputFile, tcontext.rootname);
@@ -236,7 +239,7 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
           (boa->poIndex[7] = SDDS_DefineColumn(boa->SDDSpo, "By", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0)) < 0 ||
           (boa->poIndex[8] = SDDS_DefineColumn(boa->SDDSpo, "Bz", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0)) < 0 ||
           !SDDS_WriteLayout(boa->SDDSpo)) {
-        SDDS_SetError("Problem setting up particle output file for BOAEXP");
+        SDDS_SetError("Problem setting up particle output file for BOFFAXE");
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
       }
     }
@@ -545,4 +548,59 @@ void computeMagneticFieldFromOffAxisExpansion(
   }
   for (i = 0; i < 3; i++)
     B[i] *= boa->strength;
+}
+
+void outputBOFFAXEDataOnGrid(BOFFAXE *boa)
+{
+  long ix, iy, iz, row;
+  double dx, dy;
+  double x, y, z;
+  double B[3];
+  SDDS_DATASET SDDSout;
+  STORED_BOFFAXE_DATA *boaData;
+
+  if (boa->nOutput[0]<=0 || boa->nOutput[1]<=0)
+    bombElegant("NX_OUTPUT and NY_OUTPUT must be positive for BOFFAXE if FIELD_OUTPUT_FILE is given", NULL);
+  if (boa->halfSpanOutput[0]<0 || boa->halfSpanOutput[1]<0)
+    bombElegant("X_HALF_SPAN_OUTPUT and Y_HALF_SPAN_OUTPUT must non-negative for BOFFAXE if FIELD_OUTPUT_FILE is given", NULL);
+
+  boaData = storedBOFFAXEData + boa->dataIndex;
+
+  if (!SDDS_InitializeOutputElegant(&SDDSout, SDDS_BINARY, 1, NULL, NULL, boa->fieldOutputFile) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "x", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "y", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "z", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "Bx", "T", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "By", "T", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "Bz", "T", SDDS_DOUBLE) ||
+      !SDDS_WriteLayout(&SDDSout) || 
+      !SDDS_StartPage(&SDDSout, boa->nOutput[0]*boa->nOutput[1]*boaData->nz)) {
+    SDDS_SetError("Problem setting up field output file for BOFFAXE");
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
+  }
+
+  dx = 2*boa->halfSpanOutput[0]/(boa->nOutput[0]-1);
+  dy = 2*boa->halfSpanOutput[1]/(boa->nOutput[1]-1);
+
+  row = 0;
+  for (iz=0; iz<boaData->nz; iz++) {
+    z = iz*boaData->dz + boaData->zMin;
+    for (iy=0; iy<boa->nOutput[1]; iy++) {
+      y = iy*dy - boa->halfSpanOutput[1];
+      for (ix=0; ix<boa->nOutput[0]; ix++) {
+        x = ix*dx - boa->halfSpanOutput[0];
+        computeMagneticFieldFromOffAxisExpansion(&B[0], x, y, iz, 0.0, boa, boaData);
+        if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_INDEX | SDDS_PASS_BY_VALUE, row++,
+                               0, x, 1, y, 2, z, 
+                               3, B[0], 4, B[1], 5, B[2], -1)) {
+          SDDS_SetError("Problem storing data for field output file for BOFFAXE");
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
+        }
+      }
+    }
+  }
+  if (!SDDS_WritePage(&SDDSout) || !SDDS_Terminate(&SDDSout)) {
+    SDDS_SetError("Problem writing data for field output file for BOFFAXE");
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors | SDDS_VERBOSE_PrintErrors);
+  }
 }
