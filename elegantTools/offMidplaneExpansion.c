@@ -33,7 +33,7 @@ void ComputeDerivatives(MIDPLANE_EXPANSION *expansion, MIDPLANE_FIELDS *mpFields
                         long xDerivOrder, long zDerivOrder);
 int WriteExpansion(char *output, MIDPLANE_EXPANSION *expansion);
 int EvaluateExpansionAndOutput(char *output, long ny, double yMax, MIDPLANE_EXPANSION *expansion, MIDPLANE_FIELDS *fields);
-void SmoothInZ(MIDPLANE_FIELDS *fields, long smoothPoints, long fitOrder);
+void SmoothInZ(MIDPLANE_FIELDS *fields, long smoothPoints, long fitTerms);
 
 #define SET_YORDER 0
 #define SET_EVALUATE 1
@@ -50,8 +50,8 @@ char *option[N_OPTIONS] = {
 
 #define USAGE "offMidplaneExpansion -input=<filename>[,xName=<parameterName>] -output=<filename>\n\
               [-yOrder=<integer>] [-derivativeOrder=z={2|4|6},x={2|4|6}]\n\
-              [-xSmoothing=[points=<integer>,][order=<integer>]]\n\
-              [-zSmoothing=[points=<integer>,][order=<integer>]]\n\
+              [-xSmoothing=[points=<integer>,][terms=<integer>]]\n\
+              [-zSmoothing=[points=<integer>,][terms=<integer>]]\n\
               [-evaluate=<filename>,ny=<integer>,yhalfspan=<meters>]\n\
 -input       Provides the name of an SDDS file containing (Bx, By) on a grid of (x, z) points.\n\
              The file must have one page for each value of x, with the value of x\n\
@@ -63,12 +63,12 @@ char *option[N_OPTIONS] = {
              Allows setting the order of the finite-difference equations used for taking\n\
              derivatives versus z and x. E.g., order 2 means that the error is O(h^2).\n\
              Higher order will amplify noise but provide better reproduction of sharp\n\
-             features. Defaults to 2.\n\
+             features. Defaults to 4.\n\
 -xSmoothing\n\
 -zSmoothing\n\
              If given, then for the indicated plane, data are smoothed using Savitzky-Golay\n\
              filters prior to taking derivatives. The filters use least-squares fits over the\n\
-             given number of data points. By default, 5 points are used with a cubic fit.\n\
+             given number of data points. By default, 5 points are used with a quadratic (3-term) fit.\n\
              The number of points must be odd.\n\
 -evaluate    Evaluates the expansion on a 3D grid.\n\n\
 Program by Michael Borland, 2023."
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 {
   SCANNED_ARG *scanned;
   long i_arg, yOrder = 3;
-  int32_t xDerivOrder = 2, zDerivOrder = 2;
+  int32_t xDerivOrder = 4, zDerivOrder = 4;
   char *input = NULL, *output = NULL, *evaluationOutput = NULL;
   char *xParameter = NULL;
   unsigned long dummyFlags;
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
   double evaluationYMax = 0;
   MIDPLANE_FIELDS midplaneFields;
   MIDPLANE_EXPANSION midplaneExpansion;
-  int32_t xFitPoints, zFitPoints, xFitOrder, zFitOrder;
+  int32_t xFitPoints, zFitPoints, xFitTerms, zFitTerms;
 
   argc = scanargs(&scanned, argc, argv);
   if (argc < 2 || argc > (2 + N_OPTIONS)) {
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     return (1);
   }
   
-  xFitPoints = zFitPoints = xFitOrder = zFitOrder = 0;
+  xFitPoints = zFitPoints = xFitTerms = zFitTerms = 0;
 
   for (i_arg = 1; i_arg < argc; i_arg++) {
     if (scanned[i_arg].arg_type == OPTION) {
@@ -165,13 +165,13 @@ int main(int argc, char **argv)
         break;
       case SET_X_SMOOTHING:
         xFitPoints = 5;
-        xFitOrder = 3;
+        xFitTerms = 3;
         if ((scanned[i_arg].n_items -= 1)>0) {
           if (!scanItemList(&dummyFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
                             "points", SDDS_LONG, &xFitPoints, 1, 0,
-                            "order", SDDS_LONG, &xFitOrder, 1, 0,
+                            "order", SDDS_LONG, &xFitTerms, 1, 0,
                             NULL) || 
-              xFitPoints<3 || xFitPoints%2!=1 || (xFitOrder+1)>xFitPoints) {
+              xFitPoints<3 || xFitPoints%2!=1 || (xFitTerms+1)>xFitPoints) {
             fprintf(stderr, "invalid -xSmoothing syntax\n%s\n", USAGE);
             exit(1);
           }
@@ -179,13 +179,13 @@ int main(int argc, char **argv)
         break;
       case SET_Z_SMOOTHING:
         zFitPoints = 5;
-        zFitOrder = 3;
+        zFitTerms = 3;
         if ((scanned[i_arg].n_items -= 1)>0) {
           if (!scanItemList(&dummyFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
                             "points", SDDS_LONG, &zFitPoints, 1, 0,
-                            "order", SDDS_LONG, &zFitOrder, 1, 0,
+                            "order", SDDS_LONG, &zFitTerms, 1, 0,
                             NULL) || 
-              zFitPoints<3 || zFitPoints%2!=1 || (zFitOrder+1)>zFitPoints) {
+              zFitPoints<3 || zFitPoints%2!=1 || (zFitTerms+1)>zFitPoints) {
             fprintf(stderr, "invalid -zSmoothing syntax\n%s\n", USAGE);
             exit(1);
           }
@@ -209,10 +209,10 @@ int main(int argc, char **argv)
     SDDS_Bomb("unable to read input file");
 
   if (zFitPoints)
-    SmoothInZ(&midplaneFields, zFitPoints, zFitOrder);
-  /* 
+    SmoothInZ(&midplaneFields, zFitPoints, zFitTerms);
+  /*
   if (xFitPoints)
-    SmoothInX(midplaneFields, xFitPoints, xFitOrder);
+    SmoothInX(midplaneFields, xFitPoints, xFitTerms);
   */
 
   ComputeDerivatives(&midplaneExpansion, &midplaneFields, xDerivOrder, zDerivOrder);
@@ -443,14 +443,15 @@ void takeDerivative(double *y, int64_t rows, double delta, double *deriv, long d
     /* three-point formula */
     /* See https://web.media.mit.edu/~crtaylor/calculator.html */
     for (i=0; i<rows; i++) {
+      error = 0;
       if (i==0) {
         term[0] = -3*y[0];
         term[1] = 4*y[1];
         term[2] = -y[2];
       } else if (i==(rows-1)) {
-        term[0] = 3*y[0];
-        term[1] = -4*y[1];
-        term[2] = y[2];
+        term[0] = 3*y[i];
+        term[1] = -4*y[i-1];
+        term[2] = y[i-2];
       } else {
         term[0] = y[i+1];
         term[1] = -y[i-1];
