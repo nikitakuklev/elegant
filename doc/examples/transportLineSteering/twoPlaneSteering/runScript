@@ -1,0 +1,11 @@
+#!/bin/bash
+
+elegant run.ele 
+
+sddsplot -split=page -group=page,request -sep=4 -layout=1,2 -join=x -convert=col,[xy],mm,m,1e3 -same=y,global \
+    -col=s,[xy] run.traj -match=param,Stage=uncorrected -legend=edit="i/uncor. /" -graph=line,vary \
+    -col=s,[xy] run.traj -match=param,Stage=uncorrected -graph=sym,vary,sub=type -match=col,ElementType=?MON \
+    -col=s,[xy] run.traj -match=param,Stage=corrected -legend=edit="i/cor. /" -graph=line,vary  \
+    -col=s,[xy] run.traj -match=param,Stage=corrected -graph=sym,vary,sub=type -match=col,ElementType=?MON 
+
+

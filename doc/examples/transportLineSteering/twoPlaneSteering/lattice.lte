@@ -1,0 +1,52 @@
+flag: marker
+hmon: hmonitor, l=0.0
+vmon: vmonitor, l=0.0
+hcor: hkicker, l=0.06
+vcor: vkicker, l=0.06
+dcor: drift, l=0.06
+lcq: drift, l=0.20152
+l1: drift, l=2.904756
+l1a: drift, l=0.832346
+l1b: drift, l=0.73954
+l1c: drift, l=1.27287
+l2: drift, l=0.73848
+l3: drift, l=0.73848
+l4: drift, l=0.73848
+l5: drift, l=0.73848
+l6: drift, l=0.8989925
+l7: drift, l=0.3374724
+l8: drift, l=0.33848
+l9a: drift, l=0.4928403
+l9b: drift, l=0.26848
+l10: drift, l=0.33848
+l11: drift, l=0.6000001
+l12a: drift, l=0.13
+l12b: drift, l=1.709493
+l13a: drift, l=0.612
+l13b: drift, l=0.288
+l14a: drift, l=0.13
+l14b: drift, l=0.38
+lex: drift, l=0.012222019872
+q1: quadrupole, l=0.3, k1=-1.004291597297
+q2: quadrupole, l=0.3, k1=3.755043578686
+q3: quadrupole, l=0.3, k1=-4.738443576269
+q4: quadrupole, l=0.3, k1=4.947298619308
+q5: quadrupole, l=0.3, k1=-4.272044753069
+q6: quadrupole, l=0.3, k1=3.282509620006
+q7: quadrupole, l=0.3, k1=-3.664869642743
+q8: quadrupole, l=0.3, k1=1.802865544919
+q9: quadrupole, l=0.3, k1=-1.69958258051
+q10: quadrupole, l=0.3, k1=1.703087630504
+q11: quadrupole, l=0.3, k1=-1.013880070909
+ps: sbend, l=0.4, angle=0.2, e1=0.0, e2=0.2, hgap=0.01, fint=0.5
+b1: sbend, l=0.40200836736, angle=-0.2, e1=-0.2, e2=0.0, hgap=0.02, fint=0.5
+b2: sbend, l=0.401681, angle=0.187402, e1=0.0, e2=0.187402, hgap=0.02, fint=&
+0.5
+bs: sbend, l=0.8, angle=-0.2717951246875985, e1=-0.1358975623437993, &
+e2=-0.1358975623437993, hgap=0.01, fint=0.5
+malin: malign
+ptb: line=(malin,ps,l1a,vcor,l1b,flag,l1c,q1,l2,hmon,hcor,lcq,q2,l3,vmon,dcor,lcq,q3,l4,&
+hmon,hcor,lcq,q4,l5,vmon,vcor,lcq,q5,l6,b1,l7,hmon,hcor,lcq,q6,l8,vmon,vcor,&
+lcq,q7,l9a,flag,l9b,hcor,lcq,q8,l10,vcor,vmon,lcq,q9,l11,b2,l12a,hmon,l12b,q10,&
+l13a,flag,l13b,q11,l14a,hmon,2*l14a,vmon,l14a,l14b,lex,bs)
+return !

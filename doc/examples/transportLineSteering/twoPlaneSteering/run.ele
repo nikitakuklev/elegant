@@ -1,0 +1,57 @@
+&run_setup
+        lattice = lattice.lte,
+        default_order = 2,
+        use_beamline = ptb,
+        p_central = 84.12392,
+	always_change_p0 = 1,
+        print_statistics = 0,
+        random_number_seed = 987654321
+        centroid = %s.cen,
+        final = %s.fin,
+        semaphore_file = %s.done
+&end
+
+&run_control
+        n_steps = 10,
+        reset_rf_for_each_step = 0,
+        first_is_fiducial = 1,
+&end
+
+&correct
+        mode = trajectory,
+        corrector_output = %s.cor
+        trajectory_output = %s.traj,
+        statistics = %s.scor,
+        corrector_tweek[0] = 1e-6, 1e-6,
+        correction_fraction[0] = 0.8, 0.8,
+        verbose = 1,
+        n_xy_cycles = 2,
+        n_iterations = 4,
+        auto_limit_SVs[0] = 4*0,
+        keep_largest_SVs[0] = 2*7
+&end
+        
+&error_control
+        clear_error_settings = 1,
+        no_errors_for_first_step = 0,
+&end
+
+! Misalignment errors on BPMs
+&error_element name=*, element_type=HMON, item=DX, amplitude=150e-6, cutoff=2 &end
+&error_element name=*, element_type=HMON, item=TILT, amplitude=2e-3, cutoff=2 &end
+&error_element name=*, element_type=VMON, item=DY, amplitude=150e-6, cutoff=2 &end
+&error_element name=*, element_type=VMON, item=TILT, amplitude=2e-3, cutoff=2 &end
+
+! Misalignment errors on quadrupoles
+&error_element name=*, element_type=*QUAD*, item=DX, amplitude=150e-6, cutoff=2 &end
+&error_element name=*, element_type=*QUAD*, item=DY, amplitude=150e-6, cutoff=2 &end
+&error_element name=*, element_type=*QUAD*, item=TILT, amplitude=2e-3, cutoff=2 &end
+
+&error_control summarize_error_settings = 1 &end
+
+&bunched_beam
+        n_particles_per_bunch = 1
+&end
+
+&track &end
+
