@@ -33,7 +33,7 @@ void ComputeDerivatives(MIDPLANE_EXPANSION *expansion, MIDPLANE_FIELDS *mpFields
                         long xDerivOrder, long zDerivOrder);
 int WriteExpansion(char *output, MIDPLANE_EXPANSION *expansion);
 int EvaluateExpansionAndOutput(char *output, long ny, double yMax, MIDPLANE_EXPANSION *expansion, MIDPLANE_FIELDS *fields);
-void SmoothData(MIDPLANE_FIELDS *fields, long smoothPoints, long fitTerms, short versus_x, char *outputFile);
+void SmoothData(MIDPLANE_FIELDS *fields, long smoothPoints, long fitTerms, double fraction, short versus_x, char *outputFile);
 
 #define SET_YORDER 0
 #define SET_EVALUATE 1
@@ -42,16 +42,18 @@ void SmoothData(MIDPLANE_FIELDS *fields, long smoothPoints, long fitTerms, short
 #define SET_DERIVATIVE_ORDER 4
 #define SET_X_SMOOTHING 5
 #define SET_Z_SMOOTHING 6
-#define N_OPTIONS 7
+#define SET_SMOOTHING_PASSES 7
+#define N_OPTIONS 8
 
 char *option[N_OPTIONS] = {
-  "yorder", "evaluate", "input", "output", "derivativeorder", "xsmoothing", "zsmoothing",
+  "yorder", "evaluate", "input", "output", "derivativeorder", "xsmoothing", "zsmoothing", "smoothingpasses"
 };
 
 #define USAGE "offMidplaneExpansion -input=<filename>[,xName=<parameterName>] -output=<filename>\n\
               [-yOrder=<integer>] [-derivativeOrder=z={2|4|6},x={2|4|6}]\n\
-              [-xSmoothing=[points=<integer>,][terms=<integer>][,output=<filename>]]\n\
-              [-zSmoothing=[points=<integer>,][terms=<integer>][,output=<filename>]]\n\
+              [-xSmoothing=[points=<integer>,][terms=<integer>][,output=<filename>][,fraction=<value>]]\n\
+              [-zSmoothing=[points=<integer>,][terms=<integer>][,output=<filename>][,fraction=<value>]\n\
+              [-smoothingPasses=<number>]\n\
               [-evaluate=<filename>,ny=<integer>,yhalfspan=<meters>]\n\
 -input       Provides the name of an SDDS file containing (Bx, By) on a grid of (x, z) points.\n\
              The file must have one page for each value of x, with the value of x\n\
@@ -87,6 +89,8 @@ int main(int argc, char **argv)
   MIDPLANE_EXPANSION midplaneExpansion;
   int32_t xFitPoints, zFitPoints, xFitTerms, zFitTerms;
   char *xSmoothedOutput, *zSmoothedOutput;
+  double xSmoothingFraction, zSmoothingFraction;
+  long smoothingPasses = 1;
 
   argc = scanargs(&scanned, argc, argv);
   if (argc < 2 || argc > (2 + N_OPTIONS)) {
@@ -96,6 +100,7 @@ int main(int argc, char **argv)
   
   xFitPoints = zFitPoints = xFitTerms = zFitTerms = 0;
   xSmoothedOutput = zSmoothedOutput = NULL;
+  xSmoothingFraction = zSmoothingFraction = 1;
 
   for (i_arg = 1; i_arg < argc; i_arg++) {
     if (scanned[i_arg].arg_type == OPTION) {
@@ -168,14 +173,17 @@ int main(int argc, char **argv)
       case SET_X_SMOOTHING:
         xFitPoints = 5;
         xFitTerms = 3;
+        xSmoothingFraction = 1;
         xSmoothedOutput = NULL;
         if ((scanned[i_arg].n_items -= 1)>0) {
           if (!scanItemList(&dummyFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
                             "points", SDDS_LONG, &xFitPoints, 1, 0,
                             "terms", SDDS_LONG, &xFitTerms, 1, 0,
                             "output", SDDS_STRING, &xSmoothedOutput, 1, 0,
+                            "fraction", SDDS_DOUBLE, &xSmoothingFraction, 1, 0,
                             NULL) || 
-              (xFitPoints!=0 && (xFitPoints<3 || xFitPoints%2!=1 || xFitTerms>xFitPoints))) {
+              (xFitPoints!=0 && (xFitPoints<3 || xFitPoints%2!=1 || xFitTerms>xFitPoints)) || xSmoothingFraction<=0 ||
+              xSmoothingFraction>=1 ) {
             fprintf(stderr, "invalid -xSmoothing syntax\n%s\n", USAGE);
             exit(1);
           }
@@ -184,18 +192,25 @@ int main(int argc, char **argv)
       case SET_Z_SMOOTHING:
         zFitPoints = 5;
         zFitTerms = 3;
+        zSmoothingFraction = 1;
         zSmoothedOutput = NULL;
         if ((scanned[i_arg].n_items -= 1)>0) {
           if (!scanItemList(&dummyFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
                             "points", SDDS_LONG, &zFitPoints, 1, 0,
                             "terms", SDDS_LONG, &zFitTerms, 1, 0,
                             "output", SDDS_STRING, &zSmoothedOutput, 1, 0,
+                            "fraction", SDDS_DOUBLE, &zSmoothingFraction, 1, 0,
                             NULL) || 
-              (zFitPoints!=0 && (zFitPoints<3 || zFitPoints%2!=1 || zFitTerms>zFitPoints))) {
+              (zFitPoints!=0 && (zFitPoints<3 || zFitPoints%2!=1 || zFitTerms>zFitPoints)) || zSmoothingFraction<=0 ||
+              zSmoothingFraction>=1 ) {
             fprintf(stderr, "invalid -zSmoothing syntax\n%s\n", USAGE);
             exit(1);
           }
         }
+        break;
+      case SET_SMOOTHING_PASSES:
+        if (scanned[i_arg].n_items != 2 || sscanf(scanned[i_arg].list[1], "%ld", &smoothingPasses) != 1 || smoothingPasses < 1)
+          SDDS_Bomb("invalid -smoothingPasses syntax: give an value greater than 0");
         break;
       default:
         fprintf(stderr, "unknown option given\n%s\n", USAGE);
@@ -214,10 +229,12 @@ int main(int argc, char **argv)
   if (!ReadInputFile(&midplaneFields, xParameter, input))
     SDDS_Bomb("unable to read input file");
 
-  if (zFitPoints)
-    SmoothData(&midplaneFields, zFitPoints, zFitTerms, 0, zSmoothedOutput);
-  if (xFitPoints) 
-    SmoothData(&midplaneFields, xFitPoints, xFitTerms, 1, xSmoothedOutput);
+  while (smoothingPasses--) {
+    if (zFitPoints)
+      SmoothData(&midplaneFields, zFitPoints, zFitTerms, zSmoothingFraction, 0, zSmoothedOutput);
+    if (xFitPoints) 
+      SmoothData(&midplaneFields, xFitPoints, xFitTerms, xSmoothingFraction, 1, xSmoothedOutput);
+  }
 
   ComputeDerivatives(&midplaneExpansion, &midplaneFields, xDerivOrder, zDerivOrder);
 
@@ -683,7 +700,7 @@ void ComputeDerivatives(MIDPLANE_EXPANSION *xp, MIDPLANE_FIELDS *fields, long xD
 
 #include "matlib.h"
 
-void SmoothData(MIDPLANE_FIELDS *fields, long smoothPoints, long fitTerms, short versus_x, char *output) 
+void SmoothData(MIDPLANE_FIELDS *fields, long smoothPoints, long fitTerms, double fraction, short versus_x, char *output) 
 {
   MATRIX *A, *At, *AtA, *Y, *C, *S;
   long i, j, ix, iz;
@@ -744,7 +761,7 @@ void SmoothData(MIDPLANE_FIELDS *fields, long smoothPoints, long fitTerms, short
       }
 
       for (ix=0; ix<fields->nx; ix++)
-        fields->By[ix][iz] = buffer[ix];
+        fields->By[ix][iz] = fraction*buffer[ix] + (1-fraction)*fields->By[ix][iz];
     }
     free(buffer);
   } else {
@@ -780,7 +797,7 @@ void SmoothData(MIDPLANE_FIELDS *fields, long smoothPoints, long fitTerms, short
       }
 
       for (iz=0; iz<fields->nz; iz++)
-        fields->By[ix][iz] = buffer[iz];
+        fields->By[ix][iz] = fraction*buffer[iz] + (1-fraction)*fields->By[ix][iz];
     }
     free(buffer);
   }
