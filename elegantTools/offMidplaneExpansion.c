@@ -33,7 +33,7 @@ void ComputeDerivatives(MIDPLANE_EXPANSION *expansion, MIDPLANE_FIELDS *mpFields
                         long xDerivOrder, long zDerivOrder);
 int WriteExpansion(char *output, MIDPLANE_EXPANSION *expansion);
 int EvaluateExpansionAndOutput(char *output, long ny, double yMax, MIDPLANE_EXPANSION *expansion, MIDPLANE_FIELDS *fields);
-void SmoothInZ(MIDPLANE_FIELDS *fields, long smoothPoints, long fitTerms);
+void SmoothData(MIDPLANE_FIELDS *fields, long smoothPoints, long fitTerms, short versus_x, char *outputFile);
 
 #define SET_YORDER 0
 #define SET_EVALUATE 1
@@ -50,8 +50,8 @@ char *option[N_OPTIONS] = {
 
 #define USAGE "offMidplaneExpansion -input=<filename>[,xName=<parameterName>] -output=<filename>\n\
               [-yOrder=<integer>] [-derivativeOrder=z={2|4|6},x={2|4|6}]\n\
-              [-xSmoothing=[points=<integer>,][terms=<integer>]]\n\
-              [-zSmoothing=[points=<integer>,][terms=<integer>]]\n\
+              [-xSmoothing=[points=<integer>,][terms=<integer>][,output=<filename>]]\n\
+              [-zSmoothing=[points=<integer>,][terms=<integer>][,output=<filename>]]\n\
               [-evaluate=<filename>,ny=<integer>,yhalfspan=<meters>]\n\
 -input       Provides the name of an SDDS file containing (Bx, By) on a grid of (x, z) points.\n\
              The file must have one page for each value of x, with the value of x\n\
@@ -86,6 +86,7 @@ int main(int argc, char **argv)
   MIDPLANE_FIELDS midplaneFields;
   MIDPLANE_EXPANSION midplaneExpansion;
   int32_t xFitPoints, zFitPoints, xFitTerms, zFitTerms;
+  char *xSmoothedOutput, *zSmoothedOutput;
 
   argc = scanargs(&scanned, argc, argv);
   if (argc < 2 || argc > (2 + N_OPTIONS)) {
@@ -94,6 +95,7 @@ int main(int argc, char **argv)
   }
   
   xFitPoints = zFitPoints = xFitTerms = zFitTerms = 0;
+  xSmoothedOutput = zSmoothedOutput = NULL;
 
   for (i_arg = 1; i_arg < argc; i_arg++) {
     if (scanned[i_arg].arg_type == OPTION) {
@@ -166,12 +168,14 @@ int main(int argc, char **argv)
       case SET_X_SMOOTHING:
         xFitPoints = 5;
         xFitTerms = 3;
+        xSmoothedOutput = NULL;
         if ((scanned[i_arg].n_items -= 1)>0) {
           if (!scanItemList(&dummyFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
                             "points", SDDS_LONG, &xFitPoints, 1, 0,
-                            "order", SDDS_LONG, &xFitTerms, 1, 0,
+                            "terms", SDDS_LONG, &xFitTerms, 1, 0,
+                            "output", SDDS_STRING, &xSmoothedOutput, 1, 0,
                             NULL) || 
-              xFitPoints<3 || xFitPoints%2!=1 || (xFitTerms+1)>xFitPoints) {
+              (xFitPoints!=0 && (xFitPoints<3 || xFitPoints%2!=1 || xFitTerms>xFitPoints))) {
             fprintf(stderr, "invalid -xSmoothing syntax\n%s\n", USAGE);
             exit(1);
           }
@@ -180,12 +184,14 @@ int main(int argc, char **argv)
       case SET_Z_SMOOTHING:
         zFitPoints = 5;
         zFitTerms = 3;
+        zSmoothedOutput = NULL;
         if ((scanned[i_arg].n_items -= 1)>0) {
           if (!scanItemList(&dummyFlags, scanned[i_arg].list+1, &scanned[i_arg].n_items, 0,
                             "points", SDDS_LONG, &zFitPoints, 1, 0,
-                            "order", SDDS_LONG, &zFitTerms, 1, 0,
+                            "terms", SDDS_LONG, &zFitTerms, 1, 0,
+                            "output", SDDS_STRING, &zSmoothedOutput, 1, 0,
                             NULL) || 
-              zFitPoints<3 || zFitPoints%2!=1 || (zFitTerms+1)>zFitPoints) {
+              (zFitPoints!=0 && (zFitPoints<3 || zFitPoints%2!=1 || zFitTerms>zFitPoints))) {
             fprintf(stderr, "invalid -zSmoothing syntax\n%s\n", USAGE);
             exit(1);
           }
@@ -209,11 +215,9 @@ int main(int argc, char **argv)
     SDDS_Bomb("unable to read input file");
 
   if (zFitPoints)
-    SmoothInZ(&midplaneFields, zFitPoints, zFitTerms);
-  /*
-  if (xFitPoints)
-    SmoothInX(midplaneFields, xFitPoints, xFitTerms);
-  */
+    SmoothData(&midplaneFields, zFitPoints, zFitTerms, 0, zSmoothedOutput);
+  if (xFitPoints) 
+    SmoothData(&midplaneFields, xFitPoints, xFitTerms, 1, xSmoothedOutput);
 
   ComputeDerivatives(&midplaneExpansion, &midplaneFields, xDerivOrder, zDerivOrder);
 
@@ -679,32 +683,23 @@ void ComputeDerivatives(MIDPLANE_EXPANSION *xp, MIDPLANE_FIELDS *fields, long xD
 
 #include "matlib.h"
 
-void SmoothInZ(MIDPLANE_FIELDS *fields, long smoothPoints, long fitOrder) 
+void SmoothData(MIDPLANE_FIELDS *fields, long smoothPoints, long fitTerms, short versus_x, char *output) 
 {
   MATRIX *A, *At, *AtA, *Y, *C, *S;
-  long i, j, ix, iz, iz0, diz;
-  double factor, *buffer;
-#ifdef DEBUG
-  FILE *fpdeb;
-  fpdeb = fopen("debug.sdds", "w");
-  fprintf(fpdeb, "SDDS1\n");
-  fprintf(fpdeb, "&parameter name=xAve type=float units=m &end\n");
-  fprintf(fpdeb, "&column name=z type=float units=m &end\n");
-  fprintf(fpdeb, "&column name=By type=float units=T &end\n");
-  fprintf(fpdeb, "&column name=dBy type=float units=T &end\n");
-  fprintf(fpdeb, "&data mode=ascii &end\n");
-#endif
+  long i, j, ix, iz;
+  double factor;
+  double *buffer;
 
-  m_alloc(&A, smoothPoints, fitOrder+1);
-  m_alloc(&At, fitOrder+1, smoothPoints);
-  m_alloc(&AtA, fitOrder+1, fitOrder+1);
-  m_alloc(&S, fitOrder+1, smoothPoints);
+  m_alloc(&A, smoothPoints, fitTerms);
+  m_alloc(&At, fitTerms, smoothPoints);
+  m_alloc(&AtA, fitTerms, fitTerms);
+  m_alloc(&S, fitTerms, smoothPoints);
   m_alloc(&Y, smoothPoints, 1);
-  m_alloc(&C, fitOrder+1, 1);
+  m_alloc(&C, fitTerms, 1);
 
   for (i=0; i<smoothPoints; i++) {
     factor = 1;
-    for (j=0; j<=fitOrder; j++) {
+    for (j=0; j<fitTerms; j++) {
       A->a[i][j] = factor;
       factor *= (i-smoothPoints/2);
     }
@@ -716,54 +711,102 @@ void SmoothInZ(MIDPLANE_FIELDS *fields, long smoothPoints, long fitOrder)
   m_free(&At);
   m_free(&AtA);
 
-  buffer = malloc(sizeof(*buffer)*fields->nz);
-  for (ix=0; ix<fields->nx; ix++) {
-    memset(buffer, 0, sizeof(*buffer)*fields->nz);
+  if (versus_x) {
+    long ix0, dix;
+    buffer = malloc(sizeof(*buffer)*fields->nx);
     for (iz=0; iz<fields->nz; iz++) {
-      iz0 = iz-smoothPoints/2;
-      diz = 0;
-      if (iz0<0) {
-        diz = iz0;
-        iz0 = 0;
-      }
-      if ((iz0+smoothPoints-1)>=fields->nz) {
-        iz0 = fields->nz -1 - smoothPoints;
-        diz = iz - iz0;
-      }
-      for (i=0; i<smoothPoints; i++)
-        Y->a[i][0] = fields->By[ix][iz0+i];
-      m_mult(C, S, Y);
-      if (diz==0) {
-        /* usually true */
-        buffer[iz] = C->a[0][0];
-      } else {
-        buffer[iz] = 0;
-        factor = 1;
-        for (i=0; i<=fitOrder; i++) {
-          buffer[iz] += C->a[i][0]*factor;
-          factor *= diz;
+      memset(buffer, 0, sizeof(*buffer)*fields->nx);
+      for (ix=0; ix<fields->nx; ix++) {
+        ix0 = ix-smoothPoints/2;
+        dix = 0;
+        if (ix0<0) {
+          dix = ix0;
+          ix0 = 0;
+        }
+        if ((ix0+smoothPoints-1)>=fields->nx) {
+          ix0 = fields->nx - smoothPoints;
+          dix = ix - (ix0 + smoothPoints/2);
+        }
+        for (i=0; i<smoothPoints; i++)
+          Y->a[i][0] = fields->By[ix0+i][iz];
+        m_mult(C, S, Y);
+        if (dix==0) {
+          /* usually true */
+          buffer[ix] = C->a[0][0];
+        } else {
+          buffer[ix] = 0;
+          factor = 1;
+          for (i=0; i<fitTerms; i++) {
+            buffer[ix] += C->a[i][0]*factor;
+            factor *= dix;
+          }
         }
       }
+
+      for (ix=0; ix<fields->nx; ix++)
+        fields->By[ix][iz] = buffer[ix];
     }
+    free(buffer);
+  } else {
+    long iz0, diz;
+    buffer = malloc(sizeof(*buffer)*fields->nz);
+    for (ix=0; ix<fields->nx; ix++) {
+      memset(buffer, 0, sizeof(*buffer)*fields->nz);
+      for (iz=0; iz<fields->nz; iz++) {
+        iz0 = iz-smoothPoints/2;
+        diz = 0;
+        if (iz0<0) {
+          diz = iz0;
+          iz0 = 0;
+        }
+        if ((iz0+smoothPoints-1)>=fields->nz) {
+          iz0 = fields->nz - smoothPoints;
+          diz = iz - (iz0 + smoothPoints/2);
+        }
+        for (i=0; i<smoothPoints; i++)
+          Y->a[i][0] = fields->By[ix][iz0+i];
+        m_mult(C, S, Y);
+        if (diz==0) {
+          /* usually true */
+          buffer[iz] = C->a[0][0];
+        } else {
+          buffer[iz] = 0;
+          factor = 1;
+          for (i=0; i<fitTerms; i++) {
+            buffer[iz] += C->a[i][0]*factor;
+            factor *= diz;
+          }
+        }
+      }
 
-#ifdef DEBUG
-    fprintf(fpdeb, "%le\n", fields->x[ix]);
-    fprintf(fpdeb, "%ld\n", fields->nz);
-    for (iz=0; iz<fields->nz; iz++)
-      fprintf(fpdeb, "%le %le %le\n", fields->z[iz], buffer[iz], buffer[iz]-fields->By[ix][iz]);
-    fflush(fpdeb);
-#endif
-
-    for (iz=0; iz<fields->nz; iz++)
-      fields->By[ix][iz] = buffer[iz];
+      for (iz=0; iz<fields->nz; iz++)
+        fields->By[ix][iz] = buffer[iz];
+    }
+    free(buffer);
   }
-
-#ifdef DEBUG
-  fclose(fp);
-#endif
 
   m_free(&S);
   m_free(&Y);
   m_free(&C);
-  free(buffer);
+
+  if (output) {
+    SDDS_DATASET SDDSout;
+    if (!SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 1, NULL, NULL, output) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "x", "m", SDDS_DOUBLE) || 
+        !SDDS_DefineSimpleColumn(&SDDSout, "z", "m", SDDS_DOUBLE) || 
+        !SDDS_DefineSimpleColumn(&SDDSout, "By", "T", SDDS_DOUBLE) ||
+        !SDDS_WriteLayout(&SDDSout))
+      SDDS_Bomb("Problem writing post-smoothing data");
+
+    for (ix=0; ix<fields->nx; ix++) {
+      if (!SDDS_StartPage(&SDDSout, fields->nz) ||
+          !SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "x", fields->x[ix], NULL) ||
+          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, fields->z, fields->nz, "z") ||
+          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, fields->By[ix], fields->nz, "By") ||
+          !SDDS_WritePage(&SDDSout))
+        SDDS_Bomb("Problem writing post-smoothing data");
+    }
+    if (!SDDS_Terminate(&SDDSout))
+      SDDS_Bomb("Problem writing post-smoothing data");
+  }
 }

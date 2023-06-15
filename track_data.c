@@ -215,7 +215,7 @@ char *entity_text[N_TYPES] = {
   "A solenoid implemented as a matrix, up to 2nd order.",
   "A horizontal steering dipole implemented as a matrix, up to 2nd order. Use EHKICK for symplectic tracking.",
   "A vertical steering dipole implemented as a matrix, up to 2nd order. Use EVKICK for symplectic tracking.",
-  "A first-order matrix RF cavity with exact phase dependence.",
+  "An rf cavity with exact phase dependence, first order in transverse coordinates.",
   "Not implemented.",
   "A horizontal position monitor, accepting a rpn equation for the readout as a function of the actual position (x).",
   "A vertical position monitor, accepting a rpn equation for the readout as a function of the actual position (y).",
