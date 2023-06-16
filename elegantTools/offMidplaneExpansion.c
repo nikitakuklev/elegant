@@ -183,7 +183,7 @@ int main(int argc, char **argv)
                             "fraction", SDDS_DOUBLE, &xSmoothingFraction, 1, 0,
                             NULL) || 
               (xFitPoints!=0 && (xFitPoints<3 || xFitPoints%2!=1 || xFitTerms>xFitPoints)) || xSmoothingFraction<=0 ||
-              xSmoothingFraction>=1 ) {
+              xSmoothingFraction>1 ) {
             fprintf(stderr, "invalid -xSmoothing syntax\n%s\n", USAGE);
             exit(1);
           }
@@ -202,7 +202,7 @@ int main(int argc, char **argv)
                             "fraction", SDDS_DOUBLE, &zSmoothingFraction, 1, 0,
                             NULL) || 
               (zFitPoints!=0 && (zFitPoints<3 || zFitPoints%2!=1 || zFitTerms>zFitPoints)) || zSmoothingFraction<=0 ||
-              zSmoothingFraction>=1 ) {
+              zSmoothingFraction>1 ) {
             fprintf(stderr, "invalid -zSmoothing syntax\n%s\n", USAGE);
             exit(1);
           }
