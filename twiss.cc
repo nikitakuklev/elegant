@@ -594,8 +594,10 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
       }
     } else {
       hasMatrix = 0;
-      if (elem->pred)
-        elem->Pref_input = elem->Pref_output = elem->pred->Pref_output;
+      if (elem->pred) 
+        elem->Pref_input = elem->pred->Pref_output;
+      if (elem->Pref_output<=0)
+        elem->Pref_output = elem->Pref_input;
       for (plane = 0; plane < 2; plane++) {
         C[plane] = Sp[plane] = 1;
         Cp[plane] = D[plane] = Dp[plane] = 0;
