@@ -1371,6 +1371,10 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
                          &CM->umoni, &CM->ucorr, &CM->kick_coef, &CM->sl_index,
                          &CM->pegged, &CM->weight, coord, SL, run, beamline, 0);
 
+  /* We don't need these coefficients since the response matrix includes them */
+  for (i_corr = 0; i_corr < CM->ncor; i_corr++)
+    CM->kick_coef[i_corr] = 1;
+
 #ifdef DEBUG
   for (i = 0; i < CM->ncor; i++) {
     long sl_index;
@@ -2632,6 +2636,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
       printWarning("No orbit correction done for y plane.", "No correctors for y plane.");
   }
 
+  /* We don't need these coefficients since the response matrix includes them */
   for (i_corr = 0; i_corr < CM->ncor; i_corr++)
     CM->kick_coef[i_corr] = 1;
 
@@ -3643,6 +3648,10 @@ void compute_coupled_trajcor_matrices(
   find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index,
                          &CM->umoni, &CM->ucorr, &CM->kick_coef, &CM->sl_index,
                          &CM->pegged, &CM->weight, 4, SL, run, beamline, 0);
+
+  /* We don't need these coefficients since the response matrix includes them */
+  for (i_corr = 0; i_corr < CM->ncor; i_corr++)
+    CM->kick_coef[i_corr] = 1;
 
 #ifdef DEBUG
   for (i = 0; i < CM->ncor; i++) {
