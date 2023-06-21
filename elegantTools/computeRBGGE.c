@@ -85,7 +85,7 @@ int computeGGderiv(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long deri
 int computeGGcos(FIELDS_ON_PLANES *fieldsOnPlanes, char *outputFile, long derivatives, long multipoles, long fundamental,
                    long varyDerivatives);
 double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_ON_PLANES *fieldsOnPlanes, 
-                              long multipoles, long derivatives, double significance, double radiusLimit,
+                              long multipoles, long derivatives, double significance, double *coordLimit,
                               unsigned long flags, long varyDerivatives, ALL_RESIDUALS *allResiduals);
 int ReadInputFiles(FIELDS_ON_PLANES *fieldsOnPlanes, 
                    char *topFile, char *bottomFile, char *leftFile, char *rightFile, long needBz);
@@ -117,7 +117,7 @@ char *option[N_OPTIONS] = {
 #define USAGE "computeRBGGE -yminus=<filename> -yplus=<filename> -xminus=<filename> -xplus=<filename>\n\
              -normal=<output> [-skew=<output>] [-derivatives=<integer>] [-multipoles=<integer>] [-fundamental=<integer>]\n\
               [-varyDerivatives] [-evaluate=<filename>] [-verbose] [-threads=<integer>] \n\
-              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,increaseOnly][,verbose][,log=<filename>][,minDerivatives=<integer>][,minMultipoles=<integer>]]\n\
+              [-autotune=<3dMapFile>[,significance=<fieldValue>][,minimize={rms|mav|maximum}][,radiusLimit=<meters>][,xLimit=<meters>][,yLimit=<meters>][,increaseOnly][,verbose][,log=<filename>][,minDerivatives=<integer>][,minMultipoles=<integer>]]\n\
 -yplus       (x, y, z, Bx, By, Bz) map for positive-y plane.\n\
 -yminus      (x, y, z, Bx, By, Bz) map for negative-y plane.\n\
 -xminus      (x, y, z, Bx, By, Bz) map for negative-x plane.\n\
@@ -167,7 +167,7 @@ int main(int argc, char **argv)
   char *normalOutputFile = NULL, *skewOutputFile = NULL;
   char *fieldMapFile = NULL;
   char *evaluationOutput = NULL;
-  double autoTuneSignificance = 1e-12, autoTuneRadiusLimit = 0;
+  double autoTuneSignificance = 1e-12, autoTuneCoordLimit[3] = {0,0,0};
   FIELDS_ON_PLANES fieldsOnPlanes;
   FIELD_MAP fieldMap;
   double bestResidual;
@@ -293,7 +293,9 @@ int main(int argc, char **argv)
               fieldMapFile = scanned[i_arg].list[1];
               scanned[i_arg].n_items -= 2;
               autoTuneSignificance = 1e-12;
-              autoTuneRadiusLimit = 0;
+              autoTuneCoordLimit[0] = 0;
+              autoTuneCoordLimit[1] = 0;
+              autoTuneCoordLimit[2] = 0;
               autoTuneFlags = 0;
 	      minDerivatives = minMultipoles = -1;
               if (scanned[i_arg].n_items>0 &&
@@ -302,7 +304,9 @@ int main(int argc, char **argv)
                                  "increaseonly", -1, NULL, 0, AUTOTUNE_INCRONLY,
                                  "evaluate", -1, NULL, 0, AUTOTUNE_EVALONLY,
                                  "significance", SDDS_DOUBLE, &autoTuneSignificance, 1, 0,
-                                 "radiuslimit", SDDS_DOUBLE, &autoTuneRadiusLimit, 1, 0,
+                                 "xlimit", SDDS_DOUBLE, &autoTuneCoordLimit[0], 1, 0,
+                                 "ylimit", SDDS_DOUBLE, &autoTuneCoordLimit[1], 1, 0,
+                                 "radiuslimit", SDDS_DOUBLE, &autoTuneCoordLimit[2], 1, 0,
                                  "minimize", SDDS_STRING, &autoTuneModeString, 1, AUTOTUNE_MODE_SET, 
                                  "log", SDDS_STRING, &autoTuneLogFile, 1, AUTOTUNE_LOG,
 				 "minmultipoles", SDDS_LONG,  &minMultipoles, 1, 0,
@@ -464,7 +468,7 @@ int main(int argc, char **argv)
           double residual;
           if ((residual = evaluateGGEForFieldMap(&fieldMap, &bggexpData[0], &fieldsOnPlanes,
                                                  multipoles, derivatives,
-                                                 autoTuneSignificance, autoTuneRadiusLimit,
+                                                 autoTuneSignificance, &autoTuneCoordLimit[0],
                                                  autoTuneFlags, varyDerivatives, &allResiduals))<bestResidual) {
             bestResidual = residual;
             bestMultipoles = multipoles;
@@ -2991,7 +2995,7 @@ void readBGGExpData(BGGEXP_DATA *bggexpData, char *filename, char *nameFragment,
 }
 
 double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_ON_PLANES *fieldsOnPlanes, 
-                              long multipoles, long derivatives, double significance, double radiusLimit,
+                              long multipoles, long derivatives, double significance, double *coordLimit,
                               unsigned long flags, long varyDerivatives, ALL_RESIDUALS *allResiduals)
 {
   double *residualSum, *residualSum2, *residualWorst, *maxField;
@@ -3036,9 +3040,12 @@ double evaluateGGEForFieldMap(FIELD_MAP *fmap, BGGEXP_DATA *bggexpData, FIELDS_O
         if (fmap->x[ip]>fieldsOnPlanes->xMax || fmap->x[ip]<fieldsOnPlanes->xMin ||
             fmap->y[ip]>fieldsOnPlanes->yMax || fmap->y[ip]<fieldsOnPlanes->yMin)
           continue;
-        if (radiusLimit>0) {
+        if ((coordLimit[0]>0 && fabs(fmap->x[ip])>coordLimit[0]) ||
+            (coordLimit[1]>0 && fabs(fmap->y[ip])>coordLimit[1]))
+          continue;
+        if (coordLimit[2]>0) {
           r = sqrt(sqr(fmap->x[ip])+sqr(fmap->y[ip]));
-          if (r>radiusLimit)
+          if (r>coordLimit[2])
             continue;
         }
         /* Compute fields */
