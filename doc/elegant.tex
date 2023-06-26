@@ -68,6 +68,7 @@ Here is a summary of what's changed since release 2023.2.  Historical change log
   the time interval between checks.
 \item The \verb|load_parameters| command can now optionally load the same page from a file repeatedly. This can be
   used to reassert a baseline configuration prior to other changes, for example.
+\item The \verb|insert_elements| command now supports defining the region of insertion using named elements.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -2937,6 +2938,8 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
         STRING exclude = NULL;
         double s_start = -1;
         double s_end = -1;
+        STRING start_at_element = NULL;
+        STRING end_at_element = NULL;
         long skip = 1;
         long disable = 0;
         long insert_before = 0;
@@ -2961,6 +2964,10 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
 \item \verb|s_start|, \verb|s_end| --- If positive, these give the starting and ending s locations for insertion of new elements.
   Note that the s locations are not updated as elements are inserted, but only after completion of all insertions covered by
   a single command.
+\item \verb|start_at_element|, \verb|end_at_element| --- If given, these are used to define (and override) values for \verb|s_start| and
+  \verb|s_end| based on the locations of named elements. \verb|s_start| is taken as the end of the first element with the name given
+  by 	\verb|start_at_element|, while \verb|s_end| is taken as the end of the last element with the name given by
+  \verb|end_at_element|. No wildcards are accepted.
 \item \verb|disable| --- If nonzero, the command is ignored.
 \item \verb|insert_before| --- If nonzero, the insertions are before the selected elements. By default, insertion is after
   the selected elements.
@@ -2979,6 +2986,9 @@ be set to zero  and the {\bf name} must be the exact name (no wild-card matching
   type, it is normally considered an error. If this parameter is non-zero, a warning is issued but the run continues.
 \item \verb|allow_no_insertions| --- If nothing is inserted, it is normally considered an error. If this parameter is
   non-zero, a warning is issued but the run continues.
+\item \verb|insertion_count_variable| --- If given, the name of an \verb|rpn| variable into which the number of
+  inserted elements will be written. Can be used, for example, with the \verb|field_final_value| parameter of
+  \verb|optimization_term|.
 \end{itemize}
 
 %\begin{latexonly}
