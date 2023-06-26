@@ -737,7 +737,9 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   case T_CSBEND:
     ltmp1 = ((CSBEND *)eptr->p_elem)->isr;
     ltmp2 = ((CSBEND *)eptr->p_elem)->synch_rad;
-    ((CSBEND *)eptr->p_elem)->isr = ((CSBEND *)eptr->p_elem)->synch_rad = 0;
+    ((CSBEND *)eptr->p_elem)->isr = 0;
+    if (!((CSBEND *)eptr->p_elem)->synchRadInOrdinaryMatrix)
+      ((CSBEND *)eptr->p_elem)->synch_rad = 0;
     track_through_csbend(coord, n_track, (CSBEND *)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
                          NULL, NULL, NULL, NULL, NULL, -1, eptr);
     ((CSBEND *)eptr->p_elem)->isr = ltmp1;
@@ -746,7 +748,9 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   case T_CCBEND:
     ltmp1 = ((CCBEND *)eptr->p_elem)->isr;
     ltmp2 = ((CCBEND *)eptr->p_elem)->synch_rad;
-    ((CCBEND *)eptr->p_elem)->isr = ((CCBEND *)eptr->p_elem)->synch_rad = 0;
+      ((CCBEND *)eptr->p_elem)->isr = 0;
+      if (!((CCBEND *)eptr->p_elem)->synchRadInOrdinaryMatrix)
+        ((CCBEND *)eptr->p_elem)->synch_rad = 0;
     track_through_ccbend(coord, n_track, eptr, (CCBEND *)eptr->p_elem, run->p_central, NULL, 0.0,
                          NULL, NULL, NULL, NULL, NULL, -1, -1);
     ((CCBEND *)eptr->p_elem)->isr = ltmp1;
@@ -755,6 +759,9 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   case T_LGBEND:
     ltmp1 = ((LGBEND *)eptr->p_elem)->isr;
     ltmp2 = ((LGBEND *)eptr->p_elem)->synch_rad;
+    ((LGBEND *)eptr->p_elem)->isr = 0;
+    if (!((LGBEND *)eptr->p_elem)->synchRadInOrdinaryMatrix)
+      ((LGBEND *)eptr->p_elem)->synch_rad = 0;
     ((LGBEND *)eptr->p_elem)->isr = ((LGBEND *)eptr->p_elem)->synch_rad = 0;
     track_through_lgbend(coord, n_track, eptr, (LGBEND *)eptr->p_elem, run->p_central, NULL, 0.0,
                          NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -1183,7 +1190,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     case T_CSBEND:
       ltmp1 = ((CSBEND *)eptr->p_elem)->isr;
       ltmp2 = ((CSBEND *)eptr->p_elem)->synch_rad;
-      ((CSBEND *)eptr->p_elem)->isr = ((CSBEND *)eptr->p_elem)->synch_rad = 0;
+      ((CSBEND *)eptr->p_elem)->isr = 0;
+      if (!((CSBEND *)eptr->p_elem)->synchRadInOrdinaryMatrix)
+        ((CSBEND *)eptr->p_elem)->synch_rad = 0;
       n_left = track_through_csbend(finalCoord + my_offset, my_nTrack, (CSBEND *)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
                                     NULL, NULL, NULL, NULL, NULL, -1, eptr);
       ((CSBEND *)eptr->p_elem)->isr = ltmp1;
@@ -1192,7 +1201,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     case T_CCBEND:
       ltmp1 = ((CCBEND *)eptr->p_elem)->isr;
       ltmp2 = ((CCBEND *)eptr->p_elem)->synch_rad;
-      ((CCBEND *)eptr->p_elem)->isr = ((CCBEND *)eptr->p_elem)->synch_rad = 0;
+      ((CCBEND *)eptr->p_elem)->isr = 0;
+      if (!((CCBEND *)eptr->p_elem)->synchRadInOrdinaryMatrix)
+        ((CCBEND *)eptr->p_elem)->synch_rad = 0;
 #ifdef DEBUG_CCBEND
       printf("Computing tracking-based matrix for CCBEND %s#%ld\n", eptr->name, eptr->occurence);
       fflush(stdout);
@@ -1205,7 +1216,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     case T_LGBEND:
       ltmp1 = ((LGBEND *)eptr->p_elem)->isr;
       ltmp2 = ((LGBEND *)eptr->p_elem)->synch_rad;
-      ((LGBEND *)eptr->p_elem)->isr = ((LGBEND *)eptr->p_elem)->synch_rad = 0;
+      ((LGBEND *)eptr->p_elem)->isr = 0;
+      if (!((LGBEND *)eptr->p_elem)->synchRadInOrdinaryMatrix)
+        ((LGBEND *)eptr->p_elem)->synch_rad = 0;
 #ifdef DEBUG_LGBEND
       printf("Computing tracking-based matrix for LGBEND %s#%ld\n", eptr->name, eptr->occurence);
       fflush(stdout);
@@ -1327,7 +1340,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       ltmp1 = ((KQUAD *)eptr->p_elem)->isr;
       ltmp2 = ((KQUAD *)eptr->p_elem)->synch_rad;
       ((KQUAD *)eptr->p_elem)->isr = 0;
-      ((KQUAD *)eptr->p_elem)->synch_rad = 0;
+      if (!((KQUAD *)eptr->p_elem)->synchRadInOrdinaryMatrix)
+        ((KQUAD *)eptr->p_elem)->synch_rad = 0;
       multipole_tracking2(finalCoord + my_offset, my_nTrack, eptr, 0, run->p_central, NULL, 0.0, NULL, NULL, NULL, NULL, -1);
       ((KQUAD *)eptr->p_elem)->isr = ltmp1;
       ((KQUAD *)eptr->p_elem)->synch_rad = ltmp2;

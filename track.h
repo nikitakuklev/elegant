@@ -1070,7 +1070,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 14
 #define N_KSEXT_PARAMS 39
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 56
+#define N_KQUAD_PARAMS 57
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -1081,7 +1081,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 83
+#define N_CSBEND_PARAMS 84
 #define N_MATTER_PARAMS 21
 #define N_RFMODE_PARAMS 57
 #define N_TRFMODE_PARAMS 25
@@ -1149,7 +1149,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 16
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CCBEND_PARAMS 72
+#define N_CCBEND_PARAMS 73
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS (19+5)
 #define N_APCONTOUR_PARAMS 15
@@ -1161,7 +1161,7 @@ extern char *entity_text[N_TYPES];
 #define N_BEAMBEAM_PARAMS 6
 #define N_CPICKUP_PARAMS 7
 #define N_CKICKER_PARAMS 14
-#define N_LGBEND_PARAMS 22
+#define N_LGBEND_PARAMS 23
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -2147,7 +2147,7 @@ typedef struct {
     char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor, steeringMultipoleFactor;
     short minMultipoleOrder[2], maxMultipoleOrder[2]; /* normal, skew */
-    short integration_order, sqrtOrder, isr, isr1Particle;
+    short integration_order, sqrtOrder, isr, isr1Particle, synchRadInOrdinaryMatrix;
     short edge1_effects, edge2_effects;
     double lEffective;
     double fringeIntP[5], fringeIntM[5];
@@ -2404,7 +2404,7 @@ typedef struct {
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
     double etilt, epitch, eyaw;   /* error tilt, pitch, yaw angle */
     long nSlices;
-    short etiltSign, nonlinear, synch_rad;
+    short etiltSign, nonlinear, synch_rad, synchRadInOrdinaryMatrix;
     short edge_effects[2], edge_order;
     short integration_order, expandHamiltonian;
     double edge_kick_limit[2];
@@ -2452,7 +2452,7 @@ typedef struct {
     double systematicMultipoleFactor, randomMultipoleFactor;
     short referenceOrder;
     short minMultipoleOrder[2], maxMultipoleOrder[2]; /* normal, skew */
-    short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
+    short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle, synchRadInOrdinaryMatrix;
     short optimizeFse, optimizeDx, optimizeFseOnce, optimizeDxOnce, compensateKn, referenceCorrection;
     short edgeOrder, dxdySign, verbose;
     /* for internal use only: */
@@ -3669,7 +3669,7 @@ typedef struct {
   double fse;
   long nSlices;   /* slices per segment */
   short integration_order, edgeOrder;
-  short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
+  short synch_rad, isr, isr1Particle, synchRadInOrdinaryMatrix, distributionBasedRadiation, includeOpeningAngle;
   short optimizeFse, compensateKn, verbose;
   /* for internal use only: */
   double xVertex, zVertex, xEntry, zEntry, xExit, zExit; /* from configuration file */

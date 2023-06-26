@@ -58,6 +58,11 @@ Here is a summary of what's changed since release 2023.2.  Historical change log
 \begin{itemize}
 \item The \verb|MRFDF| element now supports the \verb|START_PASS|, \verb|END_PASS|, \verb|START_PID|, and
   \verb|END_PID| parameters, per a request from forum user \verb|Seb_Wilkes|.
+\item The \verb|CCBEND|, \verb|CSBEND|,  \verb|KQUAD|, and \verb|LGBEND| elements have a new parameter, \verb|SR_IN_ORDINARY_MATRIX|
+  which allows including the effect of classical synchrotron radiation in ordinary matrix computations (e.g., for \verb|twiss_output|
+  or \verb|matrix_output|). This would allow, for example, estimating the optical effects of energy losses around the circumference
+  of a storage ring. (The \verb|moments_output| provides a fully self-consistent treatment.) This is in response to a 
+  request from forum user \verb|esmahmadi|.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -68,7 +73,7 @@ Here is a summary of what's changed since release 2023.2.  Historical change log
   the time interval between checks.
 \item The \verb|load_parameters| command can now optionally load the same page from a file repeatedly. This can be
   used to reassert a baseline configuration prior to other changes, for example.
-\item The \verb|insert_elements| command now supports defining the region of insertion using named elements.
+\item The \verb|insert_elements| command now supports defining the region of insertion by bracking with two named elements.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -6056,6 +6061,8 @@ used that gives the second-order chromaticity only.
   results are generally small, but the default behavior disagrees with the results of \verb|moments_output|.
   This feature is not available for cavities that change the beam energy (\verb|CHANGE_P0=1| in element definition 
   or \verb|always_change_p0=1| on \verb|run_setup|).
+  Setting this to 0 for a ring is unusual, but allows computing the effect of energy modulation around a ring if
+  combined with the \verb|SR_IN_ORDINARY_MATRIX=1| on \verb|CSBEND|, \verb|KQUAD|, and other elements.
 \item \verb|compute_driving_terms| --- If nonzero, then resonance driving terms \cite{Bengtsson, WangCXDrivingTerms, Bengtsson-SSC232} and
  tune shifts with amplitude are computed by summing over dipole, quadrupole, sextupole, and octupole elements.  For dipoles, only the effects of gradients and
  sextupole terms are included; curvature effects are not present in the theory.   In addition, these quantities may be optimized 
