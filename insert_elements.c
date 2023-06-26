@@ -13,7 +13,7 @@
 #include "insert_elements.h"
 
 typedef struct {
-  char **name, *type, *exclude, *elemDef;
+  char **name, *type, *exclude, *elemDef, *variable;
   long nNames, nskip, add_end, add_start, total, before, occur[100];
   double sStart, sEnd;
 } ADD_ELEM;
@@ -112,6 +112,41 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) {
   }
   str_to_upper_quotes(element_def);
 
+  if (start_at_element && strlen(start_at_element)) {
+    ELEMENT_LIST *eptr;
+    short matched;
+    eptr = beamline->elem;
+    matched = 0;
+    while (eptr) {
+      if (strcmp(eptr->name, start_at_element)==0) {
+        matched = 1;
+        break;
+      }
+      eptr = eptr->succ;
+    }
+    if (!matched)
+      bombElegantVA("no match for start_at_element = %s", start_at_element);
+    s_start = eptr->end_pos;
+    printf("start_at_element = %s => s_start = %le\n", start_at_element, s_start);
+  }
+  if (end_at_element && strlen(end_at_element)) {
+    ELEMENT_LIST *eptr;
+    short matched;
+    eptr = beamline->elast;
+    matched = 0;
+    while (eptr) {
+      if (strcmp(eptr->name, end_at_element)==0) {
+        matched = 1;
+        break;
+      }
+      eptr = eptr->pred;
+    }
+    if (!matched)
+      bombElegantVA("no match for end_at_element = %s", end_at_element);
+    s_end = eptr->end_pos;
+    printf("end_at_element = %s => s_end = %le\n", end_at_element, s_end);
+  }
+
   add_elem_flag = 1;
   addElem.nskip = skip;
   addElem.add_end = add_at_end;
@@ -124,9 +159,11 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) {
   addElem.sStart = s_start;
   addElem.sEnd = s_end;
   addElem.before = insert_before;
+  addElem.variable = insertion_count_variable;
   delete_spaces(addElem.elemDef);
   /* strncpy(elementDefCopy, element_def, COPYLEN); */
 
+  
   addElem.total = total_occurrences;
   for (i = 0; i < addElem.total; i++) {
     addElem.occur[i] = occurrence[i];
@@ -142,6 +179,8 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) {
   add_elem_flag = 0;
   if (verbose)
     printf("%ld elements inserted in total\n", insertCount+insertStartEndCount);
+  if (addElem.variable && strlen(addElem.variable))
+    rpn_store((double)(insertCount+insertStartEndCount), NULL, rpn_create_mem(addElem.variable, 0));
   if (insertCount==0) {
     if (allow_no_matches) {
       char warningBuffer[16384];

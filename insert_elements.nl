@@ -16,12 +16,15 @@
         long add_at_end = 0;
         double s_start = -1;
         double s_end = -1;
+        STRING start_at_element = NULL;
+        STRING end_at_element = NULL;
         STRING element_def = NULL;
         long verbose = 0;
         long total_occurrences = 0;
         long occurrence[100]={0};
         long allow_no_matches = 0;
         long allow_no_insertions = 0;
+        STRING insertion_count_variable = NULL;
 #end
 
 
