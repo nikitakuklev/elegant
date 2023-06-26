@@ -109,3 +109,15 @@ leading-order (cubic) nonlinear effects are included.  If the value is 3 or high
 {\bf Misalignments}
 
 \input{malign_method}
+
+{\bf Radiation effects}
+
+If \verb|SYNCH_RAD| is non-zero, classical synchrotron radiation is included in tracking.
+If, in addition, \verb|ISR| is non-zero, incoherent synchrotron radiation (i.e., quantum-mechanical variation
+in radiation emitted by different particles) is also included.
+(To exclude ISR for single-particle tracking, set \verb|ISR1PART=0|.)
+
+If \verb|TRACKING_MATRIX| and \verb|SYNCH_RAD| are non-zero, classical synchrotron radiation can be included in the
+ordinary matrix (e.g., for \verb|twiss_output| and \verb|matrix_output|) by setting \verb|SR_IN_ORDINARY_MATRIX| to a
+non-zero value. Symplecticity is not assured, but the results may be interesting nonetheless. A more rigorous approach
+is to use \verb|moments_output|.  \verb|SR_IN_ORDINARY_MATRIX| does not affect tracking.

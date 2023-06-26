@@ -22,13 +22,20 @@ to ensure that the integrated quadrupole and sextupole are not chagned.
 
 {\bf Radiation effects}
 
+If \verb|SYNCH_RAD| is non-zero, classical synchrotron radiation is included in tracking.
 Incoherent synchrotron radiation, when requested with {\tt ISR=1},
 normally uses gaussian distributions for the excitation of the electrons.
+(To exclude ISR for single-particle tracking, set \verb|ISR1PART=0|.)
 Setting {\tt USE\_RAD\_DIST=1} invokes a more sophisticated algorithm that
 uses correct statistics for the photon energy and number distributions.
 In addition, if {\tt USE\_RAD\_DIST=1} one may also set {\tt ADD\_OPENING\_ANGLE=1},
 which includes the photon angular distribution when computing the effect on 
 the emitting electron.  
+
+If \verb|SYNCH_RAD| and \verb|SR_IN_ORDINARY_MATRIX| are non-zero, classical synchrotron radiation will be included in
+the ordinary matrix (e.g., for \verb|twiss_output| and \verb|matrix_output|).  Symplecticity is not assured, but the results may
+be interesting nonetheless. A more rigorous approach is to use \verb|moments_output|.
+\verb|SR_IN_ORDINARY_MATRIX| does not affect tracking.
 
 {\bf Adding errors}
 
