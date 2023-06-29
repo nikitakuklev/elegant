@@ -101,8 +101,7 @@ static short storeData = 0; /* 0: no data stored, 1: only (X, Y, Z, BX, BY, BZ) 
 static double *X_stored = NULL, *Z_stored = NULL, *Y_stored = NULL;
 static double *wX_stored = NULL, *wZ_stored = NULL, *wY_stored = NULL;
 static double *aX_stored = NULL, *aZ_stored = NULL, *aY_stored = NULL;
-static double *FX_stored = NULL, *FZ_stored = NULL, *FY_stored = NULL;
-static short *inside_stored = NULL;
+static double *FX_stored = NULL, *FZ_stored = NULL, *FY_stored = NULL, *Fint_stored = NULL;
 static double *s_stored;
 static long n_stored, max_store;
 
