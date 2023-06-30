@@ -207,7 +207,7 @@ int main(int argc, char **argv)
         if (scanned[i_arg].n_items>0 &&
             !scanItemList(&dummyFlags, scanned[i_arg].list+2, &scanned[i_arg].n_items, 0,
                           "nrho", SDDS_LONG, &evaluation_nRho, 1, 0,
-                          "nrho", SDDS_LONG, &evaluation_nPhi, 1, 0,
+                          "nphi", SDDS_LONG, &evaluation_nPhi, 1, 0,
                           NULL)) {
           fprintf(stderr, "invalid -evaluation syntax\n%s\n", USAGE);
           exit(1);
@@ -1188,6 +1188,7 @@ int evaluateGGEAndOutput(char *outputFile, long nrho, long nphi,
   SDDS_DATASET SDDSout;
   long iphi, iz, irow, irho;
 
+  bggexpData[0].haveData = bggexpData[1].haveData = 0;
   readBGGExpData(&bggexpData[0], normalFile, "CnmS", 0);
   if (skewFile)
     readBGGExpData(&bggexpData[1], skewFile, "CnmC", 1);
