@@ -6,69 +6,7 @@
 # This file is distributed subject to a Software License Agreement found
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
-#
-# $Id: Makefile,v 1.18 2010-10-04 22:28:06 borland Exp $
-#
-#  Lowest Level Directroy Makefile
-# $Log: not supported by cvs2svn $
-# Revision 1.17  2010/03/24 14:29:27  borland
-# Added modulate_elements command.
-#
-# Revision 1.16  2008/10/31 14:20:00  xiaoam
-# Add replace_elements command to elegant
-#
-# Revision 1.15  2008/03/18 16:45:08  xiaoam
-# Add insert_elements and touschekScatter into elegant
-#
-# Revision 1.14  2008/01/21 17:38:41  borland
-# Added moments.c and moments.nl.
-#
-# Revision 1.13  2007/05/21 16:43:57  ywang25
-# Added hash table functions according to Bob Jenkins's code in public domain. Customized for elegant to improve parameter loading.
-#
-# Revision 1.12  2007/03/30 16:55:00  soliday
-# Removed a bunch of scripts and programs that have been moved to elegantTools.
-#
-# Revision 1.11  2007/02/08 17:09:54  ywang25
-# Impoved Makefile to build Pelegant and elegant more conveniently.
-#
-# Revision 1.10  2006/03/23 00:05:45  borland
-# Added coupled twiss parameter computation using code by V. Sajaev.
-# Added momentum aperture computation to elegantRingAnalysis.
-#
-# Revision 1.9  2005/11/28 22:07:09  borland
-# Added aperture input via an SDDS file using the new aperture_input command.
-#
-# Revision 1.8  2005/11/22 23:21:19  borland
-# Added momentum aperture search, which necessitated adding an argument to
-# do_tracking, resulting in changes in many files.
-# Also improved convergence of orbit finder, adding a second iteration using
-# tracking if the matrix-based method fails.
-#
-# Revision 1.7  2005/11/04 16:27:05  borland
-# Added Xiao's code for space charge element SCMULT.
-#
-# Revision 1.6  2005/09/29 20:50:43  ywang25
-# Modifications for parallelization.  Verified to be identical to sequential version when run in non-MPI mode.
-#
-# Revision 1.5  2004/04/08 16:09:36  soliday
-# Build rules are now compatible with Base 3.14
-#
-# Revision 1.4  2002/08/14 20:23:30  soliday
-# Added Open License
-#
-# Revision 1.3  1999/08/05 15:24:20  soliday
-# Now uses Makefile.Host
-#
-# Revision 1.2  1997/10/20 14:57:02  borland
-# Improved trace fitting and related routines.  Added output of traces
-# after fitting.  Fixed some output-related bugs.
-#
-# Revision 1.1.1.1  1996/02/01  16:30:34  borland
-# Imported files
-#
-#
-#
+
 
 TOP=../..
 include $(TOP)/configure/CONFIG
