@@ -63,6 +63,9 @@ Here is a summary of what's changed since release 2023.2.  Historical change log
   or \verb|matrix_output|). This would allow, for example, estimating the optical effects of energy losses around the circumference
   of a storage ring. (The \verb|moments_output| provides a fully self-consistent treatment.) This is in response to a 
   request from forum user \verb|esmahmadi|.
+\item When \verb|RFCA| or \verb|RFCW| elements are used with \verb|CHANGE_T=1|, a warning will be issued if any other
+  time-dependent elements are present. This is to remind the user that such a combination may yield wrong results or
+  even crashes.
 \end{itemize}
 
 \subsection{New and Modified Commands}

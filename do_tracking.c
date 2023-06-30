@@ -31,6 +31,7 @@ void track_through_frfmode(double **part, long np, FRFMODE *rfmode, double Po, c
 void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, long n_passes, RUN *run, long n_particles, double Po, double total_length);
 void track_through_ftrfmode(double **part, long np, FTRFMODE *trfmode, double Po, char *element_name, double element_z, long pass, long n_passes, CHARGE *charge);
 void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEMENT *ee);
+void checkRFCAChangeTConflicts(LINE_LIST *beamline);
 
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr);
 void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha);
@@ -428,6 +429,8 @@ long do_tracking(
     }
   }
   reset_driftCSR();
+
+  checkRFCAChangeTConflicts(beamline);
 
 #ifdef DEBUG_CRASH
   printMessageAndTime(stdout, "do_tracking checkpoint 0.3\n");
@@ -5855,4 +5858,59 @@ void applyBeamBeamKicks(double **part, long np, BEAMBEAM *bb, double P0) {
       ellipsoidalBeamKick(part[ip], P0, particleMass, -particleRelSign * particleCharge, bb->centroid, bb->size, bb->charge, 1);
   } else
     bombElegantVA("BEAMBEAM distribution type %s not recognized", bb->distribution);
+}
+
+void checkRFCAChangeTConflicts(LINE_LIST *beamline)
+{
+  ELEMENT_LIST *eptr;
+  short hasChangeT = 0;
+  long hasTimeDependence = 0;
+
+  eptr = beamline->elem;
+
+  while (eptr) {
+    switch (eptr->type) {
+    case T_RFCA:
+      if (((RFCA*)(eptr->p_elem))->change_t)
+        hasChangeT = 1;
+      break;
+    case T_RFCW:
+      if (((RFCW*)(eptr->p_elem))->change_t)
+        hasChangeT = 1;
+      break;
+    case T_CPICKUP:
+    case T_CKICKER:
+    case T_FRFMODE:
+    case T_FTRFMODE:
+    case T_IONEFFECTS:
+    case T_KICKER:
+    case T_LRWAKE:
+    case T_MKICKER:
+    case T_MRFDF:
+    case T_RAMPP:
+    case T_RAMPRF:
+    case T_RFDF:
+    case T_RFMODE:
+    case T_RFTM110:
+    case T_RFTMEZ0:
+    case T_RMDF:
+    case T_SHRFDF:
+    case T_TFBDRIVER:
+    case T_TFBPICKUP:
+    case T_TRFMODE:
+    case T_TMCF:
+    case T_TWLA:
+    case T_TWMTA:
+    case T_TWPL:
+      hasTimeDependence += 1;
+      break;
+    }
+    eptr = eptr->succ;
+  }
+  if (hasChangeT && hasTimeDependence) {
+    char buffer[16834];
+    snprintf(buffer, 16384, "RFCA or RFCW elements with CHANGE_T=1 may give wrong results because of %ld time-dependent elements",
+             hasTimeDependence);
+    printWarning("CHANGE_T=1 conflicts, potentially severely, with other time-dependent elements", buffer);
+  }
 }
