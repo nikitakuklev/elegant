@@ -1600,7 +1600,8 @@ long do_tracking(
                 if (!watch->disable) {
                   watch_pt_seen = 1;
                   if (!watch->initialized)
-                    set_up_watch_point(watch, run, eptr->occurence, eptr->pred ? eptr->pred->name : NULL, i_pass, beamline->elem);
+                    set_up_watch_point(watch, run, eptr->occurence, eptr->pred ? eptr->pred->name : NULL, 
+                                       eptr->pred ? eptr->pred->occurence: 0, i_pass, beamline->elem);
                   if (i_pass == passOffset && (n_passes / watch->interval) == 0) {
                     char buffer[16384];
                     snprintf(buffer, 16384,
@@ -2803,7 +2804,8 @@ long do_tracking(
           if (!(flags & TEST_PARTICLES) && !(flags & INHIBIT_FILE_OUTPUT)) {
             watch = (WATCH *)eptr->p_elem;
             if (!watch->initialized)
-              set_up_watch_point(watch, run, eptr->occurence, eptr->pred ? eptr->pred->name : NULL, i_pass, beamline->elem);
+              set_up_watch_point(watch, run, eptr->occurence, eptr->pred ? eptr->pred->name : NULL, 
+                                 eptr->pred ? eptr->pred->occurence : 0, i_pass, beamline->elem);
             if (!watch->disable) {
               if (i_pass % watch->interval == 0) {
                 switch (watch->mode_code) {

@@ -3925,8 +3925,8 @@ extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCo
 VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize, long order);
 extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long slices, long sliceEtilted, long order);
 extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long ignoreRadiation, double *z, long iSlice);
-extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName, long i_pass,
-                                 ELEMENT_LIST *eptr);
+  extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName, long previousElementOccurence,
+                                 long i_pass, ELEMENT_LIST *eptr);
 extern void set_up_slice_point(SLICE_POINT *slice, RUN *run, long occurence, char *previousElementName);
 void SDDS_SlicePointSetup(SLICE_POINT *slicePoint, char *command_file, char *lattice_file, char *caller, 
                           char *previousElementName);
@@ -4794,7 +4794,7 @@ extern void SDDS_SigmaMatrixSetup(SDDS_TABLE *SDDS_table, char *filename, long m
                            char *command_file, char *lattice_file, char *caller);
 extern void SDDS_WatchPointSetup(WATCH *waatch, long mode, long lines_per_row,
                                  char *command_file, char *lattice_file, char *caller, char *qualifier, 
-                                 char *previousElementName);
+                                 char *previousElementName, long previousElementOccurence);
 extern int32_t SDDS_InitializeOutputElegant(SDDS_DATASET *SDDS_dataset, int32_t data_mode,
                                             int32_t lines_per_row, const char *description,
                                             const char *contents, const char *filename);

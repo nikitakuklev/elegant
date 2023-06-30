@@ -402,11 +402,12 @@ static SDDS_DEFINITION watch_point_fft_column[WATCH_POINT_FFT_COLUMNS] = {
 
 void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
                           char *command_file, char *lattice_file, char *caller, char *qualifier,
-                          char *previousElementName) {
+                          char *previousElementName, long previousElementOccurence) {
   char s[100];
   SDDS_TABLE *SDDS_table;
   char *filename;
   long watch_mode;
+  char buffer[16384];
 
 #if USE_MPI && !SDDS_MPI_IO
   if (myid < 0)
@@ -505,6 +506,21 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
+    snprintf(buffer, 16384, "%ld", previousElementOccurence);
+    if (SDDS_DefineParameter(SDDS_table, "PreviousElementOccurence", NULL, NULL, NULL, "%ld", SDDS_LONG, buffer)<0) {
+      printf("Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+    snprintf(buffer, 16384, "%s#%ld", previousElementName?previousElementName:"_BEG_", previousElementOccurence);
+    if (SDDS_DefineParameter(SDDS_table, "PreviousElementTag", NULL, NULL, NULL, "%s", SDDS_STRING, buffer)<0) {
+      printf("Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+    
 #if SDDS_MPI_IO
     if (!SDDS_MPI_WriteLayout(SDDS_table))
 #else

@@ -1868,7 +1868,8 @@ char *fft_window_name[N_FFT_WINDOWS] = {
   "uniform",
 };
 
-void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName, long i_pass, ELEMENT_LIST *eptr) {
+void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName, long previousElementOccurence,
+                        long i_pass, ELEMENT_LIST *eptr) {
   char *mode, *qualifier;
 
 #if MPI_DEBUG
@@ -1894,7 +1895,8 @@ void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousEl
     watch->label = buffer;
   }
   watch->filename = compose_filename_occurence(watch->filename, run->rootname, occurence + watch->indexOffset);
-  SDDS_WatchPointSetup(watch, SDDS_BINARY, 1, run->runfile, run->lattice, "set_up_watch_point", qualifier, previousElementName);
+  SDDS_WatchPointSetup(watch, SDDS_BINARY, 1, run->runfile, run->lattice, "set_up_watch_point", qualifier, 
+                       previousElementName, previousElementOccurence);
   watch->initialized = 1;
   watch->count = 0;
   watch->flushSample = -1;
