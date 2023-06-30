@@ -2122,7 +2122,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
   {"INITIAL_PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&rfmode_example.initial_phase), NULL, 0.0, 0, "initial beam-loading phase"},
   {"INITIAL_T", "S", IS_DOUBLE, 0, (long)((char *)&rfmode_example.initial_t), NULL, 0.0, 0, "time at which INITIAL_V and INITIAL_PHASE held"},
   {"BETA", "", IS_DOUBLE, 0, (long)((char *)&rfmode_example.beta), NULL, 0.0, 0, "normalized load impedance"},
-  {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&rfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
+  {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&rfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram"},
   {"N_BINS", "", IS_LONG, 0, (long)((char *)&rfmode_example.n_bins), NULL, 0.0, 20, "number of bins for current histogram"},
   {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&rfmode_example.interpolate), NULL, 0.0, 0, "if non-zero, interpolate voltage within bins"},
   {"PRELOAD", "", IS_LONG, 0, (long)((char *)&rfmode_example.preload), NULL, 0.0, 0, "preload cavity with steady-state field"},
@@ -2176,7 +2176,7 @@ FRFMODE frfmode_example;
 /* FRFMODE physical parameters */
 PARAMETER frfmode_param[N_FRFMODE_PARAMS] = {
   {"FILENAME", "", IS_STRING, 0, (long)((char *)&frfmode_example.filename), NULL, 0.0, 0, "input file"},
-  {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&frfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
+  {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&frfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram"},
   {"N_BINS", "", IS_LONG, 0, (long)((char *)&frfmode_example.n_bins), NULL, 0.0, 20, "number of bins for current histogram"},
   {"RIGID_UNTIL_PASS", "", IS_LONG, 0, (long)((char *)&frfmode_example.rigid_until_pass), NULL, 0.0, 0, "don't affect the beam until this pass"},
   {"USE_SYMM_DATA", "", IS_LONG, 0, (long)((char *)&frfmode_example.useSymmData), NULL, 0.0, 0, "use \"Symm\" columns from URMEL output file?"},
@@ -2200,7 +2200,7 @@ PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
   {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&trfmode_example.freq), NULL, 0.0, 0, "frequency"},
   {"CHARGE", "C", IS_DOUBLE, PARAM_IS_DEPRECATED, (long)((char *)&trfmode_example.charge), NULL, 0.0, 0, "Deprecated---use CHARGE element"},
   {"BETA", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.beta), NULL, 0.0, 0, "normalized load impedance"},
-  {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&trfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
+  {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&trfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram"},
   {"N_BINS", "", IS_LONG, 0, (long)((char *)&trfmode_example.n_bins), NULL, 0.0, 20, "number of bins for current histogram"},
   {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&trfmode_example.interpolate), NULL, 0.0, 0, "if non-zero, interpolate voltage within bins"},
   {"PLANE", "", IS_STRING, 0, (long)((char *)&trfmode_example.plane), "both", 0.0, 0, "x, y, or both"},

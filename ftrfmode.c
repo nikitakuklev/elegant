@@ -237,7 +237,8 @@ void track_through_ftrfmode(
         tmean = 0;
 #endif
 #ifdef DEBUG
-      printf("tmean = %21.15e\n", tmean);
+      printf("tmean = %21.15e, bin_size = %le, n_bins = %ld\n", 
+             tmean, trfmode->bin_size, trfmode->n_bins);
       fflush(stdout);
 #endif
 
@@ -321,7 +322,7 @@ void track_through_ftrfmode(
 
       dbuffer = (double *)calloc(lastBin - firstBin + 1, sizeof(double));
 #  ifdef DEBUG
-      printf("sharing x sums\n");
+      printf("sharing x sums, firstBin=%ld, lastBin=%ld\n", firstBin, lastBin);
       fflush(stdout);
 #  endif
       MPI_Allreduce(&xsum[firstBin], dbuffer, lastBin - firstBin + 1, MPI_DOUBLE, MPI_SUM, workers);
@@ -568,6 +569,8 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
       bombElegant("too few particles in set_up_ftrfmode()", NULL);
   if (rfmode->n_bins < 2)
     bombElegant("too few bins for FTRFMODE", NULL);
+  if (rfmode->bin_size <= 0)
+    bombElegant("bin size must be positive for FTRFMODE", NULL);
   if (!rfmode->filename ||
       !SDDS_InitializeInput(&SDDSin, rfmode->filename))
     bombElegant("unable to open file for FTRFMODE element", NULL);

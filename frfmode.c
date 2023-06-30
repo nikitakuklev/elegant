@@ -454,7 +454,8 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
 
   if (rfmode->n_bins < 2)
     bombElegant("too few bins for FRFMODE", NULL);
-
+  if (rfmode->bin_size <= 0)
+    bombElegant("bin_size must be positive for FRFMODE", NULL);
   if (!rfmode->filename ||
       !SDDS_InitializeInput(&SDDSin, rfmode->filename))
     bombElegant("unable to open file for FRFMODE element", NULL);
