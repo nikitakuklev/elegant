@@ -223,6 +223,8 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
 
       if (isSlave && notSinglePart) {
         buffer = malloc(sizeof(double) * nb);
+        if (nb<=0)
+          bombElegantVA("Error in WAKE: number of bins is %ld\n", nb);
         MPI_Allreduce(Itime, buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
         memcpy(Itime, buffer, sizeof(double) * nb);
         free(buffer);

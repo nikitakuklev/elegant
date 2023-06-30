@@ -195,6 +195,8 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
 #if USE_MPI
           if (isSlave && notSinglePart) {
             buffer = malloc(sizeof(double) * nb);
+            if (nb<=0)
+              bombElegantVA("Error in TRWAKE: number of bins is %ld\n", nb);
             MPI_Allreduce(posItime[plane], buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
             memcpy(posItime[plane], buffer, sizeof(double) * nb);
             free(buffer);
