@@ -296,6 +296,12 @@ else
  SYS_PROD_LIBS_Linux += z fftw3
  SYS_PROD_LIBS_solaris += z rt 	
  #USR_LDFLAGS+= -lfftw3 -lm 
+ ifdef FFTW_DIR
+  USR_LDFLAGS+= -L$(FFTW_DIR)
+ endif
+ ifdef FFTW_INC
+  USR_CXXFLAGS+= -I$(FFTW_INC)
+ endif
 endif
 
 MAKE = make
