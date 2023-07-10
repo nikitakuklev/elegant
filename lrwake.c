@@ -200,11 +200,15 @@ void index_bunch_assignments(double **part, long np, long idSlotsPerBunch, doubl
   printf("npBunch = %x\n", npBunch);
   printf("*npBunch = %x\n", *npBunch);
   fflush(stdout);
+#if USE_MPI
   if (!partOnMaster || myid == 0) {
+#endif
     for (ib = 0; ib < *nBunches; ib++)
       printf("npBunch[%ld] = %ld\n", ib, (*npBunch)[ib]);
     fflush(stdout);
+#if USE_MPI
   }
+#endif
   printf("%ld bunches found (2)\n", *nBunches);
   fflush(stdout);
 #endif
