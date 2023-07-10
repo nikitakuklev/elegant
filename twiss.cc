@@ -1076,7 +1076,8 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_COUPLINGINTEGRAL (IP_NUYTSWAMAX + 1)
 #define IP_COUPLINGOFFSET (IP_COUPLINGINTEGRAL + 1)
 #define IP_EMITRATIO (IP_COUPLINGOFFSET + 1)
-#define IP_ALPHAC2 (IP_EMITRATIO + 1)
+#define IP_ALPHAC3 (IP_EMITRATIO + 1)
+#define IP_ALPHAC2 (IP_ALPHAC3 + 1)
 #define IP_ALPHAC (IP_ALPHAC2 + 1)
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
@@ -1158,6 +1159,7 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
   {(char *)"couplingIntegral", (char *)"&parameter name=couplingIntegral, type=double, description=\"Coupling integral for difference resonance\" &end"},
   {(char *)"couplingDelta", (char *)"&parameter name=couplingDelta, type=double, description=\"Distance from difference resonance\" &end"},
   {(char *)"emittanceRatio", (char *)"&parameter name=emittanceRatio, type=double, description=\"Emittance ratio from coupling integral\" &end"},
+  {(char *)"alphac3", (char *)"&parameter name=alphac3, symbol=\"$ga$r$bc3$n\", type=double, description=\"3rd-order momentum compaction factor\" &end"},
   {(char *)"alphac2", (char *)"&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
   {(char *)"alphac", (char *)"&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
   {(char *)"I1", (char *)"&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"},
@@ -1339,7 +1341,7 @@ void dump_twiss_parameters(
                           IP_COUPLINGINTEGRAL, beamline->couplingFactor[0],
                           IP_COUPLINGOFFSET, beamline->couplingFactor[1],
                           IP_EMITRATIO, beamline->couplingFactor[2],
-                          IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1],
+                          IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1], IP_ALPHAC3, alphac[2],
                           IP_DBETAXDP, dbeta[0], IP_DBETAYDP, dbeta[1],
                           IP_DALPHAXDP, dalpha[0], IP_DALPHAYDP, dalpha[1],
                           IP_BETAXMIN, twiss_min.betax, IP_BETAXAVE, twiss_ave.betax, IP_BETAXMAX, twiss_max.betax,
@@ -2052,7 +2054,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                               double betay, double alphay, double etay, double etapy,
                               unsigned long *unstable) {
   VMATRIX *M;
-  double chromx, chromy, dbetax, dbetay, alpha1, alpha2, dalphax, dalphay;
+  double chromx, chromy, dbetax, dbetay, alpha1, alpha2, alpha3, dalphax, dalphay;
   double x_acc_z, y_acc_z;
   ELEMENT_LIST *eptr, *elast;
   char *x_acc_name, *y_acc_name;
@@ -2297,7 +2299,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->dalpha_dPoP[0] = dalphax;
   beamline->dalpha_dPoP[1] = dalphay;
 
-  alpha1 = alpha2 = 0;
+  alpha1 = alpha2 = alpha3 = 0.;
   if (beamline->matrix->C[4] != 0) {
     alpha1 = (beamline->matrix->R[4][5] +
               beamline->matrix->R[4][0] * elast->twiss->etax +
@@ -2320,10 +2322,34 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
         for (k = 0; k <= j; k++)
           alpha2 += beamline->matrix->T[4][j][k] * eta[j] * eta[k];
       alpha2 /= beamline->matrix->C[4];
-    }
-  }
+
+      if (beamline->matrix->Q) {
+	long l;
+	// for (j = 0; j < 6; ++j)
+	//   for (k = 0; k <= j; ++k)
+	//     for (l = 0; l <= k; ++l)
+	//       printf("Q[4][%ld][%ld][%ld] = %lf\n", j, k, l, beamline->matrix->Q[4][j][k][l]);
+	// for (j = 0; j < 6; ++j)
+	//   for (k = 0; k <= j; ++k)
+	//     printf("T[4][%ld][%ld] = %lf\n", j, k, beamline->matrix->T[4][j][k]);
+	for (j = 0; j < 4; j++)
+	  alpha3 += beamline->matrix->R[4][j] * beamline->eta3[j];
+	for (j = 0; j < 4; j++)
+	  for (k = 0; k <= j; k++)
+	    alpha3 += beamline->matrix->T[4][j][k] * (beamline->eta2[j] * beamline->eta2[k] +
+						      eta[j] * beamline->eta2[k] +
+						      beamline->eta2[j] * eta[k]);
+	for (j = 0; j < 6; j++)
+	  for (k = 0; k <= j; k++)
+	    for (l = 0; l <= k; l++)
+	      alpha3 += beamline->matrix->Q[4][j][k][l] * eta[j] * eta[k] * eta[l];
+	alpha3 /= beamline->matrix->C[4];
+      } // alpha3
+    } // alpha2
+  } // alpha
   beamline->alpha[0] = alpha1;
   beamline->alpha[1] = alpha2;
+  beamline->alpha[2] = alpha3;
 
   beamline->flags |= BEAMLINE_TWISS_DONE + BEAMLINE_TWISS_CURRENT;
   if (radiation_integrals_inner_scope)

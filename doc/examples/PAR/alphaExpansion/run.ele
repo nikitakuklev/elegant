@@ -1,9 +1,17 @@
+&global_settings
+        tracking_matrix_step_factor = 10
+&end
+
 &run_setup
         lattice = par10h.lte,
         use_beamline = par
         p_central_mev = 450
         final = %s.fin
+        default_order = 3
 &end
+
+&alter_elements name=*, type=CSBEND, item=TRACKING_MATRIX, value=3 &end
+&alter_elements name=*, type=KQUAD, item=TRACKING_MATRIX, value=3 &end
 
 &twiss_output
         filename = %s.twi

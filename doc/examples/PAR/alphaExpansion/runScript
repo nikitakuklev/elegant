@@ -9,4 +9,4 @@ sddscollapse run.fin -pipe=out \
 sddsprocess run.finf -process=CsCoefficient,first,Cs0 "-define=col,alpha,CsCoefficient Cs0 /"  -clip=1,0
 sddsprintout -col=Order -col=alpha run.finf
 echo
-sddsprintout -parameter=alphac -parameter=alphac2 run.twi
+sddsprintout -parameter=alphac -parameter=alphac? run.twi
