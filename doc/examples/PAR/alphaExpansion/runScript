@@ -3,9 +3,10 @@
 elegant run.ele 
 
 sddscollapse run.fin -pipe=out \
-  | sddsprocess -pipe -define=col,delta,MALIN.DP \
+  | sddsprocess -pipe -define=col,delta,MALIN.DP -filter=col,Particles,1,1 \
   | sddsmpfit -pipe=in run.fit -indep=delta -depen=Cs -terms=7 -info=run.finf
 
 sddsprocess run.finf -process=CsCoefficient,first,Cs0 "-define=col,alpha,CsCoefficient Cs0 /"  -clip=1,0
 sddsprintout -col=Order -col=alpha run.finf
-
+echo
+sddsprintout -parameter=alphac -parameter=alphac2 run.twi

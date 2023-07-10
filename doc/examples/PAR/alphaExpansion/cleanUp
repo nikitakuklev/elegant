@@ -1,3 +1,4 @@
 #!/bin/bash
 
-\rm run.f* run.twi 
+\rm run.[a-df-z]*
+

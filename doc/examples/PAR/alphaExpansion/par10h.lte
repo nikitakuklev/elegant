@@ -35,7 +35,7 @@ ek: marker
 sdh: ksext,n_kicks=10, l=0.1, k2=5.95873739969822
 sd: line=(sdh,vcor,sdh)
 l4: drift, l=0.08
-q3: kquad,n_kicks=30, l=0.23, k1=0.0
+q3: kquad,n_kicks=30, l=0.23, k1=-0.1
 q4: kquad,n_kicks=30, l=0.23, k1=2.270174600496
 l5: drift, l=0.325
 ! horizontal chromaticity sextupole plus horizontal steering magnet

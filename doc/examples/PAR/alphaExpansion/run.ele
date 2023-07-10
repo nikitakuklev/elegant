@@ -13,8 +13,11 @@
         n_indices = 1
 &end
 
+!! Important in case the dispersion is non-zero at the beginning
+&closed_orbit output = %s.clo &end
+
 &vary_element name=MALIN, item=DP, initial=-0.02, final=0.02, index_number=0, index_limit = 61 &end
 
 &bunched_beam &end
 
-&track &end
+&track center_on_orbit=1 &end
