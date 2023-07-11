@@ -147,7 +147,7 @@ long addBGGExpData(char *filename, char *nameFragment, short skew) {
       for (iz = 1; iz < nz; iz++) {
         dz = z[iz] - z[iz - 1];
         if (dz <= 0 || fabs(dz0 / dz - 1) > 1e-6)
-          bombElegantVA("Data not uniformly and monotonically increasing in z column from %s for BGGEXP %s #%ld\n", buffer, filename, tcontext.elementName, tcontext.elementOccurrence);
+          bombElegantVA("Data not uniformly and monotonically increasing in z column from %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);
       }
       free(z);
       storedBGGExpData[nBGGExpDataSets].dz = dz0;
