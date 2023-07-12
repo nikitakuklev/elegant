@@ -4,31 +4,33 @@
  * Copyright (c) 2003 The Regents of the University of California, as
  * Operator of Los Alamos National Laboratory.
  * This file is distributed subject to a Software License Agreement found
- * in the file LICENSE that is included with this distribution. 
+ * in the file LICENSE that is included with this distribution.
  \*************************************************************************/
 
-/*  file: cooler.cc 
+/*  file: cooler.cc
  *  based on: tfeedback.c
  *
  */
 
 #if defined(SOLARIS) && !defined(__GNUC__)
-#  include <sunmath.h>
+#include <sunmath.h>
 #endif
 
 #include "mdb.h"
 #include "track.h"
 #include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_integration.h>
-//#include <algorithm>
+#include <float.h>
 
 #define cms c_mks
 #define twopi PIx2
 
+#define DEBUG 0
+
 void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double Po, long idSlotsPerBunch) {
 
   /*Initialize some variables */
-  double sum;
+  double t_sum, t_min, t_max;
   long i;
   double *time0 = NULL;    /* array to record arrival time of each particle */
   long *ibParticle = NULL; /* array to record which bucket each particle is in */
@@ -36,12 +38,10 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
   long *npBucket = NULL;   /* array to record how many particles are in each bucket */
   long nBuckets = 0;
   long ib;
-
-  // MPI Required vars
-#if USE_MPI
   long npTotal;
-  double sumTotal;
+  double t_sumTotal, t_minTotal, t_maxTotal;
 
+#if USE_MPI
   if (!partOnMaster) {
     // this element does nothing in single particle mode (e.g., trajectory, orbit, ..)
     if (notSinglePart == 0)
@@ -49,7 +49,7 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
   }
 #endif
 
-#ifdef DEBUG
+#if DEBUG
   printf("Continuing cooler pickup\n");
   fflush(stdout);
 #endif
@@ -58,7 +58,7 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
   if (cpickup->initialized == 0)
     initializeCoolerPickup(cpickup);
   else {
-    for (ib = 0; ib < cpickup->nBunches; ib++) {
+    for (ib = 0; ib < cpickup->nBunches; ++ib) {
       free(cpickup->long_coords[ib]);
       free(cpickup->horz_coords[ib]);
       free(cpickup->vert_coords[ib]);
@@ -88,7 +88,7 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
     return;
   cpickup->lastPass = pass;
 
-#ifdef DEBUG
+#if DEBUG
   printf("Initialized cooler pickup\n");
   fflush(stdout);
 #endif
@@ -98,11 +98,11 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
 #if USE_MPI
       || (partOnMaster && myid == 0)
 #endif
-  )
-    index_bunch_assignments(part0, np0, cpickup->bunchedBeamMode ? idSlotsPerBunch : 0, Po,
+      )
+    index_bunch_assignments(part0, np0, cpickup->bunchedBeamMode?idSlotsPerBunch:0, Po,
                             &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
-#ifdef DEBUG
+#if DEBUG
   printf("indexed bunch assignments\n");
   fflush(stdout);
 #endif
@@ -110,20 +110,24 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
 #if USE_MPI
   if (partOnMaster || myid != 0) {
 #endif
-#ifdef DEBUG
+#if DEBUG
     printf("%ld buckets found\n", nBuckets);
     fflush(stdout);
 #endif
 
     if (cpickup->nBunches == 0 || cpickup->nBunches != nBuckets) {
       if (cpickup->nBunches != nBuckets) {
-        printf("Number of bunches has changed, re-initializing cooler pickup\n");
-        fflush(stdout);
+	printf("Number of bunches has changed, re-initializing cooler pickup\n");
+	fflush(stdout);
       }
       cpickup->nBunches = nBuckets;
-      cpickup->tAverage = (double *)SDDS_Realloc(cpickup->tAverage, sizeof(*cpickup->tAverage) * nBuckets);
-      for (i = 0; i < nBuckets; i++) {
-        cpickup->tAverage[i] = 0;
+      cpickup->tAverage = (double*)SDDS_Realloc(cpickup->tAverage, sizeof(*cpickup->tAverage)*nBuckets);
+      cpickup->tMin = (double*)SDDS_Realloc(cpickup->tMin, sizeof(*cpickup->tMin)*nBuckets);
+      cpickup->tMax = (double*)SDDS_Realloc(cpickup->tMax, sizeof(*cpickup->tMax)*nBuckets);
+      for (i = 0; i < nBuckets; ++i) {
+	cpickup->tAverage[i] = 0;
+	cpickup->tMin[i] = 0;
+	cpickup->tMax[i] = 0;
       }
     }
 
@@ -136,11 +140,8 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
     cpickup->pidHashTable = (htab **)malloc(sizeof(htab *) * nBuckets);
     cpickup->index = (long **)malloc(sizeof(long *) * nBuckets);
 
-    // Important stuff happens here
-    //    tAverage takes average time of arrival
-    //    part_coords takes each particles individual time of arival
-
-    for (ib = 0; ib < nBuckets; ib++) {
+    // Fill the variables in CPICKUP
+    for (ib = 0; ib < nBuckets; ++ib) {
       cpickup->long_coords[ib] = (double *)malloc(sizeof(double) * npBucket[ib]);
       cpickup->horz_coords[ib] = (double *)malloc(sizeof(double) * npBucket[ib]);
       cpickup->vert_coords[ib] = (double *)malloc(sizeof(double) * npBucket[ib]);
@@ -149,52 +150,51 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
       cpickup->pidHashTable[ib] = hcreate(12);
       cpickup->index[ib] = (long *)malloc(sizeof(long) * npBucket[ib]);
 
-      sum = 0; // Used to average all particle arival times in the pickup
-      for (i = 0; i < npBucket[ib]; i++) {
-        char pidString[32];
-        sum += time0[ipBucket[ib][i]];
-        // store the particle time in the coord array to be used in kicker
-        cpickup->long_coords[ib][i] = time0[ipBucket[ib][i]];
-        // store x and y for use in computing transverse effects
-        cpickup->horz_coords[ib][i] = part0[ipBucket[ib][i]][0] + cpickup->dx;
-        cpickup->vert_coords[ib][i] = part0[ipBucket[ib][i]][2] + cpickup->dy;
-        // will use this to double-check ordering of particles between pickup and kicker
-        cpickup->pid[ib][i] = part0[ipBucket[ib][i]][particleIDIndex];
-        snprintf(pidString, 32, "%ld", cpickup->pid[ib][i]);
-        cpickup->index[ib][i] = i;
-        if (!hadd(cpickup->pidHashTable[ib], pidString, strlen(pidString), &(cpickup->index[ib][i]))) {
-          bombElegantVA("Problem creating PID hash table: duplicate PID %ld\n", cpickup->pid[ib][i]);
-        }
-      }
+      // Record information about the particles in the bucket
+      t_sum = 0;
+      t_min = DBL_MAX;
+      t_max = 0;
 
-#ifdef DEBUG
-      printf("Finished looping over %ld particles, sum = %le\n", npBucket[ib], sum);
-      fflush(stdout);
-#endif
+      // Save data for all particles
+      for (i = 0; i < npBucket[ib]; ++i) {
+	
+	t_sum += time0[ipBucket[ib][i]];
+	if (time0[ipBucket[ib][i]] < t_min)
+	  t_min = time0[ipBucket[ib][i]];
+	if (time0[ipBucket[ib][i]] > t_max)
+	  t_max = time0[ipBucket[ib][i]];
 
+	// Particle time used in computing kicks; x and y for transverse effects
+	cpickup->long_coords[ib][i] = time0[ipBucket[ib][i]];
+	cpickup->horz_coords[ib][i] = part0[ipBucket[ib][i]][0] + cpickup->dx;
+	cpickup->vert_coords[ib][i] = part0[ipBucket[ib][i]][2] + cpickup->dy;
+
+	// For double-checking ordering of particles between pickup and kicker
+	char pidString[32];
+	cpickup->pid[ib][i] = part0[ipBucket[ib][i]][particleIDIndex];
+	snprintf(pidString, 32, "%ld", cpickup->pid[ib][i]);
+	cpickup->index[ib][i] = i;
+	if (!hadd(cpickup->pidHashTable[ib], pidString, strlen(pidString), &(cpickup->index[ib][i])))
+	  bombElegantVA("Problem creating PID hash table: duplicate PID %ld\n", cpickup->pid[ib][i]);
+      } // particle
+
+      // Bucket particle properties, across all nodes
+      npTotal = npBucket[ib];
+      t_sumTotal = t_sum;
+      t_minTotal = t_min;
+      t_maxTotal = t_max;
 #if USE_MPI
       if (!partOnMaster) {
-#  ifdef DEBUG
-        printf("Reducing sum data\n");
-        fflush(stdout);
-#  endif
-        MPI_Allreduce(&npBucket[ib], &npTotal, 1, MPI_LONG, MPI_SUM, workers);
-#  ifdef DEBUG
-        printf("npTotal = %ld\n", npTotal);
-        fflush(stdout);
-#  endif
-        MPI_Allreduce(&sum, &sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
-#  ifdef DEBUG
-        printf("sumTotal = %le\n", sumTotal);
-        fflush(stdout);
-#  endif
-        cpickup->tAverage[ib] = sumTotal / npTotal;
-      } else
-        cpickup->tAverage[ib] = sum / npBucket[ib];
-#else
-    cpickup->tAverage[ib] = sum / npBucket[ib];
+	MPI_Allreduce(&npBucket[ib], &npTotal, 1, MPI_LONG, MPI_SUM, workers);
+	MPI_Allreduce(&t_sum, &t_sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
+	MPI_Allreduce(&t_min, &t_minTotal, 1, MPI_DOUBLE, MPI_MIN, workers);
+	MPI_Allreduce(&t_max, &t_maxTotal, 1, MPI_DOUBLE, MPI_MAX, workers);
+      }
 #endif
-    }
+      cpickup->tAverage[ib] = t_sumTotal / npTotal;
+      cpickup->tMin[ib] = t_minTotal;
+      cpickup->tMax[ib] = t_maxTotal;
+    } // bucket
 
 #if USE_MPI
   } /* if (!partOnMaster || myid==0) */
@@ -203,27 +203,29 @@ void coolerPickup(CPICKUP *cpickup, double **part0, long np0, long pass, double 
   //memory managment
   if (isSlave || !notSinglePart
 #if USE_MPI
-      || (partOnMaster && myid == 0)
+      || (partOnMaster && myid==0)
 #endif
-  )
+      )
     free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 
+  // Wait for sync
 #if USE_MPI
-#  ifdef DEBUG
+#if DEBUG
   printf("Waiting on barrier before returning from coolerPickup\n");
   fflush(stdout);
-#  endif
+#endif
   if (!partOnMaster)
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-#ifdef DEBUG
+#if DEBUG
   printf("Returning from coolerPickup\n");
   fflush(stdout);
 #endif
+
 }
 
-// Pickup initialization function{
+// Pickup initialization function
 void initializeCoolerPickup(CPICKUP *cpickup) {
   if (cpickup->ID == NULL || !strlen(cpickup->ID))
     bombElegant("you must give an ID string for CPICKUP", NULL);
@@ -267,21 +269,9 @@ double Ex(double theta, void *params) {
   return (J0_term + J2_term) * I0_term;
 }
 
-typedef struct {
-  int index;
-  double t;
-  double x;
-  double y;
-} indexed_coord;
-
-int compare_indexed_coord(const void *arg1, const void *arg2) {
-  indexed_coord const *lhs = (indexed_coord const *)(arg1);
-  indexed_coord const *rhs = (indexed_coord const *)(arg2);
-  return (lhs->t < rhs->t) ? -1 : ((rhs->t < lhs->t) ? 1 : 0);
-}
-
-void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamline, long pass, long nPasses, char *rootname, double Po, long idSlotsPerBunch) {
-  long i, j;
+void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamline,
+		  long pass, long nPasses, char *rootname, double Po, long idSlotsPerBunch) {
+  long i,j;
   double *time0 = NULL;    /* array to record arrival time of each particle */
   long *ibParticle = NULL; /* array to record which bucket each particle is in */
   long **ipBucket = NULL;  /* array to record particle indices in part0 array for all particles in each bucket */
@@ -290,11 +280,9 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   long updateInterval;
   double Ex0;
   long ib;
-
-#if USE_MPI
-  double sumTotal, s_sumTotal;
   long npTotal;
 
+#if USE_MPI
   if (!partOnMaster) {
     if (notSinglePart == 0)
       /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
@@ -302,14 +290,16 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   }
 #endif
 
-  if ((ckicker->startPass > 0 && pass < ckicker->startPass) || (ckicker->endPass > 0 && pass > ckicker->endPass))
+  if ((ckicker->startPass>0 && pass<ckicker->startPass) ||
+      (ckicker->endPass>0 && pass>ckicker->endPass))
     return;
 
-#ifdef DEBUG
+#if DEBUG
   printf("Continuing cooler kicker\n");
   fflush(stdout);
 #endif
 
+  // Determine 0th integral for transverse mode
   if (ckicker->transverseMode != 0) {
     // integration variables
     double error;
@@ -326,7 +316,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   }
 
   if (ckicker->initialized == 0)
-    initializeCoolerKicker(ckicker, beamline, nPasses * nBuckets, rootname);
+    initializeCoolerKicker(ckicker, beamline, nPasses * nBuckets, rootname, Po);
 
 #ifdef DEBUG
   printf("Initialized cooler kicker\n");
@@ -368,153 +358,314 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
 
     if (ckicker->nBunches == 0 || ckicker->nBunches != nBuckets) {
       if (ckicker->nBunches != nBuckets) {
-        printf("Number of bunches has changed, re-initializing cooler driver.\n");
-        fflush(stdout);
+	printf("Number of bunches has changed, re-initializing cooler driver.\n");
+	fflush(stdout);
       }
       ckicker->nBunches = nBuckets;
     }
 
     if (ckicker->nBunches != ckicker->pickup->nBunches)
       bombElegantVA("mismatch in number of buckets between CKICKER (%ld) and CPICKUP (%ld)",
-                    ckicker->nBunches, ckicker->pickup->nBunches);
+		    ckicker->nBunches, ckicker->pickup->nBunches);
 
-    for (ib = 0; ib < nBuckets; ib++) {
+    // Loop over buckets
+    for (ib = 0; ib < nBuckets; ++ib) {
       // ================================= //
       // This is where the kick is applied //
       // ================================= //
-      double sum, nom_kick, env_term;
-      double t_avg, t_i, x_i, y_i;
+
+      // Get the index of the particles in the pickup
+      long* sourceIndex = (long*)malloc(sizeof(long)*npBucket[ib]), *sitmp;
       char pidString[32];
-      long *sitmp, *sourceIndex = NULL;
-      indexed_coord *incoherent_ar = NULL;
-      double s_sum;
-      // double s_avg;
-
-      sourceIndex = (long *)malloc(sizeof(long) * npBucket[ib]);
       for (i = 0; i < npBucket[ib]; i++) {
-        snprintf(pidString, 32, "%ld", (long)part0[ipBucket[ib][i]][particleIDIndex]);
-        if (!hfind(ckicker->pickup->pidHashTable[ib], pidString, strlen(pidString)))
-          bombElegantVA("PID of particle in CKICKER not present at CPICKUP! Cooling ID=%s\n", ckicker->ID);
-        if (!(sitmp = (long *)hstuff(ckicker->pickup->pidHashTable[ib])))
-          bombElegantVA("Problem retrieving index of PID %ld. Cooling ID=%s\n", (long)part0[ipBucket[ib][i]][particleIDIndex],
-                        ckicker->ID);
-        sourceIndex[i] = *sitmp;
+	snprintf(pidString, 32, "%ld", (long)part0[ipBucket[ib][i]][particleIDIndex]);
+	if (!hfind(ckicker->pickup->pidHashTable[ib], pidString, strlen(pidString)))
+	  bombElegantVA("PID of particle in CKICKER not present at CPICKUP! Cooling ID=%s\n",
+			ckicker->ID);
+	if (!(sitmp = (long*)hstuff(ckicker->pickup->pidHashTable[ib])))
+	  bombElegantVA("Problem retrieving index of PID %ld. Cooling ID=%s\n",
+			(long)part0[ipBucket[ib][i]][particleIDIndex], ckicker->ID);
+	sourceIndex[i] = *sitmp;
       }
 
-      if (ckicker->incoherentMode != 0)
-        incoherent_ar = (indexed_coord *)malloc(sizeof(indexed_coord) * npBucket[ib]);
-      sum = 0;
-      s_sum = 0;
-      for (i = 0; i < npBucket[ib]; i++) {
-        sum += time0[ipBucket[ib][i]];
-        s_sum += part0[ipBucket[ib][i]][4];
-
-        if (ckicker->incoherentMode != 0) {
-          incoherent_ar[i].index = i;
-          incoherent_ar[i].x = ckicker->pickup->horz_coords[ib][sourceIndex[i]];
-          incoherent_ar[i].y = ckicker->pickup->vert_coords[ib][sourceIndex[i]];
-          incoherent_ar[i].t = ckicker->pickup->long_coords[ib][sourceIndex[i]];
-        }
-      }
-
-      if (ckicker->incoherentMode != 0) {
-        // sort into arrival-time order, earliest particles first
-        qsort(incoherent_ar, npBucket[ib], sizeof(indexed_coord), compare_indexed_coord);
-      }
-
-      // t_avg equals average arrival time at kicker - average time at pickup
+      // Total number of particles across all nodes
+      npTotal = npBucket[ib];
 #if USE_MPI
-      if (!partOnMaster) {
-        MPI_Allreduce(&sum, &sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
-        MPI_Allreduce(&npBucket[ib], &npTotal, 1, MPI_LONG, MPI_SUM, workers);
-        t_avg = sumTotal / npTotal - ckicker->pickup->tAverage[ib];
-
-        MPI_Allreduce(&s_sum, &s_sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
-        // s_avg = s_sumTotal / npTotal;
-
-      } else {
-        t_avg = sum / npBucket[ib] - ckicker->pickup->tAverage[ib];
-        // s_avg = s_sum / npBucket[ib];
-      }
-#else
-    t_avg = sum / npBucket[ib] - ckicker->pickup->tAverage[ib];
-    // s_avg = s_sum / npBucket[ib];
+      if (!partOnMaster)
+	MPI_Allreduce(&npBucket[ib], &npTotal, 1, MPI_LONG, MPI_SUM, workers);
 #endif
 
-#ifdef DEBUG
-      printf("bunch %ld has %ld particles, t_avg = %le\n", ib, npBucket[ib], t_avg);
+      // Get the dt between CPICKUP and CKICKER
+      double dt_ref = 0;
+      if (ckicker->dtClosedOrbit != 0)
+	dt_ref = ckicker->delta_t;
+      else {
+	double t_sum = 0;
+	for (i = 0; i < npBucket[ib]; ++i)
+	  t_sum += time0[ipBucket[ib][i]];
+	double t_sumTotal = t_sum;
+#if USE_MPI
+	if (!partOnMaster)
+	  MPI_Allreduce(&t_sum, &t_sumTotal, 1, MPI_DOUBLE, MPI_SUM, workers);
+#endif
+	double t_avg = t_sumTotal / npTotal;
+	dt_ref = t_avg - ckicker->pickup->tAverage[ib];
+      }
+
+#if DEBUG
+      printf("Bunch %ld has %ld particles, dt_ref = %le\n", ib, npBucket[ib], dt_ref);
       fflush(stdout);
 #endif
 
+      // For incoherent mode, need the times from all bucket particles from across all nodes
+      // and the translation from particle ID on this node to the bucket
+      double* all_pickup_times = NULL;
+      long ibOffset = 0;
       if (ckicker->incoherentMode != 0) {
-        for (i = 0; i < npBucket[ib]; i++) {
-          long index;
-          index = incoherent_ar[i].index; /* index of target particle in the unsorted arrays */
-          for (j = 0; j < npBucket[ib]; j++) {
-            if (i != j) {
-              if (fabs(incoherent_ar[j].t - incoherent_ar[i].t) < (ckicker->Nu * ckicker->lambda_rad) / c_mks) {
 
-                double incoherent_phase, coherent_phase, incoherent_strength, kick;
+        // Get list of all particles on this node
+        double* node_pickup_times = (double*)malloc(npBucket[ib]*sizeof(double));
+        for (i = 0; i < npBucket[ib]; ++i)
+          node_pickup_times[i] = ckicker->pickup->long_coords[ib][sourceIndex[i]];
 
-                t_i = time0[ipBucket[ib][incoherent_ar[i].index]] - ckicker->pickup->long_coords[ib][sourceIndex[incoherent_ar[i].index]];
+        // Get list of all particles across all nodes
+#if USE_MPI
+        if (!partOnMaster) {
+	  // Get number of worker and rank
+	  int num_workers = -1, worker_rank = -1;
+	  MPI_Comm_size(workers, &num_workers);
+	  MPI_Comm_rank(workers, &worker_rank);
 
-                coherent_phase = (t_avg - t_i) * c_mks * (twopi / ckicker->lambda_rad);
-                incoherent_phase = (incoherent_ar[i].t - incoherent_ar[j].t) * c_mks * (twopi / ckicker->lambda_rad);
+          // Number of bunch particles on all nodes
+          long* node_bunch_particles = (long*)malloc(num_workers*sizeof(long));
+          MPI_Allgather(&npBucket[ib], 1, MPI_LONG, node_bunch_particles, 1, MPI_LONG, workers);
 
-                double phi = (coherent_phase + incoherent_phase);
-                double nu_2 = ckicker->Nu / 2;
-
-                incoherent_strength = (1 - abs(phi / twopi) / (ckicker->Nu)) * (2.0 / twopi) * (100 * atan((phi + nu_2)) + atan(-100 * (phi - nu_2)));
-
-                kick = -(ckicker->strength * incoherent_strength) * sin(phi + ckicker->phase * twopi);
-
-                part0[ipBucket[ib][index]][5] += kick;
-              }
-            }
+	  // Offsets for where the particles on each node sit wrt bucket
+          long* node_array_offsets = (long*)malloc(num_workers*sizeof(long));
+          for (int nodeIt = 0; nodeIt < num_workers; ++nodeIt) { // node refers to workers
+            node_array_offsets[nodeIt] = 0;
+            for (int otherNodesIt = nodeIt-1; otherNodesIt >= 0; --otherNodesIt)
+              node_array_offsets[nodeIt] += node_bunch_particles[otherNodesIt];
           }
-        }
-        free(incoherent_ar);
-      }
+          ibOffset = node_array_offsets[worker_rank];
 
-      //printf("%li\n",pass);
-      for (i = 0; i < npBucket[ib]; i++) {
-        // particle coords
-        t_i = time0[ipBucket[ib][i]] - ckicker->pickup->long_coords[ib][sourceIndex[i]];
-        x_i = part0[ipBucket[ib][i]][0] - ckicker->magnification * ckicker->pickup->horz_coords[ib][sourceIndex[i]];
-        y_i = part0[ipBucket[ib][i]][2] - ckicker->magnification * ckicker->pickup->vert_coords[ib][sourceIndex[i]];
+	  // The way the MPI gather function works requires the number of elements being
+	  // passed around be described as an int.  This imposes an effective limit to how
+	  // many particles can be simulated in parallel (2^31).  It is expected that most
+	  // situations would be below this, so the code is left as-is right now, with a
+	  // warning.  In the future if more particles are required to be run in this
+	  // routine, this can be revisited.
+	  if (npTotal > pow(2,31))
+	    printWarning("CKICKER cannot handle >2^31 particles in the simulation.",
+			 "The number of particles simulated (>2^31) may be too many to be correctly "
+			 "handled by the MPI routines in the CKICKER incoherent interactions.");
 
-        // on-axis kick = sin(c*(difference in arrival time)*2*Pi/lambda + phase)
+	  // Convert longs to ints for the purposes of the MPI method
+	  int* node_bunch_particles_i = (int*)malloc(num_workers*sizeof(int));
+	  int* node_array_offsets_i = (int*)malloc(num_workers*sizeof(int));
+	  for (int nodeIt = 0; nodeIt < num_workers; ++nodeIt) {
+	    node_bunch_particles_i[nodeIt] = (int)node_bunch_particles[nodeIt];
+	    node_array_offsets_i[nodeIt] = (int)node_array_offsets[nodeIt];
+	  }
 
-        double nu_2 = ckicker->Nu / 2;
-        double phi = (t_avg - t_i) * (c_mks / ckicker->lambda_rad);
+          // Full list of particle times
+          all_pickup_times = (double*)malloc(npTotal*sizeof(double));
+          MPI_Allgatherv(node_pickup_times, node_bunch_particles_i[worker_rank], MPI_DOUBLE,
+                         all_pickup_times, node_bunch_particles_i, node_array_offsets_i, MPI_DOUBLE,
+			 workers);
 
-        env_term = (2.0 / twopi) * (atan(100 * (phi + (2 * nu_2))) + atan(-100 * (phi - (2 * nu_2)))) * (1 - abs(phi) / (2 * nu_2));
-
-        nom_kick = -(ckicker->strength) * env_term * sin((t_avg - t_i) * c_mks * (twopi / (ckicker->lambda_rad)) + ckicker->phase * twopi);
-
-        if (ckicker->transverseMode != 0) {
-          double Exi, error;
-          size_t neval;
-          gsl_function F;
-          struct E_params params = {x_i, y_i, Po, ckicker->lambda_rad}; // {x, y, gamma, lambda}
-          //struct E_params params = {0.0 , 0.0, Po, ckicker->lambda_rad};
-          F.function = &Ex;
-          F.params = &params;
-
-          gsl_integration_qng(&F, 0, ckicker->angle_rad / Po, 0, 1e-7, &Exi, &error, &neval);
-
-          part0[ipBucket[ib][i]][5] += nom_kick * Exi / Ex0;
+          free(node_pickup_times); node_pickup_times = NULL;
+          free(node_bunch_particles); node_bunch_particles = NULL;
+          free(node_array_offsets); node_array_offsets = NULL;
+          free(node_bunch_particles_i); node_bunch_particles_i = NULL;
+          free(node_array_offsets_i); node_array_offsets_i = NULL;
         } else {
-          part0[ipBucket[ib][i]][5] += nom_kick;
+          all_pickup_times = node_pickup_times; node_pickup_times = NULL;
         }
-      }
-      free(sourceIndex);
-      sourceIndex = NULL;
-    }
+#else
+        all_pickup_times = node_pickup_times; node_pickup_times = NULL;
+#endif
+      } // incoherent
 
+      // In 'numerical mode', the wave packet at the pickup is determined a priori for
+      // the full beam bunch, to create a look-up function to be used when applying kicks.
+      // Need to store the size of the wave and combine across all nodes.
+      double* pickup_rad = NULL;
+      double pickup_rad_start = 0., rad_bin_length = 0.;
+      if (ckicker->numericalMode != 0) {
+
+	// Container to hold kick function across full pulse wavepacket
+	double rad_period_length = ckicker->lambda_rad / c_mks;
+	double rad_particle_length = 2 * ckicker->Nu * rad_period_length;
+	int rad_period_bins = 20;
+	rad_bin_length = rad_period_length / rad_period_bins;
+	int rad_particle_nbins = rad_particle_length / rad_bin_length;
+
+	double pickup_pulse_length = ckicker->pickup->tMax[ib] - ckicker->pickup->tMin[ib];
+	int pickup_rad_nbins
+	  = (pickup_pulse_length + rad_particle_length) / rad_bin_length;
+	pickup_rad_start = ckicker->pickup->tMin[ib] - rad_particle_length/2.;
+#if DEBUG
+	printf("Radiation wave packet starts at %le and has %d bins (of length %le): total %lf MB\n",
+	       pickup_rad_start, pickup_rad_nbins, rad_bin_length, pickup_rad_nbins*8e-6);
+	fflush(stdout);
+#endif
+
+	// Define the full wave packet at the pickup for this node
+	double* node_pickup_rad = (double*)malloc(pickup_rad_nbins*sizeof(double));
+	for (int pickup_rad_bin = 0; pickup_rad_bin < pickup_rad_nbins; ++pickup_rad_bin)
+	  node_pickup_rad[pickup_rad_bin] = 0;
+	double time_pu, time_pu_start;
+	int bin_start;
+	double phi, envelope;
+	for (i = 0; i < npBucket[ib]; ++i) {
+	  // Time at pickup
+	  time_pu = ckicker->pickup->long_coords[ib][sourceIndex[i]];
+	  time_pu_start = time_pu - rad_particle_length/2.;
+	  bin_start = (time_pu_start - pickup_rad_start) / rad_bin_length;
+
+	  // Radiation at pickup
+	  for (int rad_bin = 0; rad_bin < rad_particle_nbins; ++rad_bin) {
+	    phi = (2. * ckicker->Nu * rad_bin/rad_particle_nbins) + ckicker->phase;
+	    envelope = (rad_particle_nbins/2. - fabs(rad_particle_nbins/2.-rad_bin)) / (rad_particle_nbins/2.);
+	    node_pickup_rad[bin_start+rad_bin] += ckicker->strength * envelope * sin(twopi*phi);
+	  } // bin
+	} // particle
+
+	// Get the full wave packet at the pickup across all nodes
+#if USE_MPI
+        if (!partOnMaster) {
+	  pickup_rad = (double*)malloc(pickup_rad_nbins*sizeof(double));
+	  MPI_Allreduce(node_pickup_rad, pickup_rad, pickup_rad_nbins, MPI_DOUBLE, MPI_SUM, workers);
+	  free(node_pickup_rad); node_pickup_rad = NULL;
+        } else {
+          pickup_rad = node_pickup_rad; node_pickup_rad = NULL;
+        }
+#else
+        pickup_rad = node_pickup_rad; node_pickup_rad = NULL;
+#endif
+      } // numerical wave packet
+
+      // Apply the kicks to each particle in turn
+      double deltax_i, deltay_i, dt_i, dt_ij_pu;
+      double time_i_pu, time_i_ku, time_j_pu;
+      double total_phi, kick, wave_packet_kick;
+      double coherent_phi, envelope_strength, coherent_kick;
+      double incoherent_phi, incoherent_strength, incoherent_kick;
+      double modulation_phase, modulation_strength;
+      int phase_bin;
+
+      // Numerical mode
+      if (ckicker->numericalMode != 0) {
+	for (i = 0; i < npBucket[ib]; ++i) {
+	  time_i_ku = time0[ipBucket[ib][i]];
+	  phase_bin = (time_i_ku - (pickup_rad_start + dt_ref)) / rad_bin_length;
+	  wave_packet_kick = pickup_rad[phase_bin];
+#if DEBUG
+	  printf("Giving particle %ld a kick %le from the numerical wave packet\n", i, wave_packet_kick);
+	  fflush(stdout);
+#endif
+	  part0[ipBucket[ib][i]][5] += wave_packet_kick;
+	}
+
+      // Analytical mode
+      } else {
+	for (i = 0; i < npBucket[ib]; ++i) {
+
+	  kick = 0.; coherent_kick = 0.; incoherent_kick = 0.;
+
+	  // Get the times the particle went through the pickup and kicker
+	  time_i_pu = ckicker->pickup->long_coords[ib][sourceIndex[i]];
+	  time_i_ku = time0[ipBucket[ib][i]];
+	  dt_i = time_i_ku - time_i_pu;
+
+	  // Coherent kick
+	  coherent_phi = (dt_i - dt_ref) * c_mks / ckicker->lambda_rad;
+	  total_phi = coherent_phi + ckicker->phase;
+	  /* double envelope_strength = (2.0/twopi)*(atan(100*(total_phi+ckicker->Nu)) */
+	  /*                                         + atan(-100*(total_phi-ckicker->Nu))) * (1 - abs(total_phi)/ckicker->Nu); */
+	  envelope_strength = fabs(total_phi) <= ckicker->Nu ? 1 - fabs(total_phi)/ckicker->Nu : 0;
+	  modulation_phase = ckicker->modulation_freq * pass * twopi;
+	  modulation_strength = pow(cos(modulation_phase), 2);
+	  coherent_kick = ckicker->strength * envelope_strength * modulation_strength * sin(total_phi*twopi);
+#if DEBUG
+	  printf("Giving particle %ld (global id %ld) a coherent kick %le\n", i, i+ibOffset, coherent_kick);
+	  fflush(stdout);
+#endif
+
+	  // Transverse component
+	  if (ckicker->transverseMode != 0) {
+	    double Exi, error;
+	    size_t neval;
+	    gsl_function F;
+	    deltax_i = part0[ipBucket[ib][i]][0] -
+	      ckicker->magnification * ckicker->pickup->horz_coords[ib][sourceIndex[i]];
+	    deltay_i = part0[ipBucket[ib][i]][2] -
+	      ckicker->magnification * ckicker->pickup->vert_coords[ib][sourceIndex[i]];
+	    struct E_params params = {deltax_i, deltay_i, Po, ckicker->lambda_rad}; // {x, y, gamma, lambda}
+	    F.function = &Ex;
+	    F.params = &params;
+
+	    gsl_integration_qng(&F, 0, ckicker->angle_rad/Po, 0, 1e-7, &Exi, &error, &neval);
+
+	    kick += coherent_kick * Exi/Ex0;
+	  } else
+	    kick += coherent_kick;
+
+	  // Incoherent kick
+	  if (ckicker->incoherentMode != 0) {
+
+	    // Convert to 'global' bucket index
+	    // NB this relies on MPI consistently ordering particles by node,
+	    // which I believe it does!
+	    long i_gbucket = i + ibOffset;
+
+	    // Consider the kicks from each of the other particles
+	    for (j = 0; j < npTotal; ++j) {
+
+	      // Time of this other particle at the pickup
+	      time_j_pu = all_pickup_times[j];
+	      dt_ij_pu = time_i_pu - time_j_pu;
+
+	      // Only consider other particles, and only those which are within the radiation wavelength envelope
+	      if ((i_gbucket == j) || fabs(dt_ij_pu) >= (ckicker->Nu*ckicker->lambda_rad)/c_mks)
+		continue;
+
+	      incoherent_phi = dt_ij_pu * c_mks / ckicker->lambda_rad;
+	      total_phi = coherent_phi + incoherent_phi + ckicker->phase;
+	      /* double incoherent_strength = (2.0/twopi)*(atan(100*(total_phi+ckicker->Nu)) + */
+	      /*                                           atan(-100*(total_phi-ckicker->Nu))) * (1 - abs(total_phi)/(ckicker->Nu)); */
+	      incoherent_strength = fabs(total_phi) <= ckicker->Nu ? 1 - fabs(total_phi)/ckicker->Nu : 0;
+	      incoherent_kick = ckicker->strength * incoherent_strength * sin(total_phi*twopi);
+
+#if DEBUG
+	      printf("Giving particle %ld (global id %ld) a kick %le from particle %ld\n",
+		     i, i_gbucket, incoherent_kick, j);
+	      fflush(stdout);
+#endif
+	      kick += incoherent_kick;
+	    }
+	  } // incoherent
+
+	  part0[ipBucket[ib][i]][5] += kick;
+	} // particle
+      } // kick mode
+
+      // Clean up memory associated with the bucket
+      if (ckicker->incoherentMode != 0) {
+	free(all_pickup_times); all_pickup_times = NULL;
+      }
+      if (ckicker->numericalMode != 0) {
+	free(pickup_rad); pickup_rad = NULL;
+      }
+      free(sourceIndex); sourceIndex = NULL;
+    } // bucket
+
+    // Clean up bucket
     if (isSlave || !notSinglePart)
       free_bunch_index_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 
+    // Sync all nodes
 #if USE_MPI
   } /* if (partOnMaster || myid!=0) */
   if (!partOnMaster)
@@ -523,49 +674,47 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
 }
 
 // Kicker initialization function
-
-void initializeCoolerKicker(CKICKER *ckicker, LINE_LIST *beamline, long nPasses, char *rootname) {
-  ELEMENT_LIST *eptr;
-  long pickupFound = 0;
-
+void initializeCoolerKicker(CKICKER *ckicker, LINE_LIST *beamline, long nPasses, char *rootname, double Po) {
   if (ckicker->ID == NULL || !strlen(ckicker->ID))
-    bombElegant("you must give an ID string for CKICKER", NULL);
+    bombElegant("CKICKER requires an ID string", NULL);
 
-  eptr = beamline->elem;
-  while (eptr) {
-    if (eptr->type == T_CPICKUP && strcmp(ckicker->ID, ((CPICKUP *)eptr->p_elem)->ID) == 0) {
+  // Find the CPICKUP associated with this CKICKER, and the
+  // reference particle location at each element
+  ELEMENT_LIST *eptr = beamline->elem;
+  long pickupFound = 0;
+  double pickup_coord[6], kicker_coord[6];
+  for (long beamlineElemIt = 0; beamlineElemIt < beamline->n_elems; ++beamlineElemIt) {
+    if (eptr->type == T_CPICKUP && strcmp(ckicker->ID, ((CPICKUP*)eptr->p_elem)->ID) == 0) {
       pickupFound = 1;
-      ckicker->pickup = ((CPICKUP *)eptr->p_elem);
-      break;
+      ckicker->pickup = ((CPICKUP*)eptr->p_elem);
+      if (ckicker->dtClosedOrbit != 0)
+	memcpy(pickup_coord,
+	       beamline->closed_orbit[beamlineElemIt - beamline->i_recirc].centroid,
+	       sizeof(double)*6);
     }
+    if (eptr->type == T_CKICKER && strcmp(ckicker->ID, ((CKICKER*)eptr->p_elem)->ID) == 0 &&
+	ckicker->dtClosedOrbit != 0)
+      memcpy(kicker_coord,
+	     beamline->closed_orbit[beamlineElemIt - beamline->i_recirc].centroid,
+	     sizeof(double)*6);
     eptr = eptr->succ;
   }
   if (!pickupFound)
-    bombElegant("pickup not found for CKICKER", NULL);
+    bombElegant("CPICKUP not found for CKICKER", NULL);
 
+  // Save the reference delta time between pickup and kicker
+  if (ckicker->dtClosedOrbit != 0) {
+    double beta = Po / (sqrt(pow(Po, 2) + 1));
+    ckicker->delta_t = (kicker_coord[4] - pickup_coord[4]) / (beta * c_mks);
+  } else
+    printWarning("CPICKUP -> CKICKER dt",
+		 "The default behavior is to take the difference between the average bunch times; "
+		 "consider using the reference dt from the closed orbit calculation for better accuracy "
+		 "(ensure closed_orbit is in the elegant configuration and use CKICKER::dtClosedOrbit != 0).");
+
+  // Initialize the variables
   ckicker->nBunches = 0;
-
   if (ckicker->updateInterval < 1)
     ckicker->updateInterval = 1;
   ckicker->initialized = 1;
-}
-
-void setCoolingTrackingMode(ELEMENT_LIST *eptr) {
-  short incoherentCooling = 0;
-  if ((entity_description[T_CKICKER].flags & UNIPROCESSOR) &&
-      (entity_description[T_CPICKUP].flags & UNIPROCESSOR))
-    return;
-  while (eptr && !incoherentCooling) {
-    if (eptr->type == T_CKICKER)
-      incoherentCooling = ((CKICKER *)(eptr->p_elem))->incoherentMode;
-    eptr = eptr->succ;
-  }
-  if (incoherentCooling) {
-    /* Force cooling into serial model */
-    printWarning("CPICKUP and CKICKER elements running in serial mode", "Parallel cooling incompatible with inclusion of incoherent effects.");
-    entity_description[T_CKICKER].flags &= ~MPALGORITHM;
-    entity_description[T_CKICKER].flags |= UNIPROCESSOR;
-    entity_description[T_CPICKUP].flags &= ~MPALGORITHM;
-    entity_description[T_CPICKUP].flags |= UNIPROCESSOR;
-  }
 }

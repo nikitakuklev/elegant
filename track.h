@@ -3613,6 +3613,8 @@ typedef struct {
   short initialized;
   long nBunches, lastPass;
   double *tAverage;  /* Stores the average arrival time of each bunch */
+  double *tMin; /* Time of earliest particle in each bunch */
+  double *tMax; /* Time of latest particle in each bunch */
   long *npBunch; /* number of particles in each bunch */
   double **long_coords, **horz_coords, **vert_coords; /* t, x, y coordinates of each particle in each bunch */
   long **pid; /* particle ID for each particle in each bunch */
@@ -3631,14 +3633,17 @@ typedef struct {
   long startPass, endPass;
   short bunchedBeamMode; 
   double lambda_rad;
-  short transverseMode, incoherentMode; 
+  short transverseMode, incoherentMode, numericalMode;
+  short dtClosedOrbit;
   double angle_rad; 
   double magnification;
+  double modulation_freq;
   long Nu; 
 
   /* internal parameters */
   short initialized;
   CPICKUP *pickup;
+  double delta_t;
   long nBunches;
 } CKICKER;
 
@@ -4937,8 +4942,7 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
 void coolerPickup(CPICKUP *tfbp, double **part, long np, long pass, double Po, long idSlotsPerBunch);
 void initializeCoolerPickup(CPICKUP *tfbp);
 void coolerKicker(CKICKER *tfbd, double **part, long np, LINE_LIST *beamline, long pass, long n_passes, char *rootname, double Po, long idSlotsPerBunch);
-void initializeCoolerKicker(CKICKER *tfbd, LINE_LIST *beamline, long n_passes, char *rootname);
-void setCoolingTrackingMode(ELEMENT_LIST *eptr);
+void initializeCoolerKicker(CKICKER *tfbd, LINE_LIST *beamline, long n_passes, char *rootname, double Po);
 
 long computeEngeCoefficients(double *engeCoef, double rho, double length, double gap, double fint);
 

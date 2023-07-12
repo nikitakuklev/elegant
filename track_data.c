@@ -3836,12 +3836,15 @@ PARAMETER ckicker_param[N_CKICKER_PARAMS] = {
   {"START_PASS", "", IS_LONG, 0, (long)((char *)&cKicker_example.startPass), NULL, 0.0, -1, "If positive, first pass on which to drive beam."},
   {"END_PASS", "", IS_LONG, 0, (long)((char *)&cKicker_example.endPass), NULL, 0.0, -1, "If positive, last pass on which to drive beam."},
   {"BUNCHED_BEAM_MODE", "", IS_SHORT, 0, (long)((char *)&cKicker_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, run in bunched beam mode."},
-  {"LAMBDA_RAD", "M", IS_DOUBLE, 0, (long)((char *)&cKicker_example.lambda_rad), NULL, 0.0, 0, "Wavelength of radiation in meters"},
+  {"LAMBDA_RAD", "M", IS_DOUBLE, 0, (long)((char *)&cKicker_example.lambda_rad), NULL, 0.0, 0, "Wavelength of radiation in meters."},
   {"TRANSVERSE_MODE", "", IS_SHORT, 0, (long)((char *)&cKicker_example.transverseMode), NULL, 0.0, 1, "If non-zero, use transverse effects."},
-  {"INCOHERENT_MODE", "", IS_SHORT, 0, (long)((char *)&cKicker_example.incoherentMode), NULL, 0.0, 1, "If non-zero, include incoherent contributions due to individual particles. Serial computation only."},
-  {"ANGLE_RAD", "MRAD", IS_DOUBLE, 0, (long)((char *)&cKicker_example.angle_rad), NULL, 0.0, 0, "Angle, in mrad, of pickup radiation"},
-  {"MAGNIFICATION", "", IS_DOUBLE, 0, (long)((char *)&cKicker_example.magnification), NULL, 0.0, 0, "Magnification of pickup radiation in the kicker"},
-  {"NU", "", IS_LONG, 0, (long)((char *)&cKicker_example.Nu), NULL, 0.0, 0, "Number of undulator periods"},
+  {"INCOHERENT_MODE", "", IS_SHORT, 0, (long)((char *)&cKicker_example.incoherentMode), NULL, 0.0, 1, "If non-zero, include incoherent contributions due to individual particles."},
+  {"NUMERICAL_MODE", "", IS_SHORT, 0, (long)((char *)&cKicker_example.numericalMode), NULL, 0.0, 0, "If non-zero, evaluate kicks from a numerical wave packet determined once per turn, rather than calculating kicks on a particle-by-particle basis."},
+  {"DT_CLOSED_ORBIT", "", IS_SHORT, 0, (long)((char *)&cKicker_example.dtClosedOrbit), NULL, 0.0, 0, "If non-zero, take the CPICKUP->CKICKER dt from the closed orbit instead of the bunch average times."},
+  {"ANGLE_RAD", "MRAD", IS_DOUBLE, 0, (long)((char *)&cKicker_example.angle_rad), NULL, 0.0, 0, "Angle, in mrad, of pickup radiation."},
+  {"MAGNIFICATION", "", IS_DOUBLE, 0, (long)((char *)&cKicker_example.magnification), NULL, 0.0, 0, "Magnification of pickup radiation in the kicker."},
+  {"MODULATION_FREQ", "1/Pass", IS_DOUBLE, 0, (long)((char *)&cKicker_example.modulation_freq), NULL, 0.0, 0, "Frequency of cos^2 modulation function to apply to the coherent kicks."},
+  {"NU", "", IS_LONG, 0, (long)((char *)&cKicker_example.Nu), NULL, 0.0, 0, "Number of undulator periods."},
 };
 
 char *beamBeamDistributionOption[N_BEAM_BEAM_DISTRIBUTIONS] = {
