@@ -708,7 +708,6 @@ long new_sdds_beam(
     setFiducializationBunch(-1, -1);
 
   if (beam->id_slots_per_bunch) {
-    char buffer[10];
     #if DEBUG
     char *ptr;
     long maxID = -LONG_MAX, minID = LONG_MAX;
@@ -717,6 +716,7 @@ long new_sdds_beam(
     printf("Assigning bunch IDs to particles (%ld PIDs per slot)\n", (long)beam->id_slots_per_bunch);
     fflush(stdout);
 #if !USE_MPI
+    char buffer[10];
     htab *hashTable;
     hashTable = hcreate(12);
 #endif

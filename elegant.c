@@ -2118,7 +2118,7 @@ char **argv;
   free(starting_coord);
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
 #  if USE_MPI
-  printf("Terminating run with %ld total processors\n", n_processors);
+  printf("Terminating run with %d total processors\n", n_processors);
 #  endif
   report_stats(stdout, "statistics: ");
   fflush(stdout);

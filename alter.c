@@ -80,6 +80,7 @@ void setup_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) {
     name = expand_ranges(name);
   if (!item || !strlen(item))
     bombElegant("no item given", NULL);
+  item = str_toupper(item);
   if (multiplicative) {
     if (!differential)
       /* convert to fractional change */
