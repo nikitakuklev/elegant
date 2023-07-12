@@ -318,7 +318,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
   if (ckicker->initialized == 0)
     initializeCoolerKicker(ckicker, beamline, nPasses * nBuckets, rootname, Po);
 
-#ifdef DEBUG
+#if DEBUG
   printf("Initialized cooler kicker\n");
   fflush(stdout);
 #endif
@@ -347,7 +347,7 @@ void coolerKicker(CKICKER *ckicker, double **part0, long np0, LINE_LIST *beamlin
     index_bunch_assignments(part0, np0, ckicker->bunchedBeamMode ? idSlotsPerBunch : 0, Po,
                             &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
-#ifdef DEBUG
+#if DEBUG
   printf("indexed bunch assignments\n");
   fflush(stdout);
 #endif
