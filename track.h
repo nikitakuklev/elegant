@@ -452,7 +452,7 @@ typedef struct line_list {
     double tuneChromLower[2];  /* lower limit of tune due to chromaticity and momentum spread */
     double dbeta_dPoP[2];    /* d/d(p/p0) of betax and betay */
     double dalpha_dPoP[2];   /* d/d(p/p0) of alphax and alphay */
-    double alpha[2];         /* first and second order momentum compaction: Cs=Cs0+alpha*delta+alpha2*delta^2*/
+    double alpha[3];         /* first, second, third order momentum compaction: Cs=Cs0+alpha*delta+alpha2*delta^2+alpha3*delta^3 */
     double dnux_dA[N_TSWA][N_TSWA];    /* tune shift with amplitude [i][j] = dnux/(dAx^i dAy^j) */
     double dnuy_dA[N_TSWA][N_TSWA];    /* tune shift with amplitude */
     double nuxTswaExtrema[2];  /* min, max tunes from TSWA calculations */ 
