@@ -429,12 +429,12 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
            traj[0], traj[1], traj[2], traj[3], traj[4], traj[5]);
 #endif
     for (i = 0; i < 6; i++) {
-      path[i] = traj[i];
+      path0[i] = path[i] = traj[i];
       M1->R[i][i] = 1;
     }
   } else {
     for (i = 0; i < 6; i++) {
-      path[i] = 0;
+      path0[i] = path[i] = 0;
       M1->R[i][i] = 1;
     }
   }
