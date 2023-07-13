@@ -51,6 +51,7 @@ short mpiAbort = 0;
 double slopeLimit = SLOPE_LIMIT;
 double coordLimit = COORD_LIMIT;
 char *searchPath = NULL;
+double sStart = 0;
 
 long trajectoryTracking = 0;
 

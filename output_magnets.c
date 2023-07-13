@@ -47,7 +47,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline) {
 
   fpm = fopen_e(filename, "w", 0);
 
-  start = end = 0;
+  start = end = sStart;
   fprintf(fpm, "SDDS1\n&description text=\"magnet layout for beamline %s\" &end\n", line_name);
   fprintf(fpm, "&column name=ElementName, type=string &end\n");
   fprintf(fpm, "&column name=ElementType, type=string &end\n");
@@ -55,9 +55,9 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline) {
   fprintf(fpm, "&data mode=ascii, no_row_counts=1 &end\n");
 
   eptr = beamline->elem;
-  fprintf(fpm, "_BEGIN_ MARK 0 0\n");
+  fprintf(fpm, "_BEGIN_ MARK %le 0\n", sStart);
   while (eptr) {
-    fprintf(fpm, "\"%s\" %s %e  0\n", eptr->name, entity_name[eptr->type], end);
+    fprintf(fpm, "\"%s\" %s %e 0\n", eptr->name, entity_name[eptr->type], end);
     switch (eptr->type) {
     case T_QUAD:
       qptr = (QUAD *)eptr->p_elem;

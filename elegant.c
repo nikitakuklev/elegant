@@ -835,7 +835,8 @@ char **argv;
           linear_chromatic_tracking_setup_done = losses_include_global_coordinates = 0;
           losses_s_limit[0] = -(losses_s_limit[1] = DBL_MAX);
           search_path = NULL;
-          
+          s_start = 0;
+
           set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
           set_print_namelist_flags(0);
           if (processNamelist(&run_setup, &namelist_text) == NAMELIST_ERROR)
@@ -898,6 +899,7 @@ char **argv;
           run_conditions.showElementTiming = show_element_timing;
           run_conditions.monitorMemoryUsage = monitor_memory_usage;
           run_conditions.backtrack = back_tracking;
+          sStart = s_start;
           if ((run_conditions.lossLimit[0] = losses_s_limit[0]) > (run_conditions.lossLimit[1] = losses_s_limit[1]))
             bombElegant("losses_s_limit[0] can't be greater than losses_s_limit[1]", NULL);
           if ((run_conditions.lossesIncludeGlobalCoordinates = losses_include_global_coordinates)) {

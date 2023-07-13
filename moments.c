@@ -252,7 +252,7 @@ void dumpBeamMoments(
     row_count = 0;
     data[IC_PCENTRAL] = elem->Pref_input;
     prepareMomentsArray(data, elem, (double *)sigma0->sigma);
-    data[IC_S] = 0; /* position for initial values */
+    data[IC_S] = sStart; /* position for initial values */
     for (j = IC_S; j < N_COLUMNS; j++)
       if (!SDDS_SetRowValues(&SDDSMoments, SDDS_SET_BY_INDEX | SDDS_PASS_BY_VALUE, row_count, j, data[j], -1)) {
         SDDS_SetError("Problem setting SDDS rows (dumpBeamMoments)");

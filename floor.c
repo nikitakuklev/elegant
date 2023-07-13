@@ -188,13 +188,13 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
   m_alloc(&W1, 3, 3);
   setupSurveyAngleMatrix(W0, theta = theta0, phi = phi0, psi = psi0);
 
-  s = 0;
+  s = sStart;
 
   elem = beamline->elem;
 
   row_index = 0;
   if (isMaster && !SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX | SDDS_PASS_BY_VALUE, row_index,
-                                     IC_S, (double)0.0, IC_DS, (double)0.0, IC_X, X0, IC_Y, Y0, IC_Z, Z0,
+                                     IC_S, (double)s, IC_DS, (double)0.0, IC_X, X0, IC_Y, Y0, IC_Z, Z0,
                                      IC_THETA, theta0, IC_PHI, phi0, IC_PSI, psi0,
                                      IC_ELEMENT, "_BEG_", IC_OCCURENCE, (long)1, IC_TYPE, "MARK",
                                      IC_NEXT_ELEMENT, elem->succ ? elem->succ->name : "_END_", IC_NEXT_TYPE, "MARK",

@@ -116,7 +116,7 @@ extern long trackingMatrixPoints, trackingMatrixMaxFitOrder;
 extern double trackingMatrixStepSize[6];
 extern long warningCountLimit;
 extern short misalignmentMethod, trackingMatrixCleanUp;
-extern double slopeLimit, coordLimit;
+extern double slopeLimit, coordLimit, sStart;
 extern char *searchPath;
 
 /* flag used to identify which processor is allowed to write to a file */

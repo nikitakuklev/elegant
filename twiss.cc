@@ -463,7 +463,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   waists[0] = waists[1] = 0;
 
   elem = elemOrig;
-  sTotal = 0;
+  sTotal = sStart;
   while (elem) {
     for (plane = 0; plane < 2; plane++)
       gamma[plane] = (1 + sqr(alpha[plane])) / beta[plane];
@@ -2706,7 +2706,7 @@ void reset_rfca_matrices(ELEMENT_LIST *eptr, long order)
 
 void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twiss_min, TWISS *twiss_max) {
   ELEMENT_LIST *eptr;
-  double dz, end_pos = 0.0;
+  double dz, end_pos = sStart;
   long nElems;
 
   if (!twiss_ave) {

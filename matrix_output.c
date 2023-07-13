@@ -369,7 +369,7 @@ void run_matrix_output(
       print_line(fp_printout[i_output], beamline);
     if (SDDS_matrix_initialized[i_output] && !print_full_only[i_output]) {
       ELEMENT_LIST start_elem;
-      start_elem.end_pos = 0;
+      start_elem.end_pos = sStart;
       start_elem.name = "_BEG_";
       start_elem.type = T_MARK;
       start_elem.occurence = 1;

@@ -82,6 +82,8 @@ Here is a summary of what's changed since release 2023.2.  Historical change log
   where supported. This was added by M. Wallbank (FNAL).
 \item The \verb|CPICKUP| and \verb|CKICKER| elements, used to model optical stochastic cooling, were improved thanks to
   work by M. Wallbank (FNAL). The main improvement is that incoherent mode can now be used in the parallel version. 
+\item The \verb|run_setup| command now offers the ability to set the initial $s$ coordinate, using the \verb|s_start| parameter.
+  This was requested by V. Sajaev (ANL).
 \end{itemize}
 
 \subsection{Other Changes}
@@ -5130,6 +5132,7 @@ in \verb|run_setup|.
     long element_divisions = 0;
     long load_balancing_on = 0;
     long back_tracking = 0;
+    double s_start = 0;
 &end
 \end{verbatim}
 
@@ -5240,6 +5243,9 @@ tracking.
   present, including \verb|CHARGE|, \verb|CSBEND|, \verb|DRIF|, \verb|EDRIFT|, \verb|EHCOR|, \verb|EHVCOR|,
   \verb|EVCOR|, \verb|HMON|, \verb|KOCT|, \verb|KQUAD|, \verb|KSEXT|, \verb|MARK|, \verb|MONI|, \verb|QUAD|, \verb|RFCA|, 
   \verb|SBEN|, \verb|SEXT|, \verb|TRWAKE|, \verb|UKICKMAP|, \verb|VMON|, \verb|WAKE|, and \verb|WATCH|.
+\item \verb|s_start| --- The initial $s$ coordinate. Changing this will affect not only output data (e.g., the \verb|s|
+  values in files from \verb|twiss_output| and \verb|floor_coordinates|), but also the behavior of commands (e.g., \verb|alter_elements|)
+  the provide $s$-based filtering.
 \end{itemize}
 
 %\begin{latexonly}

@@ -839,7 +839,7 @@ double compute_end_positions(LINE_LIST *lptr) {
   /* use length data to establish z coordinates at end of each element */
   /* also check for duplicate recirculation elements and set occurence numbers to 0 */
   eptr = lptr->elem;
-  z = z_recirc = 0;
+  z = z_recirc = sStart;
   theta = 0;
   i_elem = 0;
   recircPresent = 0;
