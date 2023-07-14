@@ -109,7 +109,7 @@ void IBSRate(double particles,
 
     coulombLogReturn = coulombLog(gamma1, emitx, emity, betax[i], betay[i], sigmaz, particles, 1);
     constant = particles * sqr(re_mks) * c_mks /
-               (8 * PI * ipow(beta, 3) * ipow(gamma2, 2) * emitx * emity * sigmaDelta * sigmaz);
+               (8 * PI * ipow3(beta) * ipow2(gamma2) * emitx * emity * sigmaDelta * sigmaz);
     constant *= coulombLogReturn;
     if (verbosity > 6)
       fprintf(stdout, "Coulomb log: %g.\n constant=: %g \n", coulombLogReturn, constant);
@@ -119,12 +119,12 @@ void IBSRate(double particles,
 
     x11 = betax[i] / emitx;
     x12 = -x11 * gamma1 * phix;
-    Cx = x11 * ipow(etax[i] / betax[i], 2) * gamma2;
+    Cx = x11 * ipow2(etax[i] / betax[i]) * gamma2;
     x22 = Cx + x12 * x12 / x11;
 
     y33 = betay[i] / emity;
     y23 = -y33 * gamma1 * phiy;
-    Cy = y33 * ipow(etay[i] / betay[i], 2) * gamma2;
+    Cy = y33 * ipow2(etay[i] / betay[i]) * gamma2;
     y22 = Cy + y23 * y23 / y33;
 
     z22 = gamma2 / sigmaDelta / sigmaDelta;
@@ -189,9 +189,9 @@ void IBSRate(double particles,
         if (k == 0 || k == steps)
           cof = 1.;
         /*
-        term = pow((ipow(alam,3) + a0*ipow(alam,2) + b0*alam + c0),0.5);
+        term = pow((ipow3(alam) + a0*ipow2(alam) + b0*alam + c0),0.5);
         */
-        term = sqrt(ipow(lambda, 3) + a0 * ipow(lambda, 2) + b0 * lambda + c0);
+        term = sqrt(ipow3(lambda) + a0 * ipow2(lambda) + b0 * lambda + c0);
         func = sqrt(lambda) / term / term / term;
         cof *= func;
         polyz = (az * lambda + bz);

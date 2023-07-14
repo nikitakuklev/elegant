@@ -225,7 +225,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       exitElegant(1);
     }
     /* - compute kSC */
-    kSC = 2 / beamRadius * sqrt(Imax / ipow(Po, 3) / Ia);
+    kSC = 2 / beamRadius * sqrt(Imax / ipow3(Po) / Ia);
     /* - compute length to drift */
     length = 0.1 / kSC;
     if (length > lengthLeft || kickMode)
@@ -493,7 +493,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
     exitElegant(1);
   }
   /* - compute kSC */
-  kSC = 2 / beamRadius * sqrt(Imax / ipow(Po, 3) / Ia);
+  kSC = 2 / beamRadius * sqrt(Imax / ipow3(Po) / Ia);
 
   /* - compute maximum length that we should be traveling between kicks */
   lengthScale = fabs(lengthScale);

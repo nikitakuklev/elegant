@@ -37,7 +37,7 @@ void applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
                                         long order, double KnL, long skew);
 long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, double ysize);
 
-int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta) {
+int convertSlopesToMomenta(double *restrict qx, double *restrict qy, double xp, double yp, double delta) {
   if (expandHamiltonian) {
     *qx = (1 + delta) * xp;
     *qy = (1 + delta) * yp;
@@ -50,7 +50,7 @@ int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double 
   return 1;
 }
 
-int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta) {
+int convertMomentaToSlopes(double *restrict xp, double *restrict yp, double qx, double qy, double delta) {
   if (expandHamiltonian) {
     *xp = qx / (1 + delta);
     *yp = qy / (1 + delta);
@@ -939,7 +939,7 @@ long multipole_tracking2(
     order[0] = 3;
     if (koct->bore)
       /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) * (1+FSE) */
-      KnL[0] = 6 * koct->B / ipow(koct->bore, 3) * (particleCharge / (particleMass * c_mks * Po)) * koct->length * (1 + koct->fse);
+      KnL[0] = 6 * koct->B / ipow3(koct->bore) * (particleCharge / (particleMass * c_mks * Po)) * koct->length * (1 + koct->fse);
     else
       KnL[0] = koct->k3 * koct->length * (1 + koct->fse);
     drift = koct->length;
@@ -1152,14 +1152,14 @@ long multipole_tracking2(
 /* BETA is 2^(1/3) */
 #define BETA 1.25992104989487316477
 
-int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xkick, double ykick,
+int integrate_kick_multipole_ordn(double *restrict coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
-                                  long *order, double *KnL, short *skew,
+                                  long *restrict order, double *restrict KnL, short *restrict skew,
                                   long n_parts, long i_part, double drift,
                                   long integration_order,
-                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData,
-                                  double *dzLoss, double *sigmaDelta2,
+                                  MULTIPOLE_DATA *restrict multData, MULTIPOLE_DATA *restrict edgeMultData, MULTIPOLE_DATA *restrict steeringMultData,
+                                  MULT_APERTURE_DATA *restrict apData,
+                                  double *restrict dzLoss, double *sigmaDelta2,
                                   long radial,
                                   double refTilt /* used for obstruction evaluation only */
 ) {
@@ -1435,9 +1435,9 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
   return 1;
 }
 
-void apply_canonical_multipole_kicks(double *qx, double *qy,
-                                     double *delta_qx_return, double *delta_qy_return,
-                                     double *xpow, double *ypow,
+void apply_canonical_multipole_kicks(double *restrict qx, double *restrict qy,
+                                     double *restrict delta_qx_return, double *restrict delta_qy_return,
+                                     double *restrict xpow, double *restrict ypow,
                                      long order, double KnL, long skew) {
   long i;
   double sum_Fx, sum_Fy;

@@ -644,7 +644,7 @@ elegantto_SRCS = ignoreElements.c elegantto.c sdds_strength_output.c convert_to_
 
 sddssasefel_SRCS = sddssasefel.c sasefelmx.c bombElegant.c
 
-abrat_SRCS = abrat.c track_data.c warnings.c context.c  bombElegant.c
+abrat_SRCS = abrat.c track_data.c warnings.c context.c bombElegant.c
 
 iirFilterTest_SRCS = iirFilterTest.c iirFilter.c bombElegant.c sdds_support_common.c track_data.c
 

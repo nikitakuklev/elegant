@@ -386,7 +386,7 @@ int main(int argc, char **argv)
     fint = dphi*dtheta*GWAve*rateFactor*(sScatterEnd[is]-sScatterStart[is]);
     for (iAngle=0; iAngle<nPhiThetaScatterUnique[is]; iAngle++) {
       index = indexScatterUnique[is]+iAngle;
-      rate[index] = fint*sin(thetaScatter[index])/ipow(sin(thetaScatter[index]/2), 4);
+      rate[index] = fint*sin(thetaScatter[index])/ipow4(sin(thetaScatter[index]/2));
       rateSum += rate[index];
       /* Output rate vs (sScatterUnique, delta) */
       if (!SDDS_SetRowValues(&SDDSfull, SDDS_PASS_BY_VALUE|SDDS_SET_BY_NAME, index,

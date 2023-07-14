@@ -55,7 +55,7 @@ long trackUndulatorKickMap(
   radCoef = isrCoef = sxpCoef = 0;
   if (map->synchRad)
     /* radCoef*I2 is d((P-Po)/Po) per step for the on-axis, on-momentum particle */
-    radCoef = 2. / 3 * particleRadius * ipow(pRef, 3);
+    radCoef = 2. / 3 * particleRadius * ipow3(pRef);
   if (map->isr) {
     /* isrCoef*sqrt(I3) is the RMS increase in dP/P per step due to incoherent SR.  */
     isrCoef = particleRadius * sqrt(55.0 / (24 * sqrt(3)) * pow5(pRef) * 137.0359895);
@@ -180,7 +180,7 @@ long trackUndulatorKickMap(
         /* 3. Optionally apply synchrotron radiation kicks */
         if (radCoef || isrCoef) {
           delta = coord[5];
-          deltaFactor = ipow(1 + delta, 2);
+          deltaFactor = ipow2(1 + delta);
           if (radCoef)
             coord[5] -= radCoef * I2 * deltaFactor;
           if (isrCoef)
@@ -357,12 +357,12 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
       } else
         h0 = fieldSign / radius;
 
-      *I1 += (h0 * Lp * (h0 * ipow(Lp, 2) + 4 * eta * PI + 2 * etap * Lp * PI)) / (2. * ipow(PI, 2));
-      *I2 += (ipow(h0, 2) * Lp) / 2.;
-      *I3 += SIGN(h0) * (4 * ipow(h0, 3) * Lp) / (3. * PI);
+      *I1 += (h0 * Lp * (h0 * ipow2(Lp) + 4 * eta * PI + 2 * etap * Lp * PI)) / (2. * ipow2(PI));
+      *I2 += (ipow2(h0) * Lp) / 2.;
+      *I3 += SIGN(h0) * (4 * ipow3(h0) * Lp) / (3. * PI);
 
       *I5 += SIGN(h0) *
-             (ipow(h0, 3) * Lp * (gamma * (-50625 * eta * h0 * ipow(Lp, 2) * ipow(PI, 3) + 72000 * ipow(eta, 2) * ipow(PI, 4) + 32 * ipow(h0, 2) * ipow(Lp, 4) * (1664 + 225 * ipow(PI, 2))) + 225 * ipow(PI, 2) * (alpha * (-289 * ipow(h0, 2) * ipow(Lp, 3) + 5 * h0 * Lp * (128 * eta - 45 * etap * Lp) * PI + 640 * eta * etap * ipow(PI, 2)) + 64 * beta * (6 * ipow(h0, 2) * ipow(Lp, 2) + 10 * etap * h0 * Lp * PI + 5 * ipow(etap, 2) * ipow(PI, 2))))) / (54000. * ipow(PI, 5));
+             (ipow3(h0) * Lp * (gamma * (-50625 * eta * h0 * ipow2(Lp) * ipow3(PI) + 72000 * ipow2(eta) * ipow4(PI) + 32 * ipow2(h0) * ipow4(Lp) * (1664 + 225 * ipow2(PI))) + 225 * ipow2(PI) * (alpha * (-289 * ipow2(h0) * ipow3(Lp) + 5 * h0 * Lp * (128 * eta - 45 * etap * Lp) * PI + 640 * eta * etap * ipow2(PI)) + 64 * beta * (6 * ipow2(h0) * ipow2(Lp) + 10 * etap * h0 * Lp * PI + 5 * ipow2(etap) * ipow2(PI))))) / (54000. * ipow5(PI));
 
       beta = beta - 2 * Lp * alpha + sqr(Lp) * gamma;
       alpha = alpha - Lp * gamma;
@@ -385,16 +385,16 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
     L = 2 * Lp;
     h0 = 1. / radius;
     for (pole = 0; pole < poles; pole += 2) {
-      *I5 += (ipow(h0, 3) * Lp * (gamma * (9000 * ipow(eta, 2) * ipow(PI, 4) + 1125 * eta * h0 * ipow(Lp, 2) * ipow(PI, 2) * (16 + 3 * PI) + ipow(h0, 2) * ipow(Lp, 4) * (15656 + 2235 * PI + 2250 * ipow(PI, 2))) + 225 * ipow(PI, 2) * (8 * beta * (ipow(h0, 2) * ipow(Lp, 2) + 5 * ipow(etap, 2) * ipow(PI, 2)) + alpha * (-16 * ipow(h0, 2) * ipow(Lp, 3) + 5 * etap * (16 * eta * ipow(PI, 2) + h0 * ipow(Lp, 2) * (16 + 3 * PI)))))) /
-             (3375. * ipow(PI, 5));
+      *I5 += (ipow3(h0) * Lp * (gamma * (9000 * ipow2(eta) * ipow4(PI) + 1125 * eta * h0 * ipow2(Lp) * ipow2(PI) * (16 + 3 * PI) + ipow2(h0) * ipow4(Lp) * (15656 + 2235 * PI + 2250 * ipow2(PI))) + 225 * ipow2(PI) * (8 * beta * (ipow2(h0) * ipow2(Lp) + 5 * ipow2(etap) * ipow2(PI)) + alpha * (-16 * ipow2(h0) * ipow3(Lp) + 5 * etap * (16 * eta * ipow2(PI) + h0 * ipow2(Lp) * (16 + 3 * PI)))))) /
+             (3375. * ipow5(PI));
       beta = beta - 2 * L * alpha + sqr(L) * gamma;
       alpha = alpha - L * gamma;
       gamma = (1 + alpha * alpha) / beta;
       eta = eta + 2 * Lp * etap;
     }
-    *I1 += -(poles / 2) * ((ipow(h0, 2) * ipow(Lp, 3)) / ipow(PI, 2));
-    *I2 += (poles / 2) * ipow(h0, 2) * Lp;
-    *I3 += (poles / 2) * (8 * ipow(h0, 3) * Lp) / (3. * PI);
+    *I1 += -(poles / 2) * ((ipow2(h0) * ipow3(Lp)) / ipow2(PI));
+    *I2 += (poles / 2) * ipow2(h0) * Lp;
+    *I3 += (poles / 2) * (8 * ipow3(h0) * Lp) / (3. * PI);
   }
 
 #ifdef DEBUG

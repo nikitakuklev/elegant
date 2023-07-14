@@ -603,17 +603,17 @@ void track_through_multipole_deflector
           case 2: /* sextupole */
             dpx += (rf_param->b[2] * (3 * x * x - 3 * y * y) + rf_param->a[2] * (-6 * x * y)) * ptPhaseFactor;
             dpy -= (rf_param->b[2] * 6 * x * y + rf_param->a[2] * (3 * x * x - 3 * y * y)) * ptPhaseFactor;
-            dpz += (rf_param->b[2] * (ipow(x, 3) - 3 * x * y * y) - rf_param->a[2] * (3 * x * x * y - ipow(y, 3))) * pzPhaseFactor;
+            dpz += (rf_param->b[2] * (ipow3(x) - 3 * x * y * y) - rf_param->a[2] * (3 * x * x * y - ipow3(y))) * pzPhaseFactor;
             break;
           case 3: /* octupole  */
-            dpx += (rf_param->b[3] * (4 * ipow(x, 3) - 12 * x * y * y) + rf_param->a[3] * (-12 * x * x * y + 4 * ipow(y, 3))) * ptPhaseFactor;
-            dpy -= (rf_param->b[3] * (12 * x * x * y - 4 * ipow(y, 3)) + rf_param->a[3] * (4 * ipow(x, 3) - 12 * x * y * y)) * ptPhaseFactor;
-            dpz += (rf_param->b[3] * (ipow(x, 4) - 6 * ipow(x * y, 2) + ipow(y, 4)) - 4 * rf_param->a[3] * (x * x - y * y) * x * y) * pzPhaseFactor;
+            dpx += (rf_param->b[3] * (4 * ipow3(x) - 12 * x * y * y) + rf_param->a[3] * (-12 * x * x * y + 4 * ipow3(y))) * ptPhaseFactor;
+            dpy -= (rf_param->b[3] * (12 * x * x * y - 4 * ipow3(y)) + rf_param->a[3] * (4 * ipow3(x) - 12 * x * y * y)) * ptPhaseFactor;
+            dpz += (rf_param->b[3] * (ipow4(x) - 6 * ipow2(x * y) + ipow4(y)) - 4 * rf_param->a[3] * (x * x - y * y) * x * y) * pzPhaseFactor;
             break;
           case 4: /* decapole */
-            dpx += (rf_param->b[4] * (5 * ipow(y, 4) + 5 * ipow(x, 4) - 30 * ipow(x * y, 2)) + rf_param->a[4] * (-20 * ipow(x, 3) * y + 20 * x * ipow(y, 3))) * ptPhaseFactor;
-            dpy -= (rf_param->b[4] * (20 * ipow(x, 3) * y - 20 * x * ipow(y, 3)) + rf_param->a[4] * (5 * ipow(x, 4) - 30 * ipow(x * y, 2) + 5 * ipow(y, 4))) * ptPhaseFactor;
-            dpz += (rf_param->b[4] * (ipow(x, 5) - 10 * ipow(x, 3) * y * y + 5 * x * ipow(y, 4)) - rf_param->a[4] * (ipow(y, 5) + 5 * ipow(x, 4) * y - 10 * y * ipow(x * y, 2))) * pzPhaseFactor;
+            dpx += (rf_param->b[4] * (5 * ipow4(y) + 5 * ipow4(x) - 30 * ipow2(x * y)) + rf_param->a[4] * (-20 * ipow3(x) * y + 20 * x * ipow3(y))) * ptPhaseFactor;
+            dpy -= (rf_param->b[4] * (20 * ipow3(x) * y - 20 * x * ipow3(y)) + rf_param->a[4] * (5 * ipow4(x) - 30 * ipow2(x * y) + 5 * ipow4(y))) * ptPhaseFactor;
+            dpz += (rf_param->b[4] * (ipow5(x) - 10 * ipow3(x) * y * y + 5 * x * ipow4(y)) - rf_param->a[4] * (ipow5(y) + 5 * ipow4(x) * y - 10 * y * ipow2(x * y))) * pzPhaseFactor;
           break;
           }
         }

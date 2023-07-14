@@ -1044,11 +1044,11 @@ void computeChromaticTuneLimits(LINE_LIST *beamline) {
       tuneValue[1] = beamline->tune[i] +
                      beamline->chromDeltaHalfRange * c1 +
                      sqr(beamline->chromDeltaHalfRange) * c2 +
-                     ipow(beamline->chromDeltaHalfRange, 3) * c3;
+                     ipow3(beamline->chromDeltaHalfRange) * c3;
       tuneValue[2] = beamline->tune[i] -
                      beamline->chromDeltaHalfRange * c1 +
                      sqr(beamline->chromDeltaHalfRange) * c2 -
-                     ipow(beamline->chromDeltaHalfRange, 3) * c3;
+                     ipow3(beamline->chromDeltaHalfRange) * c3;
       p = 3;
       /* find extrema */
       n = solveQuadratic(3 * c3, 2 * c2, c1, solution);
@@ -1057,7 +1057,7 @@ void computeChromaticTuneLimits(LINE_LIST *beamline) {
           continue;
         tuneValue[p] = beamline->tune[i] +
                        solution[j] * c1 + sqr(solution[j]) * c2 +
-                       ipow(solution[j], 3) * c3;
+                       ipow3(solution[j]) * c3;
         p += 1;
       }
       find_min_max(beamline->tuneChromLower + i, beamline->tuneChromUpper + i,

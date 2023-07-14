@@ -630,7 +630,7 @@ void lorentz_setup(
       case CUBIC_MODEL:
         flen = nibend->flen = (70 * Kg) / 9.;
         Fa = 3 / sqr(nibend->flen);
-        Fb = -2 / ipow(nibend->flen, 3);
+        Fb = -2 / ipow3(nibend->flen);
         break;
       case TANH_MODEL:
         flen = nibend->flen = 2 * Kg;
@@ -639,9 +639,9 @@ void lorentz_setup(
         break;
       case QUINTIC_MODEL:
         flen = nibend->flen = (231 * Kg) / 25.;
-        Fa = 10 / ipow(nibend->flen, 3);
-        Fb = -15 / ipow(nibend->flen, 4);
-        Fc = 6 / ipow(nibend->flen, 5);
+        Fa = 10 / ipow3(nibend->flen);
+        Fb = -15 / ipow4(nibend->flen);
+        Fc = 6 / ipow5(nibend->flen);
         break;
       case ENGE1_MODEL:
       case ENGE3_MODEL:
@@ -845,7 +845,7 @@ void lorentz_setup(
     x_correction = nibend->x_correction;
     s_offset = nibend->s_offset;
     if (nibend->synch_rad)
-      rad_coef = sqr(particleCharge / c_mks) * ipow(Po, 3) / (6 * PI * epsilon_o * particleMass);
+      rad_coef = sqr(particleCharge / c_mks) * ipow3(Po) / (6 * PI * epsilon_o * particleMass);
     else
       rad_coef = 0;
     /*
@@ -948,7 +948,7 @@ void lorentz_setup(
     central_length = bmapxyz->fieldLength > 0 ? bmapxyz->fieldLength : bmapxyz->length;
     rad_coef = 0;
     if (bmapxyz->synchRad)
-      rad_coef = sqr(particleCharge / c_mks) * ipow(Po, 3) / (6 * PI * epsilon_o * particleMass);
+      rad_coef = sqr(particleCharge / c_mks) * ipow3(Po) / (6 * PI * epsilon_o * particleMass);
 #if !USE_MPI
     if (bmapxyz->particleOutputFile && !(bmapxyz->SDDSpo)) {
       TRACKING_CONTEXT tcontext;
@@ -1808,7 +1808,7 @@ void engeFunction(double *Fy, double *Fz, double z, double y, double D, double a
     t16 = t15 * t15;
     t17 = 6 * b3 * z + 3 * b2;
     t18 = t14 / t2;
-    t19 = ipow(b3, 2);
+    t19 = ipow2(b3);
     t20 = t17 * t17;
     t21 = t16 * t15;
     t23 = t18 / t2;

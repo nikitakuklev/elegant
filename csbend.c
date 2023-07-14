@@ -2373,7 +2373,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       }
 
       phiBend += angle / csbend->nSlices;
-      slippageLength = fabs(rho0 * ipow(phiBend, 3) / 24.0);
+      slippageLength = fabs(rho0 * ipow3(phiBend) / 24.0);
       slippageLength13 = pow(slippageLength, 1. / 3.);
       diSlippage = slippageLength / dct;
       diSlippage4 = 4 * slippageLength / dct;
@@ -2397,7 +2397,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             a = sqrt(xmu * xmu + 1.0);
             b = a + xmu;
             if (xmu < 1e-3)
-              chik[iBin] = frac * const1 + 0.50 * ipow(xmu, 2) - (7.0 / 54.0) * ipow(xmu, 4) + (140.0 / 2187.0) * ipow(xmu, 6);
+              chik[iBin] = frac * const1 + 0.50 * ipow2(xmu) - (7.0 / 54.0) * ipow4(xmu) + (140.0 / 2187.0) * ipow6(xmu);
             else
               chik[iBin] = frac * (3.0 * (-2.0 * xmu * pow(b, 1.0 / 3.0) + pow(b, 2.0 / 3.0) + pow(b, 4.0 / 3.0)) +
                                    log(pow((1 - pow(b, 2.0 / 3.0)) / xmu, 2) / (1 + pow(b, 2.0 / 3.0) + pow(b, 4.0 / 3.0))));
@@ -3108,7 +3108,7 @@ if (mode & CSRDRIFT_SPREAD) {
     bombElegant("invalid wavelength_mode for CSR DRIFT.  Use sigmaz or peak-to-peak", NULL);
     break;
   }
-  criticalWavelength = 4.19 / ipow(csrWake.Po, 3) * csrWake.rho;
+  criticalWavelength = 4.19 / ipow3(csrWake.Po) * csrWake.rho;
   if (!particleIsElectron)
     bombElegant("CSRDRIFT spread mode is not supported for particles other than electrons", NULL);
   thetaRad = 0.5463e-3 / (csrWake.Po * 0.511e-3) / pow(criticalWavelength / wavelength, 1. / 3.);
@@ -3390,14 +3390,14 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
   for (is = 0; is < ns; is++) {
     /* don't use s=0 as it is singular */
     s = (is + 1.0) * sMax / ns;
-    sh = s * ipow(gamma, 3) / radius;
+    sh = s * ipow3(gamma) / radius;
     phihm = bendingAngle * gamma;
     t1 = 12 * sh;
     t2 = sqrt(64 + 144 * sh * sh);
     phihs = pow(t1 + t2, 1. / 3.) - pow(-t1 + t2, 1. / 3.);
     xhLowerLimit = -1;
     if (phihs > phihm)
-      xhLowerLimit = sh - phihm - ipow(phihm, 3) / 6 + sqrt(sqr(ipow(phihm, 3) - 6 * sh) + 9 * ipow(phihm, 4)) / 6;
+      xhLowerLimit = sh - phihm - ipow3(phihm) / 6 + sqrt(sqr(ipow3(phihm) - 6 * sh) + 9 * ipow4(phihm)) / 6;
     xUpperLimit = 0.999 * s / (1 - beta);
     for (ix = 0; ix < *n; ix++) {
       if ((*x)[ix] >= xUpperLimit)
@@ -3535,7 +3535,7 @@ double Saldin5354Factor(double xh, double sh, double phihm, double xhLowerLimit)
   double t1, t2, f, psi, psi2;
   if (xh < xhLowerLimit) {
     /* use Saldin 53 */
-    t1 = (ipow(phihm, 3) + 3 * xh * sqr(phihm) - 6 * sh);
+    t1 = (ipow3(phihm) + 3 * xh * sqr(phihm) - 6 * sh);
     t2 = 3 * (phihm + 2 * xh);
     f = 2 / (phihm + 2 * xh) * (1 + (t1 + t2) / sqrt(t1 * t1 + sqr(phihm * t2))) - 1 / sh;
   } else {
@@ -4128,17 +4128,17 @@ void dipoleFringeKHwang(double *Qf, double *Qi,
 
     /* entrance */
     if (inFringe == -1.) {
-      dx = inFringe * ipow(sec_edge, 2) * ipow(gap, 2) * k0 / rho / (1 + dp0) + inFringe * ipow(x0, 2) * ipow(tan_edge, 2) / 2 / rho / (1 + dp0) - inFringe * ipow(y0, 2) * ipow(sec_edge, 2) / 2 / rho / (1 + dp0);
-      dy = -inFringe * x0 * y0 * ipow(tan_edge, 2) / rho / (1 + dp0);
-      dpx = -1. * ipow(sec_edge, 3) * sin_edge * ipow(gap, 2) * k0 / rho / rho / (1 + dp0) + tan_edge * x0 / rho + ipow(y0, 2) / 2 * (2 * ipow(tan_edge, 3)) / ipow(rho, 2) / (1 + dp0) + ipow(y0, 2) / 2 * (ipow(tan_edge, 1)) / ipow(rho, 2) / (1 + dp0) - inFringe * (x0 * px0 - y0 * py0) * ipow(tan_edge, 2) / rho / (1 + dp0) + k4 * ipow(sin_edge, 2) * ipow(gap, 2) / 2 / ipow(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe + k6 * (y0 * y0 - x0 * x0) / 2 / ipow(cos_edge, 3) / rho * Rhe;
-      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow(sin_edge, 2)) * gap / (1 + dp0) / ipow(rho, 2) / ipow(cos_edge, 3) + inFringe * (x0 * py0 + y0 * px0) * ipow(tan_edge, 2) / rho / (1 + dp0) + inFringe * y0 * px0 / rho / (1 + dp0) + k3 * ipow(y0, 3) * (2. / 3. / cos_edge - 4. / 3. / ipow(cos_edge, 3)) / (1 + dp0) / rho / rho / gap + k6 * x0 * y0 / ipow(cos_edge, 3) / rho * Rhe;
+      dx = inFringe * ipow2(sec_edge) * ipow2(gap) * k0 / rho / (1 + dp0) + inFringe * ipow2(x0) * ipow2(tan_edge) / 2 / rho / (1 + dp0) - inFringe * ipow2(y0) * ipow2(sec_edge) / 2 / rho / (1 + dp0);
+      dy = -inFringe * x0 * y0 * ipow2(tan_edge) / rho / (1 + dp0);
+      dpx = -1. * ipow3(sec_edge) * sin_edge * ipow2(gap) * k0 / rho / rho / (1 + dp0) + tan_edge * x0 / rho + ipow2(y0) / 2 * (2 * ipow3(tan_edge)) / ipow2(rho) / (1 + dp0) + ipow2(y0) / 2 * (ipow1(tan_edge)) / ipow2(rho) / (1 + dp0) - inFringe * (x0 * px0 - y0 * py0) * ipow2(tan_edge) / rho / (1 + dp0) + k4 * ipow2(sin_edge) * ipow2(gap) / 2 / ipow3(cos_edge) / rho * Rhe - k5 * x0 * ipow1(sin_edge) * ipow1(gap) / ipow3(cos_edge) / rho * Rhe + k6 * (y0 * y0 - x0 * x0) / 2 / ipow3(cos_edge) / rho * Rhe;
+      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow2(sin_edge)) * gap / (1 + dp0) / ipow2(rho) / ipow3(cos_edge) + inFringe * (x0 * py0 + y0 * px0) * ipow2(tan_edge) / rho / (1 + dp0) + inFringe * y0 * px0 / rho / (1 + dp0) + k3 * ipow3(y0) * (2. / 3. / cos_edge - 4. / 3. / ipow3(cos_edge)) / (1 + dp0) / rho / rho / gap + k6 * x0 * y0 / ipow3(cos_edge) / rho * Rhe;
     }
     /* exit */
     if (inFringe == 1.) {
-      dx = inFringe * ipow(sec_edge, 2) * ipow(gap, 2) * k0 / rho / (1 + dp0) + inFringe * ipow(x0, 2) * ipow(tan_edge, 2) / 2 / rho / (1 + dp0) - inFringe * ipow(y0, 2) * ipow(sec_edge, 2) / 2 / rho / (1 + dp0);
-      dy = -inFringe * x0 * y0 * ipow(tan_edge, 2) / rho / (1 + dp0);
-      dpx = tan_edge * x0 / rho - ipow(y0, 2) / 2 * (1 * ipow(tan_edge, 3)) / ipow(rho, 2) / (1 + dp0) - ipow(x0, 2) / 2 * (1 * ipow(tan_edge, 3)) / ipow(rho, 2) / (1 + dp0) - inFringe * (x0 * px0 - y0 * py0) * ipow(tan_edge, 2) / rho / (1 + dp0) + k4 * ipow(sin_edge, 2) * ipow(gap, 2) / 2 / ipow(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe + k6 * (y0 * y0 - x0 * x0) / 2 / ipow(cos_edge, 3) / rho * Rhe;
-      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow(sin_edge, 2)) * gap / (1 + dp0) / ipow(rho, 2) / ipow(cos_edge, 3) + inFringe * (x0 * py0 + y0 * px0) * ipow(tan_edge, 2) / rho / (1 + dp0) + inFringe * y0 * px0 / rho / (1 + dp0) + x0 * y0 * ipow(sec_edge, 2) * tan_edge / ipow(rho, 2) / (1 + dp0) + k3 * ipow(y0, 3) * (2. / 3. / cos_edge - 4. / 3. / ipow(cos_edge, 3)) / (1 + dp0) / rho / rho / gap - k5 * y0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe + k6 * x0 * y0 / ipow(cos_edge, 3) / rho * Rhe;
+      dx = inFringe * ipow2(sec_edge) * ipow2(gap) * k0 / rho / (1 + dp0) + inFringe * ipow2(x0) * ipow2(tan_edge) / 2 / rho / (1 + dp0) - inFringe * ipow2(y0) * ipow2(sec_edge) / 2 / rho / (1 + dp0);
+      dy = -inFringe * x0 * y0 * ipow2(tan_edge) / rho / (1 + dp0);
+      dpx = tan_edge * x0 / rho - ipow2(y0) / 2 * (1 * ipow3(tan_edge)) / ipow2(rho) / (1 + dp0) - ipow2(x0) / 2 * (1 * ipow3(tan_edge)) / ipow2(rho) / (1 + dp0) - inFringe * (x0 * px0 - y0 * py0) * ipow2(tan_edge) / rho / (1 + dp0) + k4 * ipow2(sin_edge) * ipow2(gap) / 2 / ipow3(cos_edge) / rho * Rhe - k5 * x0 * ipow1(sin_edge) * ipow1(gap) / ipow3(cos_edge) / rho * Rhe + k6 * (y0 * y0 - x0 * x0) / 2 / ipow3(cos_edge) / rho * Rhe;
+      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow2(sin_edge)) * gap / (1 + dp0) / ipow2(rho) / ipow3(cos_edge) + inFringe * (x0 * py0 + y0 * px0) * ipow2(tan_edge) / rho / (1 + dp0) + inFringe * y0 * px0 / rho / (1 + dp0) + x0 * y0 * ipow2(sec_edge) * tan_edge / ipow2(rho) / (1 + dp0) + k3 * ipow3(y0) * (2. / 3. / cos_edge - 4. / 3. / ipow3(cos_edge)) / (1 + dp0) / rho / rho / gap - k5 * y0 * ipow1(sin_edge) * ipow1(gap) / ipow3(cos_edge) / rho * Rhe + k6 * x0 * y0 / ipow3(cos_edge) / rho * Rhe;
     }
 
   } else {
@@ -4146,18 +4146,18 @@ void dipoleFringeKHwang(double *Qf, double *Qi,
 
     /* entrance */
     if (inFringe == -1.) {
-      dx = inFringe * ipow(sec_edge, 2) * ipow(gap, 2) * k0 / rho / (1 + dp0);
+      dx = inFringe * ipow2(sec_edge) * ipow2(gap) * k0 / rho / (1 + dp0);
       dy = 0;
-      dpx = -1. * ipow(sec_edge, 3) * sin_edge * ipow(gap, 2) * k0 / rho / rho / (1 + dp0) + tan_edge * x0 / rho + k4 * ipow(sin_edge, 2) * ipow(gap, 2) / 2 / ipow(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe;
-      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow(sin_edge, 2)) * gap / (1 + dp0) / ipow(rho, 2) / ipow(cos_edge, 3);
+      dpx = -1. * ipow3(sec_edge) * sin_edge * ipow2(gap) * k0 / rho / rho / (1 + dp0) + tan_edge * x0 / rho + k4 * ipow2(sin_edge) * ipow2(gap) / 2 / ipow3(cos_edge) / rho * Rhe - k5 * x0 * ipow1(sin_edge) * ipow1(gap) / ipow3(cos_edge) / rho * Rhe;
+      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow2(sin_edge)) * gap / (1 + dp0) / ipow2(rho) / ipow3(cos_edge);
     }
 
     /* exit */
     if (inFringe == 1.) {
-      dx = inFringe * ipow(sec_edge, 2) * ipow(gap, 2) * k0 / rho / (1 + dp0);
+      dx = inFringe * ipow2(sec_edge) * ipow2(gap) * k0 / rho / (1 + dp0);
       dy = 0;
-      dpx = tan_edge * x0 / rho + k4 * ipow(sin_edge, 2) * ipow(gap, 2) / 2 / ipow(cos_edge, 3) / rho * Rhe - k5 * x0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe;
-      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow(sin_edge, 2)) * gap / (1 + dp0) / ipow(rho, 2) / ipow(cos_edge, 3) - k5 * y0 * ipow(sin_edge, 1) * ipow(gap, 1) / ipow(cos_edge, 3) / rho * Rhe;
+      dpx = tan_edge * x0 / rho + k4 * ipow2(sin_edge) * ipow2(gap) / 2 / ipow3(cos_edge) / rho * Rhe - k5 * x0 * ipow1(sin_edge) * ipow1(gap) / ipow3(cos_edge) / rho * Rhe;
+      dpy = -1. * tan_edge * y0 / rho + k2 * y0 * (1 + ipow2(sin_edge)) * gap / (1 + dp0) / ipow2(rho) / ipow3(cos_edge) - k5 * y0 * ipow1(sin_edge) * ipow1(gap) / ipow3(cos_edge) / rho * Rhe;
     }
   }
 
@@ -4204,10 +4204,10 @@ void dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
   sin_edge = sin(edge);
   cos_edge = cos(edge);
 
-  sec2_edge = ipow(sec_edge, 2);
-  cos3_edge = ipow(cos_edge, 3);
-  tan2_edge = ipow(tan_edge, 2);
-  tan3_edge = ipow(tan_edge, 3);
+  sec2_edge = ipow2(sec_edge);
+  cos3_edge = ipow3(cos_edge);
+  tan2_edge = ipow2(tan_edge);
+  tan3_edge = ipow3(tan_edge);
 
   if (inFringe == -1) {
     /* entrance */
@@ -4215,7 +4215,7 @@ void dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
     x1 = x0;
     px1 = px0 + tan_edge / rho * x0 + tan_edge / (2 * rho2 * (1 + dp0)) * sqr(y0) - tan3_edge / (rho2 * (1 + dp0)) * sqr(x0) - gap * k5 * sin_edge * Rhe / (rho * cos3_edge) * x0 + k6 * sec2_edge * Rhe / (2 * rho) * (sqr(y0) - sqr(x0));
     y1 = y0;
-    py1 = py0 - tan_edge / rho * y0 + tan_edge / (rho2 * (1 + dp0)) * x0 * y0 + gap * k2 * (1 + sqr(sin_edge)) / (rho2 * (1 + dp0) * cos3_edge) * y0 + 2 * k3 * (sqr(cos_edge) - 2) / (3 * gap * rho2 * cos3_edge) * ipow(y0, 3) + gap * k5 * sin_edge * Rhe / (rho * cos3_edge) * y0 + k6 * ipow(sec_edge, 3) * Rhe / rho * x0 * y0;
+    py1 = py0 - tan_edge / rho * y0 + tan_edge / (rho2 * (1 + dp0)) * x0 * y0 + gap * k2 * (1 + sqr(sin_edge)) / (rho2 * (1 + dp0) * cos3_edge) * y0 + 2 * k3 * (sqr(cos_edge) - 2) / (3 * gap * rho2 * cos3_edge) * ipow3(y0) + gap * k5 * sin_edge * Rhe / (rho * cos3_edge) * y0 + k6 * ipow3(sec_edge) * Rhe / rho * x0 * y0;
 
     t1 = (1 + tan2_edge / (2 * rho * (1 + dp0)) * x1);
     x2 = x1 / t1;
@@ -4247,7 +4247,7 @@ void dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
     x1 = x0;
     px1 = px0 + tan_edge / rho * x0 + tan3_edge / (2 * rho2 * (1 + dp0)) * sqr(y0) + tan3_edge / (2 * rho2 * (1 + dp0)) * sqr(x0) - gap * k5 * sin_edge * Rhe / (rho * cos3_edge) * x0 + k6 * sec2_edge * Rhe / (2 * rho) * (sqr(y0) - sqr(x0));
     y1 = y0;
-    py1 = py0 - tan_edge / rho * y0 + tan3_edge / (rho2 * (1 + dp0)) * x0 * y0 + gap * k2 * (1 + sqr(sin_edge)) / (rho2 * (1 + dp0) * cos3_edge) * y0 + 2 * k3 * (sqr(cos_edge) - 2) / (3 * gap * rho2 * cos3_edge) * ipow(y0, 3) + gap * k5 * sin_edge * Rhe / (rho * cos3_edge) * y0 + k6 * ipow(sec_edge, 3) * Rhe / rho * x0 * y0;
+    py1 = py0 - tan_edge / rho * y0 + tan3_edge / (rho2 * (1 + dp0)) * x0 * y0 + gap * k2 * (1 + sqr(sin_edge)) / (rho2 * (1 + dp0) * cos3_edge) * y0 + 2 * k3 * (sqr(cos_edge) - 2) / (3 * gap * rho2 * cos3_edge) * ipow3(y0) + gap * k5 * sin_edge * Rhe / (rho * cos3_edge) * y0 + k6 * ipow3(sec_edge) * Rhe / rho * x0 * y0;
 
     t1 = (1 - tan2_edge / (2 * rho * (1 + dp0)) * x1);
     x2 = x1 / t1;

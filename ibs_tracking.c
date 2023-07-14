@@ -1184,7 +1184,7 @@ void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass) {
   if (!IBS->elements)
     return;
 
-  gamma = sqrt(ipow(IBS->pCentral[IBS->elements - 1], 2) + 1.);
+  gamma = sqrt(ipow2(IBS->pCentral[IBS->elements - 1]) + 1.);
   for (islice = 0; islice < IBS->nslice; islice++) {
     if (!SDDS_StartTable(SDDS_table, IBS->elements)) {
       SDDS_SetError("Problem starting SDDS table (dump_IBScatter)");

@@ -293,7 +293,7 @@ int EvaluateExpansionAndOutput(char *output, long ny, double yMax, MIDPLANE_EXPA
                                "By0", fields->By[ix][iz],
                                "By1", fields->By[ix][iz] - sqr(y)/2*(xp->Dz2By[ix][iz] + xp->Dx2By[ix][iz]),
                                "By2", fields->By[ix][iz] - sqr(y)/2*(xp->Dz2By[ix][iz] + xp->Dx2By[ix][iz]) +
-                               ipow(y, 4)/24*(xp->Dx4By[ix][iz] + 2*xp->Dz2Dx2By[ix][iz] + xp->Dz4By[ix][iz]),
+                               ipow4(y)/24*(xp->Dx4By[ix][iz] + 2*xp->Dz2Dx2By[ix][iz] + xp->Dz4By[ix][iz]),
                                NULL))
           return 0;
     }
@@ -304,9 +304,9 @@ int EvaluateExpansionAndOutput(char *output, long ny, double yMax, MIDPLANE_EXPA
         if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                ix*nz+iz, 
                                "Bx0", y*xp->DxBy[ix][iz],
-                               "Bx1", y*xp->DxBy[ix][iz] - ipow(y,3)/6*(xp->Dz2DxBy[ix][iz] + xp->Dx3By[ix][iz]), 
-                               "Bx2", y*xp->DxBy[ix][iz] - ipow(y,3)/6*(xp->Dz2DxBy[ix][iz] + xp->Dx3By[ix][iz]),
-                               + ipow(y,5)/120*(xp->Dx5By[ix][iz] + 2*xp->Dz2Dx3By[ix][iz] + xp->Dz4DxBy[ix][iz]),
+                               "Bx1", y*xp->DxBy[ix][iz] - ipow3(y)/6*(xp->Dz2DxBy[ix][iz] + xp->Dx3By[ix][iz]),
+                               "Bx2", y*xp->DxBy[ix][iz] - ipow3(y)/6*(xp->Dz2DxBy[ix][iz] + xp->Dx3By[ix][iz]),
+                               + ipow5(y)/120*(xp->Dx5By[ix][iz] + 2*xp->Dz2Dx3By[ix][iz] + xp->Dz4DxBy[ix][iz]),
                                NULL))
           return 0;
     }
@@ -317,9 +317,9 @@ int EvaluateExpansionAndOutput(char *output, long ny, double yMax, MIDPLANE_EXPA
         if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                ix*nz+iz, 
                                "Bz0", y*xp->DzBy[ix][iz],
-                               "Bz1", y*xp->DzBy[ix][iz] - ipow(y,3)/6*(xp->Dz3By[ix][iz] + xp->DzDx2By[ix][iz]), 
-                               "Bz2", y*xp->DzBy[ix][iz] - ipow(y,3)/6*(xp->Dz3By[ix][iz] + xp->DzDx2By[ix][iz]) +
-                               ipow(y,5)/120*(xp->Dz5By[ix][iz] + 2*xp->Dz3Dx2By[ix][iz] + xp->DzDx4By[ix][iz]), 
+                               "Bz1", y*xp->DzBy[ix][iz] - ipow3(y)/6*(xp->Dz3By[ix][iz] + xp->DzDx2By[ix][iz]),
+                               "Bz2", y*xp->DzBy[ix][iz] - ipow3(y)/6*(xp->Dz3By[ix][iz] + xp->DzDx2By[ix][iz]) +
+                               ipow5(y)/120*(xp->Dz5By[ix][iz] + 2*xp->Dz3Dx2By[ix][iz] + xp->DzDx4By[ix][iz]),
                                NULL))
           return 0;    
       }

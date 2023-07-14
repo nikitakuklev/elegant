@@ -5088,6 +5088,9 @@ extern long insideObstruction_XYZ(double X, double Y, double Z, double dXi, doub
 
 extern void processGlobalSettings(NAMELIST_TEXT *nltext);
 
+#define likely(x)      __builtin_expect((x), 1)
+#define unlikely(x)    __builtin_expect((x), 0)
+
 #ifdef __cplusplus
 }
 #endif

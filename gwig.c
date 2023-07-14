@@ -322,7 +322,7 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy, double 
 
         chx = cosh(kx * x);
         cy = cos(ky * y);
-        axpy = axpy + pWig->VCw[i] * (kw / kz) * ipow(ky / kx, 2) * chx * cy * sz;
+        axpy = axpy + pWig->VCw[i] * (kw / kz) * ipow2(ky / kx) * chx * cy * sz;
       }
     } else {
       /* Split-pole Vertical Wiggler: note that one potentially could have: kx=0 (caught in main routine) */
@@ -335,7 +335,7 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy, double 
 
         sz = sin(kz * z + tz);
         ax = ax - pWig->VCw[i] * (kw / kz) * (ky / kx) * sinh(ky * y) * sin(kx * x) * sz;
-        axpy = axpy + pWig->VCw[i] * (kw / kz) * ipow(ky / kx, 2) * cosh(ky * y) * cos(kx * x) * sz;
+        axpy = axpy + pWig->VCw[i] * (kw / kz) * ipow2(ky / kx) * cosh(ky * y) * cos(kx * x) * sz;
       }
     }
   }
@@ -392,7 +392,7 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx, double 
         cx = cos(kx * x);
         chy = cosh(ky * y);
 
-        aypx = aypx + (pWig->HCw[i]) * (kw / kz) * ipow(kx / ky, 2) * cx * chy * sz;
+        aypx = aypx + (pWig->HCw[i]) * (kw / kz) * ipow2(kx / ky) * cx * chy * sz;
       }
     } else {
       /* Split-pole Horizontal Wiggler: note that one potentially could have: ky=0 (caught in main routine) */
@@ -405,7 +405,7 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx, double 
 
         sz = sin(kz * z + tz);
         ay = ay - pWig->HCw[i] * (kw / kz) * kx / ky * sin(ky * y) * sinh(kx * x) * sz;
-        aypx = aypx + pWig->HCw[i] * (kw / kz) * ipow(kx / ky, 2) * cos(ky * y) * cosh(kx * x) * sz;
+        aypx = aypx + pWig->HCw[i] * (kw / kz) * ipow2(kx / ky) * cos(ky * y) * cosh(kx * x) * sz;
       }
     }
   }

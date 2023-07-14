@@ -3188,10 +3188,10 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, ELEMEN
         etaAve = T0 + T2 * kl2 + T4 * kl4 + T6 * kl6 + T8 * kl8;
         etaK1_rhoAve = -etaAve * K1 / rho + (eta0 * tanE1 + eta2 * tanE2) / (2 * length) * h2;
 
-        T0 = (ipow(eta0, 2) * gamma1 -
+        T0 = (ipow2(eta0) * gamma1 -
               (eta0 * gamma1 * h * l2) / 3. +
               (gamma1 * h2 * l4) / 20. +
-              beta0 * (ipow(etap1, 2) + etap1 * h * length +
+              beta0 * (ipow2(etap1) + etap1 * h * length +
                        (h2 * l2) / 3.) +
               alpha1 * (eta0 * (2 * etap1 + h * length) -
                         (h * l2 * (4 * etap1 + 3 * h * length)) / 12.));
@@ -3244,11 +3244,11 @@ void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, LINE_LIST *be
   RI->Pref = Po;
   gamma = sqrt(sqr(Po) + 1);
   Rce = sqr(particleCharge) / (1e7 * particleMass);
-  RI->Uo = particleMassMV * Rce * RI->RI[1] * 2. / 3. * ipow(gamma, 4);
+  RI->Uo = particleMassMV * Rce * RI->RI[1] * 2. / 3. * ipow4(gamma);
   RI->Jx = 1 - RI->RI[3] / RI->RI[1];
   RI->Jdelta = 3 - RI->Jx;
   RI->Jy = 1;
-  RI->tauy = 1. / (Rce / 3 * ipow(gamma, 3) * c_mks / (beamline->revolution_length * n_periods) * RI->RI[1]);
+  RI->tauy = 1. / (Rce / 3 * ipow3(gamma) * c_mks / (beamline->revolution_length * n_periods) * RI->RI[1]);
   RI->taux = RI->tauy * RI->Jy / RI->Jx;
   RI->taudelta = RI->tauy * RI->Jy / RI->Jdelta;
   RI->sigmadelta = gamma * sqrt(55. / 32. / sqrt(3.) * hbar_mks / (particleMass * c_mks) * RI->RI[2] / (2 * RI->RI[1] + RI->RI[3]));
@@ -4883,7 +4883,7 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
         h00201 += (b2L * betay1 / 4 - b3L * betay1 * etax1 / 2) / 2 * ed[nE].py[2] * PF(0, 2);
 
         /* h10002 */
-        h10002 += (b3L * ed[nE].rbetax * ipow(etax1, 2) - b2L * ed[nE].rbetax * etax1) / 2 * ed[nE].px[1] * PF(1, 0);
+        h10002 += (b3L * ed[nE].rbetax * ipow2(etax1) - b2L * ed[nE].rbetax * etax1) / 2 * ed[nE].px[1] * PF(1, 0);
       }
       if (ed[nE].b3L) {
         /* first-order geometric terms from sextupoles */

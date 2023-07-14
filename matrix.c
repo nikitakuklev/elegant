@@ -34,7 +34,7 @@ void print_matrices(FILE *fp, char *string, VMATRIX *M) {
 }
 
 void print_matrices1(FILE *fp, char *string, char *format, VMATRIX *M) {
-  register long i, j, k, l;
+  long i, j, k, l;
   double *C;
   double **R;
   double ***T;
@@ -83,7 +83,7 @@ void print_matrices1(FILE *fp, char *string, char *format, VMATRIX *M) {
 }
 
 void initialize_matrices(VMATRIX *M, long order) {
-  register long i, j, k, l;
+  long i, j, k, l;
   double *Tij, **Qij, *Qijk;
   double *C, **R;
   double ***T;

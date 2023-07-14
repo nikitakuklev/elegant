@@ -668,7 +668,7 @@ void readRingParameters( char *twissFile, double desiredEnergyMeV, RINGPARAMETER
               parameters->energyMeV, desiredEnergyMeV);
       fflush(stdout);
     }
-    parameters->U0 *= ipow(desiredEnergyMeV/(parameters->energyMeV), 4);
+    parameters->U0 *= ipow4(desiredEnergyMeV/(parameters->energyMeV));
     parameters->sigmaDelta *= desiredEnergyMeV/(parameters->energyMeV);
     parameters->energyMeV = desiredEnergyMeV;
   }

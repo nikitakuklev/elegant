@@ -232,8 +232,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   }
 #endif
   if (bgg->synchRad) {
-    radCoef = ipow(particleCharge, 4) / (6 * PI * epsilon_o * ipow(c_mks, 4) * ipow(particleMass, 3));
-    isrCoef = sqrt(55 / (24 * sqrt(3)) * particleRadius * hbar_mks * ipow(particleCharge, 3)) / sqr(particleMass * c_mks);
+    radCoef = ipow4(particleCharge) / (6 * PI * epsilon_o * ipow4(c_mks) * ipow3(particleMass));
+    isrCoef = sqrt(55 / (24 * sqrt(3)) * particleRadius * hbar_mks * ipow3(particleCharge)) / sqr(particleMass * c_mks);
   }
   if (sigmaDelta2)
     *sigmaDelta2 = 0;

@@ -94,10 +94,10 @@ void GWigInit(struct gwig *Wig,
   }
 
   if ((Wig->sr = synchRad))
-    Wig->srCoef = sqr(particleCharge) * ipow(pCentral, 3) / (6 * PI * epsilon_o * particleMass * sqr(c_mks));
+    Wig->srCoef = sqr(particleCharge) * ipow3(pCentral) / (6 * PI * epsilon_o * particleMass * sqr(c_mks));
 
   Wig->isr = isr;
-  Wig->isrCoef = particleRadius * sqrt(55 / (24.0 * sqrt(3)) * ipow(pCentral, 5) * 137.0359895);
+  Wig->isrCoef = particleRadius * sqrt(55 / (24.0 * sqrt(3)) * ipow5(pCentral) * 137.0359895);
 
   kw = 2.0e0 * PI / (Wig->Lw);
   Wig->Zw = 0.0;

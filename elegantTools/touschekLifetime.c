@@ -846,7 +846,7 @@ void TouschekLifeCalc(long verbosity)
 	a0 = a1*npSlice[k]/szSlice[k];
 	sxb2 = betax[i]*exSlice[k];
 	syb2 = betay[i]*eySlice[k];
-	dx2 = ipow(etax[i], 2);
+	dx2 = ipow2(etax[i]);
 	sx2  = sxb2 + dx2*sp2;
         
 	dx_2 = ipow(alphax[i]*etax[i]+betax[i]*etaxp[i], 2);
@@ -879,7 +879,7 @@ void TouschekLifeCalc(long verbosity)
 	}
 
 	if (!plane_orbit) {
-	  dy2 = ipow(etay[i], 2);
+	  dy2 = ipow2(etay[i]);
 	  sy2  = syb2 + dy2*sp2;
 	  dy_2 = ipow(alphay[i]*etay[i]+betay[i]*etayp[i], 2);      
 	  sh2 = 1/(1/sp2+(dx2+dx_2)/sxb2+(dy2+dy_2)/syb2);

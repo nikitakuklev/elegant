@@ -2577,11 +2577,11 @@ double HermitePolynomial(double x, long n) {
     result = 4 * x * x - 2;
     break;
   case 3:
-    result = 8 * ipow(x, 3) - 12 * x;
+    result = 8 * ipow3(x) - 12 * x;
     break;
   case 4:
-    result = ipow(x, 2);
-    result = 16 * ipow(result, 2) - 48 * result + 12;
+    result = ipow2(x);
+    result = 16 * ipow2(result) - 48 * result + 12;
     break;
   default:
     fprintf(stderr, (char *)"Sorry, laser mode number too high---send an email to borland@aps.anl.gov if you really need this.\n");
@@ -2606,10 +2606,10 @@ double HermitePolynomialDeriv(double x, long n) {
     result = 8 * x;
     break;
   case 3:
-    result = 24 * ipow(x, 2) - 12;
+    result = 24 * ipow2(x) - 12;
     break;
   case 4:
-    result = 64 * ipow(x, 3) - 96 * x;
+    result = 64 * ipow3(x) - 96 * x;
     break;
   default:
     fprintf(stderr, (char *)"Sorry, laser mode number too high\n");
@@ -2637,7 +2637,7 @@ double HermitePolynomial2ndDeriv(double x, long n) {
     result = 48 * x;
     break;
   case 4:
-    result = 3 * 64 * ipow(x, 2) - 96;
+    result = 3 * 64 * ipow2(x) - 96;
     break;
   default:
     fprintf(stderr, (char *)"Sorry, laser mode number too high\n");

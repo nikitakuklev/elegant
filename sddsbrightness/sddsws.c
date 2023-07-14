@@ -631,7 +631,7 @@ void compute_constants(long nE, long nxp, long nyp, double nPeriod,
   gk = 0;
   if (kx< EPSK || ky < EPSK) {
     k_magnet = kx + ky;
-    gk = k_magnet*(ipow(k_magnet, 6) + 24.0 * ipow(k_magnet,4)/7.0 + 4.0 * k_magnet * k_magnet + 16.0/7.0)/pow(1.0 + k_magnet*k_magnet, 3.5);
+    gk = k_magnet*(ipow6(k_magnet) + 24.0 * ipow4(k_magnet)/7.0 + 4.0 * k_magnet * k_magnet + 16.0/7.0)/pow(1.0 + k_magnet*k_magnet, 3.5);
   } else if (fabs(kx-ky)< EPSK) {
     k_magnet = kx;
     gk = 32.0/7.0*k_magnet/pow(1.0 + k_magnet*k_magnet, 3.5);
@@ -1157,7 +1157,7 @@ void fk(double xg, double yg, double k_magnet, double *s0, double *s1, double *s
   B=PI;
   eps = 1.0e-12;
   
-  gk = k_magnet*(ipow(k_magnet, 6) +24.0/7.0*ipow(k_magnet, 4) +4.0*k_magnet*k_magnet +16.0/7.0)/pow(1.0 + k_magnet*k_magnet, 3.5);
+  gk = k_magnet*(ipow6(k_magnet) +24.0/7.0*ipow4(k_magnet) +4.0*k_magnet*k_magnet +16.0/7.0)/pow(1.0 + k_magnet*k_magnet, 3.5);
   c  = 2.0*16.0/7.0*k_magnet/PI/gk;
   integ_par.xc = xg;
   integ_par.kc = k_magnet;
@@ -1213,7 +1213,7 @@ c  horizontally and vertically polarized components added.
   p = xc -kc*cos(alpha);
   d = 1.0 + yc*yc + p*p;
   h = 1.0 +yc*yc -p*p;
-  result = h*h/ipow(d, 5)*sin(alpha)*sin(alpha);
+  result = h*h/ipow5(d)*sin(alpha)*sin(alpha);
   return result;
 }
 
@@ -1238,6 +1238,6 @@ c  horizontally and vertically polarized components added. */
   p = xc -kc*cos(alpha);
   d = 1.0 +yc*yc +p*p;
   v = 2.0*yc*p;
-  return (v*v/ipow(d, 5))*sin(alpha)*sin(alpha);
+  return (v*v/ipow5(d))*sin(alpha)*sin(alpha);
   
 }

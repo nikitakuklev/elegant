@@ -694,10 +694,10 @@ int main(int argc, char **argv) {
     if (energy != 0) {
       /* scale to new energy */
       pCentral0 = sqrt(sqr(energy / me_mev) - 1);
-      taux /= ipow(energy / EMeV, 3);
-      tauy /= ipow(energy / EMeV, 3);
-      taudelta /= ipow(energy / EMeV, 3);
-      U0 *= ipow(energy / EMeV, 4);
+      taux /= ipow3(energy / EMeV);
+      tauy /= ipow3(energy / EMeV);
+      taudelta /= ipow3(energy / EMeV);
+      U0 *= ipow4(energy / EMeV);
       for (i = 0; i < elements; i++)
         pCentral[i] = pCentral0;
       EMeV = energy;

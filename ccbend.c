@@ -735,10 +735,10 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
     double H0;
     if (logHamiltonian && fpHam) {
       double H;
-      H = -sqrt(ipow(1 + dp, 2) - qx * qx - qy * qy) +
+      H = -sqrt(ipow2(1 + dp) - qx * qx - qy * qy) +
           KnL[0] / drift * x +
           KnL[1] / (2 * drift) * (x * x - y * y) +
-          KnL[2] / (6 * drift) * (ipow(x, 3) - 3 * x * y * y);
+          KnL[2] / (6 * drift) * (ipow3(x) - 3 * x * y * y);
       if (i_kick == 0)
         H0 = H;
       fprintf(fpHam, "%e %e %e %e %le %le\n", i_kick * drift, x, y, qx, qy, H - H0);
@@ -1380,14 +1380,14 @@ void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double p
      */
     *I1 += ds * (eta1 + eta2) / 2 / lastRho;
     *I2 += ds / sqr(lastRho);
-    *I3 += ds / ipow(fabs(lastRho), 3);
+    *I3 += ds / ipow3(fabs(lastRho));
     /* Compute effective K1 including the sextupole effect plus rotation.
      * lastX and lastXp are saved by track_through_ccbend().
      */
     K1 = (ccbend->K1 + (lastX - ccbend->dxOffset) * ccbend->K2) * cos(atan(lastXp));
-    *I4 += ds * (eta1 + eta2) / 2 * (1 / ipow(lastRho, 3) + 2 * K1 / lastRho);
+    *I4 += ds * (eta1 + eta2) / 2 * (1 / ipow3(lastRho) + 2 * K1 / lastRho);
     H2 = (eta2 * eta2 + sqr(beta2 * etap2 + alpha2 * eta2)) / beta2;
-    *I5 += ds / ipow(fabs(lastRho), 3) * (H1 + H2) / 2;
+    *I5 += ds / ipow3(fabs(lastRho)) * (H1 + H2) / 2;
 
     /* Save lattice functions as values at start of next slice */
     beta1 = beta2;
