@@ -4258,7 +4258,8 @@ where \verb|<statistic>| is \verb|min|, \verb|max|, \verb|ave|, \verb|p99|, \ver
 symbols for y).
 \item Chromatic derivatives of beta and alpha functions, via symbols
 \verb|dbetax/dp|, \verb|dbetay/dp|, \verb|dalphax/dp|, and \verb|dalphay/dp|.
-\item First- and second-order momentum compaction factors via symbols \verb|alphac| and \verb|alphac2|.  
+\item First-, second-, and third-order momentum compaction factors via symbols \verb|alphac|, \verb|alphac2|, and
+  \verb|alphac3|, respectively.
 \item If radiation integral computation is requested,  one may use \verb|ex0| and \verb|Sdelta0| for
 the equilibrium emittance and momentum spread, plus \verb|J<plane>|
 and \verb|tau<plane>| for the damping partition and damping time,
@@ -6155,8 +6156,10 @@ defined as $\frac{d\alpha}{d\delta}$.
  These will be zero unless \verb|compute_driving_terms| is nonzero.
 \item {\tt Ax} and {\tt Ay} --- The horizontal and vertical acceptance.  These will be zero if no apertures are
   defined.
-\item {\tt alphac}, {\tt alphac2} --- First- and second-order momentum compaction.  The path length is 
-  $s = s_o + \alpha_c L \delta + \alpha_{c2} L \delta^2$.
+\item {\tt alphac}, {\tt alphac2}, {\tt alphac3} --- First-, second, and third-order momentum compaction.  The path length is 
+  $s = s_o + \alpha_c L \delta + \alpha_{c2} L \delta^2 + \alpha_{c3} L \delta^2$.  Regarding $\alpha_{c3}$, users are cautioned that
+  the analytical matrices for most elements are limited to second-order, so using tracking-derivce matrices is necessary
+  where supported, and gives limited accuracy.
 \item {\tt couplingIntegral}, {\tt couplingDelta}, and {\tt emittanceRatio} --- These quantities are defined
   in section 3.1.4.4 of \cite{HAPE}.  The computations include tilted quadrupoles, vertical orbit in sextupoles,
   vertical sextupole displacement, and solenoids.  Note that the emittance ratio {\em does not} include 
