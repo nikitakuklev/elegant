@@ -82,7 +82,7 @@ void print_matrices1(FILE *fp, char *string, char *format, VMATRIX *M) {
   log_exit("print_matrices");
 }
 
-void initialize_matrices(VMATRIX *M, long order) {
+void initialize_matrices(VMATRIX *M, const long order) {
   long i, j, k, l;
   double *Tij, **Qij, *Qijk;
   double *C, **R;
@@ -93,60 +93,62 @@ void initialize_matrices(VMATRIX *M, long order) {
 
   M->eptr = NULL;
 
+  // TODO: check if higher orders can also work with single allocation - they should
+  // Contiguous memory regions will allow strided access and vectorization
+
   switch (M->order = order) {
   case 3:
     M->C = C = tmalloc(sizeof(*C) * 6);
-    M->R = R = tmalloc(sizeof(*R) * 6);
+    M->R = R = (double **)czarray_2d(sizeof(double), 6, 6);
     M->T = T = tmalloc(sizeof(*T) * 6);
     M->Q = Q = tmalloc(sizeof(*Q) * 6);
     for (i = 0; i < 6; i++) {
-      C[i] = 0;
-      R[i] = tmalloc(sizeof(**R) * 6);
       T[i] = tmalloc(sizeof(**T) * 6);
       Q[i] = tmalloc(sizeof(**Q) * 6);
       for (j = 0; j < 6; j++) {
-        R[i][j] = 0;
         Tij = T[i][j] = tmalloc(sizeof(***T) * (j + 1));
         Qij = Q[i][j] = tmalloc(sizeof(***Q) * (j + 1));
         for (k = 0; k <= j; k++) {
-          *Tij++ = 0;
           Qijk = *Qij++ = tmalloc(sizeof(****Q) * (k + 1));
-          for (l = 0; l <= k; l++)
-            *Qijk++ = 0;
         }
       }
     }
     break;
   case 2:
     M->C = C = tmalloc(sizeof(*C) * 6);
-    M->R = R = tmalloc(sizeof(*R) * 6);
+    M->R = R = (double **)czarray_2d(sizeof(double), 6, 6);
     M->T = T = tmalloc(sizeof(*T) * 6);
     M->Q = NULL;
     for (i = 0; i < 6; i++) {
-      C[i] = 0;
-      R[i] = tmalloc(sizeof(**R) * 6);
       T[i] = tmalloc(sizeof(**T) * 6);
       for (j = 0; j < 6; j++) {
-        R[i][j] = 0;
         Tij = T[i][j] = tmalloc(sizeof(***T) * (j + 1));
-        for (k = 0; k <= j; k++) {
-          *Tij++ = 0;
-        }
       }
     }
     break;
   case 1:
+    // TODO: pick final implementation and clean up
+    // //grrrrr pointers are confusing
+    // double **ptr0;
+    // double *buffer;
+    // ptr0 = (double **)tmalloc(sizeof(*ptr0) * 6);
+    // buffer = (double *)tmalloc(sizeof(**R) * 6 * 6);
+    // for (uint64_t i = 0; i < 6; i++)
+    //   ptr0[i] = buffer + i * sizeof(**R) * 6;
+    // M->R = R = ptr0;
+
+    // char **ptr0;
+    // char *buffer;
+    // uint64_t i;
+    // ptr0 = (char **)tmalloc((uint64_t)(sizeof(*ptr0) * 6));
+    // buffer = (char *)tmalloc((uint64_t)(sizeof(*buffer) * sizeof(double) * 6 * 6));
+    // for (i = 0; i < 6; i++)
+    //   ptr0[i] = buffer + i * sizeof(double) * 6;
+    // M->R = R = (double **)ptr0;
+    M->R = R = (double **)czarray_2d(sizeof(double), 6, 6);
     M->C = C = tmalloc(sizeof(*C) * 6);
-    M->R = R = tmalloc(sizeof(*R) * 6);
     M->T = NULL;
     M->Q = NULL;
-    for (i = 0; i < 6; i++) {
-      C[i] = 0;
-      R[i] = tmalloc(sizeof(**R) * 6);
-      for (j = 0; j < 6; j++) {
-        R[i][j] = 0;
-      }
-    }
     break;
   default:
     printf("invalid order: %ld  (initialize_matrices)\n",
@@ -242,6 +244,8 @@ void track_particles(double **final, VMATRIX *M, double **initial, long n_part) 
 #endif
 
   set_matrix_pointers(&C, &R, &T, &Q, M);
+
+  // TODO: move all the null checks outside the per-particle loop
 
   switch (M->order) {
   case 3:
@@ -411,13 +415,12 @@ void free_matrices(VMATRIX *M) {
         tfree(Q[i][j]);
         Q[i][j] = NULL;
       }
-      tfree(R[i]);
-      R[i] = NULL;
       tfree(T[i]);
       T[i] = NULL;
       tfree(Q[i]);
       Q[i] = NULL;
     }
+    tfree(*R);
     tfree(C);
     tfree(R);
     tfree(T);
@@ -437,11 +440,10 @@ void free_matrices(VMATRIX *M) {
         tfree(T[i][j]);
         T[i][j] = NULL;
       }
-      tfree(R[i]);
-      R[i] = NULL;
       tfree(T[i]);
       T[i] = NULL;
     }
+    tfree(*R);
     tfree(C);
     tfree(R);
     tfree(T);
@@ -449,12 +451,7 @@ void free_matrices(VMATRIX *M) {
   case 1:
     if (!R || !C)
       bombElegant("NULL R or C entry for matrix (free_matrices)", NULL);
-    for (i = 0; i < 6; i++) {
-      if (!R[i])
-        bombElegant("NULL R[i] entry for matrix (free_matrices)", NULL);
-      tfree(R[i]);
-      R[i] = NULL;
-    }
+    tfree(*R);
     tfree(C);
     tfree(R);
     break;
@@ -794,6 +791,8 @@ void copy_matrices(VMATRIX *M1, VMATRIX *M0) {
   log_entry("copy_matrices");
 
   initialize_matrices(M1, M1->order = M0->order);
+
+  // TODO: check if memcpy better?
 
   for (i = 0; i < 6; i++) {
     M1->C[i] = M0->C[i];
