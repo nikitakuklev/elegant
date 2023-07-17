@@ -1838,7 +1838,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM 33
 
-#define N_TWISS_QUANS (88 + 18 + 2)
+#define N_TWISS_QUANS (89 + 18 + 2)
 static char *twiss_name[N_TWISS_QUANS] = {
   "betax", "alphax", "nux", "etax", "etapx",
   "betay", "alphay", "nuy", "etay", "etapy",
@@ -1846,7 +1846,7 @@ static char *twiss_name[N_TWISS_QUANS] = {
   "max.betay", "max.etay", "max.etapy",
   "min.betax", "min.etax", "min.etapx",
   "min.betay", "min.etay", "min.etapy",
-  "dnux/dp", "dnuy/dp", "alphac", "alphac2",
+  "dnux/dp", "dnuy/dp", "alphac", "alphac2", "alphac3",
   "ave.betax", "ave.betay",
   "etaxp", "etayp",
   "waistsx", "waistsy",
@@ -1875,105 +1875,7 @@ static char *twiss_name[N_TWISS_QUANS] = {
   "p96.betax", "p96.etax", "p96.etapx",
   "p96.betay", "p96.etay", "p96.etapy",
   "Ax", "Ay"};
-static long twiss_mem[N_TWISS_QUANS] = {
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-  -1,
-};
+static long twiss_mem[N_TWISS_QUANS] = {-1};
 
 static char *radint_name[14] = {
   "ex0",
@@ -2084,7 +1986,9 @@ int showTwissMemories(FILE *fp) {
   long i;
 
   for (i = 0; i < N_TWISS_QUANS; i++) {
-    if (twiss_mem[i] != -1)
+    if (twiss_mem[i] == -1)
+      break;
+    else
       fprintf(fp, "%s = %21.15e\n",
               twiss_name[i], rpn_recall(twiss_mem[i]));
   }
@@ -2367,103 +2271,104 @@ double optimization_function(double *value, long *invalid) {
     /* first and second-order momentum compaction */
     rpn_store(beamline->alpha[0], NULL, twiss_mem[24]);
     rpn_store(beamline->alpha[1], NULL, twiss_mem[25]);
+    rpn_store(beamline->alpha[2], NULL, twiss_mem[26]);
     /* more statistics */
-    rpn_store(twiss_ave.betax, NULL, twiss_mem[26]);
-    rpn_store(twiss_ave.betay, NULL, twiss_mem[27]);
+    rpn_store(twiss_ave.betax, NULL, twiss_mem[27]);
+    rpn_store(twiss_ave.betay, NULL, twiss_mem[28]);
     /* alternate names for etapx and etapy */
-    rpn_store(beamline->elast->twiss->etapx, NULL, twiss_mem[28]);
-    rpn_store(beamline->elast->twiss->etapy, NULL, twiss_mem[29]);
+    rpn_store(beamline->elast->twiss->etapx, NULL, twiss_mem[29]);
+    rpn_store(beamline->elast->twiss->etapy, NULL, twiss_mem[30]);
     /* number of waists per plane */
-    rpn_store((double)beamline->waists[0], NULL, twiss_mem[30]);
-    rpn_store((double)beamline->waists[1], NULL, twiss_mem[31]);
+    rpn_store((double)beamline->waists[0], NULL, twiss_mem[31]);
+    rpn_store((double)beamline->waists[1], NULL, twiss_mem[32]);
     /* amplitude-dependent tune shifts */
-    rpn_store(beamline->dnux_dA[1][0], NULL, twiss_mem[32]);
-    rpn_store(beamline->dnux_dA[0][1], NULL, twiss_mem[33]);
-    rpn_store(beamline->dnuy_dA[1][0], NULL, twiss_mem[34]);
-    rpn_store(beamline->dnuy_dA[0][1], NULL, twiss_mem[35]);
+    rpn_store(beamline->dnux_dA[1][0], NULL, twiss_mem[33]);
+    rpn_store(beamline->dnux_dA[0][1], NULL, twiss_mem[34]);
+    rpn_store(beamline->dnuy_dA[1][0], NULL, twiss_mem[35]);
+    rpn_store(beamline->dnuy_dA[0][1], NULL, twiss_mem[36]);
     /* higher-order chromaticities */
-    rpn_store(beamline->chrom2[0], NULL, twiss_mem[36]);
-    rpn_store(beamline->chrom3[0], NULL, twiss_mem[37]);
-    rpn_store(beamline->chrom2[1], NULL, twiss_mem[38]);
-    rpn_store(beamline->chrom3[1], NULL, twiss_mem[39]);
+    rpn_store(beamline->chrom2[0], NULL, twiss_mem[37]);
+    rpn_store(beamline->chrom3[0], NULL, twiss_mem[38]);
+    rpn_store(beamline->chrom2[1], NULL, twiss_mem[39]);
+    rpn_store(beamline->chrom3[1], NULL, twiss_mem[40]);
     /* higher-order dispersion */
-    rpn_store(beamline->eta2[0], NULL, twiss_mem[40]);
-    rpn_store(beamline->eta3[0], NULL, twiss_mem[41]);
-    rpn_store(beamline->eta2[2], NULL, twiss_mem[42]);
-    rpn_store(beamline->eta3[2], NULL, twiss_mem[43]);
+    rpn_store(beamline->eta2[0], NULL, twiss_mem[41]);
+    rpn_store(beamline->eta3[0], NULL, twiss_mem[42]);
+    rpn_store(beamline->eta2[2], NULL, twiss_mem[43]);
+    rpn_store(beamline->eta3[2], NULL, twiss_mem[44]);
     /* limits of tunes due to chromatic effects */
-    rpn_store(beamline->tuneChromLower[0], NULL, twiss_mem[44]);
-    rpn_store(beamline->tuneChromUpper[0], NULL, twiss_mem[45]);
-    rpn_store(beamline->tuneChromLower[1], NULL, twiss_mem[46]);
-    rpn_store(beamline->tuneChromUpper[1], NULL, twiss_mem[47]);
+    rpn_store(beamline->tuneChromLower[0], NULL, twiss_mem[45]);
+    rpn_store(beamline->tuneChromUpper[0], NULL, twiss_mem[46]);
+    rpn_store(beamline->tuneChromLower[1], NULL, twiss_mem[47]);
+    rpn_store(beamline->tuneChromUpper[1], NULL, twiss_mem[48]);
     /* derivative of beta functions with momentum offset */
-    rpn_store(beamline->dbeta_dPoP[0], NULL, twiss_mem[48]);
-    rpn_store(beamline->dbeta_dPoP[1], NULL, twiss_mem[49]);
-    rpn_store(beamline->dalpha_dPoP[0], NULL, twiss_mem[50]);
-    rpn_store(beamline->dalpha_dPoP[1], NULL, twiss_mem[51]);
+    rpn_store(beamline->dbeta_dPoP[0], NULL, twiss_mem[49]);
+    rpn_store(beamline->dbeta_dPoP[1], NULL, twiss_mem[50]);
+    rpn_store(beamline->dalpha_dPoP[0], NULL, twiss_mem[51]);
+    rpn_store(beamline->dalpha_dPoP[1], NULL, twiss_mem[52]);
     /* higher-order tune shifts with amplitude */
-    rpn_store(beamline->dnux_dA[2][0], NULL, twiss_mem[52]);
-    rpn_store(beamline->dnux_dA[0][2], NULL, twiss_mem[53]);
-    rpn_store(beamline->dnuy_dA[2][0], NULL, twiss_mem[54]);
-    rpn_store(beamline->dnuy_dA[0][2], NULL, twiss_mem[55]);
-    rpn_store(beamline->dnux_dA[1][1], NULL, twiss_mem[56]);
-    rpn_store(beamline->dnuy_dA[1][1], NULL, twiss_mem[57]);
+    rpn_store(beamline->dnux_dA[2][0], NULL, twiss_mem[53]);
+    rpn_store(beamline->dnux_dA[0][2], NULL, twiss_mem[54]);
+    rpn_store(beamline->dnuy_dA[2][0], NULL, twiss_mem[55]);
+    rpn_store(beamline->dnuy_dA[0][2], NULL, twiss_mem[56]);
+    rpn_store(beamline->dnux_dA[1][1], NULL, twiss_mem[57]);
+    rpn_store(beamline->dnuy_dA[1][1], NULL, twiss_mem[58]);
     /* tune extrema due to TSWA */
-    rpn_store(beamline->nuxTswaExtrema[0], NULL, twiss_mem[58]);
-    rpn_store(beamline->nuxTswaExtrema[1], NULL, twiss_mem[59]);
-    rpn_store(beamline->nuyTswaExtrema[0], NULL, twiss_mem[60]);
-    rpn_store(beamline->nuyTswaExtrema[1], NULL, twiss_mem[61]);
+    rpn_store(beamline->nuxTswaExtrema[0], NULL, twiss_mem[59]);
+    rpn_store(beamline->nuxTswaExtrema[1], NULL, twiss_mem[60]);
+    rpn_store(beamline->nuyTswaExtrema[0], NULL, twiss_mem[61]);
+    rpn_store(beamline->nuyTswaExtrema[1], NULL, twiss_mem[62]);
     /* coupling parameters */
-    rpn_store(beamline->couplingFactor[0], NULL, twiss_mem[62]);
-    rpn_store(beamline->couplingFactor[2], NULL, twiss_mem[63]);
+    rpn_store(beamline->couplingFactor[0], NULL, twiss_mem[63]);
+    rpn_store(beamline->couplingFactor[2], NULL, twiss_mem[64]);
     /* geometric driving terms */
-    rpn_store(beamline->drivingTerms.h21000[0], NULL, twiss_mem[64]);
-    rpn_store(beamline->drivingTerms.h30000[0], NULL, twiss_mem[65]);
-    rpn_store(beamline->drivingTerms.h10110[0], NULL, twiss_mem[66]);
-    rpn_store(beamline->drivingTerms.h10020[0], NULL, twiss_mem[67]);
-    rpn_store(beamline->drivingTerms.h10200[0], NULL, twiss_mem[68]);
-    rpn_store(beamline->drivingTerms.dnux_dJx, NULL, twiss_mem[69]);
-    rpn_store(beamline->drivingTerms.dnux_dJy, NULL, twiss_mem[70]);
-    rpn_store(beamline->drivingTerms.dnuy_dJy, NULL, twiss_mem[71]);
-    rpn_store(beamline->drivingTerms.h11001[0], NULL, twiss_mem[72]);
-    rpn_store(beamline->drivingTerms.h00111[0], NULL, twiss_mem[73]);
-    rpn_store(beamline->drivingTerms.h20001[0], NULL, twiss_mem[74]);
-    rpn_store(beamline->drivingTerms.h00201[0], NULL, twiss_mem[75]);
-    rpn_store(beamline->drivingTerms.h10002[0], NULL, twiss_mem[76]);
-    rpn_store(beamline->drivingTerms.h22000[0], NULL, twiss_mem[77]);
-    rpn_store(beamline->drivingTerms.h11110[0], NULL, twiss_mem[78]);
-    rpn_store(beamline->drivingTerms.h00220[0], NULL, twiss_mem[79]);
-    rpn_store(beamline->drivingTerms.h31000[0], NULL, twiss_mem[80]);
-    rpn_store(beamline->drivingTerms.h40000[0], NULL, twiss_mem[81]);
-    rpn_store(beamline->drivingTerms.h20110[0], NULL, twiss_mem[82]);
-    rpn_store(beamline->drivingTerms.h11200[0], NULL, twiss_mem[83]);
-    rpn_store(beamline->drivingTerms.h20020[0], NULL, twiss_mem[84]);
-    rpn_store(beamline->drivingTerms.h20200[0], NULL, twiss_mem[85]);
-    rpn_store(beamline->drivingTerms.h00310[0], NULL, twiss_mem[86]);
-    rpn_store(beamline->drivingTerms.h00400[0], NULL, twiss_mem[87]);
+    rpn_store(beamline->drivingTerms.h21000[0], NULL, twiss_mem[65]);
+    rpn_store(beamline->drivingTerms.h30000[0], NULL, twiss_mem[66]);
+    rpn_store(beamline->drivingTerms.h10110[0], NULL, twiss_mem[67]);
+    rpn_store(beamline->drivingTerms.h10020[0], NULL, twiss_mem[68]);
+    rpn_store(beamline->drivingTerms.h10200[0], NULL, twiss_mem[69]);
+    rpn_store(beamline->drivingTerms.dnux_dJx, NULL, twiss_mem[70]);
+    rpn_store(beamline->drivingTerms.dnux_dJy, NULL, twiss_mem[71]);
+    rpn_store(beamline->drivingTerms.dnuy_dJy, NULL, twiss_mem[72]);
+    rpn_store(beamline->drivingTerms.h11001[0], NULL, twiss_mem[73]);
+    rpn_store(beamline->drivingTerms.h00111[0], NULL, twiss_mem[74]);
+    rpn_store(beamline->drivingTerms.h20001[0], NULL, twiss_mem[75]);
+    rpn_store(beamline->drivingTerms.h00201[0], NULL, twiss_mem[76]);
+    rpn_store(beamline->drivingTerms.h10002[0], NULL, twiss_mem[77]);
+    rpn_store(beamline->drivingTerms.h22000[0], NULL, twiss_mem[78]);
+    rpn_store(beamline->drivingTerms.h11110[0], NULL, twiss_mem[79]);
+    rpn_store(beamline->drivingTerms.h00220[0], NULL, twiss_mem[80]);
+    rpn_store(beamline->drivingTerms.h31000[0], NULL, twiss_mem[81]);
+    rpn_store(beamline->drivingTerms.h40000[0], NULL, twiss_mem[82]);
+    rpn_store(beamline->drivingTerms.h20110[0], NULL, twiss_mem[83]);
+    rpn_store(beamline->drivingTerms.h11200[0], NULL, twiss_mem[84]);
+    rpn_store(beamline->drivingTerms.h20020[0], NULL, twiss_mem[85]);
+    rpn_store(beamline->drivingTerms.h20200[0], NULL, twiss_mem[86]);
+    rpn_store(beamline->drivingTerms.h00310[0], NULL, twiss_mem[87]);
+    rpn_store(beamline->drivingTerms.h00400[0], NULL, twiss_mem[88]);
 
     compute_twiss_percentiles(beamline, &twiss_p99, &twiss_p98, &twiss_p96);
-    rpn_store(twiss_p99.betax, NULL, twiss_mem[88]);
-    rpn_store(twiss_p99.etax, NULL, twiss_mem[89]);
-    rpn_store(twiss_p99.etapx, NULL, twiss_mem[90]);
-    rpn_store(twiss_p99.betay, NULL, twiss_mem[91]);
-    rpn_store(twiss_p99.etay, NULL, twiss_mem[92]);
-    rpn_store(twiss_p99.etapy, NULL, twiss_mem[93]);
-    rpn_store(twiss_p98.betax, NULL, twiss_mem[94]);
-    rpn_store(twiss_p98.etax, NULL, twiss_mem[95]);
-    rpn_store(twiss_p98.etapx, NULL, twiss_mem[96]);
-    rpn_store(twiss_p98.betay, NULL, twiss_mem[97]);
-    rpn_store(twiss_p98.etay, NULL, twiss_mem[98]);
-    rpn_store(twiss_p98.etapy, NULL, twiss_mem[99]);
-    rpn_store(twiss_p96.betax, NULL, twiss_mem[100]);
-    rpn_store(twiss_p96.etax, NULL, twiss_mem[101]);
-    rpn_store(twiss_p96.etapx, NULL, twiss_mem[102]);
-    rpn_store(twiss_p96.betay, NULL, twiss_mem[103]);
-    rpn_store(twiss_p96.etay, NULL, twiss_mem[104]);
-    rpn_store(twiss_p96.etapy, NULL, twiss_mem[105]);
+    rpn_store(twiss_p99.betax, NULL, twiss_mem[89]);
+    rpn_store(twiss_p99.etax, NULL,  twiss_mem[90]);
+    rpn_store(twiss_p99.etapx, NULL, twiss_mem[91]);
+    rpn_store(twiss_p99.betay, NULL, twiss_mem[92]);
+    rpn_store(twiss_p99.etay, NULL,  twiss_mem[93]);
+    rpn_store(twiss_p99.etapy, NULL, twiss_mem[94]);
+    rpn_store(twiss_p98.betax, NULL, twiss_mem[95]);
+    rpn_store(twiss_p98.etax, NULL,  twiss_mem[96]);
+    rpn_store(twiss_p98.etapx, NULL, twiss_mem[97]);
+    rpn_store(twiss_p98.betay, NULL, twiss_mem[98]);
+    rpn_store(twiss_p98.etay, NULL,  twiss_mem[99]);
+    rpn_store(twiss_p98.etapy, NULL, twiss_mem[100]);
+    rpn_store(twiss_p96.betax, NULL, twiss_mem[101]);
+    rpn_store(twiss_p96.etax, NULL,  twiss_mem[102]);
+    rpn_store(twiss_p96.etapx, NULL, twiss_mem[103]);
+    rpn_store(twiss_p96.betay, NULL, twiss_mem[104]);
+    rpn_store(twiss_p96.etay, NULL,  twiss_mem[105]);
+    rpn_store(twiss_p96.etapy, NULL, twiss_mem[106]);
 
-    rpn_store(beamline->acceptance[0], NULL, twiss_mem[106]);
-    rpn_store(beamline->acceptance[1], NULL, twiss_mem[107]);
+    rpn_store(beamline->acceptance[0], NULL, twiss_mem[107]);
+    rpn_store(beamline->acceptance[1], NULL, twiss_mem[108]);
 
 #if DEBUG
     printf("Twiss parameters stored.\n");
