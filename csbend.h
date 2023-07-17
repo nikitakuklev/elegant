@@ -12,6 +12,10 @@ extern "C" {
 extern long negativeWarningsLeft;
 extern long dipoleFringeWarning;
 */
+
+// variables can get inlined better in csbend if not needed for gpu
+// will be declared static in csbend.c
+#ifdef HAVE_GPU
 extern long expansionOrder1;  /* order of expansion+1 */
 extern long hasSkew, hasNormal;
 extern double rho0, rho_actual, rad_coef, isrConstant;
@@ -19,18 +23,16 @@ extern double meanPhotonsPerRadian0, meanPhotonsPerMeter0, normalizedCriticalEne
 extern long distributionBasedRadiation, includeOpeningAngle;
 extern long photonCount;
 extern double energyCount, radiansTotal;
-extern long particle_lost;
-extern double s_lost;
 extern double **Fx_xy, **Fy_xy;
+extern short refTrajectoryMode;
+extern long refTrajectoryPoints;
+extern double **refTrajectoryData;
+#endif
 
 #if !defined(PARALLEL)
 /* to avoid problems with HP parallel compiler */
 extern unsigned long multipoleKicksDone ;
 #endif
-
-extern short refTrajectoryMode;
-extern long refTrajectoryPoints;
-extern double **refTrajectoryData;
 
 #define DERBENEV_CRITERION_DISABLE 0
 #define DERBENEV_CRITERION_EVAL 1

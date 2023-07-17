@@ -2428,6 +2428,12 @@ typedef struct {
     short photonFileActive;
     SDDS_DATASET *SDDSphotons;
     short e1Index, e2Index;
+    // memoization for field
+    short expansionOrder_ref, nonlinear_ref;
+    long expansionOrder1_ref, hasSkew_ref, hasNormal_ref;
+    double h_ref;
+    double b_ref[9], c_ref[9];
+    double **Fx_xy_ref, **Fy_xy_ref;
     } CSBEND;
 
 /* names and storage structure for canonically-integrated rectangular bending magnet physical parameters */
