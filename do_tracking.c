@@ -2186,6 +2186,9 @@ long do_tracking(
               nLeft = elimit_amplitudes(coord, ((CORGPIPE *)eptr->p_elem)->radius, ((CORGPIPE *)eptr->p_elem)->radius,
                                         nLeft, accepted, z, *P_central, 1, 0, 2, 2, eptr);
               break;
+            case T_CORGPLATES:
+              track_through_corgplates(coord, nLeft, (CORGPLATES *)eptr->p_elem, P_central, run, i_pass, charge);
+              break;
             case T_LRWAKE:
               track_through_lrwake(coord, nToTrack, (LRWAKE *)eptr->p_elem, P_central, run, i_pass, charge);
               break;

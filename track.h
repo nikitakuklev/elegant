@@ -1021,7 +1021,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_CPICKUP 131
 #define T_CKICKER 132
 #define T_LGBEND 133
-#define N_TYPES  134
+#define T_CORGPLATES 134
+#define N_TYPES  135
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1162,6 +1163,7 @@ extern char *entity_text[N_TYPES];
 #define N_CPICKUP_PARAMS 7
 #define N_CKICKER_PARAMS 17
 #define N_LGBEND_PARAMS 23
+#define N_CORGPLATES_PARAMS 13
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3694,6 +3696,16 @@ typedef struct {
   APERTURE_DATA *localApertureData;
 } LGBEND;
 
+/* names and storage structure for longitudinal corrugated-plates wake physical parameters */
+extern PARAMETER corgplates_param[N_CORGPLATES_PARAMS];
+
+typedef struct {
+  double length, halfGap, period, depth, dt, tmax;
+  long interpolate;          /* flag to turn on interpolation */
+  long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
+  long change_p0, allowLongBeam;
+  long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
+} CORGPLATES;
 
   /* END OF ELEMENT STRUCTURE DEFINITIONS */
 
@@ -4676,6 +4688,8 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
 void track_through_wake(double **part, long np, WAKE *wakeData, double *Po,
                         RUN *run, long i_pass, CHARGE *charge);
 void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *Pcentral, 
+                            RUN *run, long i_pass, CHARGE *charge);
+void track_through_corgplates(double **part, long np, CORGPLATES *corgplates, double *Pcentral, 
                             RUN *run, long i_pass, CHARGE *charge);
 void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
                           RUN *run, long i_pass, CHARGE *charge);

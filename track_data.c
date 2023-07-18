@@ -199,6 +199,7 @@ char *entity_name[N_TYPES] = {
   "CPICKUP",
   "CKICKER",
   "LGBEND",
+  "CORGPLATE",
 };
 
 char *madcom_name[N_MADCOMS] = {
@@ -338,7 +339,8 @@ char *entity_text[N_TYPES] = {
   "An element to provide kicks from another beam",
   "Optical stochastic cooling pickup element---records particle position",
   "Optical stochastic cooling kicker element---applies a kick in particle momentum",
-  "A multi-segment straight longitudinal dipole magnet"};
+  "A multi-segment straight longitudinal dipole magnet",
+  "A pair of corrugated plates, commonly used as a dechirper in linacs."};
 
 QUAD quad_example;
 /* quadrupole physical parameters */
@@ -3882,6 +3884,24 @@ PARAMETER lgbend_param[N_LGBEND_PARAMS] = {
   {"VERBOSE", "", IS_SHORT, 0, (long)((char *)&lgbend_example.verbose), NULL, 0.0, 0, "If nonzero, print messages showing optimized FSE and x offset."},
 };
 
+CORGPLATES corgplates_example;
+/* CORGPLATES physical parameters */
+PARAMETER corgplates_param[N_CORGPLATES_PARAMS] = {
+  {"L", "M", IS_DOUBLE, 0, (long)((char *)&corgplates_example.length), NULL, 0.0, 0, "length"},
+  {"HALFGAP", "M", IS_DOUBLE, 0, (long)((char *)&corgplates_example.halfGap), NULL, 0.0, 0, "Half the distance between the top of the corrugations."},
+  {"PERIOD", "M", IS_DOUBLE, 0, (long)((char *)&corgplates_example.period), NULL, 0.0, 0, "period of corrugations"},
+  {"DEPTH", "M", IS_DOUBLE, 0, (long)((char *)&corgplates_example.depth), NULL, 0.0, 0, "depth of corrugations"},
+  {"DT", "S", IS_DOUBLE, 0, (long)((char *)&corgplates_example.dt), NULL, 0.0, 0, "maximum time duration of wake (0 for autoscale)"},
+  {"TMAX", "S", IS_DOUBLE, 0, (long)((char *)&corgplates_example.tmax), NULL, 0.0, 0, "maximum time duration of wake (0 for autoscale)"},
+  {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&corgplates_example.interpolate), NULL, 0.0, 0, "interpolate wake?"},
+  {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&corgplates_example.smoothing), NULL, 0.0, 0, "Use Savitzky-Golay filter to smooth current histogram?"},
+  {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&corgplates_example.SGHalfWidth), NULL, 0.0, 4, "Savitzky-Golay filter half-width for smoothing"},
+  {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&corgplates_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing"},
+  {"CHANGE_P0", "", IS_LONG, 0, (long)((char *)&corgplates_example.change_p0), NULL, 0.0, 0, "change central momentum?"},
+  {"ALLOW_LONG_BEAM", "", IS_LONG, 0, (long)((char *)&corgplates_example.allowLongBeam), NULL, 0.0, 0, "allow beam longer than wake data?"},
+  {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&corgplates_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
+};
+
 /* END OF ELEMENT DICTIONARY ARRAYS */
 
 /* array of parameter structures */
@@ -4040,6 +4060,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
   {N_CPICKUP_PARAMS, MPALGORITHM | NO_APERTURE, sizeof(CPICKUP), cpickup_param},
   {N_CKICKER_PARAMS, MPALGORITHM | RUN_ZERO_PARTICLES, sizeof(CKICKER), ckicker_param},
   {N_LGBEND_PARAMS, MAT_LEN_NCAT, sizeof(LGBEND), lgbend_param},
+  {N_CORGPLATES_PARAMS, MAY_CHANGE_ENERGY | MPALGORITHM | MAT_LEN_NCAT, sizeof(CORGPLATES), corgplates_param},
 };
 
 void compute_offsets() {

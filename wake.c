@@ -174,6 +174,7 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
         if (wakeData->n_bins) {
           nb = wakeData->n_bins;
           tmin = tmean - dt * nb / 2.0;
+          tmax = tmin + dt*(nb-1);
         } else {
           nb = (tmax - tmin) / dt + 3;
           tmin -= dt;
@@ -647,6 +648,144 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
   exactDrift(part, np, corgpipe->length / 2);
   track_through_wake(part, np, &wakeData, Pcentral, run, i_pass, charge);
   exactDrift(part, np, corgpipe->length / 2);
+
+  free(wakeData.t);
+  free(wakeData.W);
+}
+
+void track_through_corgplates(double **part, long np, CORGPLATES *corgplates, double *Pcentral,
+                              RUN *run, long i_pass, CHARGE *charge)
+/* Longitudinal wake for a pair of parallel corrugated plates, using results in Section 2 and
+ * Appendix A of Z. Zhang et al., PRAB 18, 010702 (2015).
+ */
+{
+  double Z0, k, dt, t, omega, tau;
+  WAKE wakeData;
+  long i, n_bins;
+  double c1 = 1.7096, c2 = -0.5026;
+  double b1 = 0.1483, b2 = 0.1418, b3 = -0.0437, b4 = 0.1460, b5 = 0.5908, d1 = 3.2495, d2 = -9.1830, d3 = 10.2230;
+  double F, Q, a, h, p;
+
+  /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+  /*
+#if USE_MPI
+  if (notSinglePart==0)
+    return;
+#else
+  if (np<2)
+    return;
+#endif
+*/
+
+#if USE_MPI
+  if (myid == 1) {
+#endif
+    if (corgplates->period <= 0)
+      bombElegant("Error: PERIOD parameter on CORGPLATES must be greater than zero", NULL);
+    if (corgplates->halfGap <= 0)
+      bombElegant("Error: HALFGAP parameter on CORGPLATES must be greater than zero", NULL);
+    if (corgplates->depth <= 0)
+      bombElegant("Error: DEPTH parameter on CORGPLATES must be greater than zero", NULL);
+    if (corgplates->tmax < 0)
+      bombElegant("Error: TMAX parameter on CORGPLATES must be greater than or equal to zero", NULL);
+    if (charge == NULL)
+      bombElegant("Error: supply CHARGE element prior to CORGPLATES element", NULL);
+    if (corgplates->period > corgplates->halfGap)
+      bombElegant("Error: Must have PERIOD<=HALFGAP for CORGPLATES element", NULL);
+    if (corgplates->depth > corgplates->halfGap)
+      bombElegant("Error: Must have DEPTH<=PERIOD for CORGPLATES element", NULL);
+    if (corgplates->depth/corgplates->period < 0.8)
+      printWarningForTracking("CORGPLATES DEPTH should be > 0.8*PERIOD.", NULL);
+#if USE_MPI
+  }
+#endif
+
+  a = corgplates->halfGap;
+  p = corgplates->period;
+  h = corgplates->depth;
+
+  F = b1*(1 - p/a)*(1 - h/a) + b2*(1 - h/a) + b3*sqr(1-p/a) + b4*(1-p/a) + b5;
+  k = (c1/sqrt(h/a) + c2)/a;
+  Q = d1*sqr(h/a) + d2*h/a + d3;
+
+
+  dt = 0.1 / (k * c_mks);
+  if (corgplates->dt > 0) {
+    if (corgplates->dt > dt)
+      bombElegantVA("Error: CORGPLATES DT value should be less than %e\n", dt);
+  }
+
+  if (corgplates->tmax == 0) {
+    double beta, gamma, sMin, sMax, dtBeam;
+#if USE_MPI
+    double result;
+#endif
+    sMax = -(sMin = DBL_MAX);
+    for (i = 0; i < np; i++) {
+      if (part[i][4] > sMax)
+        sMax = part[i][4];
+      if (part[i][4] < sMin)
+        sMin = part[i][4];
+    }
+#if USE_MPI
+    MPI_Allreduce(&sMin, &result, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    sMin = result;
+    MPI_Allreduce(&sMax, &result, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    sMax = result;
+#endif
+    if (sMin != sMax) {
+      gamma = sqrt(sqr(*Pcentral) + 1);
+      beta = *Pcentral / gamma;
+      dtBeam = (sMax - sMin) / (beta * c_mks);
+      if (dtBeam < 30 * dt)
+        dt = dtBeam / 30;
+      n_bins = 3 * dtBeam / dt;
+      if (n_bins < 10)
+        n_bins = 10;
+    } else
+      n_bins = 10;
+  } else {
+    if ((n_bins = corgplates->tmax / dt) < 10)
+      n_bins = 10;
+  }
+
+  if ((1.0 * np) / n_bins < 100)
+    printWarningForTracking("Fewer than 100 particles per bin on average for CORGPLATES.",
+                            "Considering increasing the number of particles.");
+
+  wakeData.factor = 1;
+  wakeData.n_bins = n_bins;
+  wakeData.interpolate = corgplates->interpolate;
+  wakeData.smoothing = corgplates->smoothing;
+  wakeData.SGHalfWidth = corgplates->SGHalfWidth;
+  wakeData.SGOrder = corgplates->SGOrder;
+  wakeData.change_p0 = corgplates->change_p0;
+  wakeData.allowLongBeam = corgplates->allowLongBeam;
+  wakeData.acausalAllowed = wakeData.i0 = 0;
+  wakeData.rampPasses = corgplates->rampPasses;
+  wakeData.initialized = 1;
+  wakeData.wakePoints = n_bins;
+  wakeData.isCopy = 0;
+  wakeData.startBunch = wakeData.endBunch = -1;
+  wakeData.W = tmalloc(sizeof(double) * n_bins);
+  wakeData.t = tmalloc(sizeof(double) * n_bins);
+  wakeData.dt = dt;
+  wakeData.bunchedBeamMode = 1;
+
+  Z0 = 4 * PI * 1e-7 * c_mks;
+  F *= PI*Z0*c_mks/(16*sqr(a))*corgplates->length;
+  omega = k*c_mks;
+  tau = 2*Q/omega;
+  for (i = 0; i < n_bins; i++) {
+    wakeData.t[i] = (t=i* dt);
+    wakeData.W[i] = F*exp(-t/tau)*cos(omega*t);
+  }
+  wakeData.macroParticleCharge = charge->macroParticleCharge;
+  wakeData.charge = charge->macroParticleCharge * np;
+
+  exactDrift(part, np, corgplates->length / 2);
+  track_through_wake(part, np, &wakeData, Pcentral, run, i_pass, charge);
+  exactDrift(part, np, corgplates->length / 2);
 
   free(wakeData.t);
   free(wakeData.W);
