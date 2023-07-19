@@ -199,7 +199,7 @@ char *entity_name[N_TYPES] = {
   "CPICKUP",
   "CKICKER",
   "LGBEND",
-  "CORGPLATE",
+  "CORGPLATES",
 };
 
 char *madcom_name[N_MADCOMS] = {
