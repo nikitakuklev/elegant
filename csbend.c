@@ -137,7 +137,7 @@ static void computeCSBENDFields(double *restrict Fx, double *restrict Fy, const 
         sumFx += Fx_xy[i][j] * (xt * yp[j]);
         sumFy += Fy_xy[i][j] * (xt * yp[j]);
       }
-      xt = xt*(x*x);
+      xt = xt*x;
     }
   }
   *Fx = sumFx;
