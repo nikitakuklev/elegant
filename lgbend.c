@@ -936,7 +936,8 @@ void readLGBendApertureData(LGBEND *lgbend)
   
   char *filename;
 
-  filename = findFileInSearchPath(lgbend->apertureDataFile);
+  if (!(filename = findFileInSearchPath(lgbend->apertureDataFile)))
+    bombElegantVA("failed to find LGBEND aperture file %s in search path\n", lgbend->apertureDataFile);
   
   if (!apertureDataHashTable) 
     apertureDataHashTable = hcreate(12);
