@@ -90,10 +90,17 @@ void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlin
 
 // ---------------------
 
-void computeCSBENDFields(double *Fx, double *Fy, double x, double y) {
-  double xp[11], yp[11];
+// This allows to specify things that will be true always (by negative converse)
+// Can be used to hint at range of variable
+#define assume( condition ) { if(!(condition)) __builtin_unreachable(); }
+
+static void computeCSBENDFields(double *restrict Fx, double *restrict Fy, const double x, const double y) {
+  double yp[11];
   double sumFx = 0, sumFy = 0;
   long i, j;
+
+  assume(expansionOrder1 <= 11)
+  assume(expansionOrder1 >= 5)
 
   if (!hasSkew && !hasNormal) {
     *Fx = 0;
@@ -101,40 +108,44 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y) {
     return;
   }
 
-  xp[0] = yp[0] = 1;
+  yp[0] = 1;
   for (i = 1; i < expansionOrder1; i++) {
-    xp[i] = xp[i - 1] * x;
     yp[i] = yp[i - 1] * y;
   }
 
   // Need to specialize loops to help autovectorizer
+  // TODO: check if flipping memory layout helps
   // Can debug with -ftree-vectorize -ftree-vectorizer-verbose=4 -fopt-info-vec-missed
   // Easier to use godbolt with bite sized pieces, like in https://godbolt.org/z/nMdKP488z
 
+  double xt = 1;
   /* Note: using expansionOrder-i here ensures that for x^i*y^j , i+j<=(expansionOrder1-1) */
   if (hasSkew) {
     //j0=0,dj=1
     for (i = 0; i < expansionOrder1; i++) {
       for (j = 0; j < expansionOrder1 - i; j += 1) {
-          sumFx += Fx_xy[i][j] * xp[i] * yp[j];
-          sumFy += Fy_xy[i][j] * xp[i] * yp[j];
+          sumFx += Fx_xy[i][j] * (xt * yp[j]);
+          sumFy += Fy_xy[i][j] * (xt * yp[j]);
       }
+      xt *= x;
     }
   } else {
     //j0=1,dj=2
-    for (i = 0; i < expansionOrder1; i++)
-      for (j = 1; j < expansionOrder1 - i; j += 2)
-        sumFx += Fx_xy[i][j] * xp[i] * yp[j];
-
-    for (i = 0; i < expansionOrder1; i++)
-      for (j = 0; j < expansionOrder1 - i; j += 2)
-        sumFy += Fy_xy[i][j] * xp[i] * yp[j];
+    for (i = 0; i < expansionOrder1; i++) {
+      sumFy += Fy_xy[i][0] * xt;
+      for (j = 1; j < expansionOrder1 - i; j += 2) {
+        sumFx += Fx_xy[i][j] * (xt * yp[j]);
+        sumFy += Fy_xy[i][j] * (xt * yp[j]);
+      }
+      xt = xt*(x*x);
+    }
   }
   *Fx = sumFx;
   *Fy = sumFy;
 }
 
-void computeCSBENDFieldCoefficients(double *restrict b, double *restrict c, double h1, long nonlinear, long expansionOrder) {
+void computeCSBENDFieldCoefficients(double *restrict b, double *restrict c,
+                                    double h1, const long nonlinear, long expansionOrder) {
   long i;
   double h[20];
 
@@ -165,10 +176,10 @@ void computeCSBENDFieldCoefficients(double *restrict b, double *restrict c, doub
   if (!Fy_xy)
     Fy_xy = (double **)czarray_2d(sizeof(double), 11, 11);
 
-  for (i = 0; i < expansionOrder1; i++) {
-    memset(Fx_xy[i], 0, expansionOrder1 * sizeof(double));
-    memset(Fy_xy[i], 0, expansionOrder1 * sizeof(double));
-  }
+//  for (i = 0; i < expansionOrder1; i++) {
+//    memset(Fx_xy[i], 0, expansionOrder1 * sizeof(double));
+//    memset(Fy_xy[i], 0, expansionOrder1 * sizeof(double));
+//  }
 
   h[0] = 1;
   for (i = 1; i < 20; i++)
@@ -938,13 +949,17 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   // Store and reload computed Fx_xy/Fy_xy based on function inputs
   // If we were using C++, there are many good memoization libraries, but alas...
-  // TODO: check if we can also cache b[9],c[9] computations based on b1,b2... values
+
+  //  If debugging, enable tracking context
+  //  TRACKING_CONTEXT context;
+  //  getTrackingContext(&context);
+
   bool needsUpdate = false;
   if (!csbend->Fx_xy_ref) {
     // First execution, need to cache
     needsUpdate = true;
-    // printf("CSBEND update needed because this is initial run for %s#%ld h:%e, nl:%ld order:%ld\n",
-    // context.elementName, context.elementOccurrence, h, csbend->nonlinear, csbend->expansionOrder);
+//    printf("CSBEND update needed because this is initial run for %s#%ld h:%e, nl:%ld order:%ld\n",
+//           context.elementName, context.elementOccurrence, h, csbend->nonlinear, csbend->expansionOrder);
   } else if ((memcmp(csbend->b_ref, csbend->b, sizeof(double)*9) != 0) ||
             (memcmp(csbend->c_ref, csbend->c, sizeof(double)*9) != 0) ||
             (csbend->h_ref != h) ||
@@ -952,8 +967,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
             (csbend->expansionOrder_ref != csbend->expansionOrder)) {
     // Need update due to new parameters (only 5 determine output)
     needsUpdate = true;
-    // printf("CSBEND update needed because of parameter change for %s#%ld: %d b and %d c\n",context.elementName,context.elementOccurrence,
-    // bdifferent, cdifferent);
+//    printf("CSBEND update needed because of parameter change for %s#%ldc\n",
+//           context.elementName, context.elementOccurrence);
   }
 
   if (needsUpdate) {
@@ -967,29 +982,30 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     csbend->expansionOrder1_ref = expansionOrder1;
     csbend->hasNormal_ref = hasNormal;
     csbend->hasSkew_ref = hasSkew;
-    csbend->Fx_xy_ref = (double **)czarray_2d(sizeof(double), 11, 11);
-    csbend->Fy_xy_ref = (double **)czarray_2d(sizeof(double), 11, 11);
-    // Copy starting from element 0 which is address of first pointer
+    if (!csbend->Fx_xy_ref)
+      csbend->Fx_xy_ref = (double **)czarray_2d(sizeof(double), 11, 11);
+    if (!csbend->Fy_xy_ref)
+      csbend->Fy_xy_ref = (double **)czarray_2d(sizeof(double), 11, 11);
     memcpy(*(csbend->Fx_xy_ref), *(Fx_xy), sizeof(double)*11*11);
     memcpy(*(csbend->Fy_xy_ref), *(Fy_xy), sizeof(double)*11*11);
-    //printf("Fresh CSBEND fields initialized h:%e nl:%ld order:%ld\n", h, csbend->nonlinear, csbend->expansionOrder);
-    // printf("Set fresh CSBEND fields for array of size %ld %ld %ld\n Fy_xy[0][0]=%e  %e  \n", sizeof(csbend->b),
-    // sizeof(Fx_xy), sizeof(csbend->Fx_xy),
-    // (csbend->Fy_xy)[0][0], Fy_xy[0][0]);
+//    printf("Fresh CSBEND fields initialized h:%e nl:%ld order:%ld\n", h, csbend->nonlinear, csbend->expansionOrder);
+//    printf("Set fresh CSBEND fields for array of size %ld %ld %ld\n Fy_xy[0][0]=%e  %e  \n", sizeof(csbend->b),
+//           sizeof(Fx_xy), sizeof(csbend->Fx_xy_ref), (csbend->Fy_xy_ref)[0][0], Fy_xy[0][0]);
   } else {
     // Set pointers to cached valued
-    // TODO: eliminate copy is no writes happen to these
     if (!Fx_xy)
       bombElegant("unexpected null pointer in Fx_xy", NULL);
     if (!Fy_xy)
       bombElegant("unexpected null pointer in Fy_xy", NULL);
-    memcpy(*(Fx_xy), *(csbend->Fx_xy_ref), sizeof(double)*11*11);
-    memcpy(*(Fy_xy), *(csbend->Fy_xy_ref), sizeof(double)*11*11);
+    //memcpy(*(Fx_xy), *(csbend->Fx_xy_ref), sizeof(double)*11*11);
+    //memcpy(*(Fy_xy), *(csbend->Fy_xy_ref), sizeof(double)*11*11);
+    Fx_xy = csbend->Fx_xy_ref;
+    Fy_xy = csbend->Fy_xy_ref;
     expansionOrder1 = csbend->expansionOrder1_ref;
     hasNormal = csbend->hasNormal_ref;
     hasSkew = csbend->hasSkew_ref;
-    // printf("Set CACHED CSBEND fields for %s#%ld -- h:%e nl:%ld order:%ld\n", context.elementName, context.elementOccurrence, h,
-    //  csbend->nonlinear, csbend->expansionOrder);
+//    printf("Set CACHED CSBEND fields for %s#%ld -- h:%e nl:%ld order:%ld\n", context.elementName,
+//           context.elementOccurrence, h, csbend->nonlinear, csbend->expansionOrder);
   }
 
   ttilt = tilt + etilt;
@@ -1532,7 +1548,10 @@ long integrate_csbend_ordn(
       computeCSBENDFields(&Fx, &Fy, x, y);
 
       /* --do kicks */
-      // can factor out a bit more but impacts output
+      // TODO:[PERF] output changes
+      //double tmp = ds * (1 + X / rho0) / rho_actual;
+      //QX += -Fy * tmp;
+      //QY += Fx * tmp;
       const double temp1 = ds * (1 + X / rho0);
       QX += -temp1 * Fy / rho_actual;
       QY += temp1 * Fx / rho_actual;
@@ -1599,8 +1618,9 @@ long integrate_csbend_ordn(
   return 1;
 }
 
-long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long iSlice, double rho0, double p0,
-                                    double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order, ELEMENT_LIST *eptr)
+long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n,
+                                    long iSlice, double rho0, double p0, double *dz_lost,
+                                    MULT_APERTURE_DATA *apData, short integration_order, ELEMENT_LIST *eptr)
 /* The Hamiltonian in this case is approximated as
  * H = Hd + Hf, where Hd is the drift part and Hf is the field part.
  * Hd = Hd1 + Hd2 + Hd1, where
@@ -1718,6 +1738,7 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       computeCSBENDFields(&Fx, &Fy, x, y);
 
       /* --do kicks */
+      // TODO:[PERF]
       QX += -ds * (1 + X / rho0) * Fy / rho_actual;
       QY += ds * (1 + X / rho0) * Fx / rho_actual;
       if (rad_coef || isrConstant) {
@@ -3634,7 +3655,7 @@ double Saldin5354Factor(double xh, double sh, double phihm, double xhLowerLimit)
   return f;
 }
 
-void exactDrift(double **part, long np, double length) {
+void exactDrift(double **part, const long np, const double length) {
   long i;
   double *coord;
 
@@ -4728,7 +4749,7 @@ void applyFilterTable(double *function, long bins, double dx, long fValues,
   free(realimag);
 }
 
-void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
+static inline void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
                       double x, double y, double theta, double thetaf, double h0, double Fx, double Fy,
                       double ds, double radCoef, double dsISR, double isrCoef,
                       long distributionBased, long includeOpeningAngle, double meanPhotonsPerMeter,

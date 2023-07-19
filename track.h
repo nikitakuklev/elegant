@@ -4391,7 +4391,8 @@ extern void remove_s_dependent_matrix_elements(VMATRIX *M, long order);
 #define SET_UNIT_R 0x10
 extern void track_particles(double **final, VMATRIX *M, double  **initial, long n_part);
 extern void free_matrices(VMATRIX *M);
-extern void free_nonlinear_matrices(VMATRIX *M);
+// Not used
+// extern void free_nonlinear_matrices(VMATRIX *M);
 extern void free_matrices_above_order(VMATRIX *M, long order);
 extern void set_matrix_pointers(double **C, double ***R, double ****T, double *****Q, VMATRIX *M);
 extern long read_matrices(VMATRIX *M, char *filename, FILE *fp);
@@ -5108,8 +5109,9 @@ extern long insideObstruction_XYZ(double X, double Y, double Z, double dXi, doub
 
 extern void processGlobalSettings(NAMELIST_TEXT *nltext);
 
-#define likely(x)      __builtin_expect((x), 1)
-#define unlikely(x)    __builtin_expect((x), 0)
+// to indicate very unlikely conditions
+#define likely(x)	__builtin_expect(!!(x), 1)
+#define unlikely(x)	__builtin_expect(!!(x), 0)
 
 #ifdef __cplusplus
 }

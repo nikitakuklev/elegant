@@ -90,11 +90,10 @@ void initialize_matrices(VMATRIX *M, const long order) {
   double ****Q;
 
   log_entry("initialize_matrices");
-
   M->eptr = NULL;
 
-  // TODO: check if higher orders can also work with single allocation - they should
   // Contiguous memory regions will allow strided access and vectorization
+  // Actually...maybe not, this ragged array stuff in order 2/3 is not good
 
   switch (M->order = order) {
   case 3:

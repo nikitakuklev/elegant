@@ -50,7 +50,8 @@ int convertSlopesToMomenta(double *restrict qx, double *restrict qy, double xp, 
   return 1;
 }
 
-int convertMomentaToSlopes(double *restrict xp, double *restrict yp, double qx, double qy, double delta) {
+int convertMomentaToSlopes(double *restrict xp, double *restrict yp,
+                           const double qx, const double qy, const double delta) {
   if (expandHamiltonian) {
     *xp = qx / (1 + delta);
     *yp = qy / (1 + delta);
@@ -290,7 +291,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   addMultipoleDatasetToStore(multData, multFile);
 }
 
-void fillPowerArray(double x, double *xpow, long order) {
+void fillPowerArray(const double x, double *xpow, const long order) {
   long i;
 
   if (!xpow)
@@ -695,7 +696,7 @@ long multipole_tracking(
   return (i_top + 1);
 }
 
-double *expansion_coefficients(long n) {
+double *expansion_coefficients(const long n) {
   static double **expansion_coef = NULL;
   static long *orderDone = NULL;
   static long maxOrder = -1;
@@ -724,9 +725,9 @@ double *expansion_coefficients(long n) {
 }
 
 long multipole_tracking2(
-  double **particle,  /* initial/final phase-space coordinates */
+  double **restrict particle,  /* initial/final phase-space coordinates */
   long n_part,        /* number of particles */
-  ELEMENT_LIST *elem, /* element pointer */
+  ELEMENT_LIST *restrict elem, /* element pointer */
   double p_error,     /* p_nominal/p_central */
   double Po,
   double **accepted,
@@ -1152,15 +1153,16 @@ long multipole_tracking2(
 /* BETA is 2^(1/3) */
 #define BETA 1.25992104989487316477
 
-int integrate_kick_multipole_ordn(double *restrict coord, double dx, double dy, double xkick, double ykick,
-                                  double Po, double rad_coef, double isr_coef,
+int integrate_kick_multipole_ordn(double *restrict coord, const double dx, const double dy, double xkick, double ykick,
+                                  const double Po, const double rad_coef, const double isr_coef,
                                   long *restrict order, double *restrict KnL, short *restrict skew,
-                                  long n_parts, long i_part, double drift,
-                                  long integration_order,
-                                  MULTIPOLE_DATA *restrict multData, MULTIPOLE_DATA *restrict edgeMultData, MULTIPOLE_DATA *restrict steeringMultData,
+                                  const long n_parts, const long i_part, double drift,
+                                  const long integration_order,
+                                  MULTIPOLE_DATA *restrict multData, MULTIPOLE_DATA *restrict edgeMultData,
+                                  MULTIPOLE_DATA *restrict steeringMultData,
                                   MULT_APERTURE_DATA *restrict apData,
-                                  double *restrict dzLoss, double *sigmaDelta2,
-                                  long radial,
+                                  double *restrict dzLoss, double *restrict sigmaDelta2,
+                                  const long radial,
                                   double refTilt /* used for obstruction evaluation only */
 ) {
   double p, qx, qy, beta0, beta1, dp, s;
@@ -1358,6 +1360,8 @@ int integrate_kick_multipole_ordn(double *restrict coord, double dx, double dy, 
         /* delta_qx and delta_qy are for the last step and have kickFrac[step-1] included, so remove it */
         delta_qx /= kickFrac[step];
         delta_qy /= kickFrac[step];
+        // TODO:[PERF] output will change
+        //F2 = (sqr(delta_qx - xkick) + sqr(delta_qy + ykick)) / sqr(drift);
         F2 = sqr(delta_qx / drift - xkick / drift) + sqr(delta_qy / drift + ykick / drift);
         delta_qx = 0;
         delta_qy = 0;
@@ -1438,26 +1442,35 @@ int integrate_kick_multipole_ordn(double *restrict coord, double dx, double dy, 
 void apply_canonical_multipole_kicks(double *restrict qx, double *restrict qy,
                                      double *restrict delta_qx_return, double *restrict delta_qy_return,
                                      double *restrict xpow, double *restrict ypow,
-                                     long order, double KnL, long skew) {
+                                     const long order, const double KnL, const long skew) {
   long i;
   double sum_Fx, sum_Fy;
   double *coef;
 
   coef = expansion_coefficients(order);
+  sum_Fx = sum_Fy = 0;
 
   /* sum up the terms for the multipole expansion */
-  for (i = sum_Fx = sum_Fy = 0; i <= order; i++) {
-    /*
-    if (ODD(i))
-      sum_Fx += coef[i]*ipow(x, order-i)*ipow(y, i);
-    else
-      sum_Fy += coef[i]*ipow(x, order-i)*ipow(y, i);
-      */
-    if (ODD(i))
-      sum_Fx += coef[i] * xpow[order - i] * ypow[i];
-    else
-      sum_Fy += coef[i] * xpow[order - i] * ypow[i];
-  }
+  //  for (i = 0; i <= order; i++) {
+  //    /*
+  //    if (ODD(i))
+  //      sum_Fx += coef[i]*ipow(x, order-i)*ipow(y, i);
+  //    else
+  //      sum_Fy += coef[i]*ipow(x, order-i)*ipow(y, i);
+  //      */
+  //    if (ODD(i))
+  //      sum_Fx += coef[i] * xpow[order - i] * ypow[i];
+  //    else
+  //      sum_Fy += coef[i] * xpow[order - i] * ypow[i];
+  //  }
+
+  //even
+  for (i = 0; i <= order; i += 2)
+    sum_Fy += coef[i] * xpow[order - i] * ypow[i];
+  //odd
+  for (i = 1; i <= order; i += 2)
+    sum_Fx += coef[i] * xpow[order - i] * ypow[i];
+
   if (skew) {
     SWAP_DOUBLE(sum_Fx, sum_Fy);
     sum_Fx = -sum_Fx;

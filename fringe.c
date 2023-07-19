@@ -20,9 +20,9 @@
 #include "mdb.h"
 #include "track.h"
 
-void quadFringe(double **coord, long np, double K1,
-                double *fringeIntM0, /* I0m/K1, I1m/K1, I2m/K1, I3m/K1, Lambda2m/K1 */
-                double *fringeIntP0, /* I0p/K1, I1p/K1, I2p/K1, I3p/K1, Lambda2p/K1 */
+void quadFringe(double **restrict coord, long np, double K1,
+                double *restrict fringeIntM0, /* I0m/K1, I1m/K1, I2m/K1, I3m/K1, Lambda2m/K1 */
+                double *restrict fringeIntP0, /* I0p/K1, I1p/K1, I2p/K1, I3p/K1, Lambda2p/K1 */
                 int backtrack,       /* 0 = forward, otherwise backward */
                 int inFringe,        /* -1 = entrance, +1 = exit */
                 int higherOrder,     /* +/-1=linear, +/-2=linear+3rd order, +/-3=linear+higher order */

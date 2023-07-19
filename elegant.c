@@ -1410,9 +1410,7 @@ char **argv;
             finishRfcDataFile();
           if (correct.mode != -1)
             finishCorrectionOutput();
-#ifdef SUNOS4
-          check_heap();
-#endif
+
           switch (commandCode) {
           case TRACK:
             printf("Finished tracking.\n");
@@ -1840,9 +1838,7 @@ char **argv;
             finish_response_output();
           if (correct.mode != -1)
             finishCorrectionOutput();
-#ifdef SUNOS4
-          check_heap();
-#endif
+
           switch (commandCode) {
           case FIND_APERTURE:
             printf("Finished dynamic aperture search.\n");
@@ -2083,9 +2079,6 @@ char **argv;
           exitElegant(1);
           break;
         }
-#ifdef SUNOS4
-        check_heap();
-#endif
       }
 
       switch (namelistErrorCode) {
@@ -2200,6 +2193,7 @@ double find_beam_p_central(char *input) {
   return psum / rows;
 }
 
+// TODO: explore if it works on modern systems, else remove
 #ifdef SUNOS4
 #  include <malloc.h>
 
