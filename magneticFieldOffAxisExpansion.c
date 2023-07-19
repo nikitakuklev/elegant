@@ -535,7 +535,7 @@ void computeMagneticFieldFromOffAxisExpansion(
                   B[0] += fieldData[6] * (-ipow3(x) * ipow5(y) / 11520 - ipow5(x) * ipow3(y) / 5760 - ipow7(x) * y / 11520);
                   B[1] += fieldData[6] * (ipow8(y) / 30720 - ipow6(x) * sqr(y) / 11520 - ipow4(x * y) / 9216 - ipow8(x) / 92160);
                   if (boaData->nDz1 > 7 && (boa->expansionOrder == 0 || boa->expansionOrder > 7)) {
-                    B[2] += fieldData[7] * (ipow(y, 9) / 276480 - ipow4(x) * ipow5(y) / 46080 - ipow6(x) * ipow3(y) / 34560 - ipow8(x) * y / 92160);
+                    B[2] += fieldData[7] * (ipow9(y) / 276480 - ipow4(x) * ipow5(y) / 46080 - ipow6(x) * ipow3(y) / 34560 - ipow8(x) * y / 92160);
                   }
                 }
               }

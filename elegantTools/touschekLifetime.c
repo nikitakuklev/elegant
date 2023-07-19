@@ -849,7 +849,7 @@ void TouschekLifeCalc(long verbosity)
 	dx2 = ipow2(etax[i]);
 	sx2  = sxb2 + dx2*sp2;
         
-	dx_2 = ipow(alphax[i]*etax[i]+betax[i]*etaxp[i], 2);
+	dx_2 = ipow2(alphax[i]*etax[i]+betax[i]*etaxp[i]);
 	c1 = sqr(betax[i])/(2*betagamma2*sxb2);
 	c2 = sqr(betay[i])/(2*betagamma2*syb2);
 
@@ -881,7 +881,7 @@ void TouschekLifeCalc(long verbosity)
 	if (!plane_orbit) {
 	  dy2 = ipow2(etay[i]);
 	  sy2  = syb2 + dy2*sp2;
-	  dy_2 = ipow(alphay[i]*etay[i]+betay[i]*etayp[i], 2);      
+	  dy_2 = ipow2(alphay[i]*etay[i]+betay[i]*etayp[i]);
 	  sh2 = 1/(1/sp2+(dx2+dx_2)/sxb2+(dy2+dy_2)/syb2);
 	  c0 = sqrt(sh2)/(sigmapSlice[k]*betagamma2*exSlice[k]*eySlice[k]);
 	  c3 = sx2*sy2-sp4*dx2*dy2;

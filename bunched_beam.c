@@ -678,7 +678,8 @@ long new_bunched_beam(
       beam->original[i_particle][6] += beam->n_to_track;
 #endif
     }
-    gamma = sqrt(sqr(p = Po * (1 + beam->particle[i_particle][5])) + 1);
+    p = Po * (1 + beam->particle[i_particle][5]);
+    gamma = sqrt(sqr(p) + 1);
     beta = p / gamma;
     beam->particle[i_particle][5] = (p - p_central) / p_central;
     beam->particle[i_particle][4] += s_offset;

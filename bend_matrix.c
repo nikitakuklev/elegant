@@ -225,8 +225,11 @@ VMATRIX *edge_matrix(
   if (M->order > 1) {
     h2 = sqr(h);
     if (all_terms) {
-      T[0][0][0] = which_edge * h / 2 * (tan2_beta = sqr(tan_beta));
-      T[0][2][2] = -which_edge * h / 2 * (sec2_beta = sqr(sec_beta = 1. / cos(beta)));
+      tan2_beta = sqr(tan_beta);
+      T[0][0][0] = which_edge * h / 2 * tan2_beta;
+      sec_beta = 1. / cos(beta);
+      sec2_beta = sqr(sec_beta);
+      T[0][2][2] = -which_edge * h / 2 * sec2_beta;
       T[1][0][0] = which_edge == -1 ? -n * h2 * tan_beta : -h2 * (n + tan2_beta / 2) * tan_beta;
       T[3][3][0] = -(T[2][2][0] = T[1][1][0] = -which_edge * h * tan2_beta);
       T[1][2][2] = which_edge == -1 ? h2 * (n + .5 + tan2_beta) * tan_beta : h2 * (n - tan2_beta / 2) * tan_beta;

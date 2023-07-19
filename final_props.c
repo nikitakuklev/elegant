@@ -864,8 +864,10 @@ double rms_emittance(double **coord, long i1, long i2, long n,
     *c2Return = xpc;
 
   for (i = s11 = s12 = s22 = 0; i < n; i++) {
-    s11 += sqr(x = coord[i][i1] - xc);
-    s22 += sqr(xp = coord[i][i2] - xpc);
+    x = coord[i][i1] - xc;
+    xp = coord[i][i2] - xpc;
+    s11 += sqr(x);
+    s22 += sqr(xp);
     s12 += x * xp;
   }
   if (s11Return)
@@ -918,8 +920,10 @@ double rms_emittance_p(double **coord, long i1, long i2, long n,
     *c2Return = xpc;
 
   for (i = 0; i < n; i++) {
-    s11_local += sqr(x = coord[i][i1] - xc);
-    s22_local += sqr(xp = coord[i][i2] - xpc);
+    x = coord[i][i1] - xc;
+    xp = coord[i][i2] - xpc;
+    s11_local += sqr(x);
+    s22_local += sqr(xp);
     s12_local += x * xp;
   }
 
@@ -975,8 +979,10 @@ double rms_longitudinal_emittance(double **coord, long n, double Po, long startP
 
   for (i = s11 = s12 = s22 = 0; i < n; i++) {
     if (startPID >= endPID || (coord[i][6] >= startPID && coord[i][6] <= endPID)) {
-      s11 += sqr(dt = time[i] - tc);
-      s22 += sqr(ddp = coord[i][5] - dpc);
+      dt = time[i] - tc;
+      s11 += sqr(dt);
+      ddp = coord[i][5] - dpc;
+      s22 += sqr(ddp);
       s12 += dt * ddp;
     }
   }
@@ -1063,8 +1069,10 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
 
   for (i = s11 = s12 = s22 = 0; i < n; i++) {
     if (startPID >= endPID || (coord[i][6] >= startPID && coord[i][6] <= endPID)) {
-      s11 += sqr(dt = time[i] - tc);
-      s22 += sqr(ddp = coord[i][5] - dpc);
+      dt = time[i] - tc;
+      s11 += sqr(dt);
+      ddp = coord[i][5] - dpc;
+      s22 += sqr(ddp);
       s12 += dt * ddp;
     }
   }
@@ -1142,8 +1150,10 @@ void compute_longitudinal_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, l
   bp->max2 = dpmax;
 
   for (i = S1 = S2 = s11 = s12 = s22 = 0; i < n; i++) {
-    s11 += sqr(dt = time[i] - tc);
-    s22 += sqr(ddp = coord[i][5] - dpc);
+    dt = time[i] - tc;
+    s11 += sqr(dt);
+    ddp = coord[i][5] - dpc;
+    s22 += sqr(ddp);
     s12 += dt * ddp;
     S1 += sqr(time[i]);
     S2 += sqr(coord[i][5]);
@@ -1197,8 +1207,10 @@ void compute_transverse_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, lon
   bp->max2 = xpmax;
 
   for (i = S1 = S2 = s11 = s12 = s22 = 0; i < n; i++) {
-    s11 += sqr(dx = coord[i][offset] - xc);
-    s22 += sqr(dxp = coord[i][offset + 1] - xpc);
+    dx = coord[i][offset] - xc;
+    s11 += sqr(dx);
+    dxp = coord[i][offset + 1] - xpc;
+    s22 += sqr(dxp);
     s12 += dx * dxp;
     S1 += sqr(coord[i][offset]);
     S2 += sqr(coord[i][offset + 1]);

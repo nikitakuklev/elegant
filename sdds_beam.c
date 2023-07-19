@@ -415,7 +415,8 @@ long new_sdds_beam(
             fflush(stdout);
             exitElegant(1);
           }
-          gamma = sqrt(sqr(p = beam->original[i][IEC_P]) + 1);
+          p = beam->original[i][IEC_P];
+          gamma = sqrt(sqr(p) + 1);
           if (p_lower && (p_lower > p || p_upper < p)) {
             i_store--;
             continue;

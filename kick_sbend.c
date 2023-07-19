@@ -96,7 +96,8 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
   }
 
   fse = ksbend->fse;
-  h2 = sqr(h = 1. / rho0);
+  h = 1. / rho0;
+  h2 = sqr(h);
   h3 = h * h2;
   nh = n * h;
   betah2 = beta * h2;

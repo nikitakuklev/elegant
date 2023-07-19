@@ -4149,7 +4149,9 @@ void apply_edge_effects(
 
   h2 = sqr(h);
   T111 = which_edge * h / 2 * (tan2_beta = sqr(tan_beta));
-  T133 = -which_edge * h / 2 * (sec2_beta = sqr(sec_beta = 1. / cos(beta)));
+  sec_beta = 1. / cos(beta);
+  sec2_beta =  sqr(sec_beta);
+  T133 = -which_edge * h / 2 * sec2_beta;
   T211 = which_edge == -1 ? -n * h2 * tan_beta : -h2 * (n + tan2_beta / 2) * tan_beta;
   T441 = -(T331 = T221 = -which_edge * h * tan2_beta);
   T233 = which_edge == -1 ? h2 * (n + .5 + tan2_beta) * tan_beta : h2 * (n - tan2_beta / 2) * tan_beta;

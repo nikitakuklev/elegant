@@ -1029,8 +1029,10 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
         if (!(j >= 4 && k >= 4))
           S[j][k] += (part[index[i]][j] - C[j]) * (part[index[i]][k] - C[k]);
     i1 = i - start;
-    S[4][4] += sqr(dt = time[i1] - C[4]);
-    S[5][5] += sqr(dp = (part[index[i]][5] - C[5]));
+    dt = time[i1] - C[4];
+    S[4][4] += sqr(dt);
+    dp = (part[index[i]][5] - C[5]);
+    S[5][5] += sqr(dp);
     S[5][4] += dt * dp;
   }
 #if USE_MPI
