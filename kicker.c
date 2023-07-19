@@ -509,6 +509,8 @@ long interpolateDeflectionMap(double *xpFactor, double *ypFactor, KICKER *kicker
   double Fa, Fb, fx, fy;
   long ix, iy;
 
+  *xpFactor = *ypFactor = 0;
+
   if (isnan(x) || isnan(y) || isinf(x) || isinf(y))
     return 0;
 
