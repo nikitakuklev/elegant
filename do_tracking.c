@@ -1359,7 +1359,7 @@ long do_tracking(
                 bombElegantVA("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign. Specified value is %g\n", charge->charge);
               break;
             case T_MARK:
-              if ((flags & OPTIMIZING) && ((MARK *)eptr->p_elem)->fitpoint && i_pass == n_passes - 1) {
+              if ((flags & (CLOSED_ORBIT_TRACKING|OPTIMIZING)) && ((MARK *)eptr->p_elem)->fitpoint && i_pass == n_passes - 1) {
                 /*
 		  if (beamline->flags&BEAMLINE_TWISS_WANTED) {
 		  if (!(beamline->flags&BEAMLINE_TWISS_DONE))
@@ -1368,12 +1368,14 @@ long do_tracking(
 		  eptr->occurence, eptr->twiss);
 		  }
 		*/
-                if (isMaster || !notSinglePart)
-                  store_fitpoint_matrix_values((MARK *)eptr->p_elem, eptr->name,
-                                               eptr->occurence, eptr->accumMatrix);
-                store_fitpoint_beam_parameters((MARK *)eptr->p_elem, eptr->name, eptr->occurence,
-                                               coord, nToTrack, *P_central);
-                if (flags & CLOSED_ORBIT_TRACKING)
+                if (!(flags&CLOSED_ORBIT_TRACKING)) {
+                  if (isMaster || !notSinglePart)
+                    store_fitpoint_matrix_values((MARK *)eptr->p_elem, eptr->name,
+                                                 eptr->occurence, eptr->accumMatrix);
+                  store_fitpoint_beam_parameters((MARK *)eptr->p_elem, eptr->name, eptr->occurence,
+                                                 coord, nToTrack, *P_central);
+                }
+                if (flags & CLOSED_ORBIT_TRACKING) 
                   storeMonitorOrbitValues(eptr, coord, nToTrack);
               }
               break;
