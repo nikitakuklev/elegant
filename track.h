@@ -1496,7 +1496,7 @@ typedef struct {
     short coFitpoint;
     short storeTurnByTurn;
     unsigned short initialized; /* 0x01: CO, 0x02: TBT */
-    long coMemoryNumber[4], tbtMemoryNumber[2];
+    long coMemoryNumber[4], tbtMemoryNumber[3];
     } MONI;
 
 /* names and storage structure for rectangular collimator physical parameters */
@@ -3174,7 +3174,7 @@ typedef struct {
   short initialized;
   long dataIndex[2]; /* normal, skew */
   SDDS_DATASET *SDDSpo;
-  long poIndex[10];
+  long poIndex[11];
 } BGGEXP;
 
 /* magnetic field from on-axis data */

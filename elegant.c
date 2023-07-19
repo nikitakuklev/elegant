@@ -404,7 +404,7 @@ void finishCorrectionOutput();
 void setupElasticScattering(NAMELIST_TEXT *nltext, RUN *run, VARY *control, long twissFlag);
 long runElasticScattering(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
 void finishElasticScattering();
-void setupInelasticScattering(NAMELIST_TEXT *nltext, RUN *run, VARY *control, long twissFlag);
+void setupInelasticScattering(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 long runInelasticScattering(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
 void finishInelasticScattering();
 
@@ -1658,7 +1658,7 @@ char **argv;
             beamline->flags |= BEAMLINE_MATRICES_NEEDED;
             break;
           case INELASTIC_SCATTERING:
-            setupInelasticScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output || twiss_computed);
+            setupInelasticScattering(&namelist_text, &run_conditions, &run_control);
             beamline->flags |= BEAMLINE_MATRICES_NEEDED;
             break;
           case CHAOS_MAP:
@@ -3008,7 +3008,7 @@ void bombTracking(const char *error) {
   dup2(fd, fileno(stdout));
 #endif
   printf("error:  %s\n", error);
-  if (tc.elementName)
+  if (strlen(tc.elementName))
     printf("Tracking through %s#%ld at s=%lem\n",
            tc.elementName, tc.elementOccurrence, tc.zEnd);
   else
