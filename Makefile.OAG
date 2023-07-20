@@ -321,10 +321,6 @@ ifeq ($(EPICS_HOST_ARCH),solaris-x86-gnu)
 MAKE = gmake
 endif
 
-# On Intrepid, we need build our own lapack and blas libraries
-ifeq (intrepid, $(findstring intrepid, $(HOSTNAME)))
-OP_SYS_LDLIBS += -L/gpfs/home/ywang/Lib -llapack -lblas -lgfortran 
-endif
 
 
 INTEL_MKL=0
@@ -472,25 +468,6 @@ else
      SYS_PROD_LIBS_Linux += lapack blas
     endif
    endif
-   gcc-version = $(shell $(CC) -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}' | head -1)
-   gfortran-version = $(shell gfortran -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
-   ifeq ($(gcc-version),$(gfortran-version))
-    ifneq (cori,$(findstring cori, $(HOSTNAME)))
-     ifneq (edison,$(findstring edison, $(HOSTNAME)))
-      SYS_PROD_LIBS_Linux += gfortran
-     endif
-    endif
-   else
-    ifneq (intrepid,$(findstring intrepid, $(HOSTNAME)))
-     ifneq (vesta,$(findstring vesta, $(HOSTNAME)))
-      ifneq (mira,$(findstring mira, $(HOSTNAME)))
-       ifneq (blogin,$(findstring blogin, $(HOSTNAME)))
-        SYS_PROD_LIBS_Linux += g2c
-       endif
-      endif
-     endif
-    endif
-   endif 
   endif #ifeq ($(OS_CLASS),Linux)
   ifeq ($(OS_CLASS),solaris)
    OPT_CFLAGS_YES=
