@@ -37,7 +37,7 @@ void applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
                                         long order, double KnL, long skew);
 long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, double ysize);
 
-int convertSlopesToMomenta(double *restrict qx, double *restrict qy, double xp, double yp, double delta) {
+int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta) {
   if (expandHamiltonian) {
     *qx = (1 + delta) * xp;
     *qy = (1 + delta) * yp;
@@ -50,7 +50,7 @@ int convertSlopesToMomenta(double *restrict qx, double *restrict qy, double xp, 
   return 1;
 }
 
-int convertMomentaToSlopes(double *restrict xp, double *restrict yp,
+int convertMomentaToSlopes(double *xp, double *yp,
                            const double qx, const double qy, const double delta) {
   if (expandHamiltonian) {
     *xp = qx / (1 + delta);
@@ -725,9 +725,9 @@ double *expansion_coefficients(const long n) {
 }
 
 long multipole_tracking2(
-  double **restrict particle,  /* initial/final phase-space coordinates */
+  double **particle,  /* initial/final phase-space coordinates */
   long n_part,        /* number of particles */
-  ELEMENT_LIST *restrict elem, /* element pointer */
+  ELEMENT_LIST *elem, /* element pointer */
   double p_error,     /* p_nominal/p_central */
   double Po,
   double **accepted,
@@ -1153,15 +1153,15 @@ long multipole_tracking2(
 /* BETA is 2^(1/3) */
 #define BETA 1.25992104989487316477
 
-int integrate_kick_multipole_ordn(double *restrict coord, const double dx, const double dy, double xkick, double ykick,
+int integrate_kick_multipole_ordn(double *coord, const double dx, const double dy, double xkick, double ykick,
                                   const double Po, const double rad_coef, const double isr_coef,
-                                  long *restrict order, double *restrict KnL, short *restrict skew,
+                                  long *order, double *KnL, short *skew,
                                   const long n_parts, const long i_part, double drift,
                                   const long integration_order,
-                                  MULTIPOLE_DATA *restrict multData, MULTIPOLE_DATA *restrict edgeMultData,
-                                  MULTIPOLE_DATA *restrict steeringMultData,
-                                  MULT_APERTURE_DATA *restrict apData,
-                                  double *restrict dzLoss, double *restrict sigmaDelta2,
+                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData,
+                                  MULTIPOLE_DATA *steeringMultData,
+                                  MULT_APERTURE_DATA *apData,
+                                  double *dzLoss, double *sigmaDelta2,
                                   const long radial,
                                   double refTilt /* used for obstruction evaluation only */
 ) {
@@ -1439,9 +1439,9 @@ int integrate_kick_multipole_ordn(double *restrict coord, const double dx, const
   return 1;
 }
 
-void apply_canonical_multipole_kicks(double *restrict qx, double *restrict qy,
-                                     double *restrict delta_qx_return, double *restrict delta_qy_return,
-                                     double *restrict xpow, double *restrict ypow,
+void apply_canonical_multipole_kicks(double *qx, double *qy,
+                                     double *delta_qx_return, double *delta_qy_return,
+                                     double *xpow, double *ypow,
                                      const long order, const double KnL, const long skew) {
   long i;
   double sum_Fx, sum_Fy;

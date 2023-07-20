@@ -94,13 +94,10 @@ void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlin
 // Can be used to hint at range of variable
 #define assume( condition ) { if(!(condition)) __builtin_unreachable(); }
 
-static void computeCSBENDFields(double *restrict Fx, double *restrict Fy, const double x, const double y) {
+static void computeCSBENDFields(double *Fx, double *Fy, const double x, const double y) {
   double yp[11];
   double sumFx = 0, sumFy = 0;
   long i, j;
-
-  assume(expansionOrder1 <= 11)
-  assume(expansionOrder1 >= 5)
 
   if (!hasSkew && !hasNormal) {
     *Fx = 0;
@@ -118,8 +115,9 @@ static void computeCSBENDFields(double *restrict Fx, double *restrict Fy, const 
   // Can debug with -ftree-vectorize -ftree-vectorizer-verbose=4 -fopt-info-vec-missed
   // Easier to use godbolt with bite sized pieces, like in https://godbolt.org/z/nMdKP488z
 
-  double xt = 1;
   /* Note: using expansionOrder-i here ensures that for x^i*y^j , i+j<=(expansionOrder1-1) */
+
+  double xt = 1;
   if (hasSkew) {
     //j0=0,dj=1
     for (i = 0; i < expansionOrder1; i++) {
@@ -144,7 +142,7 @@ static void computeCSBENDFields(double *restrict Fx, double *restrict Fy, const 
   *Fy = sumFy;
 }
 
-void computeCSBENDFieldCoefficients(double *restrict b, double *restrict c,
+void computeCSBENDFieldCoefficients(double *b, double *c,
                                     double h1, const long nonlinear, long expansionOrder) {
   long i;
   double h[20];
