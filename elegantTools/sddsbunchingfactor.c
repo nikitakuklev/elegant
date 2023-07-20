@@ -23,10 +23,11 @@
 #define SET_MODE 3
 #define SET_COMBINE_PAGES 4
 #define SET_COLUMN 5
-#define N_OPTIONS 6
+#define SET_THREADS 6
+#define N_OPTIONS 7
 
 char *option[N_OPTIONS] = {
-  "pipe", "omegarange", "points", "mode", "combinepages", "column"
+  "pipe", "omegarange", "points", "mode", "combinepages", "column", "threads",
 } ;
 
 char *modeOption[2] = {
@@ -35,25 +36,33 @@ char *modeOption[2] = {
 
 char *USAGE="sddsbunchingfactor [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
   [-omegaRange=<lower>,<upper>] [-points=<number>] [-mode={linear|logarithmic}] [-combinePages]\n\
-  [-column=<columnName>]\n\
+  [-column=<columnName>] [-threads=<number>]\n\
 Computes the bunching factor vs angular frequency using time coordinates of particles in the input.\n\
 -pipe         The standard SDDS pipe option.\n\
 -omegaRange   Lower and upper limits of angular frequency.\n\
 -points       Number of values of omega.\n\
 -mode         Linear or logarithmic spacing of omega points?\n\
 -combinePages Combine input data from all pages.\n\
--column       Name of column for which to compute bunching factor. Default is \"t\".\n\n\
-Program by Michael Borland.  (This is version 1, March 30, 2015)\n";
+-column       Name of column for which to compute bunching factor. Default is \"t\".\n\
+-threads      Number of threads to use. Default is 1.\n\
+Program by Michael Borland.  (This is version 2, July 2023)\n";
 
 long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, SDDS_DATASET *SDDSin, char *columnUnits);
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
+
+#if defined(linux) || (defined(_WIN32) && !defined(_MINGW))
+#  include <omp.h>
+#else
+#  define NOTHREADS 1
+#endif
 
 int main(int argc, char **argv)
 {
   SDDS_DATASET SDDSin, SDDSout;
   char *inputfile, *outputfile;
   long i_arg, readCode, omegaMode, combinePages;
-  long iw, ip, particles, particlesTotal;
+  long iw;
+  int64_t particles, particlesTotal;
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
   double *t, omega;
@@ -61,6 +70,7 @@ int main(int argc, char **argv)
   long omegaPoints, tmpFileUsed;
   double *omegaArray, *cosSum, *sinSum;
   char *column, *columnUnits;
+  long threads = 1;
 
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
@@ -108,6 +118,10 @@ int main(int argc, char **argv)
 	  SDDS_Bomb("invalid -column syntax");
         cp_str(&column, s_arg[i_arg].list[1]);
         break;
+      case SET_THREADS:
+        if (s_arg[i_arg].n_items != 2 || sscanf(s_arg[i_arg].list[1], "%ld", &threads) != 1 || threads <= 0)
+          SDDS_Bomb("invalid -threads syntax: give an value greater than 0");
+        break;
       default:
         fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
         fflush(stdout);
@@ -145,6 +159,8 @@ int main(int argc, char **argv)
 
   if (omegaPoints<=0 || omegaLower==omegaUpper)
     SDDS_Bomb("must give -omegaRange and -points");
+  if (omegaLower==0 && omegaMode)
+    SDDS_Bomb("can't use logarithmic mode if omega range starts at 0");
 
   omegaArray = tmalloc(sizeof(*omegaArray)*omegaPoints);
   cosSum = tmalloc(sizeof(*cosSum)*omegaPoints);
@@ -160,6 +176,10 @@ int main(int argc, char **argv)
     }
   }
 
+#if !defined(NOTHREADS)
+  omp_set_num_threads(threads);
+#endif
+
   particlesTotal = 0;
   while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
     if (!SDDS_StartPage(&SDDSout, omegaPoints) || !SDDS_CopyParameters(&SDDSout, &SDDSin))
@@ -167,14 +187,27 @@ int main(int argc, char **argv)
     if ((particles=SDDS_RowCount(&SDDSin))>1) {
       if (!(t =  SDDS_GetColumnInDoubles(&SDDSin, column)))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      for (iw=0; iw<omegaPoints; iw++) {
-        omega = omegaArray[iw];
-        if (!combinePages)
-          cosSum[iw] = sinSum[iw] = 0;
-        for (ip=0; ip<particles; ip++) {
-          cosSum[iw] += cos(omega*t[ip]);
-          sinSum[iw] += sin(omega*t[ip]);
+#pragma omp parallel
+      {
+        int myid, iw, iw1, iw2, nEach;
+        int64_t ip;
+        double omega;
+        myid = omp_get_thread_num();
+        nEach = omegaPoints/threads;
+        iw1 = myid*nEach;
+        iw2 = iw1+nEach;
+        if (iw2>omegaPoints || myid==(threads-1))
+          iw2 = omegaPoints;
+        for (iw=iw1; iw<iw2; iw++) {
+          omega = omegaArray[iw];
+          if (!combinePages)
+            cosSum[iw] = sinSum[iw] = 0;
+          for (ip=0;  ip<particles; ip++) {
+            cosSum[iw] += cos(omega*t[ip]);
+            sinSum[iw] += sin(omega*t[ip]);
+          }
         }
+#pragma omp barrier
       }
       if (!combinePages) {
         for (iw=0; iw<omegaPoints; iw++) {
