@@ -17,6 +17,8 @@
 #include "mdb.h"
 #include "track.h"
 
+// TODO:[PERF] matmul comes up as a hotspot - memory is continuous now, we should use proper libraries or hardcode 6x6
+
 VMATRIX *transformMatrixBetweenMomentumAndSlopes(VMATRIX *VM);
 
 /* Modify a matrix to include misalignments */

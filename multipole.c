@@ -1464,13 +1464,12 @@ void apply_canonical_multipole_kicks(double *restrict qx, double *restrict qy,
   //      sum_Fy += coef[i] * xpow[order - i] * ypow[i];
   //  }
 
-  //even
-  for (i = 0; i <= order; i += 2)
-    sum_Fy += coef[i] * xpow[order - i] * ypow[i];
   //odd
   for (i = 1; i <= order; i += 2)
     sum_Fx += coef[i] * xpow[order - i] * ypow[i];
-
+  //even
+  for (i = 0; i <= order; i += 2)
+    sum_Fy += coef[i] * xpow[order - i] * ypow[i];
   if (skew) {
     SWAP_DOUBLE(sum_Fx, sum_Fy);
     sum_Fx = -sum_Fx;

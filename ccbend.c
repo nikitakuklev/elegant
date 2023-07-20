@@ -781,6 +781,7 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
         dsh = drift * driftFrac[step];
         x += xp * dsh;
         y += yp * dsh;
+        // This single line takes 7% of MOGA runtime
         s += dsh * sqrt(1 + sqr(xp) + sqr(yp));
         *dsLoss = s;  /* Ideally, we'd use the path length of the reference particle at this slice, but that isn't known to us */
       }
@@ -851,6 +852,7 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
       /* delta_qx and delta_qy are for the last step and have kickFrac[step-1] included, so remove it */
       delta_qx /= kickFrac[step - 1];
       delta_qy /= kickFrac[step - 1];
+      // TODO:[PERF]
       F2 = sqr(delta_qx / drift) + sqr(delta_qy / drift);
       dsFactor = sqrt(1 + sqr(xp) + sqr(yp)) * drift;
       if (rad_coef)
