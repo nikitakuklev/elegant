@@ -72,7 +72,7 @@ USR_CFLAGS =  -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma 
                 -DIEEE_MATH -DzLib
 
 USR_CFLAGS_DEFAULT = 	-DUNIX 
-#USR_CFLAGS_Linux =	-Df2cFortran
+USR_CFLAGS_Linux =	-DUNIX -fPIE
 #USR_CFLAGS_WIN32 = 	-DpgiFortran
 
 
