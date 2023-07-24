@@ -82,6 +82,84 @@ void print_matrices1(FILE *fp, char *string, char *format, VMATRIX *M) {
   log_exit("print_matrices");
 }
 
+#if TURBO_MODE >= 14
+void initialize_matrices(VMATRIX *M, long order) {
+  long i, j, k;
+  double *C, **R;
+  double ***T;
+  double ****Q;
+
+  log_entry("initialize_matrices");
+  M->eptr = NULL;
+
+  // Contiguous memory regions will allow strided access and vectorization
+  // Actually...maybe not, this ragged array stuff in order 2/3 is not good
+
+  if (order < 1 || order > 3) {
+    printf("invalid order: %ld  (initialize_matrices)\n", order);
+    fflush(stdout);
+    exitElegant(1);
+  }
+
+  M->C = C = tmalloc(sizeof(*C) * 6);
+
+  M->R = R = (double **)tmalloc(sizeof(double*) * 6);
+  double *Rbuf = (double *)tmalloc(sizeof(double) * 36);
+  for (i = 0; i < 6; i++)
+    R[i] = Rbuf + i*6;
+
+  M->T = NULL;
+  if (order >= 2) {
+    // Tijk is ragged, Tijk and Tikj for k<j have been combined
+    // So we need sum(i:0-5,j:0-5,k:j+1) = 6*sum((j+1),j:0-5) = 6 * (1+2+3+4+5+6) = 126
+    M->T = T = tmalloc(sizeof(*T) * 6);
+    double **T2 = (double **)tmalloc(sizeof(double*) * 36);
+    double *Tbuf = (double *)tmalloc(sizeof(double) * 126);
+    long pos = 0;
+    for (i = 0; i < 6; i++) {
+      T[i] = T2 + i*6;
+      for (j = 0; j < 6; j++) {
+        T[i][j] = Tbuf + pos;
+        pos += j+1;
+      }
+    }
+//    if (pos >= 126+1) {
+//      printf("invalid state: %ld  (T)\n", pos);
+//      bombElegant("I am bad at T matrices, send help", NULL);
+//    }
+  }
+
+  M->Q = NULL;
+  if (order >= 3) {
+    // sum(i:0-5;j:0-5;k:0-j;l:k+1) = 336 (data)
+    // sum(i:0-5;j:0-5;k:j+1) = 126 (last level pointers)
+    M->Q = Q = tmalloc(sizeof(*Q) * 6);
+    double ***Q2 = (double ***)tmalloc(sizeof(double**) * 36);
+    double **Q3 = (double **)tmalloc(sizeof(double*) * 126);
+    double *Qbuf = (double *)tmalloc(sizeof(double) * 336);
+    long pos = 0;
+    long pos3 = 0;
+    for (i = 0; i < 6; i++) {
+      Q[i] = Q2 + i*6;
+      for (j = 0; j < 6; j++) {
+        Q[i][j] = Q3 + pos3;
+        pos3 += j+1;
+        for (k = 0; k <= j; k++) {
+          Q[i][j][k] = Qbuf + pos;
+          pos += k+1;
+//          if (Qposition >= 336+1 || Qpos_level3 >= 126+1) {
+//            printf("invalid state: %ld %ld (Q)\n", Qposition, Qpos_level3);
+//            bombElegant("I am bad at Q matrices, send help", NULL);
+//          }
+        }
+      }
+    }
+  }
+
+  M->order = order;
+  log_exit("initialize_matrices");
+}
+#else
 void initialize_matrices(VMATRIX *M, const long order) {
   long i, j, k, l;
   double *Tij, **Qij, *Qijk;
@@ -99,10 +177,11 @@ void initialize_matrices(VMATRIX *M, const long order) {
   switch (M->order = order) {
   case 3:
     M->C = C = tmalloc(sizeof(*C) * 6);
-    M->R = R = (double **)czarray_2d(sizeof(double), 6, 6);
+    M->R = R = tmalloc(sizeof(*R) * 6);
     M->T = T = tmalloc(sizeof(*T) * 6);
     M->Q = Q = tmalloc(sizeof(*Q) * 6);
     for (i = 0; i < 6; i++) {
+      R[i] = tmalloc(sizeof(**R) * 6);
       T[i] = tmalloc(sizeof(**T) * 6);
       Q[i] = tmalloc(sizeof(**Q) * 6);
       for (j = 0; j < 6; j++) {
@@ -116,10 +195,11 @@ void initialize_matrices(VMATRIX *M, const long order) {
     break;
   case 2:
     M->C = C = tmalloc(sizeof(*C) * 6);
-    M->R = R = (double **)czarray_2d(sizeof(double), 6, 6);
+    M->R = R = tmalloc(sizeof(*R) * 6);
     M->T = T = tmalloc(sizeof(*T) * 6);
     M->Q = NULL;
     for (i = 0; i < 6; i++) {
+      R[i] = tmalloc(sizeof(**R) * 6);
       T[i] = tmalloc(sizeof(**T) * 6);
       for (j = 0; j < 6; j++) {
         Tij = T[i][j] = tmalloc(sizeof(***T) * (j + 1));
@@ -127,10 +207,13 @@ void initialize_matrices(VMATRIX *M, const long order) {
     }
     break;
   case 1:
-    M->R = R = (double **)czarray_2d(sizeof(double), 6, 6);
+    M->R = R = tmalloc(sizeof(*R) * 6);
     M->C = C = tmalloc(sizeof(*C) * 6);
     M->T = NULL;
     M->Q = NULL;
+    for (i = 0; i < 6; i++) {
+      R[i] = tmalloc(sizeof(**R) * 6);
+    }
     break;
   default:
     printf("invalid order: %ld  (initialize_matrices)\n",
@@ -141,7 +224,33 @@ void initialize_matrices(VMATRIX *M, const long order) {
   }
   log_exit("initialize_matrices");
 }
+#endif
 
+#if TURBO_MODE >= 14
+void null_matrices(VMATRIX *M, unsigned long flags) {
+  long i, j;
+  double *C, **R, ***T, ****Q;
+
+  M->eptr = NULL;
+
+  set_matrix_pointers(&C, &R, &T, &Q, M);
+
+  if (M->order == 3 && !(flags & EXCLUDE_Q) && Q)
+    memset(***Q, 0, 336);
+
+  if (M->order >= 2 && !(flags & EXCLUDE_T) && T)
+    memset(**T, 0, 126);
+
+  if (M->order >= 1 && !(flags & EXCLUDE_R) && R)
+    for (i = 0; i < 6; i++)
+      for (j = 0; j < 6; j++)
+        R[i][j] = (flags & SET_UNIT_R) && (i == j) ? 1 : 0;
+
+  if (!(flags & EXCLUDE_C) && C)
+    for (i = 0; i < 6; i++)
+      C[i] = 0;
+}
+#else
 void null_matrices(VMATRIX *M, unsigned long flags) {
   long i, j, k, l;
   double *Tij, **Qij, *Qijk;
@@ -180,6 +289,7 @@ void null_matrices(VMATRIX *M, unsigned long flags) {
     for (i = 0; i < 6; i++)
       C[i] = 0;
 }
+#endif
 
 void track_particles(double **final, VMATRIX *M, double **initial, long n_part) {
   double sum1;
@@ -357,6 +467,62 @@ void track_particles(double **final, VMATRIX *M, double **initial, long n_part) 
   log_exit("track_particles");
 }
 
+#if TURBO_MODE >= 14
+void free_matrices(VMATRIX *M) {
+  double *C, **R;
+  double ***T;
+  double ****Q;
+
+  log_entry("free_matrices");
+  if (!M)
+    bombElegant("NULL matrix passed to free_matrices", NULL);
+
+  set_matrix_pointers(&C, &R, &T, &Q, M);
+
+  if (M->order > 3 || M->order < 1) {
+    printf("invalid order: %ld  (free_matrices)\n", M->order);
+    fflush(stdout);
+    exitElegant(1);
+  }
+
+  if (M->order >= 1) {
+    if (!R || !C)
+      bombElegant("NULL R or C entry for matrix (free_matrices)", NULL);
+    tfree(*R);
+    tfree(C);
+    tfree(R);
+  }
+
+  if (M->order >= 2) {
+    if (!T)
+      bombElegant("NULL T entry for matrix (free_matrices)", NULL);
+    if (!T[0])
+      bombElegant("NULL T[0] entry for matrix (free_matrices)", NULL);
+    tfree(**T);
+    tfree(*T);
+    tfree(T);
+  }
+
+  if (M->order >= 3) {
+    if (!Q)
+      bombElegant("NULL Q entry for matrix (free_matrices)", NULL);
+    if (!Q[0])
+      bombElegant("NULL Q[0] entry for matrix (free_matrices)", NULL);
+    if (!Q[0][0])
+      bombElegant("NULL Q[0][0] entry for matrix (free_matrices)", NULL);
+    tfree(***Q);
+    tfree(**Q);
+    tfree(*Q);
+    tfree(Q);
+  }
+
+  M->C = NULL;
+  M->R = NULL;
+  M->T = NULL;
+  M->Q = NULL;
+  log_exit("free_matrices");
+}
+#else
 void free_matrices(VMATRIX *M) {
   long i, j, k;
   double **Qij;
@@ -370,76 +536,86 @@ void free_matrices(VMATRIX *M) {
 
   set_matrix_pointers(&C, &R, &T, &Q, M);
   switch (M->order) {
-  case 3:
-    if (!Q || !T || !R || !C)
-      bombElegant("NULL Q, T, R, or C entry for matrix (free_matrices)", NULL);
-    for (i = 0; i < 6; i++) {
-      if (!R[i])
-        bombElegant("NULL R[i] entry for matrix (free_matrices)", NULL);
-      if (!T[i])
-        bombElegant("NULL T[i] entry for matrix (free_matrices)", NULL);
-      if (!Q[i])
-        bombElegant("NULL Q[i] entry for matrix (free_matrices)", NULL);
-      for (j = 0; j < 6; j++) {
-        if (!(Qij = Q[i][j]))
-          bombElegant("NULL Q[i][j] entry for matrix (free_matrices)", NULL);
-        for (k = 0; k <= j; k++) {
-          if (!*Qij)
-            bombElegant("NULL Q[i][j][k] entry for matrix (free_matrices)", NULL);
-          tfree(*Qij++);
+    case 3:
+      if (!Q || !T || !R || !C)
+        bombElegant("NULL Q, T, R, or C entry for matrix (free_matrices)", NULL);
+      for (i = 0; i < 6; i++) {
+        if (!R[i])
+          bombElegant("NULL R[i] entry for matrix (free_matrices)", NULL);
+        if (!T[i])
+          bombElegant("NULL T[i] entry for matrix (free_matrices)", NULL);
+        if (!Q[i])
+          bombElegant("NULL Q[i] entry for matrix (free_matrices)", NULL);
+        for (j = 0; j < 6; j++) {
+          if (!(Qij = Q[i][j]))
+            bombElegant("NULL Q[i][j] entry for matrix (free_matrices)", NULL);
+          for (k = 0; k <= j; k++) {
+            if (!*Qij)
+              bombElegant("NULL Q[i][j][k] entry for matrix (free_matrices)", NULL);
+            tfree(*Qij++);
+          }
+          if (!T[i][j])
+            bombElegant("NULL T[i][j] entry for matrix (free_matrices)", NULL);
+          if (!Q[i][j])
+            bombElegant("NULL Q[i][j] entry for matrix (free_matrices)", NULL);
+          tfree(T[i][j]);
+          T[i][j] = NULL;
+          tfree(Q[i][j]);
+          Q[i][j] = NULL;
         }
-        if (!T[i][j])
-          bombElegant("NULL T[i][j] entry for matrix (free_matrices)", NULL);
-        if (!Q[i][j])
-          bombElegant("NULL Q[i][j] entry for matrix (free_matrices)", NULL);
-        tfree(T[i][j]);
-        T[i][j] = NULL;
-        tfree(Q[i][j]);
-        Q[i][j] = NULL;
+        tfree(R[i]);
+        R[i] = NULL;
+        tfree(T[i]);
+        T[i] = NULL;
+        tfree(Q[i]);
+        Q[i] = NULL;
       }
-      tfree(T[i]);
-      T[i] = NULL;
-      tfree(Q[i]);
-      Q[i] = NULL;
-    }
-    tfree(C);
-    free_czarray_2d((void**)R, 6, 6);
-    tfree(T);
-    tfree(Q);
-    break;
-  case 2:
-    if (!T || !R || !C)
-      bombElegant("NULL T, R, or C entry for matrix (free_matrices)", NULL);
-    for (i = 0; i < 6; i++) {
-      if (!R[i])
-        bombElegant("NULL R[i] entry for matrix (free_matrices)", NULL);
-      if (!T[i])
-        bombElegant("NULL T[i] entry for matrix (free_matrices)", NULL);
-      for (j = 0; j < 6; j++) {
-        if (!T[i][j])
-          bombElegant("NULL T[i][j] entry for matrix (free_matrices)", NULL);
-        tfree(T[i][j]);
-        T[i][j] = NULL;
+      tfree(C);
+      tfree(R);
+      tfree(T);
+      tfree(Q);
+      break;
+    case 2:
+      if (!T || !R || !C)
+        bombElegant("NULL T, R, or C entry for matrix (free_matrices)", NULL);
+      for (i = 0; i < 6; i++) {
+        if (!R[i])
+          bombElegant("NULL R[i] entry for matrix (free_matrices)", NULL);
+        if (!T[i])
+          bombElegant("NULL T[i] entry for matrix (free_matrices)", NULL);
+        for (j = 0; j < 6; j++) {
+          if (!T[i][j])
+            bombElegant("NULL T[i][j] entry for matrix (free_matrices)", NULL);
+          tfree(T[i][j]);
+          T[i][j] = NULL;
+        }
+        tfree(R[i]);
+        R[i] = NULL;
+        tfree(T[i]);
+        T[i] = NULL;
       }
-      tfree(T[i]);
-      T[i] = NULL;
-    }
-    tfree(C);
-    free_czarray_2d((void**)R, 6, 6);
-    tfree(T);
-    break;
-  case 1:
-    if (!R || !C)
-      bombElegant("NULL R or C entry for matrix (free_matrices)", NULL);
-    tfree(C);
-    free_czarray_2d((void**)R, 6, 6);
-    break;
-  default:
-    printf("invalid order: %ld  (free_matrices)\n",
-           M->order);
-    fflush(stdout);
-    exitElegant(1);
-    break;
+      tfree(C);
+      tfree(R);
+      tfree(T);
+      break;
+    case 1:
+      if (!R || !C)
+        bombElegant("NULL R or C entry for matrix (free_matrices)", NULL);
+      for (i = 0; i < 6; i++) {
+        if (!R[i])
+          bombElegant("NULL R[i] entry for matrix (free_matrices)", NULL);
+        tfree(R[i]);
+        R[i] = NULL;
+      }
+      tfree(C);
+      tfree(R);
+      break;
+    default:
+      printf("invalid order: %ld  (free_matrices)\n",
+             M->order);
+      fflush(stdout);
+      exitElegant(1);
+      break;
   }
   M->C = NULL;
   M->R = NULL;
@@ -447,6 +623,7 @@ void free_matrices(VMATRIX *M) {
   M->Q = NULL;
   log_exit("free_matrices");
 }
+#endif
 
 void free_nonlinear_matrices(VMATRIX *M) {
   register long i, j, k;
@@ -505,6 +682,34 @@ void free_nonlinear_matrices(VMATRIX *M) {
   log_exit("free_nonlinear_matrices");
 }
 
+#if TURBO_MODE >= 14
+void free_matrices_above_order(VMATRIX *M, long order) {
+  double *C, **R;
+  double ***T;
+  double ****Q;
+
+  set_matrix_pointers(&C, &R, &T, &Q, M);
+  if (M->order < order)
+    return;
+
+  if (M->order == 3 && order < 3) {
+    tfree(***Q);
+    tfree(**Q);
+    tfree(*Q);
+    tfree(Q);
+    M->Q = NULL;
+    M->order = 2;
+  }
+
+  if (M->order == 2 && order < 2) {
+    tfree(**T);
+    tfree(*T);
+    tfree(T);
+    M->T = NULL;
+    M->order = 1;
+  }
+}
+#else
 void free_matrices_above_order(VMATRIX *M, long order) {
   long i, j, k;
   double **Qij;
@@ -548,6 +753,7 @@ void free_matrices_above_order(VMATRIX *M, long order) {
     M->order = 1;
   }
 }
+#endif
 
 void set_matrix_pointers(double **C, double ***R, double ****T, double *****Q, VMATRIX *M) {
   if (!M) {

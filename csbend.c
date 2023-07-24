@@ -20,9 +20,12 @@
 #  include "gpu_base.h"
 #  include "gpu_csbend.h"
 #  include "gpu_funcs.h"
-#  define VT
-#else
+#endif
+
+#if TURBO_MODE >= 3 && !defined(HAVE_GPU)
 #define VT static
+#else
+#define VT
 #endif
 
 /* global variables */
@@ -38,62 +41,63 @@ VT short refTrajectoryMode = 0;
 VT long refTrajectoryPoints = 0;
 VT double **refTrajectoryData = NULL;
 
-    // used in gpu
+#if TURBO_MODE >= 4
+#define VTS static
+#else
+#define VTS
+#endif
+
 void convolveArrays1(double *output, long n, double *a1, double *a2);
-static void dipoleFringeKHwang(double *Qf, double *Qi,
+VTS void dipoleFringeKHwang(double *Qf, double *Qi,
                         double rho, double inFringe, long higherOrder, double K1, double edge, double gap,
                         double fint, double Rhe);
-static void dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
+VTS void dipoleFringeKHwangRLindberg(double *Qf, double *Qi,
                                  double rho, double inFringe, double K1, double edge,
                                  double gap, double fint, double Rhe);
 
-static void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
+VTS void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
                       double x, double y, double theta, double thetaf, double h0, double Fx, double Fy,
                       double ds, double radCoef, double dsISR, double isrCoef,
                       long distributionBased, long includeOpeningAngle,
                       double meanPhotonsPerMeter,
                       double normalizedCriticalEnergy, double Po);
-static double pickNormalizedPhotonEnergy(double RN);
+VTS double pickNormalizedPhotonEnergy(double RN);
 
-static long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long i, double rho0, double p0,
+VTS long integrate_csbend_ordn(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long i, double rho0, double p0,
                            double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order, ELEMENT_LIST *eptr);
-static long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long i, double rho0, double p0,
+VTS long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long i, double rho0, double p0,
                                     double *dz_lost, MULT_APERTURE_DATA *apData, short integration_order, ELEMENT_LIST *eptr);
-static void convertFromCSBendCoords(double **part, long np, double rho0,
+VTS void convertFromCSBendCoords(double **part, long np, double rho0,
                              double cos_ttilt, double sin_ttilt, long ctMode);
-static void convertToCSBendCoords(double **part, long np, double rho0,
+VTS void convertToCSBendCoords(double **part, long np, double rho0,
                            double cos_ttilt, double sin_ttilt, long ctMode);
 void applyFilterTable(double *function, long bins, double dt, long fValues,
                       double *fFreq, double *fReal, double *fImag);
 
 long correctDistribution(double *array, long npoints, double desiredSum);
 
-static void convertToDipoleCanonicalCoordinates(double *Qi, long expanded);
-static void convertFromDipoleCanonicalCoordinates(double *Qi, long expanded);
+VTS void convertToDipoleCanonicalCoordinates(double *Qi, long expanded);
+VTS void convertFromDipoleCanonicalCoordinates(double *Qi, long expanded);
 
-static long inversePoissonCDF(double mu, double C);
+VTS long inversePoissonCDF(double mu, double C);
 
-static void setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np);
-static void logPhoton(double Ep, double x, double xp, double y, double yp, double theta, double thetaf, double rho);
-static SDDS_DATASET *SDDSphotons;
-static long photonRows;
-static double photonLowEnergyCutoff;
+VTS void setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np);
+VTS void logPhoton(double Ep, double x, double xp, double y, double yp, double theta, double thetaf, double rho);
+VTS SDDS_DATASET *SDDSphotons;
+VTS long photonRows;
+VTS double photonLowEnergyCutoff;
 
 #define RECORD_TRAJECTORY 1
 #define SUBTRACT_TRAJECTORY 2
 
-static void applySimpleDipoleEdgeKick(double *xp, double *yp, double x, double y, double delta, double rho, double ea,
+VTS void applySimpleDipoleEdgeKick(double *xp, double *yp, double x, double y, double delta, double rho, double ea,
                                double psi, double kickLimit, long expanded);
 
-static void computeCSBENDFields(double *Fx, double *Fy, double x, double y);
+VTS void computeCSBENDFields(double *Fx, double *Fy, double x, double y);
 void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlinear, long expansionOrder);
 
-// ---------------------
 
-// This allows to specify things that will be true always (by negative converse)
-// Can be used to hint at range of variable
-#define assume( condition ) { if(!(condition)) __builtin_unreachable(); }
-
+#if TURBO_MODE >= 10
 static void computeCSBENDFields(double *Fx, double *Fy, const double x, const double y) {
   double yp[11];
   double sumFx = 0, sumFy = 0;
@@ -135,12 +139,46 @@ static void computeCSBENDFields(double *Fx, double *Fy, const double x, const do
         sumFx += Fx_xy[i][j] * (xt * yp[j]);
         sumFy += Fy_xy[i][j] * (xt * yp[j]);
       }
-      xt = xt*x;
+      xt *= x;
     }
   }
   *Fx = sumFx;
   *Fy = sumFy;
 }
+#else
+void computeCSBENDFields(double *Fx, double *Fy, double x, double y) {
+  double xp[11], yp[11];
+  double sumFx = 0, sumFy = 0;
+  long i, j, j0, dj;
+
+  if (!hasSkew && !hasNormal) {
+    *Fx = 0;
+    *Fy = 1;
+    return;
+  }
+
+  xp[0] = yp[0] = 1;
+  for (i = 1; i < expansionOrder1; i++) {
+    xp[i] = xp[i - 1] * x;
+    yp[i] = yp[i - 1] * y;
+  }
+
+  dj = hasSkew ? 1 : 2;
+  j0 = hasSkew ? 0 : 1;
+
+  for (i = 0; i < expansionOrder1; i++)
+    /* Note: using expansionOrder-i here ensures that for x^i*y^j , i+j<=(expansionOrder1-1) */
+    for (j = j0; j < expansionOrder1 - i; j += dj)
+      sumFx += Fx_xy[i][j] * xp[i] * yp[j];
+  *Fx = sumFx;
+
+  for (i = 0; i < expansionOrder1; i++)
+    for (j = 0; j < expansionOrder1 - i; j += dj)
+      sumFy += Fy_xy[i][j] * xp[i] * yp[j];
+  *Fy = sumFy;
+}
+#endif
+
 
 void computeCSBENDFieldCoefficients(double *b, double *c,
                                     double h1, const long nonlinear, long expansionOrder) {
@@ -174,10 +212,10 @@ void computeCSBENDFieldCoefficients(double *b, double *c,
   if (!Fy_xy)
     Fy_xy = (double **)czarray_2d(sizeof(double), 11, 11);
 
-//  for (i = 0; i < expansionOrder1; i++) {
-//    memset(Fx_xy[i], 0, expansionOrder1 * sizeof(double));
-//    memset(Fy_xy[i], 0, expansionOrder1 * sizeof(double));
-//  }
+  for (i = 0; i < expansionOrder1; i++) {
+    memset(Fx_xy[i], 0, expansionOrder1 * sizeof(double));
+    memset(Fy_xy[i], 0, expansionOrder1 * sizeof(double));
+  }
 
   h[0] = 1;
   for (i = 1; i < 20; i++)
@@ -945,6 +983,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     includeOpeningAngle = csbend->includeOpeningAngle;
   }
 
+#if TURBO_MODE >= 1
   // Store and reload computed Fx_xy/Fy_xy based on function inputs
   // If we were using C++, there are many good memoization libraries, but alas...
 
@@ -995,16 +1034,19 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       bombElegant("unexpected null pointer in Fx_xy", NULL);
     if (!Fy_xy)
       bombElegant("unexpected null pointer in Fy_xy", NULL);
-    //memcpy(*(Fx_xy), *(csbend->Fx_xy_ref), sizeof(double)*11*11);
-    //memcpy(*(Fy_xy), *(csbend->Fy_xy_ref), sizeof(double)*11*11);
-    Fx_xy = csbend->Fx_xy_ref;
-    Fy_xy = csbend->Fy_xy_ref;
+    memcpy(*(Fx_xy), *(csbend->Fx_xy_ref), sizeof(double)*11*11);
+    memcpy(*(Fy_xy), *(csbend->Fy_xy_ref), sizeof(double)*11*11);
+    //Fx_xy = csbend->Fx_xy_ref;
+    //Fy_xy = csbend->Fy_xy_ref;
     expansionOrder1 = csbend->expansionOrder1_ref;
     hasNormal = csbend->hasNormal_ref;
     hasSkew = csbend->hasSkew_ref;
 //    printf("Set CACHED CSBEND fields for %s#%ld -- h:%e nl:%ld order:%ld\n", context.elementName,
 //           context.elementOccurrence, h, csbend->nonlinear, csbend->expansionOrder);
   }
+#else
+  computeCSBENDFieldCoefficients(csbend->b, csbend->c, h, csbend->nonlinear, csbend->expansionOrder);
+#endif
 
   ttilt = tilt + etilt;
   if (ttilt == 0) {
@@ -1390,15 +1432,15 @@ long integrate_csbend_ordn(
   double *Qf,                 /* final coordinates */
   double *Qi,                 /* initial coordinates */
   double *sigmaDelta2,        /* accumulate the energy spread increase for propagation of radiation matrix */
-  double s,                            /* arc length */
-  long n,                        /* number of slices */
+  double s,                   /* arc length */
+  long n,                     /* number of slices */
   long iSlice,                         /* If <0, integrate the full magnet. If >=0, integrate just a single part and return.
                                        * This is needed to allow propagation of the radiation matrix. */
-  double rho0,                   /* nominal bending radius */
-  double p0,                           /* central momentum */
+  double rho0,                /* nominal bending radius */
+  double p0,                  /* central momentum */
   double *dz_lost,            /* return of loss position */
   MULT_APERTURE_DATA *apData, /* aperture data */
-  short integration_order,       /* 2, 4, or 6 */
+  short integration_order,    /* 2, 4, or 6 */
   ELEMENT_LIST *eptr
 ) {
   long i;
@@ -1511,18 +1553,18 @@ long integrate_csbend_ordn(
       /* do drift */
       dsh = s * driftFrac[j];
       f = sqr(1 + DPoP) - sqr(QY);
-      if (unlikely(f <= 0)) {
+      if (f <= 0) {
         return 0;
       }
       f = sqrt(f);
-      if (unlikely(fabs(QX / f) > 1)) {
+      if (fabs(QX / f) > 1) {
         return 0;
       }
       sin_phi = QX / f;
       phi = asin(sin_phi);
       sine = sin(dsh / rho0 + phi);
       cosi = cos(dsh / rho0 + phi);
-      if (unlikely(cosi == 0)) {
+      if (cosi == 0) {
         return 0;
       }
       tang = sine / cosi;
@@ -1546,13 +1588,15 @@ long integrate_csbend_ordn(
       computeCSBENDFields(&Fx, &Fy, x, y);
 
       /* --do kicks */
-      // TODO:[PERF] output changes
-      //double tmp = ds * (1 + X / rho0) / rho_actual;
-      //QX += -Fy * tmp;
-      //QY += Fx * tmp;
-      const double temp1 = ds * (1 + X / rho0);
-      QX += -temp1 * Fy / rho_actual;
-      QY += temp1 * Fx / rho_actual;
+      // [PERF]
+#if TURBO_MODE >= 13
+      double tmp = ds * (1 + X / rho0) / rho_actual;
+      QX += -Fy * tmp;
+      QY += Fx * tmp;
+#else
+      QX += -ds * (1 + X / rho0) * Fy / rho_actual;
+      QY += ds * (1 + X / rho0) * Fx / rho_actual;
+#endif
       if (rad_coef || isrConstant) {
         addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
                          X, Y, (i + 1. / 3) * s, s * n, 1. / rho0, Fx, Fy,
@@ -1736,9 +1780,14 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       computeCSBENDFields(&Fx, &Fy, x, y);
 
       /* --do kicks */
-      // TODO:[PERF]
+      // [PERF]
+#if TURBO_MODE >= 13
+      QX += -(ds * (1 + X / rho0) / rho_actual) * Fy;
+      QY += (ds * (1 + X / rho0) / rho_actual) * Fx;
+#else
       QX += -ds * (1 + X / rho0) * Fy / rho_actual;
       QY += ds * (1 + X / rho0) * Fx / rho_actual;
+#endif
       if (rad_coef || isrConstant) {
         addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
                          X, Y, (i + 1. / 3) * s, s * n, 1. / rho0, Fx, Fy,
@@ -3653,7 +3702,7 @@ double Saldin5354Factor(double xh, double sh, double phihm, double xhLowerLimit)
   return f;
 }
 
-void exactDrift(double **part, const long np, const double length) {
+void exactDrift(double **part, long np, double length) {
   long i;
   double *coord;
 
@@ -4747,7 +4796,7 @@ void applyFilterTable(double *function, long bins, double dx, long fValues,
   free(realimag);
 }
 
-static inline void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
+void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
                       double x, double y, double theta, double thetaf, double h0, double Fx, double Fy,
                       double ds, double radCoef, double dsISR, double isrCoef,
                       long distributionBased, long includeOpeningAngle, double meanPhotonsPerMeter,

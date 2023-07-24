@@ -51,7 +51,7 @@ int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double 
 }
 
 int convertMomentaToSlopes(double *xp, double *yp,
-                           const double qx, const double qy, const double delta) {
+                           double qx, double qy, double delta) {
   if (expandHamiltonian) {
     *xp = qx / (1 + delta);
     *yp = qy / (1 + delta);
@@ -289,18 +289,6 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   multData->copy = 0;
 
   addMultipoleDatasetToStore(multData, multFile);
-}
-
-void fillPowerArray(const double x, double *xpow, const long order) {
-  long i;
-
-  if (!xpow)
-    bombElegant("Error: NULL pointer passed to fillPowerArray---Seek expert help!", NULL);
-
-  xpow[0] = 1;
-  for (i = 1; i <= order; i++) {
-    xpow[i] = xpow[i - 1] * x;
-  }
 }
 
 void initialize_fmultipole(FMULT *multipole) {
@@ -694,34 +682,6 @@ long multipole_tracking(
 
   log_exit("multipole_tracking");
   return (i_top + 1);
-}
-
-double *expansion_coefficients(const long n) {
-  static double **expansion_coef = NULL;
-  static long *orderDone = NULL;
-  static long maxOrder = -1;
-  long i;
-
-  if (n <= maxOrder && orderDone[n])
-    return (expansion_coef[n]);
-
-  if (n > maxOrder) {
-    expansion_coef = SDDS_Realloc(expansion_coef, sizeof(*expansion_coef) * (n + 1));
-    orderDone = SDDS_Realloc(orderDone, sizeof(*orderDone) * (n + 1));
-    for (i = maxOrder + 1; i <= n; i++)
-      orderDone[i] = 0;
-    maxOrder = n;
-  }
-
-  expansion_coef[n] = tmalloc(sizeof(**expansion_coef) * (n + 1));
-
-  /* calculate expansion coefficients with signs for (x+iy)^n/n! */
-  for (i = 0; i <= n; i++) {
-    expansion_coef[n][i] = (ODD(i / 2) ? -1.0 : 1.0) / (dfactorial(i) * dfactorial(n - i));
-  }
-  orderDone[n] = 1;
-
-  return (expansion_coef[n]);
 }
 
 long multipole_tracking2(
@@ -1153,16 +1113,16 @@ long multipole_tracking2(
 /* BETA is 2^(1/3) */
 #define BETA 1.25992104989487316477
 
-int integrate_kick_multipole_ordn(double *coord, const double dx, const double dy, double xkick, double ykick,
-                                  const double Po, const double rad_coef, const double isr_coef,
+int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xkick, double ykick,
+                                  double Po, double rad_coef, double isr_coef,
                                   long *order, double *KnL, short *skew,
-                                  const long n_parts, const long i_part, double drift,
-                                  const long integration_order,
+                                  long n_parts, long i_part, double drift,
+                                  long integration_order,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData,
                                   MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData,
                                   double *dzLoss, double *sigmaDelta2,
-                                  const long radial,
+                                  long radial,
                                   double refTilt /* used for obstruction evaluation only */
 ) {
   double p, qx, qy, beta0, beta1, dp, s;
@@ -1360,9 +1320,13 @@ int integrate_kick_multipole_ordn(double *coord, const double dx, const double d
         /* delta_qx and delta_qy are for the last step and have kickFrac[step-1] included, so remove it */
         delta_qx /= kickFrac[step];
         delta_qy /= kickFrac[step];
-        // TODO:[PERF] output will change
-        //F2 = (sqr(delta_qx - xkick) + sqr(delta_qy + ykick)) / sqr(drift);
+        // [PERF]
+#if TURBO_MODE >=13
+        F2 = (sqr(delta_qx - xkick) + sqr(delta_qy + ykick)) / sqr(drift);
+#else
         F2 = sqr(delta_qx / drift - xkick / drift) + sqr(delta_qy / drift + ykick / drift);
+#endif
+
         delta_qx = 0;
         delta_qy = 0;
         dsFactor = sqrt(1 + sqr(xp) + sqr(yp));
@@ -1439,10 +1403,52 @@ int integrate_kick_multipole_ordn(double *coord, const double dx, const double d
   return 1;
 }
 
+#if TURBO_MODE < 2
+double *expansion_coefficients(long n) {
+  static double **expansion_coef = NULL;
+  static long *orderDone = NULL;
+  static long maxOrder = -1;
+  long i;
+
+  if (n <= maxOrder && orderDone[n])
+    return (expansion_coef[n]);
+
+  if (n > maxOrder) {
+    expansion_coef = SDDS_Realloc(expansion_coef, sizeof(*expansion_coef) * (n + 1));
+    orderDone = SDDS_Realloc(orderDone, sizeof(*orderDone) * (n + 1));
+    for (i = maxOrder + 1; i <= n; i++)
+      orderDone[i] = 0;
+    maxOrder = n;
+  }
+
+  expansion_coef[n] = tmalloc(sizeof(**expansion_coef) * (n + 1));
+
+  /* calculate expansion coefficients with signs for (x+iy)^n/n! */
+  for (i = 0; i <= n; i++) {
+    expansion_coef[n][i] = (ODD(i / 2) ? -1.0 : 1.0) / (dfactorial(i) * dfactorial(n - i));
+  }
+  orderDone[n] = 1;
+
+  return (expansion_coef[n]);
+}
+
+void fillPowerArray(double x, double *xpow, long order) {
+  long i;
+
+  if (!xpow)
+    bombElegant("Error: NULL pointer passed to fillPowerArray---Seek expert help!", NULL);
+
+  xpow[0] = 1;
+  for (i = 1; i <= order; i++) {
+    xpow[i] = xpow[i - 1] * x;
+  }
+}
+
 void apply_canonical_multipole_kicks(double *qx, double *qy,
-                                     double *delta_qx_return, double *delta_qy_return,
+                                     double *delta_qx_return,
+                                     double *delta_qy_return,
                                      double *xpow, double *ypow,
-                                     const long order, const double KnL, const long skew) {
+                                     long order, double KnL, long skew) {
   long i;
   double sum_Fx, sum_Fy;
   double *coef;
@@ -1451,25 +1457,19 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
   sum_Fx = sum_Fy = 0;
 
   /* sum up the terms for the multipole expansion */
-  //  for (i = 0; i <= order; i++) {
-  //    /*
-  //    if (ODD(i))
-  //      sum_Fx += coef[i]*ipow(x, order-i)*ipow(y, i);
-  //    else
-  //      sum_Fy += coef[i]*ipow(x, order-i)*ipow(y, i);
-  //      */
-  //    if (ODD(i))
-  //      sum_Fx += coef[i] * xpow[order - i] * ypow[i];
-  //    else
-  //      sum_Fy += coef[i] * xpow[order - i] * ypow[i];
-  //  }
+  for (i = 0; i <= order; i++) {
+    /*
+    if (ODD(i))
+      sum_Fx += coef[i]*ipow(x, order-i)*ipow(y, i);
+    else
+      sum_Fy += coef[i]*ipow(x, order-i)*ipow(y, i);
+      */
+    if (ODD(i))
+      sum_Fx += coef[i] * xpow[order - i] * ypow[i];
+    else
+      sum_Fy += coef[i] * xpow[order - i] * ypow[i];
+  }
 
-  //odd
-  for (i = 1; i <= order; i += 2)
-    sum_Fx += coef[i] * xpow[order - i] * ypow[i];
-  //even
-  for (i = 0; i <= order; i += 2)
-    sum_Fy += coef[i] * xpow[order - i] * ypow[i];
   if (skew) {
     SWAP_DOUBLE(sum_Fx, sum_Fy);
     sum_Fx = -sum_Fx;
@@ -1482,6 +1482,7 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
   if (delta_qy_return)
     *delta_qy_return += KnL * sum_Fx;
 }
+#endif
 
 void applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
                                         double *sum_Fx_return, double *sum_Fy_return,

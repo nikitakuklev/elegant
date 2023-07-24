@@ -688,8 +688,16 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
   }
 
   /* calculate initial canonical momenta */
-  qx = (1 + dp) * xp / (denom = sqrt(1 + sqr(xp) + sqr(yp)));
+  // [PERF]
+#if TURBO_MODE >= 13
+  denom = sqrt(1 + sqr(xp) + sqr(yp));
+  qx = ((1 + dp) / denom) * xp ;
+  qy = ((1 + dp) / denom) * yp ;
+#else
+  denom = sqrt(1 + sqr(xp) + sqr(yp));
+  qx = (1 + dp) * xp / denom;
   qy = (1 + dp) * yp / denom;
+#endif
 
   maxOrder = findMaximumOrder(1, nTerms, edge1MultData, edge2MultData, multData);
   xpow = tmalloc(sizeof(*xpow) * (maxOrder + 1));
@@ -852,8 +860,12 @@ int integrate_kick_KnL(double *coord,                               /* coordinat
       /* delta_qx and delta_qy are for the last step and have kickFrac[step-1] included, so remove it */
       delta_qx /= kickFrac[step - 1];
       delta_qy /= kickFrac[step - 1];
-      // TODO:[PERF]
+      // [PERF]
+#if TURBO_MODE >= 13
+      F2 = (sqr(delta_qx) + sqr(delta_qy))/sqr(drift);
+#else
       F2 = sqr(delta_qx / drift) + sqr(delta_qy / drift);
+#endif
       dsFactor = sqrt(1 + sqr(xp) + sqr(yp)) * drift;
       if (rad_coef)
         dp -= rad_coef * deltaFactor * F2 * dsFactor;

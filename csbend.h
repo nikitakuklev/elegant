@@ -15,7 +15,7 @@ extern long dipoleFringeWarning;
 
 // variables can get inlined better in csbend if not needed for gpu
 // will be declared static in csbend.c
-#ifdef HAVE_GPU
+#if TURBO_MODE < 3 || defined(HAVE_GPU)
 extern long expansionOrder1;  /* order of expansion+1 */
 extern long hasSkew, hasNormal;
 extern double rho0, rho_actual, rad_coef, isrConstant;

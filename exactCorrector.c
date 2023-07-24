@@ -15,6 +15,7 @@
  */
 #include "mdb.h"
 #include "track.h"
+#include "multipole.h"
 
 void computeTotalSteeringMultipoleErrors(MULTIPOLE_DATA *steeringMult, double sysFactor,
                                          MULTIPOLE_DATA *randomMult, double ranFactor,
@@ -35,6 +36,7 @@ int applySteeringMultipoleKicks(
 
   denom = sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
   delta = coord[5];
+  // [PERF]
   qx = (1 + delta) * coord[1] / denom;
   qy = (1 + delta) * coord[3] / denom;
 

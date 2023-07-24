@@ -48,6 +48,8 @@
 #include "matrixOp.h"
 #include "matlib.h"
 
+#include "manual.h"
+
 #if defined(_WIN32)
 #include <float.h>
 #include <math.h>
@@ -4440,11 +4442,11 @@ int integrate_kick_multipole_ordn(double *coord, double dx, double dy, double xk
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial, 
                                   double refTilt /* used for obstruction evaluation only */);
-void apply_canonical_multipole_kicks(double *qx, double *qy, 
-                                     double *delta_qx_return, double *delta_qy_return,
-                                     double *xpow, double *ypow,
-                                     long order, double KnL, long skew);
-void fillPowerArray(double x, double *xpow, long order);
+//void apply_canonical_multipole_kicks(double *qx, double *qy,
+//                                     double *delta_qx_return, double *delta_qy_return,
+//                                     double *xpow, double *ypow,
+//                                     long order, double KnL, long skew);
+//void fillPowerArray(double x, double *xpow, long order);
 long findMaximumOrder(long order, long order2, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData, 
                       MULTIPOLE_DATA *multData);
 
@@ -5112,6 +5114,10 @@ extern void processGlobalSettings(NAMELIST_TEXT *nltext);
 // to indicate very unlikely conditions
 #define likely(x)	__builtin_expect(!!(x), 1)
 #define unlikely(x)	__builtin_expect(!!(x), 0)
+
+// This allows to specify things that will be true always (by negative converse)
+// Can be used to hint at range of variable
+#define assume( condition ) { if(!(condition)) __builtin_unreachable(); }
 
 #ifdef __cplusplus
 }
