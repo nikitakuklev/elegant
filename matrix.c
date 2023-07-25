@@ -82,7 +82,7 @@ void print_matrices1(FILE *fp, char *string, char *format, VMATRIX *M) {
   log_exit("print_matrices");
 }
 
-#if TURBO_MODE >= 14
+#if TURBO_MODE >= 6
 void initialize_matrices(VMATRIX *M, long order) {
   long i, j, k;
   double *C, **R;
@@ -226,7 +226,7 @@ void initialize_matrices(VMATRIX *M, const long order) {
 }
 #endif
 
-#if TURBO_MODE >= 14
+#if TURBO_MODE >= 6
 void null_matrices(VMATRIX *M, unsigned long flags) {
   long i, j;
   double *C, **R, ***T, ****Q;
@@ -467,7 +467,7 @@ void track_particles(double **final, VMATRIX *M, double **initial, long n_part) 
   log_exit("track_particles");
 }
 
-#if TURBO_MODE >= 14
+#if TURBO_MODE >= 6
 void free_matrices(VMATRIX *M) {
   double *C, **R;
   double ***T;
@@ -625,6 +625,7 @@ void free_matrices(VMATRIX *M) {
 }
 #endif
 
+#if TURBO_MODE < 6
 void free_nonlinear_matrices(VMATRIX *M) {
   register long i, j, k;
   double **Qij;
@@ -681,8 +682,9 @@ void free_nonlinear_matrices(VMATRIX *M) {
   M->order = 1;
   log_exit("free_nonlinear_matrices");
 }
+#endif
 
-#if TURBO_MODE >= 14
+#if TURBO_MODE >= 6
 void free_matrices_above_order(VMATRIX *M, long order) {
   double *C, **R;
   double ***T;

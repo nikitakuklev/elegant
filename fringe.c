@@ -20,6 +20,7 @@
 #include "mdb.h"
 #include "track.h"
 
+// TODO: [PERF] stop reallocating all the time
 void quadFringe(double **coord, long np, double K1,
                 double *fringeIntM0, /* I0m/K1, I1m/K1, I2m/K1, I3m/K1, Lambda2m/K1 */
                 double *fringeIntP0, /* I0p/K1, I1p/K1, I2p/K1, I3p/K1, Lambda2p/K1 */

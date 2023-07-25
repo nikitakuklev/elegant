@@ -3,7 +3,7 @@
 
 
 #ifndef TURBO_MODE
-#define TURBO_MODE 0
+#define TURBO_MODE 10
 #endif
 
 
@@ -12,13 +12,21 @@
 // 1 - csbend field caching
 // 2 - layout changes/static fields
 // 3 - static declarations
-
+// 4 - more statics
+// 5 - csbendfield
+// 6 - matrix memory layout overhaul (why output changes is unclear)
+// 7 - static momenta conversions
+// 8 - extract non-distribution radiation kick
+// 9 - try to fix alignment of rootname copy, still need to reduce amount of copying or buffer size
 
 // ANY SETTINGS >= 10 affect output (as does USE_OLD_IPOW in mdb.h)
 
-// 10 - csbendfield
-// 12 - expandPower/apply_canonical_multipole_kicks/etc.
+// 11 - csbendfield reorder calculations
 // 13 - various small equation tweaks
-// 14 - matrix memory layout overhaul (why output changes is unclear)
+
+
+
+// >= 20 settings are still work in progress, do not use
+// 22 - proper caching of multipole expansion orders/apply_canonical_multipole_kicks/etc.
 
 #endif //DL_PATCH_MANUAL_H

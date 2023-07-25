@@ -15,6 +15,10 @@
 #include "mdb.h"
 #include "track.h"
 
+#if TURBO_MODE >= 7
+#include "multipole.h"
+#endif
+
 long polynomial_kicks(
   double **particle, /* initial/final phase-space coordinates */
   long n_part,       /* number of particles */

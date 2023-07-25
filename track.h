@@ -836,14 +836,21 @@ typedef struct {
     SLICE_OUTPUT sliceAnalysis;
     } OUTPUT_FILES;
 
+#if TURBO_MODE >= 9
+#define CONTEXT_BUFSIZE 1023
+#define AL __attribute__ ((aligned(16)))
+#else
 #define CONTEXT_BUFSIZE 1024
-typedef struct {
-  char elementName[CONTEXT_BUFSIZE+1];
+#define AL
+#endif
+// TODO: [PERF] too long and unaligned
+typedef AL struct {
+  char elementName[CONTEXT_BUFSIZE+1] AL;
   long elementOccurrence, step, elementType;
   ELEMENT_LIST *element;
   SLICE_OUTPUT *sliceAnalysis;
   double zStart, zEnd;
-  char rootname[CONTEXT_BUFSIZE+1];
+  char rootname[CONTEXT_BUFSIZE+1] AL;
   unsigned long flags;
 #if USE_MPI
   int myid;
@@ -4424,8 +4431,10 @@ typedef struct {
 extern void setupMultApertureData(MULT_APERTURE_DATA *apertureData, double reverseTilt, APCONTOUR *apContour, MAXAMP *maxamp, 
                                   APERTURE_DATA *apFileData, APERTURE_DATA *localApFileData, double zPosition, ELEMENT_LIST *eptr);
 extern long checkMultAperture(double x, double y, double sLocal, MULT_APERTURE_DATA *apData);
+#if TURBO_MODE < 7
 extern int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta);
 extern int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta);
+#endif
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);
 extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, 
                                 double Po, double **accepted, double z_start,

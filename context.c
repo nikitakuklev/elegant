@@ -11,6 +11,8 @@
 #include "mdbsun.h"
 #include "track.h"
 
+
+// TODO: is this a bug? flags not set
 TRACKING_CONTEXT trackingContext =
   {"", -1, 0, -1, NULL, NULL, 0.0, 0.0, ""
 #if USE_MPI

@@ -97,7 +97,7 @@ VTS void computeCSBENDFields(double *Fx, double *Fy, double x, double y);
 void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlinear, long expansionOrder);
 
 
-#if TURBO_MODE >= 10
+#if TURBO_MODE >= 5
 static void computeCSBENDFields(double *Fx, double *Fy, const double x, const double y) {
   double yp[11];
   double sumFx = 0, sumFy = 0;
@@ -114,11 +114,10 @@ static void computeCSBENDFields(double *Fx, double *Fy, const double x, const do
     yp[i] = yp[i - 1] * y;
   }
 
-  // Need to specialize loops to help autovectorizer
-  // TODO: check if flipping memory layout helps
+  // This change is needed to specialize loops to help autovectorizer
   // Can debug with -ftree-vectorize -ftree-vectorizer-verbose=4 -fopt-info-vec-missed
   // Easier to use godbolt with bite sized pieces, like in https://godbolt.org/z/nMdKP488z
-
+  // TODO: PERF
   /* Note: using expansionOrder-i here ensures that for x^i*y^j , i+j<=(expansionOrder1-1) */
 
   double xt = 1;
@@ -126,19 +125,23 @@ static void computeCSBENDFields(double *Fx, double *Fy, const double x, const do
     //j0=0,dj=1
     for (i = 0; i < expansionOrder1; i++) {
       for (j = 0; j < expansionOrder1 - i; j += 1) {
-          sumFx += Fx_xy[i][j] * (xt * yp[j]);
-          sumFy += Fy_xy[i][j] * (xt * yp[j]);
+#if TURBO_MODE >= 11
+          sumFx += *(*Fx_xy + i*11 + j) * (xt * yp[j]);
+          sumFy += *(*Fy_xy + i*11 + j) * (xt * yp[j]);
+#else
+          sumFx += *(*Fx_xy + i*11 + j) * xt * yp[j];
+          sumFy += *(*Fy_xy + i*11 + j) * xt * yp[j];
+#endif
       }
       xt *= x;
     }
   } else {
     //j0=1,dj=2
     for (i = 0; i < expansionOrder1; i++) {
-      sumFy += Fy_xy[i][0] * xt;
-      for (j = 1; j < expansionOrder1 - i; j += 2) {
-        sumFx += Fx_xy[i][j] * (xt * yp[j]);
-        sumFy += Fy_xy[i][j] * (xt * yp[j]);
-      }
+      for (j = 1; j < expansionOrder1 - i; j += 2)
+        sumFx += *(*Fx_xy + i*11 + j) * xt * yp[j];
+      for (j = 0; j < expansionOrder1 - i; j += 2)
+        sumFy += *(*Fy_xy + i*11 + j) * xt * yp[j];
       xt *= x;
     }
   }
@@ -1598,11 +1601,40 @@ long integrate_csbend_ordn(
       QY += ds * (1 + X / rho0) * Fx / rho_actual;
 #endif
       if (rad_coef || isrConstant) {
+#if TURBO_MODE >= 8
+        if (!distributionBasedRadiation) {
+          double f = (1 + X * (1. / rho0)) / sqrt(sqr(1 + DPoP) - sqr(QX) - sqr(QY));
+          double xp = QX * f;
+          double yp = QY * f;
+          double dsFactor = sqrt(sqr(1 + X * (1. / rho0)) + sqr(xp) + sqr(yp));
+          double F2 = sqr(Fx) + sqr(Fy);
+          double deltaFactor = sqr(1 + DPoP);
+          double dsISR = s / (nSubsteps - 1);
+          QX /= (1 + DPoP);
+          QY /= (1 + DPoP);
+          if (rad_coef)
+            DPoP -= rad_coef * deltaFactor * F2 * ds * dsFactor;
+          if (isrConstant > 0)
+            /* The minus sign is for consistency with the previous version. */
+            DPoP -= isrConstant * deltaFactor * pow(F2, 0.75) * sqrt(dsISR * dsFactor) * gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+          if (sigmaDelta2)
+            *sigmaDelta2 += sqr(isrConstant * deltaFactor) * pow(F2, 1.5) * dsISR * dsFactor;
+          QX *= (1 + DPoP);
+          QY *= (1 + DPoP);
+        } else {
+          addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
+                          X, Y, (i + 1. / 3) * s, s * n, 1. / rho0, Fx, Fy,
+                          ds, rad_coef, s / (nSubsteps - 1), isrConstant,
+                          distributionBasedRadiation, includeOpeningAngle,
+                          meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
+        }
+#else
         addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
                          X, Y, (i + 1. / 3) * s, s * n, 1. / rho0, Fx, Fy,
                          ds, rad_coef, s / (nSubsteps - 1), isrConstant,
                          distributionBasedRadiation, includeOpeningAngle,
                          meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
+#endif
       }
 
     }
@@ -1789,6 +1821,35 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       QY += ds * (1 + X / rho0) * Fx / rho_actual;
 #endif
       if (rad_coef || isrConstant) {
+#if TURBO_MODE >= 8
+        // TODO: [PERF] merge with above for x/rho
+        if (!distributionBasedRadiation) {
+          double f = (1 + X * (1. / rho0)) / sqrt(sqr(1 + DPoP) - sqr(QX) - sqr(QY));
+          double xp = QX * f;
+          double yp = QY * f;
+          double dsFactor = sqrt(sqr(1 + X * (1. / rho0)) + sqr(xp) + sqr(yp));
+          double F2 = sqr(Fx) + sqr(Fy);
+          double deltaFactor = sqr(1 + DPoP);
+          double dsISR = s / 3;
+          QX /= (1 + DPoP);
+          QY /= (1 + DPoP);
+          if (rad_coef)
+            DPoP -= rad_coef * deltaFactor * F2 * ds * dsFactor;
+          if (isrConstant > 0)
+            /* The minus sign is for consistency with the previous version. */
+            DPoP -= isrConstant * deltaFactor * pow(F2, 0.75) * sqrt(dsISR * dsFactor) * gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+          if (sigmaDelta2)
+            *sigmaDelta2 += sqr(isrConstant * deltaFactor) * pow(F2, 1.5) * dsISR * dsFactor;
+          QX *= (1 + DPoP);
+          QY *= (1 + DPoP);
+        } else {
+          addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
+                          X, Y, (i + 1. / 3) * s, s * n, 1. / rho0, Fx, Fy,
+                          ds, rad_coef, s / 3, isrConstant,
+                          distributionBasedRadiation, includeOpeningAngle,
+                          meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
+        }
+#else
         addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
                          X, Y, (i + 1. / 3) * s, s * n, 1. / rho0, Fx, Fy,
                          ds, rad_coef, s / 3, isrConstant,

@@ -20,7 +20,10 @@
 #endif
 
 unsigned long multipoleKicksDone = 0;
+
+//#if TURBO_MODE < 7
 unsigned short expandHamiltonian = 0;
+//#endif
 
 /* #define ODD(j) ((j) % 2) */
 
@@ -37,6 +40,7 @@ void applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
                                         long order, double KnL, long skew);
 long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, double ysize);
 
+#if TURBO_MODE < 7
 int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta) {
   if (expandHamiltonian) {
     *qx = (1 + delta) * xp;
@@ -49,6 +53,7 @@ int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double 
   }
   return 1;
 }
+
 
 int convertMomentaToSlopes(double *xp, double *yp,
                            double qx, double qy, double delta) {
@@ -67,6 +72,7 @@ int convertMomentaToSlopes(double *xp, double *yp,
   }
   return 1;
 }
+#endif
 
 long findMaximumOrder(long order, long order2, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                       MULTIPOLE_DATA *multData) {

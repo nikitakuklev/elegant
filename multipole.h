@@ -24,9 +24,9 @@ void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult);
 
 #define ODD(j) ((j)%2)
 
-#if TURBO_MODE >= 12
-static double expansion_coef_7[8] = {+1./(1*5040), +1/(1*720), -1/(2*120), -1./(6*24),
-                                     +1./(24*6), +1./(120*2), -1./(720*1), -1./(5040*1)};
+#if TURBO_MODE >= 22
+//static double expansion_coef_7[8] = {+1./(1*5040), +1/(1*720), -1/(2*120), -1./(6*24),
+//                                     +1./(24*6), +1./(120*2), -1./(720*1), -1./(5040*1)};
 static double expansion_coef_6[7] = {+1./(1*720), +1./(1*120), -1./(2*24), -1./(6*6),
                                      +1./(24*2), +1./(120*1), -1./(720*1)};
 static double expansion_coef_5[6] = {+1./(1*120), +1./(1*24), -1./(2*6), -1./(6*2), +1./(24*1), +1./(120*1)};
@@ -52,11 +52,11 @@ static double *expansion_coefficients(const long n) {
       return expansion_coef_5;
     case 6:
       return expansion_coef_6;
-    case 7:
-      return expansion_coef_7;
+//    case 7:
+//      return expansion_coef_7;
     default:
       printf("Request for field expansion of order %ld seems too high???\n", n);
-      return expansion_coefficients(n);
+      return expansion_coefficients_dynamic(n);
   }
 }
 
@@ -221,20 +221,6 @@ static void apply_canonical_multipole_kicks(double *qx, double *qy,
   coef = expansion_coefficients(order);
   sum_Fx = sum_Fy = 0;
 
-  /* sum up the terms for the multipole expansion */
-  //  for (i = 0; i <= order; i++) {
-  //    /*
-  //    if (ODD(i))
-  //      sum_Fx += coef[i]*ipow(x, order-i)*ipow(y, i);
-  //    else
-  //      sum_Fy += coef[i]*ipow(x, order-i)*ipow(y, i);
-  //      */
-  //    if (ODD(i))
-  //      sum_Fx += coef[i] * xpow[order - i] * ypow[i];
-  //    else
-  //      sum_Fy += coef[i] * xpow[order - i] * ypow[i];
-  //  }
-
   //odd
   for (i = 1; i <= order; i += 2)
     sum_Fx += coef[i] * xpow[order - i] * ypow[i];
@@ -257,6 +243,41 @@ static void apply_canonical_multipole_kicks(double *qx, double *qy,
 
 #endif
 
+
+#if TURBO_MODE >= 7
+extern unsigned short expandHamiltonian;
+
+static inline int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta) {
+  if (expandHamiltonian) {
+    *qx = (1 + delta) * xp;
+    *qy = (1 + delta) * yp;
+  } else {
+    double denom;
+    denom = sqrt(1 + sqr(xp) + sqr(yp));
+    *qx = (1 + delta) * xp / denom;
+    *qy = (1 + delta) * yp / denom;
+  }
+  return 1;
+}
+
+static inline int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta) {
+  if (expandHamiltonian) {
+    *xp = qx / (1 + delta);
+    *yp = qy / (1 + delta);
+  } else {
+    double denom;
+    if ((denom = sqr(1 + delta) - sqr(qx) - sqr(qy)) <= 0) {
+      printWarningForTracking("Particle acquired undefined slopes when integrating through kick multipole.", NULL);
+      return 0;
+    }
+    denom = sqrt(denom);
+    *xp = qx / denom;
+    *yp = qy / denom;
+  }
+  return 1;
+}
+
+#endif
 
 #ifdef __cplusplus
 }
