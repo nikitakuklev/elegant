@@ -1855,6 +1855,7 @@ long integrate_csbend_ordn_expanded(double *Qf, double *Qi, double *sigmaDelta2,
                          ds, rad_coef, s / 3, isrConstant,
                          distributionBasedRadiation, includeOpeningAngle,
                          meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
+#endif
       }
     }
 
